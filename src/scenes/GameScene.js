@@ -27,16 +27,18 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('btn_pause', 'src/assets/btn_pause.png');
     this.load.image('btn_menu', 'src/assets/btn_menu.png');
 
-    for (let i = 1; i <= 10; i++) {
+    const MAX_ASSET_COUNT = 5; // Conforme MAX_WORLD em EnemySpawner
+
+    for (let i = 1; i <= MAX_ASSET_COUNT; i++) {
       this.load.image(`enemy${i}`, `src/assets/enemy${i}.png`);
       this.load.image(`boss${i}`, `src/assets/boss${i}.png`);
     }
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 10; i++) { // Mantido como 10 para powerups, conforme instrução de focar em inimigos, chefes e bgs
       this.load.image(`powerup${i}`, `src/assets/powerups/powerup${i}.png`);
     }
 
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= MAX_ASSET_COUNT; i++) { // bg5 é o máximo utilizado
       this.load.image(`bg${i}`, `src/assets/bg${i}.png`);
     }
   }
@@ -107,7 +109,11 @@ export default class GameScene extends Phaser.Scene {
     this.collisionHandler.register();
 
     this.enemySpawner = new EnemySpawner(this);
-    this.enemySpawner.spawn();
+    const initialSpawnResult = this.enemySpawner.spawn();
+    if (initialSpawnResult === 'GAME_SHOULD_END') {
+      this.handleGameOver();
+      return; // Impede o resto da configuração se o jogo já deve terminar
+    }
 
     createUIButtons(this, this.playerStats);
 
@@ -122,15 +128,15 @@ export default class GameScene extends Phaser.Scene {
 
   showNextStageDialog() {
     StageDialog(this, () => {
-      if (this.level >= 25) {
-        this.handleGameOver();
-        return;
-      }
-
+      // A verificação this.level >= 25 foi removida daqui, pois EnemySpawner agora lida com isso.
       this.level++;
       this.enemyHp++;
       this.resetWaveState();
-      this.enemySpawner.spawn();
+      const spawnResult = this.enemySpawner.spawn();
+      if (spawnResult === 'GAME_SHOULD_END') {
+        this.handleGameOver();
+        return;
+      }
       this.physics.resume();
       this.bombTimer.paused = false;
       SoundManager.play(this, 'next_stage');
@@ -206,20 +212,37 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // 🌊 Início nova wave normal (sem boss)
+    // Este bloco gerencia a transição para a próxima wave quando todos os inimigos de uma wave normal são derrotados.
     if (
-      this.enemiesSpawned > 0 &&
-      this.enemiesKilled >= this.enemiesSpawned &&
-      !this.bossSpawned &&
-      !this.waveStarted &&
-      !this.transitioning
+      this.enemiesSpawned > 0 && // Garante que inimigos foram efetivamente gerados na wave atual.
+      this.enemiesKilled >= this.enemiesSpawned && // Condição principal: todos os inimigos gerados foram derrotados.
+      !this.bossSpawned && // Assegura que esta lógica é apenas para waves normais (não de chefes).
+                           // A lógica de transição após um chefe é tratada separadamente (em this.showNextStageDialog).
+      !this.waveStarted && // Flag crucial: indica que a transição para a próxima wave AINDA NÃO começou.
+                           // É setada para `true` imediatamente ao entrar neste bloco para prevenir reentradas
+                           // e resetada para `false` em `resetWaveState()`, que é chamado antes de `this.enemySpawner.spawn()`
+                           // para a *nova* wave. Funciona como um semáforo para o processo de transição.
+      !this.transitioning   // Flag geral que indica se alguma outra forma de transição de cena/nível está ativa
+                            // (ex: o diálogo após um chefe, que também seta `this.transitioning = true`).
+                            // Previne que esta lógica de wave automática inicie se uma transição manual/especial já está em curso.
     ) {
-      this.waveStarted = true;
+      this.waveStarted = true; // Marca que o processo de iniciar a próxima wave começou.
+                               // Isso impede que este bloco `if` seja re-executado em frames subsequentes
+                               // enquanto se aguarda o `delayedCall`.
 
-      this.time.delayedCall(500, () => {
-        this.level++;
-        this.enemyHp++;
-        this.resetWaveState();
-        this.enemySpawner.spawn();
+      this.time.delayedCall(500, () => { // Um pequeno atraso para dar ao jogador um momento antes da próxima wave.
+        this.level++; // Incrementa o nível geral do jogo.
+        this.enemyHp++; // Aumenta o HP base para inimigos no próximo nível/wave.
+
+        this.resetWaveState(); // Reseta o estado da wave (enemiesKilled, waveStarted = false, etc.)
+                               // e atualiza informações visuais como background e HUD para o novo nível.
+
+        const spawnResult = this.enemySpawner.spawn(); // Gera os inimigos para a nova wave.
+        if (spawnResult === 'GAME_SHOULD_END') { // Verifica se a condição de fim de jogo foi atingida (ex: nível > 25).
+           this.handleGameOver(); // Chama a rotina de fim de jogo.
+           // Não é estritamente necessário um 'return' aqui, pois está no final do callback,
+           // mas se houvesse código após este if no callback, um return seria importante.
+        }
       });
     }
 
