@@ -45,6 +45,6 @@ const game = new Phaser.Game(config);
 
 // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
 window.onerror = function (msg, url, lineNo, columnNo, error) {
-  alert("Erro capturado no jogo:\n" + msg + "\nVeja o console para detalhes.");
-  console.error("Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro:", error);
+  console.warn("Erro capturado no jogo: " + msg); // Alterado de alert para console.warn
+  console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error); // Melhorado o log detalhado
 };

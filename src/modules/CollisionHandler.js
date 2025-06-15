@@ -44,8 +44,8 @@ export default class CollisionHandler {
     if (!enemy.active) return;
     bomb.destroy();
 
-    const damage = this.scene.playerStats?.damage ?? 1;
-    enemy.hp = (enemy.hp ?? 1) - damage;
+    const damage = this.scene.playerStats?.damage ?? 1; // Manter ?? 1 para damage, pois é de playerStats
+    enemy.hp = enemy.hp - damage; // Fallback ?? 1 removido para enemy.hp
 
     SoundManager.play(this.scene, 'hit_enemy');
 
@@ -82,12 +82,12 @@ export default class CollisionHandler {
     if (stats.extraLives > 0) {
       enemy.destroy();
     } else {
-      localStorage.setItem('playerStats', JSON.stringify(stats));
-      SoundManager.play(this.scene, 'gameover');
-      this.scene.scene.start('GameOverScene', {
-        score: this.scene.score,
-        coinsEarned: this.scene.coinsEarned
-      });
+      // localStorage.setItem('playerStats', JSON.stringify(stats)); // Removido
+      SoundManager.play(this.scene, 'gameover'); // Som de gameover ainda é relevante aqui
+      // A chamada para handleGameOver() já está implícita ao perder todas as vidas,
+      // e GameScene.handleGameOver() centralizará o salvamento e a transição de cena.
+      // this.scene.scene.start('GameOverScene', ...); // Será chamado por handleGameOver
+      this.scene.handleGameOver(); // Chama o método centralizado em GameScene
     }
   }
 }

@@ -27,16 +27,11 @@ export default class EnemySpawner {
 
     // Fim do jogo após nível 25
     if (level > 25) {
-      console.log(`[ENEMY SPAWNER] Fim do jogo no nível ${level}`);
+      console.log(`[ENEMY SPAWNER] Condição de fim de jogo atingida no nível ${level}`);
       const upgrades = getUpgrades();
       upgrades.coins += this.scene.coinsEarned || 0;
       saveUpgrades(upgrades);
-
-      this.scene.scene.start('GameOverScene', {
-        score: this.scene.score || 0,
-        coinsEarned: this.scene.coinsEarned || 0
-      });
-      return;
+      return 'GAME_SHOULD_END'; // Sinaliza para GameScene
     }
 
     // Limpar inimigos anteriores
@@ -54,7 +49,7 @@ export default class EnemySpawner {
       const boss = this.scene.enemies.create(this.scene.scale.width / 2, -50, bossKey);
       boss.setVelocityY(28);
       boss.setDisplaySize(48, 48);
-      boss.hp = (this.scene.baseBossHp || 10) + level * 2;
+      boss.hp = this.scene.baseBossHp + level * 2; // Fallback || 10 removido
       boss.isBoss = true;
 
       this.scene.bossSpawned = true;
@@ -94,7 +89,7 @@ export default class EnemySpawner {
 
     enemy.setVelocityY((100 + level * 2) * 0.7);
     enemy.setDisplaySize(32, 32);
-    enemy.hp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+    enemy.hp = this.scene.baseEnemyHp + Math.floor((level - 1) / 2); // Fallback || 1 removido
     enemy.isBoss = false;
 
     this.scene.enemiesSpawned++;
