@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Bomb Dash - 8bit shooter retro game" />
+  <title>💣 Bomb Dash</title>
+  
+  <!-- Ícone opcional -->
+  <link rel="icon" href="src/assets/favicon.ico" type="image/x-icon" />
+
+  <!-- Phaser CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      font-family: monospace;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      image-rendering: pixelated;
+      border: 2px solid #00ffff;
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ponto de entrada do jogo -->
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
