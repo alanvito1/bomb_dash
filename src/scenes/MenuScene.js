@@ -93,7 +93,7 @@ export default class MenuScene extends Phaser.Scene {
           }
         })
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
-        .on('pointerout', () => button.setStyle({ fill: item.action === 'logout' ? '#FF6347' : '#00ffff' })));
+        .on('pointerout', () => button.setStyle({ fill: item.action === 'logout' ? '#FF6347' : '#00ffff' }));
     });
   }
 
