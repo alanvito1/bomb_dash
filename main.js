@@ -2,8 +2,8 @@
 
 // 🎬 Importação das cenas principais do jogo
 import LoadingScene from './src/scenes/LoadingScene.js';
-import AuthChoiceScene from './src/scenes/AuthChoiceScene.js'; // ✨ Tela de Escolha de Autenticação
-import RegisterScene from './src/scenes/RegisterScene.js';   // 🆕 Tela de Criação de Conta
+import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
+import RegisterScene from './src/scenes/RegisterScene.js';
 import LoginScene from './src/scenes/LoginScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
@@ -29,39 +29,42 @@ const config = {
   },
   dom: {
     createContainer: true,
-    parent: 'phaser-dom-container' // CORRIGIDO: Especifica o contêiner pai
+    parent: 'phaser-dom-container' // Especifica o contêiner pai
   },
   scene: [
-    LoadingScene,    // 🔄 Tela de carregamento (antes de tudo)
-    AuthChoiceScene, // ✨ Tela de Escolha de Autenticação
-    RegisterScene,   // 🆕 Tela de Criação de Conta
-    LoginScene,      // 🔑 Tela de Login
-    StartScene,      // 🎮 Tela de abertura estilo arcade
-    MenuScene,       // 🧭 Menu principal
-    GameScene,       // 🕹️ Cena principal do jogo
-    ShopScene,       // 💰 Loja de atributos
-    RankingScene,    // 🏆 Ranking de pontuação
-    GameOverScene,   // ☠️ Tela de Game Over
-    ConfigScene,     // ⚙️ Configurações de som, volume e reset
-    StatsScene       // 📊 Tela com atributos comprados
+    LoadingScene,
+    AuthChoiceScene,
+    RegisterScene,
+    LoginScene,
+    StartScene,
+    MenuScene,
+    GameScene,
+    ShopScene,
+    RankingScene,
+    GameOverScene,
+    ConfigScene,
+    StatsScene
   ],
-  // Otimizações de performance e renderização
   render: {
-    antialias: false, // Desativa antialiasing para um visual pixelado mais nítido
-    pixelArt: true,   // Configura o renderizador para pixel art
-    roundPixels: true // Ajuda a prevenir subpixel rendering que pode borrar pixel art
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true
   },
   scale: {
-    mode: Phaser.Scale.FIT, // Ajusta para caber na tela mantendo a proporção
-    autoCenter: Phaser.Scale.CENTER_BOTH // Centraliza o jogo na tela
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
   }
 };
 
-// 🚀 Criação da instância do jogo
-const game = new Phaser.Game(config);
+// Esperar o DOM estar completamente carregado antes de iniciar o jogo Phaser
+window.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM completamente carregado e processado. Iniciando Phaser...");
+  // 🚀 Criação da instância do jogo
+  const game = new Phaser.Game(config);
 
-// 🧪 Captura de erros em tempo de execução (útil para debug em produção)
-window.onerror = function (msg, url, lineNo, columnNo, error) {
-  console.warn("Erro capturado no jogo: " + msg);
-  console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error);
-};
+  // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
+  window.onerror = function (msg, url, lineNo, columnNo, error) {
+    console.warn("Erro capturado no jogo: " + msg);
+    console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error);
+  };
+});
