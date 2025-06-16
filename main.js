@@ -28,7 +28,7 @@ const config = {
     }
   },
   dom: {
-    createContainer: true         // Permite usar elementos DOM (ex: input de nome)
+    createContainer: true, parent: 'phaser-dom-container'         // Permite usar elementos DOM (ex: input de nome)
   },
   scene: [
     LoadingScene,    // 🔄 Tela de carregamento (antes de tudo)
