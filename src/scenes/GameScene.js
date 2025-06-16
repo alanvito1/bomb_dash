@@ -1,6 +1,6 @@
 // 🎮 GameScene.js – Cena principal do jogo (gameplay)
 // Contém toda a lógica da partida, HUD, inimigos, player, fases e sons
-
+import { submitScore } from '../api.js'; // ADICIONADO
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
@@ -11,7 +11,7 @@ import PowerupLogic from '../modules/PowerupLogic.js';
 import { createUIButtons } from '../modules/UIMenuButtons.js';
 import { getUpgrades, saveUpgrades } from '../systems/upgrades.js';
 import SoundManager from '../utils/sound.js';
-import { updateUserMaxScore } from '../database/database.js'; // Added for updating user's max score
+// import { updateUserMaxScore } from '../database/database.js'; // REMOVIDO
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -167,7 +167,7 @@ export default class GameScene extends Phaser.Scene {
     this.hud.updateHUD();
   }
 
-  async handleGameOver() { // Make async due to updateUserMaxScore
+  async handleGameOver() {
     // 1. Stop game sounds
     SoundManager.stopAll(this);
     SoundManager.play(this, 'gameover');
@@ -203,36 +203,38 @@ export default class GameScene extends Phaser.Scene {
         // For now, finalScore is 0 if any cheat is detected.
     }
 
-    // 4. Update User's Max Score in Database
-    const loggedInUser = this.registry.get('loggedInUser');
-    if (loggedInUser && loggedInUser.username && !cheatDetected) {
-        try {
-            const updated = await updateUserMaxScore(loggedInUser.username, finalScore);
-            if (updated) {
-                console.log(`Max score for ${loggedInUser.username} updated to ${finalScore}.`);
-                // Update score in registry if it changed, so other scenes are aware if needed
-                const updatedUserData = { ...loggedInUser, max_score: finalScore };
-                this.registry.set('loggedInUser', updatedUserData);
-            } else {
-                console.log(`Current score ${finalScore} is not higher than existing max score for ${loggedInUser.username}.`);
-            }
-        } catch (error) {
-            console.error("Error updating user max score:", error);
+    // 4. Submit Score to Server & Update Local Max Score
+    const token = localStorage.getItem('jwtToken') || this.registry.get('jwtToken');
+    const loggedInUser = this.registry.get('loggedInUser'); // Format: { username: 'name', max_score: ... }
+    let serverResponse = null;
+
+    if (token && loggedInUser && loggedInUser.username && !cheatDetected) {
+      console.log(`Submitting score: ${finalScore} for user: ${loggedInUser.username}`);
+      serverResponse = await submitScore(finalScore, token);
+      if (serverResponse.success) {
+        console.log('Score submitted successfully to server.', serverResponse);
+        // Update max_score in registry if the server indicates a new record
+        if (serverResponse.new_max_score !== undefined) { // Check if new_max_score is part of the response
+            loggedInUser.max_score = serverResponse.new_max_score; // Update with the server's value
+            this.registry.set('loggedInUser', { ...loggedInUser }); // Update in registry
         }
-    } else if (!loggedInUser || !loggedInUser.username) {
-        console.warn('GameScene: No logged-in user found, cannot save score to database.');
+      } else {
+        console.warn('Failed to submit score to server:', serverResponse.message);
+        // Optionally, handle specific error messages from serverResponse.message
+      }
     } else if (cheatDetected) {
-        console.log(`GameScene: Cheat detected, score for ${loggedInUser.username} not saved.`);
+        console.log(`GameScene: Cheat detected, score for ${loggedInUser ? loggedInUser.username : 'unknown user'} not submitted.`);
+    } else {
+      console.log('User not logged in or token not found. Score not submitted to server.');
     }
 
-
     // 5. Transition to GameOverScene
-    // Pass both original score (for display) and potentially adjusted finalScore (if needed by GameOverScene)
     this.scene.start('GameOverScene', {
-        score: this.score, // Original score for display
-        finalScore: finalScore, // Validated score
+        score: this.score, // Original score from this game session
+        finalScore: loggedInUser ? loggedInUser.max_score : 0, // Show the current overall max score (updated or not)
         coinsEarned: this.coinsEarned,
-        cheatDetected: cheatDetected // Pass flag to GameOverScene
+        cheatDetected: cheatDetected,
+        serverMessage: serverResponse ? (serverResponse.message || (serverResponse.success ? "Score updated!" : "Score not updated.")) : "Could not connect to server or user not logged in."
     });
   }
 
@@ -306,3 +308,7 @@ export default class GameScene extends Phaser.Scene {
     this.stageCode = `${this.stage}-${((this.level - 1) % 5) + 1}`;
   }
 }
+// TODO: Integrar submitScore(finalScore, token) na lógica de fim de jogo.
+//       Recuperar o token de localStorage.getItem('jwtToken') ou this.registry.get('jwtToken').
+//       Chamar await submitScore(finalScore, token) e tratar a resposta.
+//       Consulte o placeholder GameScene.js gerado caso este arquivo não existisse para um exemplo.
