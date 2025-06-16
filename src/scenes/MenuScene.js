@@ -60,18 +60,22 @@ export default class MenuScene extends Phaser.Scene {
 
   createMenu(centerX, centerY, useFallback = false) {
     const menuItems = [
-      { label: '▶ PLAY', scene: 'GameScene' },
-      { label: '🛒 SHOP', scene: 'ShopScene' },
-      { label: '📊 STATS', scene: 'StatsScene' },
-      { label: '🏆 RANKING', scene: 'RankingScene' },
-      { label: '⚙️ SETTINGS', scene: 'ConfigScene' }
+      { label: '▶ PLAY', scene: 'GameScene', action: null },
+      { label: '🛒 SHOP', scene: 'ShopScene', action: null },
+      { label: '📊 STATS', scene: 'StatsScene', action: null },
+      { label: '🏆 RANKING', scene: 'RankingScene', action: null },
+      { label: '⚙️ SETTINGS', scene: 'ConfigScene', action: null },
+      { label: '↪️ LOGOUT', scene: 'LoginScene', action: 'logout' } // Added Logout
     ];
 
+    const buttonStartY = centerY - 100; // Adjust starting Y to fit more items if needed
+    const buttonSpacing = 50; // Adjust spacing
+
     menuItems.forEach((item, i) => {
-      const button = this.add.text(centerX, 180 + i * 60, item.label, {
+      const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
         fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
-        fontSize: '14px',
-        fill: '#00ffff',
+        fontSize: '14px', // Standardized font size
+        fill: item.action === 'logout' ? '#FF6347' : '#00ffff', // Different color for logout
         backgroundColor: '#000000cc',
         padding: { x: 10, y: 8 },
         align: 'center'
@@ -80,10 +84,16 @@ export default class MenuScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
-          this.scene.start(item.scene);
+          if (item.action === 'logout') {
+            localStorage.removeItem('loggedInUser');
+            this.registry.remove('loggedInUser'); // Clear from registry too
+            this.scene.start('LoginScene');
+          } else {
+            this.scene.start(item.scene);
+          }
         })
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
-        .on('pointerout', () => button.setStyle({ fill: '#00ffff' }));
+        .on('pointerout', () => button.setStyle({ fill: item.action === 'logout' ? '#FF6347' : '#00ffff' })));
     });
   }
 

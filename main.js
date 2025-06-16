@@ -2,6 +2,7 @@
 
 // 🎬 Importação das cenas principais do jogo
 import LoadingScene from './src/scenes/LoadingScene.js';   // Tela de carregamento inicial
+import LoginScene from './src/scenes/LoginScene.js';       // Tela de Login/Criação de Conta
 import StartScene from './src/scenes/StartScene.js';       // Tela "Press any key"
 import MenuScene from './src/scenes/MenuScene.js';         // Menu principal
 import GameScene from './src/scenes/GameScene.js';         // Gameplay principal
@@ -29,6 +30,7 @@ const config = {
   },
   scene: [
     LoadingScene,    // 🔄 Tela de carregamento (antes de tudo)
+    LoginScene,      // 🔑 Tela de Login
     StartScene,      // 🎮 Tela de abertura estilo arcade
     MenuScene,       // 🧭 Menu principal
     GameScene,       // 🕹️ Cena principal do jogo
