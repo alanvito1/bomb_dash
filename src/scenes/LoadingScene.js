@@ -1,7 +1,7 @@
 // src/scenes/LoadingScene.js
 import SoundManager from '../utils/sound.js';
-// We need initDB and getUser to validate the auto-login user
-import { initDB, getUser } from '../database/database.js';
+// import { initDB, getUser } from '../database/database.js'; // REMOVIDO
+import { validateCurrentSession } from '../api.js'; // ADICIONADO
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -12,7 +12,6 @@ export default class LoadingScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Fundo
     this.add.text(centerX, centerY - 50, '💣 Bomb Dash', {
       fontFamily: 'monospace',
       fontSize: '28px',
@@ -35,36 +34,47 @@ export default class LoadingScene extends Phaser.Scene {
       loadingText.setText('Complete!');
     });
 
-    // Carrega todos os assets
-    SoundManager.loadAll(this); // Ensure sounds are loaded
-    this.load.image('bg', 'src/assets/menu_bg_vertical.png'); // Example asset
+    SoundManager.loadAll(this);
+    this.load.image('bg', 'src/assets/menu_bg_vertical.png');
     this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
   async create() {
-    // Initialize DB connection first
-    await initDB();
+    // await initDB(); // REMOVIDO
 
-    this.time.delayedCall(500, async () => { // Mark callback as async
-        const loggedInUserUsername = localStorage.getItem('loggedInUser');
+    this.time.delayedCall(500, async () => {
+        const jwtToken = localStorage.getItem('jwtToken');
 
-        if (loggedInUserUsername) {
-            // User token found, try to validate and get data using the new getUser function
-            const user = await getUser(loggedInUserUsername); // New way
+        if (jwtToken) {
+            console.log('LoadingScene: Found JWT token. Validating session...');
+            const validationResult = await validateCurrentSession(jwtToken);
 
-            if (user) { // Check if user object is returned (meaning user exists in DB)
-                console.log(`LoadingScene: Auto-login validated for user: ${user.username}. Max score: ${user.max_score}.`);
-                this.registry.set('loggedInUser', { username: user.username, max_score: user.max_score });
-                this.scene.start('StartScene'); // Or MenuScene directly
+            if (validationResult.success && validationResult.user) {
+                console.log(`LoadingScene: Session validated for user: ${validationResult.user.username}. Max score: ${validationResult.user.max_score}.`);
+
+                // Atualizar localStorage e Phaser Registry com os dados frescos do servidor
+                localStorage.setItem('loggedInUser', validationResult.user.username); // Armazena apenas o username
+                // O jwtToken já está no localStorage, não precisa setar de novo a menos que seja um novo token (não é o caso aqui)
+
+                this.registry.set('loggedInUser', validationResult.user); // Armazena o objeto user completo
+                this.registry.set('jwtToken', jwtToken); // Garante que o registry também tenha o token
+
+                this.scene.start('StartScene'); // Ou MenuScene, conforme preferência
             } else {
-                // User from localStorage not found in DB, clear invalid token
-                console.log(`LoadingScene: User ${loggedInUserUsername} from localStorage not found in DB. Clearing token.`);
+                // Token inválido ou sessão expirada/não encontrada no servidor
+                console.log(`LoadingScene: Session validation failed. ${validationResult.message || 'Redirecting to LoginScene.'}`);
                 localStorage.removeItem('loggedInUser');
+                localStorage.removeItem('jwtToken');
+                this.registry.remove('loggedInUser');
+                this.registry.remove('jwtToken');
                 this.scene.start('LoginScene');
             }
         } else {
-            // No auto-login user found, go to LoginScene
-            console.log('LoadingScene: No auto-login user. Proceeding to LoginScene.');
+            // No JWT token found in localStorage
+            console.log('LoadingScene: No JWT token found. Proceeding to LoginScene.');
+            localStorage.removeItem('loggedInUser'); // Limpar por segurança, caso jwtToken tenha sido removido manualmente
+            this.registry.remove('loggedInUser');
+            this.registry.remove('jwtToken');
             this.scene.start('LoginScene');
         }
     });

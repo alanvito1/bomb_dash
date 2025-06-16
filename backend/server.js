@@ -73,6 +73,37 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// GET /api/auth/me - Validar token e retornar dados do usuário logado
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+    const username = req.user.username; // Obtido do token JWT verificado
+
+    if (!username) {
+        // Isso não deveria acontecer se verifyToken funcionou corretamente
+        return res.status(400).json({ success: false, message: 'Nome de usuário não encontrado no token.' });
+    }
+
+    try {
+        const user = await db.findUserByUsername(username);
+        if (!user) {
+            // Usuário no token não existe mais no banco de dados
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado no banco de dados.' });
+        }
+
+        // Retornar os dados essenciais do usuário
+        res.json({
+            success: true,
+            user: {
+                username: user.username,
+                max_score: user.max_score
+                // Não retorne o password_hash!
+            }
+        });
+    } catch (error) {
+        console.error("Get /api/auth/me error:", error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar dados do usuário.' });
+    }
+});
+
 // POST /api/login - Autenticar um usuário
 app.post('/api/login', async (req, res) => {
     const { username, pin } = req.body;
@@ -175,6 +206,7 @@ db.initDb()
             console.log(`  POST /api/login`);
             console.log(`  POST /api/scores (protegido por JWT)`);
             console.log(`  GET /api/ranking`);
+            console.log(`  GET /api/auth/me (protegido por JWT)`);
             console.log(`JWT_SECRET está configurado como: ${JWT_SECRET === 'your-very-strong-secret-key' ? 'CHAVE PADRÃO (INSEGURA!)' : 'CHAVE PERSONALIZADA'}`)
             if (JWT_SECRET === 'your-very-strong-secret-key') {
                 console.warn("AVISO: JWT_SECRET está usando a chave padrão. Mude para uma chave forte em um ambiente de produção!");
