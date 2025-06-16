@@ -67,7 +67,7 @@ export default class LoadingScene extends Phaser.Scene {
                 localStorage.removeItem('jwtToken');
                 this.registry.remove('loggedInUser');
                 this.registry.remove('jwtToken');
-                this.scene.start('LoginScene');
+                this.scene.start('AuthChoiceScene');
             }
         } else {
             // No JWT token found in localStorage
@@ -75,7 +75,7 @@ export default class LoadingScene extends Phaser.Scene {
             localStorage.removeItem('loggedInUser'); // Limpar por segurança, caso jwtToken tenha sido removido manualmente
             this.registry.remove('loggedInUser');
             this.registry.remove('jwtToken');
-            this.scene.start('LoginScene');
+            this.scene.start('AuthChoiceScene');
         }
     });
   }
