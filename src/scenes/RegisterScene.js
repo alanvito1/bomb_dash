@@ -1,90 +1,151 @@
-// src/scenes/RegisterScene.js (Simplificada para Diagnóstico)
-// import { registerUser, loginUser } from '../api.js';
-// import SoundManager from '../utils/sound.js';
+// src/scenes/RegisterScene.js (Controlador para Formulário HTML)
+import { registerUser, loginUser } from '../api.js';
+import SoundManager from '../utils/sound.js';
 
 export default class RegisterScene extends Phaser.Scene {
   constructor() {
     super('RegisterScene');
+    // Referências aos elementos do formulário e handlers de evento
+    this.formContainer = null;
+    this.usernameInput = null;
+    this.pinInput = null;
+    this.messageText = null;
+    this.registerButton = null;
+    this.backButton = null;
+
+    // Handlers precisam ser vinculados ou definidos como arrow functions para manter o 'this' da cena
+    this.handleRegisterSubmit = this.handleRegisterSubmit.bind(this);
+    this.handleBack = this.handleBack.bind(this);
   }
 
   preload() {
+    // Carregar assets visuais da cena (ex: background), sons.
+    // O formulário em si já está no HTML.
     this.load.image('auth_bg', 'src/assets/menu_bg_vertical.png');
-    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
+    SoundManager.loadAll(this); // Garante que sons como 'click' estejam disponíveis
+    // WebFontLoader não é mais estritamente necessário aqui se não usarmos this.add.text para a UI principal
   }
 
   create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
+    // Background da cena Phaser (pode ser sobreposto pelo form HTML)
     this.add.image(centerX, centerY, 'auth_bg')
       .setOrigin(0.5)
       .setDisplaySize(this.scale.width, this.scale.height);
 
-    // Tentar carregar a fonte e criar UI, com fallback
-    // A lógica do WebFontLoader é mantida pois o erro ocorre dentro do callback 'active'
-    if (window.WebFont) {
-      WebFont.load({
-        google: { families: ['Press Start 2P'] },
-        active: () => {
-          console.log('[RegisterScene-Simple] WebFont active. Tentando criar UI simplificada...');
-          this.createUISimplified(centerX, centerY, false);
-        },
-        inactive: () => {
-          console.warn('[RegisterScene-Simple] WebFont inactive. Tentando criar UI simplificada com fallback...');
-          this.createUISimplified(centerX, centerY, true);
-        }
-      });
+    // Obter referências aos elementos do DOM
+    this.formContainer = document.getElementById('register-form-container');
+    this.usernameInput = document.getElementById('register-username');
+    this.pinInput = document.getElementById('register-pin');
+    this.messageText = document.getElementById('register-message');
+    this.registerButton = document.getElementById('register-submit-button');
+    this.backButton = document.getElementById('register-back-button');
+
+    if (!this.formContainer || !this.usernameInput || !this.pinInput || !this.messageText || !this.registerButton || !this.backButton) {
+      console.error('RegisterScene: Não foi possível encontrar um ou mais elementos do formulário HTML!');
+      // Adicionar um texto de erro na tela Phaser se os elementos não forem encontrados
+      this.add.text(centerX, centerY, 'Erro: Formulário de Registro não encontrado no HTML.', {
+        fontFamily: 'monospace', fontSize: '12px', fill: '#ff0000', wordWrap: { width: this.scale.width - 20 }
+      }).setOrigin(0.5);
+      return;
+    }
+
+    // Limpar campos e mensagem de tentativas anteriores
+    this.usernameInput.value = '';
+    this.pinInput.value = '';
+    this.messageText.textContent = '';
+    this.messageText.className = 'form-message'; // Reset class
+
+    // Adicionar listeners de evento
+    this.registerButton.addEventListener('click', this.handleRegisterSubmit);
+    this.backButton.addEventListener('click', this.handleBack);
+
+    // Tornar o formulário visível
+    this.formContainer.style.display = 'flex'; // Usar 'flex' como definido no CSS para centralizar
+
+    console.log('RegisterScene criada e formulário HTML de registro está visível.');
+  }
+
+  async handleRegisterSubmit() {
+    SoundManager.play(this, 'click'); // Tocar som de clique da cena Phaser
+    const username = this.usernameInput.value.trim();
+    const pin = this.pinInput.value.trim();
+
+    // Validações
+    if (!username || !pin) {
+      this.setMessage('Username e PIN são obrigatórios.', 'error');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username) || username.length < 3) {
+      this.setMessage('Username: min 3 chars, sem espaços, letras, números, underscores.', 'error');
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      this.setMessage('PIN deve ter exatamente 4 dígitos numéricos.', 'error');
+      return;
+    }
+
+    this.setMessage('Registrando...', 'processing');
+    const registerResult = await registerUser(username, pin);
+
+    if (registerResult.success) {
+      this.setMessage(`Conta ${username} criada! Logando...`, 'success');
+
+      const loginResult = await loginUser(username, pin);
+      if (loginResult.success && loginResult.token && loginResult.user) {
+        localStorage.setItem('loggedInUser', loginResult.user.username);
+        localStorage.setItem('jwtToken', loginResult.token);
+        this.registry.set('loggedInUser', loginResult.user);
+        this.registry.set('jwtToken', loginResult.token);
+
+        SoundManager.play(this, 'submit');
+        // Esconder formulário ANTES de mudar de cena para evitar flash
+        this.formContainer.style.display = 'none';
+        this.scene.start('MenuScene');
+      } else {
+        this.setMessage(`Conta criada, mas login automático falhou. Tente logar manualmente. ${loginResult.message || ''}`, 'error');
+        // Não esconder o formulário aqui, permitir que o usuário veja a mensagem
+        // Poderia adicionar um timeout para redirecionar para LoginScene ou deixar o usuário clicar em Voltar
+      }
     } else {
-      console.error('[RegisterScene-Simple] WebFontLoader script não encontrado. Tentando criar UI simplificada com fallback...');
-      this.createUISimplified(centerX, centerY, true);
+      this.setMessage(registerResult.message || 'Falha ao criar conta.', 'error');
     }
   }
 
-  createUISimplified(centerX, centerY, useFallbackFont = false) {
-    // const fontFamily = useFallbackFont ? 'monospace' : '"Press Start 2P"'; // Não usado por enquanto
+  handleBack() {
+    SoundManager.play(this, 'click');
+    this.formContainer.style.display = 'none';
+    this.scene.start('AuthChoiceScene');
+  }
 
-    console.log('[RegisterScene-Simple] Dentro de createUISimplified. Tentando this.add.dom() para usernameInput...');
-    try {
-      const usernameInput = this.add.dom(centerX, centerY - 80).createElement('input', {
-        type: 'text',
-        name: 'username',
-        autocomplete: 'username', // Adicionado para consistência
-        style: 'width: 300px; padding: 10px; font-size: 16px; border: 2px solid #00ff00; background-color: #333; color: #fff; font-family: monospace;'
-      });
-      usernameInput.setOrigin(0.5);
-      // usernameInput.addListener('click'); // Removido para simplificar
-      console.log('[RegisterScene-Simple] usernameInput DOM element criado (ou tentativa).');
-
-      // Adicionar um texto simples do Phaser para ver se a cena funciona até aqui
-      this.add.text(centerX, centerY + 100, 'Register Scene (Diagnóstico)', {
-        fontFamily: useFallbackFont ? 'monospace' : '"Press Start 2P"',
-        fontSize: '16px', fill: '#fff'
-      }).setOrigin(0.5);
-
-    } catch (e) {
-      console.error('[RegisterScene-Simple] Erro ao tentar criar usernameInput com this.add.dom():', e);
-      // Adicionar um texto de erro na tela se o DOM falhar, para feedback visual
-      this.add.text(centerX, centerY, `Erro no DOM: ${e.message}`, {
-        fontFamily: useFallbackFont ? 'monospace' : '"Press Start 2P"',
-        fontSize: '12px', fill: '#ff0000', wordWrap: { width: this.scale.width - 20 }
-      }).setOrigin(0.5);
+  setMessage(message, type = 'error') {
+    if (this.messageText) {
+      this.messageText.textContent = message;
+      this.messageText.className = 'form-message'; // Reset
+      if (type === 'success') {
+        this.messageText.classList.add('success');
+      } else if (type === 'processing') {
+        this.messageText.classList.add('processing');
+      } else {
+        // error é o padrão (vermelho)
+      }
     }
+  }
 
-    // Botão VOLTAR SIMPLIFICADO (usando Phaser Text, não DOM)
-    // para permitir sair da cena mesmo se o DOM falhar.
-    const backButton = this.add.text(centerX, this.scale.height - 50, '[ VOLTAR PARA TESTE ]', {
-      fontFamily: useFallbackFont ? 'monospace' : '"Press Start 2P"',
-      fontSize: '12px',
-      fill: '#00ffff',
-      backgroundColor: '#00000077',
-      padding: { x: 10, y: 5 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    backButton.on('pointerdown', () => {
-      // SoundManager não importado, então não tocar som por enquanto
-      this.scene.start('AuthChoiceScene');
-    });
-
-    console.log('[RegisterScene-Simple] createUISimplified concluída.');
+  shutdown() {
+    // Chamado quando a cena é parada ou destruída
+    console.log('RegisterScene shutdown. Escondendo formulário e removendo listeners.');
+    if (this.formContainer) {
+      this.formContainer.style.display = 'none';
+    }
+    // Remover listeners para evitar memory leaks
+    if (this.registerButton) {
+      this.registerButton.removeEventListener('click', this.handleRegisterSubmit);
+    }
+    if (this.backButton) {
+      this.backButton.removeEventListener('click', this.handleBack);
+    }
   }
 }

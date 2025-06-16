@@ -56,6 +56,121 @@
       max-width: 100vw;
       max-height: 100vh;
     }
+
+    /* Estilos para os novos formulários HTML */
+    .form-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 400px; /* Largura máxima para o formulário */
+      padding: 20px;
+      background-color: rgba(0, 0, 0, 0.85); /* Fundo escuro semi-transparente */
+      border: 2px solid #00ffff; /* Borda ciano, como o canvas */
+      border-radius: 8px;
+      z-index: 100; /* Garante que fique sobre o canvas e outros elementos DOM do Phaser */
+      color: #ffffff; /* Cor do texto padrão para os formulários */
+      font-family: "Press Start 2P", monospace; /* Usar a fonte do jogo se carregada, senão monospace */
+      display: flex; /* Usado para esconder/mostrar; será mudado para flex pelas cenas */
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .form-box {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .form-title {
+      font-size: 20px; /* Tamanho um pouco menor que o título da cena Phaser */
+      margin-bottom: 20px;
+      color: #00ffff; /* Cor ciano para títulos de formulário */
+    }
+
+    .form-container label {
+      font-size: 12px;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      width: 100%;
+      max-width: 300px; /* Alinhar com largura do input */
+      text-align: left;
+    }
+
+    .form-container input[type="text"],
+    .form-container input[type="password"] {
+      width: 100%;
+      max-width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #00ffff;
+      background-color: #333;
+      color: #fff;
+      font-family: monospace; /* Inputs usam monospace para consistência de digitação */
+      margin-bottom: 15px;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .form-message {
+      font-size: 10px;
+      color: #ff0000; /* Vermelho para erros por padrão */
+      min-height: 20px; /* Para evitar que o layout salte quando a mensagem aparece */
+      text-align: center;
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 10px;
+      word-wrap: break-word;
+    }
+
+    .form-message.success {
+        color: #00ff00; /* Verde para sucesso */
+    }
+    .form-message.processing {
+        color: #ffff00; /* Amarelo para processamento */
+    }
+
+    .form-button {
+      width: 100%;
+      max-width: 300px;
+      padding: 10px 15px;
+      font-size: 14px;
+      font-family: "Press Start 2P", monospace;
+      color: #00ffff;
+      background-color: #000000cc;
+      border: 2px solid #00ffff;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      text-align: center;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .form-button:hover {
+      background-color: #00ffff;
+      color: #000000;
+    }
+
+    .form-button.secondary {
+      background-color: #00000099;
+      color: #00ff00; /* Verde para botões secundários como Voltar */
+      border-color: #00ff00;
+    }
+    .form-button.secondary:hover {
+      background-color: #00ff00;
+      color: #000000;
+    }
+
+    .form-tip {
+        font-size: 10px;
+        color: #dddddd;
+        margin-top: 20px;
+        text-align: center;
+        width: 100%;
+        max-width: 300px;
+    }
   </style>
 </head>
 
@@ -65,5 +180,35 @@
 
   <!-- Ponto de entrada do jogo Phaser -->
   <script type="module" src="./main.js"></script>
+
+  <!-- Formulário de Registro (inicialmente escondido) -->
+  <div id="register-form-container" class="form-container" style="display: none;">
+    <div class="form-box">
+      <h2 class="form-title">Criar Conta</h2>
+      <label for="register-username">Username:</label>
+      <input type="text" id="register-username" name="register-username" autocomplete="username">
+      <label for="register-pin">PIN (4 dígitos):</label>
+      <input type="password" id="register-pin" name="register-pin" maxlength="4" autocomplete="new-password">
+      <p id="register-message" class="form-message"></p>
+      <button type="button" id="register-submit-button" class="form-button">Registrar e Entrar</button>
+      <button type="button" id="register-back-button" class="form-button secondary">Voltar</button>
+      <p class="form-tip">Escolha um nome de usuário e um PIN de 4 dígitos.</p>
+    </div>
+  </div>
+
+  <!-- Formulário de Login (inicialmente escondido) -->
+  <div id="login-form-container" class="form-container" style="display: none;">
+    <div class="form-box">
+      <h2 class="form-title">Fazer Login</h2>
+      <label for="login-username">Username:</label>
+      <input type="text" id="login-username" name="login-username" autocomplete="username">
+      <label for="login-pin">PIN (4 dígitos):</label>
+      <input type="password" id="login-pin" name="login-pin" maxlength="4" autocomplete="current-password">
+      <p id="login-message" class="form-message"></p>
+      <button type="button" id="login-submit-button" class="form-button">Login</button>
+      <button type="button" id="login-back-button" class="form-button secondary">Voltar</button>
+      <p class="form-tip">Entre com seu username e PIN de 4 dígitos.</p>
+    </div>
+  </div>
 </body>
 </html>
