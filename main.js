@@ -1,40 +1,41 @@
 // main.js
 
 // 🎬 Importação das cenas principais do jogo
-import LoadingScene from './src/scenes/LoadingScene.js';   // Tela de carregamento inicial
-import LoginScene from './src/scenes/LoginScene.js';       // Tela de Login/Criação de Conta
+import LoadingScene from './src/scenes/LoadingScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js'; // ✨ Tela de Escolha de Autenticação
 import RegisterScene from './src/scenes/RegisterScene.js';   // 🆕 Tela de Criação de Conta
-import StartScene from './src/scenes/StartScene.js';       // Tela "Press any key"
-import MenuScene from './src/scenes/MenuScene.js';         // Menu principal
-import GameScene from './src/scenes/GameScene.js';         // Gameplay principal
-import ShopScene from './src/scenes/ShopScene.js';         // Loja de upgrades
-import RankingScene from './src/scenes/RankingScene.js';   // Ranking de pontuação
-import GameOverScene from './src/scenes/GameOverScene.js'; // Tela de fim de jogo
-import ConfigScene from './src/scenes/ConfigScene.js';     // Configurações
-import StatsScene from './src/scenes/StatsScene.js';       // Tela de estatísticas
+import LoginScene from './src/scenes/LoginScene.js';
+import StartScene from './src/scenes/StartScene.js';
+import MenuScene from './src/scenes/MenuScene.js';
+import GameScene from './src/scenes/GameScene.js';
+import ShopScene from './src/scenes/ShopScene.js';
+import RankingScene from './src/scenes/RankingScene.js';
+import GameOverScene from './src/scenes/GameOverScene.js';
+import ConfigScene from './src/scenes/ConfigScene.js';
+import StatsScene from './src/scenes/StatsScene.js';
 
 // ⚙️ Configurações gerais do Phaser
 const config = {
-  type: Phaser.AUTO,                // Usa WebGL se possível, senão fallback para Canvas
+  type: Phaser.AUTO,
   width: 480,
   height: 800,
   backgroundColor: '#000000',
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,                // Desativa o modo de depuração
-      gravity: { y: 0 }           // Sem gravidade no jogo (movimento top-down)
+      debug: false,
+      gravity: { y: 0 }
     }
   },
   dom: {
-    createContainer: true, parent: 'phaser-dom-container'         // Permite usar elementos DOM (ex: input de nome)
+    createContainer: true,
+    parent: 'phaser-dom-container' // CORRIGIDO: Especifica o contêiner pai
   },
   scene: [
     LoadingScene,    // 🔄 Tela de carregamento (antes de tudo)
-    LoginScene,      // 🔑 Tela de Login
     AuthChoiceScene, // ✨ Tela de Escolha de Autenticação
     RegisterScene,   // 🆕 Tela de Criação de Conta
+    LoginScene,      // 🔑 Tela de Login
     StartScene,      // 🎮 Tela de abertura estilo arcade
     MenuScene,       // 🧭 Menu principal
     GameScene,       // 🕹️ Cena principal do jogo
@@ -43,7 +44,17 @@ const config = {
     GameOverScene,   // ☠️ Tela de Game Over
     ConfigScene,     // ⚙️ Configurações de som, volume e reset
     StatsScene       // 📊 Tela com atributos comprados
-  ]
+  ],
+  // Otimizações de performance e renderização
+  render: {
+    antialias: false, // Desativa antialiasing para um visual pixelado mais nítido
+    pixelArt: true,   // Configura o renderizador para pixel art
+    roundPixels: true // Ajuda a prevenir subpixel rendering que pode borrar pixel art
+  },
+  scale: {
+    mode: Phaser.Scale.FIT, // Ajusta para caber na tela mantendo a proporção
+    autoCenter: Phaser.Scale.CENTER_BOTH // Centraliza o jogo na tela
+  }
 };
 
 // 🚀 Criação da instância do jogo
@@ -51,6 +62,6 @@ const game = new Phaser.Game(config);
 
 // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
 window.onerror = function (msg, url, lineNo, columnNo, error) {
-  console.warn("Erro capturado no jogo: " + msg); // Alterado de alert para console.warn
-  console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error); // Melhorado o log detalhado
+  console.warn("Erro capturado no jogo: " + msg);
+  console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error);
 };
