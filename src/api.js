@@ -105,10 +105,42 @@ async function getRanking() {
     }
 }
 
+// Validar a sessão atual usando o token JWT
+async function validateCurrentSession(token) {
+    if (!token) {
+        console.log('validateCurrentSession: No token provided.');
+        return { success: false, message: 'No token provided for session validation.' };
+    }
+    try {
+        const response = await fetch(`${BASE_URL}/auth/me`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+        // handleResponse irá lançar um erro se !response.ok (ex: token inválido -> 403)
+        const data = await handleResponse(response);
+        // Espera-se que o backend retorne { success: true, user: { username, max_score } }
+        if (data.success && data.user) {
+            return { success: true, user: data.user };
+        } else {
+            // Caso o backend retorne success: false mas com status 200 (pouco provável para este endpoint)
+            throw new Error(data.message || 'Session validation failed, user data not received.');
+        }
+    } catch (error) {
+        console.error('Error in validateCurrentSession:', error.message);
+        // Se handleResponse lançou erro (ex: por status 401, 403, 404), a mensagem já estará em error.message
+        // Retorna um objeto de erro padronizado
+        return { success: false, message: error.message || 'Network error or server is unreachable during session validation.' };
+    }
+}
+
 export {
     registerUser,
     loginUser,
     submitScore,
     getRanking,
+    validateCurrentSession,
     BASE_URL // Exportar BASE_URL pode ser útil para debug ou configuração
 };
