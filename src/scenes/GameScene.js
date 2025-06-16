@@ -11,6 +11,7 @@ import PowerupLogic from '../modules/PowerupLogic.js';
 import { createUIButtons } from '../modules/UIMenuButtons.js';
 import { getUpgrades, saveUpgrades } from '../systems/upgrades.js';
 import SoundManager from '../utils/sound.js';
+import { updateUserMaxScore } from '../database/database.js'; // Added for updating user's max score
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -70,7 +71,7 @@ export default class GameScene extends Phaser.Scene {
     this.activePowerUps = {};
     this.coinsEarned = 0;
     this.baseEnemyHp = 1;
-    this.baseBossHp = 10;
+    this.baseBossHp = 100;
     this.gamePaused = false;
 
     const saved = getUpgrades();
@@ -166,17 +167,72 @@ export default class GameScene extends Phaser.Scene {
     this.hud.updateHUD();
   }
 
-  handleGameOver() {
+  async handleGameOver() { // Make async due to updateUserMaxScore
+    // 1. Stop game sounds
+    SoundManager.stopAll(this);
+    SoundManager.play(this, 'gameover');
+
+    // 2. Handle coins and local upgrades (existing logic)
     const upgrades = getUpgrades();
     upgrades.coins += this.coinsEarned;
     saveUpgrades(upgrades);
 
-    SoundManager.stopAll(this);
-    SoundManager.play(this, 'gameover');
+    // 3. Anti-Cheat Checks
+    let finalScore = this.score;
+    const MAX_ALLOWED_SCORE = 1000000; // Example hard cap for score
+    const MAX_REASONABLE_LIVES = 10;   // Example hard cap for lives at game end
 
+    let cheatDetected = false;
+
+    if (this.score > MAX_ALLOWED_SCORE) {
+        console.warn(`Anti-Cheat: Score ${this.score} exceeds max allowed ${MAX_ALLOWED_SCORE}. Resetting to 0.`);
+        finalScore = 0; // Or clamp to MAX_ALLOWED_SCORE, or don't save
+        cheatDetected = true;
+    }
+
+    // Check current lives. this.playerStats should be available.
+    if (this.playerStats && this.playerStats.extraLives > MAX_REASONABLE_LIVES) {
+        console.warn(`Anti-Cheat: Player extra lives ${this.playerStats.extraLives} exceeds reasonable max ${MAX_REASONABLE_LIVES}. Resetting score to 0.`);
+        finalScore = 0; // Or don't save
+        cheatDetected = true;
+    }
+
+    if (cheatDetected) {
+        // Optionally, provide different feedback or less reward if cheat is detected
+        console.warn('Anti-Cheat: Potential cheat detected. Score will not be saved or will be penalized.');
+        // For now, finalScore is 0 if any cheat is detected.
+    }
+
+    // 4. Update User's Max Score in Database
+    const loggedInUser = this.registry.get('loggedInUser');
+    if (loggedInUser && loggedInUser.username && !cheatDetected) {
+        try {
+            const updated = await updateUserMaxScore(loggedInUser.username, finalScore);
+            if (updated) {
+                console.log(`Max score for ${loggedInUser.username} updated to ${finalScore}.`);
+                // Update score in registry if it changed, so other scenes are aware if needed
+                const updatedUserData = { ...loggedInUser, max_score: finalScore };
+                this.registry.set('loggedInUser', updatedUserData);
+            } else {
+                console.log(`Current score ${finalScore} is not higher than existing max score for ${loggedInUser.username}.`);
+            }
+        } catch (error) {
+            console.error("Error updating user max score:", error);
+        }
+    } else if (!loggedInUser || !loggedInUser.username) {
+        console.warn('GameScene: No logged-in user found, cannot save score to database.');
+    } else if (cheatDetected) {
+        console.log(`GameScene: Cheat detected, score for ${loggedInUser.username} not saved.`);
+    }
+
+
+    // 5. Transition to GameOverScene
+    // Pass both original score (for display) and potentially adjusted finalScore (if needed by GameOverScene)
     this.scene.start('GameOverScene', {
-      score: this.score,
-      coinsEarned: this.coinsEarned
+        score: this.score, // Original score for display
+        finalScore: finalScore, // Validated score
+        coinsEarned: this.coinsEarned,
+        cheatDetected: cheatDetected // Pass flag to GameOverScene
     });
   }
 

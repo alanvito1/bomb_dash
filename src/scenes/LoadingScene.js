@@ -1,5 +1,7 @@
 // src/scenes/LoadingScene.js
 import SoundManager from '../utils/sound.js';
+// We need initDB and getUser to validate the auto-login user
+import { initDB, getUser } from '../database/database.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -34,15 +36,37 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // Carrega todos os assets
-    SoundManager.loadAll(this);
-    this.load.image('bg', 'src/assets/menu_bg_vertical.png');
+    SoundManager.loadAll(this); // Ensure sounds are loaded
+    this.load.image('bg', 'src/assets/menu_bg_vertical.png'); // Example asset
     this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
-  create() {
-    // Espera 500ms para não cortar visualmente
-    this.time.delayedCall(500, () => {
-      this.scene.start('StartScene'); // vai pra tela inicial
+  async create() {
+    // Initialize DB connection first
+    await initDB();
+
+    this.time.delayedCall(500, async () => { // Mark callback as async
+        const loggedInUserUsername = localStorage.getItem('loggedInUser');
+
+        if (loggedInUserUsername) {
+            // User token found, try to validate and get data using the new getUser function
+            const user = await getUser(loggedInUserUsername); // New way
+
+            if (user) { // Check if user object is returned (meaning user exists in DB)
+                console.log(`LoadingScene: Auto-login validated for user: ${user.username}. Max score: ${user.max_score}.`);
+                this.registry.set('loggedInUser', { username: user.username, max_score: user.max_score });
+                this.scene.start('StartScene'); // Or MenuScene directly
+            } else {
+                // User from localStorage not found in DB, clear invalid token
+                console.log(`LoadingScene: User ${loggedInUserUsername} from localStorage not found in DB. Clearing token.`);
+                localStorage.removeItem('loggedInUser');
+                this.scene.start('LoginScene');
+            }
+        } else {
+            // No auto-login user found, go to LoginScene
+            console.log('LoadingScene: No auto-login user. Proceeding to LoginScene.');
+            this.scene.start('LoginScene');
+        }
     });
   }
 }

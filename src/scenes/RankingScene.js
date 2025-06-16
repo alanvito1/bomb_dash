@@ -1,4 +1,6 @@
+// src/scenes/RankingScene.js
 import SoundManager from '../utils/sound.js';
+import { getRankingTop10, initDB } from '../database/database.js'; // Import database functions
 
 export default class RankingScene extends Phaser.Scene {
   constructor() {
@@ -7,64 +9,85 @@ export default class RankingScene extends Phaser.Scene {
 
   preload() {
     SoundManager.loadAll(this);
+    // Ensure webfont is loaded if not already, for consistent styling
+    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
-  create() {
+  async create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    this.cameras.main.setBackgroundColor('#000');
+    this.cameras.main.setBackgroundColor('#000033'); // Consistent dark blue background
 
-    // Título do ranking
-    this.add.text(centerX, 60, '🏆 TOP 10 RANKING', {
-      fontSize: '32px',
-      fill: '#00ffff',
-      fontFamily: 'monospace',
-      stroke: '#000',
-      strokeThickness: 3
-    }).setOrigin(0.5);
+    // Attempt to initialize DB just in case, though it should be up by now.
+    // In a more robust app, DB readiness would be guaranteed by an earlier scene.
+    await initDB();
 
-    // Recuperar e ordenar ranking
-    const fullRanking = JSON.parse(localStorage.getItem('ranking') || '[]');
-    const ranking = fullRanking
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10); // mostra só os 10 melhores
+    // Get logged-in user details from registry
+    const loggedInUser = this.registry.get('loggedInUser'); // Format: { username: 'name', max_score: ... }
 
-    if (ranking.length === 0) {
-      this.add.text(centerX, centerY, 'No scores yet.', {
-        fontSize: '20px',
-        fill: '#fff',
-        fontFamily: 'monospace'
-      }).setOrigin(0.5);
-    } else {
-      ranking.forEach((entry, index) => {
-        const position = `${index + 1}.`.padEnd(4);
-        const name = entry.name.padEnd(12);
-        const score = `${entry.score} pts`;
-        const row = `${position}${name} - ${score}`;
-
-        this.add.text(centerX, 110 + index * 30, row, {
+    // Load font then create content
+    WebFont.load({
+      google: { families: ['Press Start 2P'] },
+      active: async () => {
+        // Título do ranking
+        this.add.text(centerX, 80, '🏆 TOP 10 RANKING 🏆', {
+          fontFamily: '"Press Start 2P"',
           fontSize: '20px',
-          fill: '#ffffff',
-          fontFamily: 'monospace'
+          fill: '#00ffff',
+          align: 'center'
         }).setOrigin(0.5);
-      });
-    }
 
-    // Botão de voltar
-    const backBtn = this.add.text(centerX, 520, '[ BACK TO MENU ]', {
-      fontSize: '20px',
-      fill: '#0ff',
-      fontFamily: 'monospace',
-      backgroundColor: '#111',
-      padding: { x: 10, y: 5 }
-    })
-    .setOrigin(0.5)
-    .setInteractive();
+        // Fetch ranking data from database
+        const ranking = await getRankingTop10(); // Returns array of { username: 'name', score: 123 }
 
-    backBtn.on('pointerdown', () => {
-      SoundManager.play(this, 'click');
-      this.scene.start('MenuScene');
+        if (ranking.length === 0) {
+          this.add.text(centerX, centerY, 'No scores yet.\nBe the first!', { // Added newline for better display
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            fill: '#fff',
+            align: 'center'
+          }).setOrigin(0.5);
+        } else {
+          ranking.forEach((entry, index) => {
+            const position = `${index + 1}.`.padEnd(3);
+            // Shorten name if too long, though DB schema doesn't enforce length
+            const name = entry.username.substring(0, 10).padEnd(10);
+            const score = `${String(entry.score).padStart(6, ' ')} pts`; // Pad score for alignment
+            const rowText = `${position} ${name}  ${score}`;
+
+            let textColor = '#ffffff'; // Default color
+            if (loggedInUser && entry.username === loggedInUser.username) {
+              textColor = '#FFD700'; // Highlight logged-in user (Gold color)
+            }
+
+            this.add.text(centerX, 150 + index * 35, rowText, {
+              fontFamily: '"Press Start 2P"',
+              fontSize: '14px',
+              fill: textColor,
+              align: 'left' // Align text rows to the left under center
+            }).setOrigin(0.5, 0.5); // Center each text line
+          });
+        }
+
+        // Botão de voltar
+        const backBtn = this.add.text(centerX, this.scale.height - 80, '[ BACK TO MENU ]', {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '16px',
+          fill: '#00ffff',
+          backgroundColor: '#00000099',
+          padding: { x: 10, y: 5 }
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+
+        backBtn.on('pointerdown', () => {
+          SoundManager.play(this, 'click');
+          this.scene.start('MenuScene');
+        });
+        backBtn.on('pointerover', () => backBtn.setStyle({ fill: '#ffffff' }));
+        backBtn.on('pointerout', () => backBtn.setStyle({ fill: '#00ffff' }));
+      }
     });
   }
 }
