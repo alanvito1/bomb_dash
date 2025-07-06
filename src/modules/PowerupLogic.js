@@ -37,8 +37,17 @@ export default class PowerupLogic {
     powerup.destroy();
     SoundManager.play(this.scene, 'powerup_collect');
 
-    // const duration = 5000; // Duração padrão de 5 segundos para anti-buffs. Power-ups positivos mantêm 10s.
     let currentEffectDuration = (id === 'powerup6' || id === 'powerup7' || id === 'powerup8') ? 5000 : 10000;
+
+    // Show message for anti-buffs
+    const antiBuffColor = '#ff6666'; // A reddish color for warnings
+    if (id === 'powerup6') {
+      this.scene.hud?.showTemporaryMessage?.('MORE ENEMIES!', 3000, antiBuffColor);
+    } else if (id === 'powerup7') {
+      this.scene.hud?.showTemporaryMessage?.('FASTER SPAWNS!', 3000, antiBuffColor);
+    } else if (id === 'powerup8') {
+      this.scene.hud?.showTemporaryMessage?.('BOMB SIZE DOWN!', 3000, antiBuffColor);
+    }
 
 
     if (this.activePowerups[id] && this.activePowerups[id].event) {
