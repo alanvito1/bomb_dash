@@ -1,4 +1,3 @@
-// import { getUpgrades, saveUpgrades } from '../systems/upgrades.js'; // REMOVIDO
 import SoundManager from '../utils/sound.js';
 
 // Constantes
