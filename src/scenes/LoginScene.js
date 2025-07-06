@@ -1,6 +1,11 @@
 // src/scenes/LoginScene.js (Controlador para Formulário HTML)
-import { loginUser } from '../api.js';
+import { loginUser, getPlayerStatsFromServer } from '../api.js'; // Import getPlayerStatsFromServer
 import SoundManager from '../utils/sound.js';
+
+// Helper function for localStorage (similar to GameScene/ShopScene)
+function savePlayerStatsToLocalStorage(stats) {
+  localStorage.setItem('playerStats', JSON.stringify(stats));
+}
 
 export default class LoginScene extends Phaser.Scene {
   constructor() {
@@ -84,7 +89,21 @@ export default class LoginScene extends Phaser.Scene {
       localStorage.removeItem('playerUpgrades'); // Old key
       localStorage.removeItem('bomb_dash_sqlite_db'); // Old sql.js db
       localStorage.removeItem('playerStats'); // Current key for shop/game stats
-      console.log('[LoginScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage.');
+      console.log('[LoginScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage PRIOR to server sync.');
+
+      // Agora, tente carregar stats do servidor
+      const serverStatsResult = await getPlayerStatsFromServer(result.token);
+      if (serverStatsResult.success && serverStatsResult.stats) {
+        savePlayerStatsToLocalStorage(serverStatsResult.stats);
+        console.log('[LoginScene] Stats do jogador carregados do servidor e salvos no localStorage:', serverStatsResult.stats);
+      } else if (serverStatsResult.success && !serverStatsResult.stats) {
+        console.log('[LoginScene] Nenhum stats encontrado no servidor para este usuário (novo usuário ou sem jogos salvos). localStorage permanece limpo para defaults.');
+        // localStorage já foi limpo, então o jogo usará defaults.
+      } else {
+        // Falha ao buscar stats do servidor, mas o login foi bem-sucedido.
+        // Deixar localStorage limpo para usar defaults. Poderia mostrar uma mensagem se desejado.
+        console.warn('[LoginScene] Falha ao carregar stats do servidor após login:', serverStatsResult.message);
+      }
 
       this.setMessage(`Bem-vindo, ${result.user.username}!`, 'success');
       SoundManager.play(this, 'submit');

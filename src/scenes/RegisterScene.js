@@ -1,6 +1,11 @@
 // src/scenes/RegisterScene.js (Controlador para Formulário HTML)
-import { registerUser, loginUser } from '../api.js';
+import { registerUser, loginUser, getPlayerStatsFromServer } from '../api.js'; // Import getPlayerStatsFromServer
 import SoundManager from '../utils/sound.js';
+
+// Helper function for localStorage
+function savePlayerStatsToLocalStorage(stats) {
+  localStorage.setItem('playerStats', JSON.stringify(stats));
+}
 
 export default class RegisterScene extends Phaser.Scene {
   constructor() {
@@ -104,7 +109,14 @@ export default class RegisterScene extends Phaser.Scene {
         localStorage.removeItem('playerUpgrades'); // Old key
         localStorage.removeItem('bomb_dash_sqlite_db'); // Old sql.js db
         localStorage.removeItem('playerStats'); // Current key for shop/game stats
-        console.log('[RegisterScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage.');
+        console.log('[RegisterScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage PRIOR to server sync for new user.');
+
+        // Para um usuário recém-registrado, não esperamos stats do servidor.
+        // getPlayerStatsFromServer provavelmente retornará { success: true, stats: null }.
+        // Então, o localStorage permanecerá limpo, e o jogo usará defaults, o que é correto.
+        // Poderíamos chamar getPlayerStatsFromServer para consistência, mas não é estritamente necessário
+        // assumindo que um novo usuário não terá stats pré-existentes no servidor.
+        // Ex: await getPlayerStatsFromServer(loginResult.token); // Não faria nada se retornasse null.
 
         SoundManager.play(this, 'submit');
         // Esconder formulário ANTES de mudar de cena para evitar flash
