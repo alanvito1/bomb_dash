@@ -80,17 +80,21 @@ export default class GameScene extends Phaser.Scene {
     this.gamePaused = false;
 
     // Inicialização de stats do jogador e flags de anti-buff
-    // const saved = getUpgrades(); // REMOVIDO
-    this.playerStats = JSON.parse(JSON.stringify(this.DEFAULT_STATS)); // Sempre começa com stats padrão
-    console.log('[GameScene] Player stats inicializados com DEFAULT_STATS.');
+    const localStats = getPlayerStatsFromLocalStorage();
+    // Start with defaults, then layer localStats (from shop purchases), then server coins for authoritative coin count.
+    this.playerStats = { ...this.DEFAULT_STATS, ...(localStats || {}) };
+    console.log('[GameScene] Player stats initialized with DEFAULT_STATS and merged with localStorage stats:', this.playerStats);
 
     const loggedInUser = this.registry.get('loggedInUser');
-    if (loggedInUser && loggedInUser.coins) { // Verifica se coins existem no usuário logado
-      console.log('[GameScene] Usuário logado encontrado:', loggedInUser.username, 'Moedas:', loggedInUser.coins);
-      this.playerStats.coins = loggedInUser.coins; // Carrega moedas do servidor
+    if (loggedInUser && typeof loggedInUser.coins === 'number') { // Check if coins exist and is a number
+      console.log('[GameScene] Usuário logado encontrado:', loggedInUser.username, 'Moedas do servidor:', loggedInUser.coins);
+      this.playerStats.coins = loggedInUser.coins; // Server coins override local/default coins
+      console.log('[GameScene] Player stats coins updated from server:', this.playerStats.coins);
     } else {
-      console.log('[GameScene] Nenhum usuário logado ou sem moedas no servidor, usando DEFAULT_STATS puros para moedas.');
+      console.log('[GameScene] Nenhum usuário logado ou sem moedas no servidor. Usando moedas dos stats locais/padrão:', this.playerStats.coins);
     }
+    // Ensure playerStats always has all DEFAULT_STATS fields, even if localStats was partial or null
+    // The spread operator logic above should handle this, but an explicit merge can be added if issues arise.
 
     // Inicializa variáveis para anti-buffs
     this.enemySpawnMultiplier = 1;

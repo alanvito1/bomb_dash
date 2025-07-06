@@ -85,9 +85,17 @@ export default class MenuScene extends Phaser.Scene {
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
           if (item.action === 'logout') {
+            // Clear user session data
             localStorage.removeItem('loggedInUser');
-            this.registry.remove('loggedInUser'); // Clear from registry too
-            this.scene.start('LoginScene');
+            localStorage.removeItem('jwtToken');
+            this.registry.remove('loggedInUser');
+            this.registry.remove('jwtToken');
+
+            // Clear local game progress/stats
+            localStorage.removeItem('playerStats');
+
+            console.log('[MenuScene] User logged out. Cleared loggedInUser, jwtToken, and playerStats from localStorage and registry.');
+            this.scene.start('AuthChoiceScene'); // Go to AuthChoiceScene instead of LoginScene for a cleaner flow
           } else {
             this.scene.start(item.scene);
           }
