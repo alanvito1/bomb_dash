@@ -11,6 +11,16 @@ import { createUIButtons } from '../modules/UIMenuButtons.js';
 // import { getUpgrades, saveUpgrades } from '../systems/upgrades.js'; // REMOVIDO
 import SoundManager from '../utils/sound.js';
 
+// Helper functions for localStorage (similar to ShopScene)
+function getPlayerStatsFromLocalStorage() {
+  const stats = localStorage.getItem('playerStats');
+  return stats ? JSON.parse(stats) : null;
+}
+
+function savePlayerStatsToLocalStorage(stats) {
+  localStorage.setItem('playerStats', JSON.stringify(stats));
+}
+
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
@@ -203,6 +213,23 @@ export default class GameScene extends Phaser.Scene {
     // const upgrades = getUpgrades(); // REMOVIDO
     // upgrades.coins += this.coinsEarned; // REMOVIDO - Moedas serão gerenciadas pelo servidor
     // saveUpgrades(upgrades); // REMOVIDO
+
+    // Calculate coins earned from the current game's score
+    this.coinsEarned = Math.floor(this.score / 10);
+
+    // Update total coins in localStorage
+    let playerStats = getPlayerStatsFromLocalStorage();
+    if (playerStats) {
+      playerStats.coins = (playerStats.coins || 0) + this.coinsEarned;
+      savePlayerStatsToLocalStorage(playerStats);
+      console.log(`[GameScene] Updated coins in localStorage. New total: ${playerStats.coins}`);
+    } else {
+      // If no stats in localStorage, save current earnings (and default stats if needed)
+      // This case might indicate first game or cleared storage.
+      // For simplicity, just saving coins earned. ShopScene initializes with defaults if no stats.
+      savePlayerStatsToLocalStorage({ coins: this.coinsEarned });
+      console.log(`[GameScene] No existing stats in localStorage. Saved current earnings: ${this.coinsEarned}`);
+    }
 
     let finalScore = this.score;
     const MAX_ALLOWED_SCORE = 1000000;

@@ -90,4 +90,29 @@ export default class HUD {
     this.powerupText[id]?.destroy();
     delete this.powerupText[id];
   }
+
+  showTemporaryMessage(message, duration = 3000, color = '#ff0000') {
+    if (this.temporaryMessage) {
+      this.temporaryMessage.destroy();
+    }
+
+    const centerX = this.scene.cameras.main.centerX;
+    const y = this.scene.cameras.main.centerY * 0.5; // Display somewhat above center
+
+    this.temporaryMessage = this.scene.add.text(centerX, y, message, {
+      fontSize: '24px', // Larger font for visibility
+      fill: color,
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center'
+    }).setOrigin(0.5);
+
+    this.scene.time.delayedCall(duration, () => {
+      if (this.temporaryMessage) {
+        this.temporaryMessage.destroy();
+        this.temporaryMessage = null;
+      }
+    });
+  }
 }
