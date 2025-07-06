@@ -1,5 +1,14 @@
-import { getUpgrades, saveUpgrades } from '../systems/upgrades.js';
 import SoundManager from '../utils/sound.js';
+
+// Helper functions to replace getUpgrades and saveUpgrades using localStorage
+function getUpgradesFromLocalStorage() {
+  const stats = localStorage.getItem('playerStats');
+  return stats ? JSON.parse(stats) : null;
+}
+
+function saveUpgradesToLocalStorage(stats) {
+  localStorage.setItem('playerStats', JSON.stringify(stats));
+}
 
 export default class ShopScene extends Phaser.Scene {
   constructor() {
@@ -92,7 +101,7 @@ export default class ShopScene extends Phaser.Scene {
         if (this.playerStats.coins >= cost) {
           btn.effect();
           this.playerStats.coins -= cost;
-          saveUpgrades(this.playerStats);
+          saveUpgradesToLocalStorage(this.playerStats);
 
           SoundManager.play(this, 'upgrade');
 
@@ -117,12 +126,12 @@ export default class ShopScene extends Phaser.Scene {
       fontFamily: 'monospace'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
       SoundManager.play(this, 'click');
-      saveUpgrades(this.playerStats);
+      saveUpgradesToLocalStorage(this.playerStats);
       this.scene.start('MenuScene');
     });
 
     this.events.on('shutdown', () => {
-      saveUpgrades(this.playerStats);
+      saveUpgradesToLocalStorage(this.playerStats);
     });
   }
 
@@ -136,7 +145,7 @@ export default class ShopScene extends Phaser.Scene {
       multiShot: 0,
       coins: 0
     };
-    const saved = getUpgrades();
+    const saved = getUpgradesFromLocalStorage();
     return { ...defaultStats, ...(saved || {}) };
   }
 }
