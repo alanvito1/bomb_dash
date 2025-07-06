@@ -37,7 +37,7 @@ export default class PowerupLogic {
     powerup.destroy();
     SoundManager.play(this.scene, 'powerup_collect');
 
-    let currentEffectDuration = (id === 'powerup6' || id === 'powerup7' || id === 'powerup8') ? 5000 : 10000;
+    let currentEffectDuration = (id === 'powerup6' || id === 'powerup7' || id === 'powerup8') ? 15000 : 10000; // Anti-buffs now 15s
 
     // Show message for anti-buffs
     const antiBuffColor = '#ff6666'; // A reddish color for warnings
@@ -135,10 +135,17 @@ export default class PowerupLogic {
         break;
 
       // Anti-Buffs (Power-downs)
-      case 'powerup6': // Multiplicar Inimigos
-        this.scene.enemySpawnMultiplier = 2; // Ou um fator configurável
-        this.scene.enemySpawnMultiplierActive = true;
-        console.log('[PowerupLogic] Anti-buff: Multiplicar Inimigos ATIVADO');
+      case 'powerup6': // More Enemies - Instant Wave
+        if (this.scene.enemySpawner && typeof this.scene.enemySpawner.spawnImmediateWave === 'function') {
+          const waveSize = 10 + Math.floor((this.scene.level || 1) / 5); // Example: 10 enemies + 1 per world
+          this.scene.enemySpawner.spawnImmediateWave(waveSize);
+          console.log(`[PowerupLogic] Anti-buff: Spawned immediate wave of ${waveSize} enemies.`);
+        } else {
+          console.warn('[PowerupLogic] EnemySpawner or spawnImmediateWave method not found for powerup6.');
+        }
+        // No longer setting enemySpawnMultiplierActive, this is an instant effect.
+        // If we want it to *also* multiply regular spawns during its duration, that would be an addition.
+        // For now, focusing on the "instant wave" aspect.
         break;
       case 'powerup7': // Acelerar Spawn de Inimigos
         if (!this.scene.enemySpawnSpeedActive && this.scene.enemySpawner && typeof this.scene.enemySpawner.getSpawnInterval === 'function') {
@@ -149,8 +156,9 @@ export default class PowerupLogic {
         } else if (!this.scene.enemySpawner || typeof this.scene.enemySpawner.getSpawnInterval !== 'function') {
              console.warn('[PowerupLogic] EnemySpawner ou seus métodos de intervalo não encontrados na cena para powerup7.');
         }
-        this.scene.enemySpawnSpeedActive = true;
-        console.log('[PowerupLogic] Anti-buff: Acelerar Spawn de Inimigos ATIVADO');
+        this.scene.enemySpawnSpeedActive = true; // Flag for faster spawn interval
+        this.scene.increaseEnemySpeedActive = true; // Flag for faster enemy movement
+        console.log('[PowerupLogic] Anti-buff: Acelerar Spawn de Inimigos E Velocidade de Movimento ATIVADO');
         break;
       case 'powerup8': // Diminuir Tamanho do Tiro
         if (!this.scene.bombSizeDebuffActive) {
@@ -196,10 +204,10 @@ export default class PowerupLogic {
       // case 'powerup5': // VIDA EXTRA - Não tem remoção.
 
       // Anti-Buffs (Power-downs)
-      case 'powerup6': // Multiplicar Inimigos
-        this.scene.enemySpawnMultiplier = 1;
-        this.scene.enemySpawnMultiplierActive = false;
-        console.log('[PowerupLogic] Anti-buff: Multiplicar Inimigos DESATIVADO');
+      case 'powerup6': // More Enemies - Instant Wave
+        // This is now an instant effect, no specific removal logic needed unless it also applies a timed multiplier.
+        // If it only spawns an instant wave, this removal part is not strictly necessary for that aspect.
+        console.log('[PowerupLogic] Anti-buff: More Enemies (instant wave) effect period ended (no specific state to revert for instant part).');
         break;
       case 'powerup7': // Acelerar Spawn de Inimigos
         if (this.scene.enemySpawner && typeof this.scene.enemySpawner.setSpawnInterval === 'function' && this.scene.originalEnemySpawnInterval) {
@@ -208,7 +216,8 @@ export default class PowerupLogic {
             console.warn('[PowerupLogic] EnemySpawner ou setSpawnInterval não encontrado na cena ao remover powerup7.');
         }
         this.scene.enemySpawnSpeedActive = false;
-        console.log('[PowerupLogic] Anti-buff: Acelerar Spawn de Inimigos DESATIVADO');
+        this.scene.increaseEnemySpeedActive = false; // Revert enemy speed flag
+        console.log('[PowerupLogic] Anti-buff: Acelerar Spawn de Inimigos E Velocidade de Movimento DESATIVADO');
         break;
       case 'powerup8': // Diminuir Tamanho do Tiro
         // Restaura para o tamanho que era ANTES do debuff ser aplicado.

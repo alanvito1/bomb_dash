@@ -1,13 +1,29 @@
 import SoundManager from '../utils/sound.js';
 
+import { savePlayerStatsToServer } from '../api.js'; // Import savePlayerStatsToServer
 // Helper functions to replace getUpgrades and saveUpgrades using localStorage
 function getUpgradesFromLocalStorage() {
   const stats = localStorage.getItem('playerStats');
   return stats ? JSON.parse(stats) : null;
 }
 
-function saveUpgradesToLocalStorage(stats) {
+async function saveUpgradesToLocalStorageAndServer(sceneContext, stats) {
   localStorage.setItem('playerStats', JSON.stringify(stats));
+  console.log('[ShopScene] Stats saved to localStorage.');
+
+  const token = localStorage.getItem('jwtToken') || sceneContext.registry.get('jwtToken');
+  if (token) {
+    console.log('[ShopScene] Attempting to save stats to server...');
+    const result = await savePlayerStatsToServer(stats, token);
+    if (result.success) {
+      console.log('[ShopScene] Stats successfully saved to server.');
+    } else {
+      console.warn('[ShopScene] Failed to save stats to server:', result.message);
+      // Optionally, notify the user that server sync failed but progress is saved locally.
+    }
+  } else {
+    console.warn('[ShopScene] No token found, cannot save stats to server. Progress only saved locally.');
+  }
 }
 
 export default class ShopScene extends Phaser.Scene {
@@ -101,7 +117,7 @@ export default class ShopScene extends Phaser.Scene {
         if (this.playerStats.coins >= cost) {
           btn.effect();
           this.playerStats.coins -= cost;
-          saveUpgradesToLocalStorage(this.playerStats);
+          saveUpgradesToLocalStorageAndServer(this, this.playerStats);
 
           SoundManager.play(this, 'upgrade');
 
@@ -126,12 +142,20 @@ export default class ShopScene extends Phaser.Scene {
       fontFamily: 'monospace'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
       SoundManager.play(this, 'click');
-      saveUpgradesToLocalStorage(this.playerStats);
+      // No specific need to save to server here if individual purchases are saved,
+      // but saving to localStorage is good practice.
+      // Or, make it consistent and save to server on exit too. For now, local save is fine.
+      localStorage.setItem('playerStats', JSON.stringify(this.playerStats)); // Just local save on exit
       this.scene.start('MenuScene');
     });
 
+    // It might be excessive to save to server on every shutdown if purchases already do.
+    // However, if coins could change by other means not yet implemented, this might be a fallback.
+    // For now, removing server save from shutdown to avoid too many calls if not strictly needed.
     this.events.on('shutdown', () => {
-      saveUpgradesToLocalStorage(this.playerStats);
+      // saveUpgradesToLocalStorageAndServer(this, this.playerStats); // Potentially too frequent
+      localStorage.setItem('playerStats', JSON.stringify(this.playerStats));
+      console.log('[ShopScene] Shutdown: Stats ensured saved to localStorage.');
     });
   }
 

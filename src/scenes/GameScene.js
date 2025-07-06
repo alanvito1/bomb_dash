@@ -1,5 +1,5 @@
 // 🎮 GameScene.js – Cena principal do jogo (gameplay)
-import { submitScore } from '../api.js';
+import { submitScore, savePlayerStatsToServer } from '../api.js'; // Import savePlayerStatsToServer
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
@@ -101,6 +101,7 @@ export default class GameScene extends Phaser.Scene {
     this.enemySpawnMultiplierActive = false;
     // this.originalEnemySpawnInterval será definido após a criação do enemySpawner
     this.enemySpawnSpeedActive = false;
+    this.increaseEnemySpeedActive = false; // Initialize new flag for powerup7
     this.playerStats.originalBombSizeForDebuff = this.playerStats.bombSize; // Salva o tamanho inicial/base
     this.bombSizeDebuffActive = false;
 
@@ -211,6 +212,24 @@ export default class GameScene extends Phaser.Scene {
   }
 
   async handleGameOver() {
+    // Prevent multiple calls or actions if already game over
+    if (this.gamePaused || this.transitioning) {
+      // 'transitioning' might be set by next stage dialog, gamePaused is more general for game over
+      // If gamePaused is set by this function, this check prevents re-entry.
+      // If another path sets transitioning (like next stage), we also want to avoid conflict.
+      // A more robust way could be to check if the 'GameOverScene' is already starting/active.
+      // For now, this.gamePaused should suffice if set early.
+      return;
+    }
+    this.gamePaused = true; // Stop player input, enemy movement/spawning via update() checks
+    if (this.player) {
+        this.player.setActive(false); // Make player non-interactive
+    }
+    if (this.bombTimer) {
+        this.bombTimer.paused = true; // Stop bomb firing
+    }
+    // Stop enemy spawners, etc. EnemySpawner's spawn() method should check this.gamePaused.
+
     SoundManager.stopAll(this);
     SoundManager.play(this, 'gameover');
 
@@ -253,28 +272,43 @@ export default class GameScene extends Phaser.Scene {
 
     const token = localStorage.getItem('jwtToken') || this.registry.get('jwtToken');
     const loggedInUser = this.registry.get('loggedInUser');
-    let serverResponse = null;
+    let serverResponse = null; // For score submission
+    let statsSaveResponse = null; // For stats submission
 
     if (token && loggedInUser && loggedInUser.username && !cheatDetected) {
+      // Submit score
       console.log(`Submitting score: ${finalScore} for user: ${loggedInUser.username}`);
       serverResponse = await submitScore(finalScore, token);
       if (serverResponse.success) {
         console.log('Score submitted successfully to server.', serverResponse);
         if (serverResponse.new_max_score !== undefined) {
-            loggedInUser.max_score = serverResponse.new_max_score;
-            this.registry.set('loggedInUser', { ...loggedInUser });
+            loggedInUser.max_score = serverResponse.new_max_score; // Update local registry for immediate use
         }
       } else {
         console.warn('Failed to submit score to server:', serverResponse.message);
       }
-      // Lógica de submissão de moedas será adicionada aqui quando implementada (Passo 5)
-      // Ex: await api.updateUserCoins(this.coinsEarned, token);
-      //     loggedInUser.coins = await api.getUserCoins(token); // ou algo similar para atualizar
-      //     this.registry.set('loggedInUser', { ...loggedInUser });
+
+      // Save all player stats (including updated coins and any upgrades)
+      // this.playerStats should be up-to-date here from GameScene's own logic and ShopScene purchases via localStorage
+      console.log(`Saving full player stats for user: ${loggedInUser.username}`, this.playerStats);
+      statsSaveResponse = await savePlayerStatsToServer(this.playerStats, token);
+      if (statsSaveResponse.success) {
+        console.log('Player stats saved successfully to server.', statsSaveResponse);
+        // If server modifies/confirms coin total, update registry:
+        // For example, if savePlayerStatsToServer returned the confirmed stats object including coins:
+        // if (statsSaveResponse.data && typeof statsSaveResponse.data.coins === 'number') {
+        //    loggedInUser.coins = statsSaveResponse.data.coins;
+        // }
+        // For now, we assume this.playerStats.coins is authoritative from client perspective after game
+      } else {
+        console.warn('Failed to save player stats to server:', statsSaveResponse.message);
+      }
+      this.registry.set('loggedInUser', { ...loggedInUser }); // Save any updates to registry (e.g. max_score)
+
     } else if (cheatDetected) {
-        console.log(`GameScene: Cheat detected, score for ${loggedInUser ? loggedInUser.username : 'unknown user'} not submitted.`);
+        console.log(`GameScene: Cheat detected, score and stats for ${loggedInUser ? loggedInUser.username : 'unknown user'} not submitted.`);
     } else {
-      console.log('User not logged in or token not found. Score not submitted to server.');
+      console.log('User not logged in or token not found. Score and stats not submitted to server.');
     }
 
     this.scene.start('GameOverScene', {
@@ -304,14 +338,20 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.getChildren().forEach(enemy => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {
-        // this.enemiesKilled++; // Não incrementar aqui, pois o inimigo não foi derrotado pelo jogador
-        enemy.destroy();
-        if (this.playerStats.extraLives > 0) {
-          this.playerStats.extraLives--;
-          SoundManager.play(this, 'player_hit');
-          this.hud.updateHUD();
+        enemy.destroy(); // Enemy is gone
+
+        if (this.gamePaused) return; // Already game over or paused
+
+        this.playerStats.extraLives--;
+        if (this.playerStats.extraLives < 0) this.playerStats.extraLives = 0; // Clamp to 0 for display
+
+        this.hud.updateHUD(); // Update HUD to show new life count
+
+        if (this.playerStats.extraLives === 0) {
+          SoundManager.play(this, 'player_hit'); // Sound for losing the last life this way
+          this.handleGameOver(); // Trigger game over
         } else {
-          this.handleGameOver();
+          SoundManager.play(this, 'player_hit'); // Sound for losing a life but surviving
         }
       }
     });
