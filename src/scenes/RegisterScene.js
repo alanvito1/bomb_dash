@@ -100,6 +100,11 @@ export default class RegisterScene extends Phaser.Scene {
         this.registry.set('loggedInUser', loginResult.user);
         this.registry.set('jwtToken', loginResult.token);
 
+        // Limpar dados legados do localStorage
+        localStorage.removeItem('playerUpgrades');
+        localStorage.removeItem('bomb_dash_sqlite_db'); // Remove BD sql.js antigo
+        console.log('[RegisterScene] Dados legados (playerUpgrades, bomb_dash_sqlite_db) limpos do localStorage.');
+
         SoundManager.play(this, 'submit');
         // Esconder formulário ANTES de mudar de cena para evitar flash
         this.formContainer.style.display = 'none';

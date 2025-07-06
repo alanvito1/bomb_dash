@@ -1,17 +1,33 @@
-import { getUpgrades, saveUpgrades } from '../systems/upgrades.js';
+// import { getUpgrades, saveUpgrades } from '../systems/upgrades.js'; // REMOVIDO
 import SoundManager from '../utils/sound.js';
 
 // Constantes
 const MAX_WORLD = 5;
 const BOSS_INTERVAL = 5;
-const MAX_ENEMIES = 11;
-const SPAWN_DELAY = 800;
+const MAX_ENEMIES_BASE = 11; // Renomeado para indicar que é o base
+const SPAWN_DELAY_BASE = 800; // Renomeado para indicar que é o base
 
 export default class EnemySpawner {
   constructor(scene) {
     this.scene = scene;
-    this.spawnDelay = SPAWN_DELAY;
-    this.maxEnemies = MAX_ENEMIES;
+    this.spawnInterval = SPAWN_DELAY_BASE; // Usar this.spawnInterval para que possa ser modificado
+    this.maxEnemiesBase = MAX_ENEMIES_BASE; // Usar this.maxEnemiesBase
+
+    // getUpgrades e saveUpgrades não são mais usados aqui desde a remoção do sistema de upgrades.js
+    // A lógica de fim de jogo no nível 25 foi movida para GameScene.js ou será tratada lá.
+  }
+
+  // Método para PowerupLogic obter o intervalo de spawn atual
+  getSpawnInterval() {
+    return this.spawnInterval;
+  }
+
+  // Método para PowerupLogic definir um novo intervalo de spawn
+  setSpawnInterval(newInterval) {
+    this.spawnInterval = Math.max(50, newInterval); // Adicionar um limite mínimo para o intervalo (ex: 50ms)
+    console.log(`[EnemySpawner] Spawn interval set to: ${this.spawnInterval}`);
+    // Se um timer de spawn estiver ativo, ele precisaria ser reiniciado para usar o novo intervalo.
+    // A lógica atual em spawn() já cria um novo timer a cada chamada, então isso deve funcionar.
   }
 
   spawn() {
@@ -25,61 +41,69 @@ export default class EnemySpawner {
     const stageInWorld = ((level - 1) % BOSS_INTERVAL) + 1;
     this.scene.stageCode = `${world}-${stageInWorld}`;
 
-    // Fim do jogo após nível 25
-    if (level > 25) {
-      console.log(`[ENEMY SPAWNER] Condição de fim de jogo atingida no nível ${level}`);
-      const upgrades = getUpgrades();
-      upgrades.coins += this.scene.coinsEarned || 0;
-      saveUpgrades(upgrades);
-      return 'GAME_SHOULD_END'; // Sinaliza para GameScene
-    }
+    // Lógica de fim de jogo no nível 25 foi movida para GameScene.js (ou será tratada lá)
+    // if (level > 25) { ... return 'GAME_SHOULD_END'; } // REMOVIDO DAQUI
 
-    // Limpar inimigos anteriores
     this.scene.enemies.clear(true, true);
     this.scene.bossDefeated = false;
     this.scene.bossSpawned = false;
     this.scene.enemiesSpawned = 0;
     this.scene.enemiesKilled = 0;
 
-    // Boss a cada 5 níveis
     if (level % BOSS_INTERVAL === 0) {
       const bossIndex = Math.min(world, MAX_WORLD);
       const bossKey = this.scene.textures.exists(`boss${bossIndex}`) ? `boss${bossIndex}` : 'boss5';
-
       const boss = this.scene.enemies.create(this.scene.scale.width / 2, -50, bossKey);
       boss.setVelocityY(28);
       boss.setDisplaySize(48, 48);
-      boss.hp = this.scene.baseBossHp + level * 2; // Fallback || 10 removido
+      boss.hp = (this.scene.baseBossHp || 100) + level * 2;
       boss.isBoss = true;
-
       this.scene.bossSpawned = true;
       this.scene.enemiesSpawned = 1;
-
       SoundManager.play(this.scene, 'boss_spawn');
-
       console.log(`[ENEMY SPAWNER] Boss wave ${level} (world ${world}) - Spawned ${bossKey} with HP ${boss.hp}`);
       return;
     }
 
-    // Spawn de inimigos comuns
     const enemyIndex = Math.min(world, MAX_WORLD);
     const spriteKey = this.scene.textures.exists(`enemy${enemyIndex}`) ? `enemy${enemyIndex}` : 'enemy5';
 
-    this._spawnEnemy(spriteKey, level);
+    // Aplicar multiplicador de inimigos do powerup6 (Anti-buff)
+    let currentMaxEnemies = this.maxEnemiesBase;
+    if (this.scene.enemySpawnMultiplierActive) {
+      currentMaxEnemies = Math.floor(this.maxEnemiesBase * (this.scene.enemySpawnMultiplier || 1));
+      console.log(`[EnemySpawner] Anti-buff: Multiplicando inimigos. Base: ${this.maxEnemiesBase}, Multiplicador: ${this.scene.enemySpawnMultiplier}, Atual: ${currentMaxEnemies}`);
+    }
 
-    this.scene.time.addEvent({
-      delay: this.spawnDelay,
-      repeat: this.maxEnemies - 1,
-      callback: () => this._spawnEnemy(spriteKey, level)
-    });
+    // Garante que pelo menos um inimigo seja spawnado se currentMaxEnemies for maior que 0
+    currentMaxEnemies = Math.max(1, currentMaxEnemies);
+
+
+    this._spawnEnemy(spriteKey, level); // Spawna o primeiro inimigo
+
+    if (currentMaxEnemies > 1) { // Só cria o timer se houver mais inimigos para spawnar
+        // O timer usará this.spawnInterval, que pode ser modificado pelo powerup7
+        this.scene.time.addEvent({
+        delay: this.spawnInterval,
+        repeat: currentMaxEnemies - 1, // Ajustado para currentMaxEnemies
+        callback: () => this._spawnEnemy(spriteKey, level)
+        });
+    } else {
+        // Se currentMaxEnemies for 1 (ou menos, mas corrigido para 1),
+        // e o primeiro já foi spawnado, não precisamos do timer de repetição.
+        // A lógica de this.scene.enemiesSpawned já conta o primeiro.
+    }
+
 
     SoundManager.play(this.scene, 'wave_start');
-
-    console.log(`[ENEMY SPAWNER] Regular wave ${level} (world ${world}) - Spawning ${this.maxEnemies} ${spriteKey} enemies`);
+    console.log(`[ENEMY SPAWNER] Regular wave ${level} (world ${world}) - Spawning up to ${currentMaxEnemies} ${spriteKey} enemies with interval ${this.spawnInterval}ms`);
   }
 
   _spawnEnemy(spriteKey, level) {
-    if (!this.scene.enemies) return;
+    if (!this.scene.enemies || !this.scene.player || !this.scene.player.active) {
+        // Não spawna se o jogador não estiver ativo (ex: durante transição de game over)
+        return;
+    }
 
     const enemy = this.scene.enemies.create(
       Phaser.Math.Between(50, this.scene.scale.width - 50),
@@ -89,7 +113,7 @@ export default class EnemySpawner {
 
     enemy.setVelocityY((100 + level * 2) * 0.7);
     enemy.setDisplaySize(32, 32);
-    enemy.hp = this.scene.baseEnemyHp + Math.floor((level - 1) / 2); // Fallback || 1 removido
+    enemy.hp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
     enemy.isBoss = false;
 
     this.scene.enemiesSpawned++;

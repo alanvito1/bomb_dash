@@ -80,6 +80,11 @@ export default class LoginScene extends Phaser.Scene {
       this.registry.set('loggedInUser', result.user);
       this.registry.set('jwtToken', result.token);
 
+      // Limpar dados legados do localStorage
+      localStorage.removeItem('playerUpgrades');
+      localStorage.removeItem('bomb_dash_sqlite_db'); // Remove BD sql.js antigo
+      console.log('[LoginScene] Dados legados (playerUpgrades, bomb_dash_sqlite_db) limpos do localStorage.');
+
       this.setMessage(`Bem-vindo, ${result.user.username}!`, 'success');
       SoundManager.play(this, 'submit');
 
