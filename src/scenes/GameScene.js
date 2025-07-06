@@ -291,7 +291,7 @@ export default class GameScene extends Phaser.Scene {
       // Save all player stats (including updated coins and any upgrades)
       // this.playerStats should be up-to-date here from GameScene's own logic and ShopScene purchases via localStorage
       console.log(`Saving full player stats for user: ${loggedInUser.username}`, this.playerStats);
-      statsSaveResponse = await savePlayerStatsToServer(this.playerStats, token);
+      statsSaveResponse = await savePlayerStatsToServer(loggedInUser.username, this.playerStats, token);
       if (statsSaveResponse.success) {
         console.log('Player stats saved successfully to server.', statsSaveResponse);
         // If server modifies/confirms coin total, update registry:

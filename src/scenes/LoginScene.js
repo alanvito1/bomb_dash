@@ -92,7 +92,7 @@ export default class LoginScene extends Phaser.Scene {
       console.log('[LoginScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage PRIOR to server sync.');
 
       // Agora, tente carregar stats do servidor
-      const serverStatsResult = await getPlayerStatsFromServer(result.token);
+      const serverStatsResult = await getPlayerStatsFromServer(result.user.username, result.token);
       if (serverStatsResult.success && serverStatsResult.stats) {
         savePlayerStatsToLocalStorage(serverStatsResult.stats);
         console.log('[LoginScene] Stats do jogador carregados do servidor e salvos no localStorage:', serverStatsResult.stats);

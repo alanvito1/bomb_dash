@@ -12,9 +12,11 @@ async function saveUpgradesToLocalStorageAndServer(sceneContext, stats) {
   console.log('[ShopScene] Stats saved to localStorage.');
 
   const token = localStorage.getItem('jwtToken') || sceneContext.registry.get('jwtToken');
-  if (token) {
-    console.log('[ShopScene] Attempting to save stats to server...');
-    const result = await savePlayerStatsToServer(stats, token);
+  const loggedInUsername = localStorage.getItem('loggedInUser') || sceneContext.registry.get('loggedInUser')?.username;
+
+  if (token && loggedInUsername) {
+    console.log(`[ShopScene] Attempting to save stats to server for user ${loggedInUsername}...`);
+    const result = await savePlayerStatsToServer(loggedInUsername, stats, token);
     if (result.success) {
       console.log('[ShopScene] Stats successfully saved to server.');
     } else {
@@ -22,7 +24,7 @@ async function saveUpgradesToLocalStorageAndServer(sceneContext, stats) {
       // Optionally, notify the user that server sync failed but progress is saved locally.
     }
   } else {
-    console.warn('[ShopScene] No token found, cannot save stats to server. Progress only saved locally.');
+    console.warn('[ShopScene] No token or username found, cannot save stats to server. Progress only saved locally.');
   }
 }
 
