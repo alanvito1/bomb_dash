@@ -1,5 +1,10 @@
-import { getUpgrades } from '../systems/upgrades.js';
 import SoundManager from '../utils/sound.js';
+
+// Helper function to replace getUpgrades using localStorage
+function getUpgradesFromLocalStorage() {
+  const stats = localStorage.getItem('playerStats');
+  return stats ? JSON.parse(stats) : null;
+}
 
 export default class StatsScene extends Phaser.Scene {
   constructor() {
@@ -30,7 +35,15 @@ export default class StatsScene extends Phaser.Scene {
   }
 
   displayStats(centerX) {
-    const upgrades = getUpgrades();
+    const upgrades = getUpgradesFromLocalStorage() || {
+      damage: 1, // Default values if nothing in localStorage
+      speed: 200,
+      extraLives: 1,
+      fireRate: 600,
+      bombSize: 1,
+      multiShot: 0,
+      coins: 0
+    };
 
     const statsToShow = [
       ['Damage', upgrades.damage],
