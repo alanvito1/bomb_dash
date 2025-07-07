@@ -1,5 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
-const DB_PATH = './ranking.sqlite'; // Arquivo do banco de dados será criado no diretório 'backend'
+const DB_PATH = './databasebomb.sqlite'; // Changed database filename
 
 let db = null;
 
@@ -32,12 +32,37 @@ async function initDb() {
             db.run(createUserTableSQL, (err) => {
                 if (err) {
                     console.error('Error creating users table', err.message);
-                    db.close(); // Fecha o BD se a criação da tabela falhar
+                    db.close();
                     db = null;
                     return reject(err);
                 }
                 console.log("Users table initialized or already exists.");
-                resolve(db);
+
+                // Criar a tabela player_stats se não existir
+                const createPlayerStatsTableSQL = `
+                    CREATE TABLE IF NOT EXISTS player_stats (
+                        user_id INTEGER PRIMARY KEY,
+                        damage INTEGER DEFAULT 1,
+                        speed INTEGER DEFAULT 200,
+                        extraLives INTEGER DEFAULT 1,
+                        fireRate INTEGER DEFAULT 600,
+                        bombSize REAL DEFAULT 1.0,
+                        multiShot INTEGER DEFAULT 0,
+                        coins INTEGER DEFAULT 0,
+                        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    );
+                `;
+                db.run(createPlayerStatsTableSQL, (err) => {
+                    if (err) {
+                        console.error('Error creating player_stats table', err.message);
+                        db.close();
+                        db = null;
+                        return reject(err);
+                    }
+                    console.log("Player_stats table initialized or already exists.");
+                    resolve(db);
+                });
             });
         });
     });
@@ -136,6 +161,8 @@ module.exports = {
     findUserByUsername,
     updateUserScore,
     getTop10Players,
+    getPlayerStats, // Added new function
+    savePlayerStats,  // Added new function
     // Função para fechar a conexão com o BD (útil para graceful shutdown)
     closeDb: () => {
         if (db) {
@@ -149,3 +176,65 @@ module.exports = {
         }
     }
 };
+
+// Função para buscar as estatísticas de um jogador
+async function getPlayerStats(userId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const querySQL = `
+            SELECT user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins
+            FROM player_stats
+            WHERE user_id = ?;
+        `;
+        db.get(querySQL, [userId], (err, row) => {
+            if (err) {
+                console.error(`Error finding player_stats for user_id ${userId}:`, err.message);
+                return reject(err);
+            }
+            // Retorna a linha de stats ou undefined se não encontrado
+            // O servidor pode querer retornar 404 se for undefined.
+            // O cliente espera null para stats se não houver, que é o que undefined vai gerar no JSON.
+            resolve(row);
+        });
+    });
+}
+
+// Função para salvar/atualizar as estatísticas de um jogador
+async function savePlayerStats(userId, stats) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const {
+            damage = 1, // Default values matching table schema if not provided in stats object
+            speed = 200,
+            extraLives = 1,
+            fireRate = 600,
+            bombSize = 1.0,
+            multiShot = 0,
+            coins = 0
+        } = stats;
+
+        const upsertSQL = `
+            INSERT INTO player_stats (user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                damage = excluded.damage,
+                speed = excluded.speed,
+                extraLives = excluded.extraLives,
+                fireRate = excluded.fireRate,
+                bombSize = excluded.bombSize,
+                multiShot = excluded.multiShot,
+                coins = excluded.coins,
+                last_updated = CURRENT_TIMESTAMP;
+        `;
+        db.run(upsertSQL, [userId, damage, speed, extraLives, fireRate, bombSize, multiShot, coins], function(err) {
+            if (err) {
+                console.error(`Error saving player_stats for user_id ${userId}:`, err.message);
+                return reject(err);
+            }
+            console.log(`Player_stats saved/updated for user_id ${userId}. Changes: ${this.changes}`);
+            // Retorna o objeto de stats salvo/atualizado para consistência com o que foi escrito.
+            // Para obter o ID do último insert (this.lastID) ou changes (this.changes), é preciso usar function() e não arrow func.
+            resolve({ success: true, userId: userId, stats: stats });
+        });
+    });
+}
