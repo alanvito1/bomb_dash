@@ -77,7 +77,7 @@ export async function savePlayerStatsToServer(username, stats, token) {
   // Ajuste o endpoint e o corpo conforme a definição do seu backend.
   console.log(`[API] Salvando stats para usuário ${username || 'identificado por token'}...`, stats);
   try {
-    const response = await fetch(`${API_BASE_URL}/user/stats`, { // Assumindo endpoint /user/stats
+    const response = await fetch(`${BASE_URL}/user/stats`, { // Corrected to BASE_URL
       method: 'PUT', // Ou POST, dependendo da sua API (PUT é comum para update/replace)
       headers: {
         'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export async function getPlayerStatsFromServer(username, token) {
   // O username pode não ser necessário no path se o backend identificar o usuário pelo token.
   console.log(`[API GETSTATS] Called for username: ${username}. Token: ${token ? 'present' : 'MISSING!'}`);
   try {
-    const response = await fetch(`${API_BASE_URL}/user/stats`, { // Assumindo endpoint /user/stats
+    const response = await fetch(`${BASE_URL}/user/stats`, { // Corrected to BASE_URL
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
