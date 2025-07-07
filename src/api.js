@@ -59,63 +59,84 @@ async function loginUser(username, pin) {
     }
 }
 
-// --- Funções para Stats do Jogador (Simuladas por enquanto) ---
-
-let pseudoServerStorage = {}; // In-memory storage to simulate backend persistence per user
+// --- Funções para Stats do Jogador (Requer Backend Implementado) ---
 
 /**
- * Simula o salvamento das estatísticas completas do jogador no servidor.
- * @param {string} username - Identificador do usuário.
+ * Salva as estatísticas completas do jogador no servidor.
+ * @param {string} username - Identificador do usuário (pode ser omitido se o backend usa o token para identificar).
  * @param {object} stats - O objeto completo de estatísticas do jogador.
- * @param {string} token - JWT token para autenticação (usado para validar a chamada).
- * @returns {Promise<object>} - Resposta simulada do servidor.
+ * @param {string} token - JWT token para autenticação.
+ * @returns {Promise<object>} - Resposta do servidor.
  */
 export async function savePlayerStatsToServer(username, stats, token) {
   if (!token) {
     console.warn('[API] savePlayerStatsToServer: Token não fornecido.');
     return { success: false, message: 'Token não fornecido.' };
   }
-  if (!username) {
-    console.warn('[API] savePlayerStatsToServer: Username não fornecido.');
-    return { success: false, message: 'Username não fornecido para salvar stats.' };
+  // O username pode não ser necessário no path/body se o backend identificar o usuário pelo token.
+  // Ajuste o endpoint e o corpo conforme a definição do seu backend.
+  console.log(`[API] Salvando stats para usuário ${username || 'identificado por token'}...`, stats);
+  try {
+    const response = await fetch(`${API_BASE_URL}/user/stats`, { // Assumindo endpoint /user/stats
+      method: 'PUT', // Ou POST, dependendo da sua API (PUT é comum para update/replace)
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(stats),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Erro ao salvar estatísticas.' }));
+      console.error('[API] savePlayerStatsToServer falhou:', response.status, errorData);
+      return { success: false, message: errorData.message || `Erro ${response.status} ao salvar stats.` };
+    }
+    const responseData = await response.json();
+    console.log('[API] savePlayerStatsToServer sucesso:', responseData);
+    return { success: true, data: responseData };
+  } catch (error) {
+    console.error('[API] savePlayerStatsToServer erro de rede/conexão:', error);
+    return { success: false, message: error.message || 'Erro de rede ao salvar estatísticas.' };
   }
-
-  console.log(`[API] Simulando savePlayerStatsToServer para usuário ${username}...`, { stats });
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular delay de rede
-
-  pseudoServerStorage[username] = JSON.parse(JSON.stringify(stats)); // Store a deep copy
-
-  console.log(`[API] savePlayerStatsToServer: Stats para ${username} salvos no pseudoServerStorage (simulado).`);
-  return { success: true, message: `Estatísticas para ${username} salvas no servidor (simulado).` };
 }
 
 /**
- * Simula o carregamento das estatísticas completas do jogador do servidor.
- * @param {string} username - Identificador do usuário.
+ * Carrega as estatísticas completas do jogador do servidor.
+ * @param {string} username - Identificador do usuário (pode ser omitido se o backend usa o token para identificar).
  * @param {string} token - JWT token para autenticação.
- * @returns {Promise<object>} - Resposta simulada contendo as estatísticas ou erro.
+ * @returns {Promise<object>} - Resposta contendo as estatísticas ou erro.
  */
 export async function getPlayerStatsFromServer(username, token) {
   if (!token) {
     console.warn('[API] getPlayerStatsFromServer: Token não fornecido.');
     return { success: false, message: 'Token não fornecido.' };
   }
-   if (!username) {
-    console.warn('[API] getPlayerStatsFromServer: Username não fornecido.');
-    return { success: false, message: 'Username não fornecido para carregar stats.' };
-  }
-
-  console.log(`[API] Simulando getPlayerStatsFromServer para usuário ${username}...`);
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simular delay de rede
-
-  const userStats = pseudoServerStorage[username];
-
-  if (userStats) {
-    console.log(`[API] getPlayerStatsFromServer: Stats encontrados para ${username} no pseudoServerStorage.`, userStats);
-    return { success: true, stats: JSON.parse(JSON.stringify(userStats)) }; // Return a deep copy
-  } else {
-    console.log(`[API] getPlayerStatsFromServer: Nenhum stats encontrado para ${username} no pseudoServerStorage.`);
-    return { success: true, stats: null }; // Simula que não há stats salvos para este usuário ainda.
+  // O username pode não ser necessário no path se o backend identificar o usuário pelo token.
+  console.log(`[API] Carregando stats para usuário ${username || 'identificado por token'}...`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/user/stats`, { // Assumindo endpoint /user/stats
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      if (response.status === 404) { // Comum para "não encontrado" = sem stats para este usuário
+        console.log('[API] getPlayerStatsFromServer: Nenhum stats encontrado no servidor para o usuário (404).');
+        return { success: true, stats: null }; // Tratado como sucesso, mas sem dados.
+      }
+      const errorData = await response.json().catch(() => ({ message: 'Erro ao carregar estatísticas.' }));
+      console.error('[API] getPlayerStatsFromServer falhou:', response.status, errorData);
+      return { success: false, message: errorData.message || `Erro ${response.status} ao carregar stats.` };
+    }
+    const responseData = await response.json();
+    console.log('[API] getPlayerStatsFromServer sucesso, stats recebidos:', responseData);
+    // Assumindo que o backend retorna um objeto onde os stats estão na raiz ou em uma propriedade "stats"
+    // Ex: { "damage": 1, "coins": 10 } ou { "stats": { "damage": 1, "coins": 10 } }
+    // Ajuste responseData.stats se a estrutura for diferente.
+    return { success: true, stats: responseData.stats || responseData };
+  } catch (error) {
+    console.error('[API] getPlayerStatsFromServer erro de rede/conexão:', error);
+    return { success: false, message: error.message || 'Erro de rede ao carregar estatísticas.' };
   }
 }
 

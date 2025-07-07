@@ -1,6 +1,13 @@
 // src/scenes/MenuScene.js
 import { backgroundImages } from '../config/background.js';
 import SoundManager from '../utils/sound.js';
+import { savePlayerStatsToServer } from '../api.js'; // Import for saving stats on logout
+
+// Helper to get stats from localStorage, similar to other scenes
+function getPlayerStatsFromLocalStorage() {
+  const stats = localStorage.getItem('playerStats');
+  return stats ? JSON.parse(stats) : null;
+}
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -82,20 +89,36 @@ export default class MenuScene extends Phaser.Scene {
       })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+        .on('pointerdown', async () => { // Make callback async
           SoundManager.play(this, 'click');
           if (item.action === 'logout') {
-            // Clear user session data
+            const username = localStorage.getItem('loggedInUser') || this.registry.get('loggedInUser')?.username;
+            const token = localStorage.getItem('jwtToken') || this.registry.get('jwtToken');
+            const currentStats = getPlayerStatsFromLocalStorage();
+
+            if (username && token && currentStats) {
+              console.log('[MenuScene] Attempting to save stats to server before logout...', currentStats);
+              try {
+                await savePlayerStatsToServer(username, currentStats, token);
+                console.log('[MenuScene] Stats successfully sent to server on logout.');
+              } catch (error) {
+                console.warn('[MenuScene] Failed to save stats to server on logout:', error);
+                // Proceed with logout anyway
+              }
+            } else {
+              console.log('[MenuScene] No user/token/stats found in localStorage to save on logout.');
+            }
+
+            // Clear user session data (always do this)
             localStorage.removeItem('loggedInUser');
             localStorage.removeItem('jwtToken');
+            localStorage.removeItem('playerStats'); // Clear local game progress/stats
+
             this.registry.remove('loggedInUser');
             this.registry.remove('jwtToken');
 
-            // Clear local game progress/stats
-            localStorage.removeItem('playerStats');
-
             console.log('[MenuScene] User logged out. Cleared loggedInUser, jwtToken, and playerStats from localStorage and registry.');
-            this.scene.start('AuthChoiceScene'); // Go to AuthChoiceScene instead of LoginScene for a cleaner flow
+            this.scene.start('AuthChoiceScene');
           } else {
             this.scene.start(item.scene);
           }
