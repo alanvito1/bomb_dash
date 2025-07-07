@@ -196,6 +196,59 @@ app.get('/api/ranking', async (req, res) => {
     }
 });
 
+// --- Player Stats Endpoints ---
+
+// GET /api/user/stats - Obter estatísticas do jogador logado
+app.get('/api/user/stats', verifyToken, async (req, res) => {
+    const userId = req.user.userId; // Obtido do token JWT verificado (payload should have userId)
+
+    if (!userId) {
+        return res.status(400).json({ success: false, message: 'ID do usuário não encontrado no token.' });
+    }
+
+    try {
+        const stats = await db.getPlayerStats(userId);
+        if (stats) {
+            res.json({ success: true, stats: stats });
+        } else {
+            // Nenhum stats encontrado para este usuário, o que é normal para um novo usuário.
+            // O cliente espera um 404 ou stats: null para lidar com isso criando defaults.
+            res.status(404).json({ success: false, message: 'Nenhuma estatística encontrada para este usuário.' });
+        }
+    } catch (error) {
+        console.error(`Get /api/user/stats error for user ${userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar estatísticas do jogador.' });
+    }
+});
+
+// PUT /api/user/stats - Salvar/atualizar estatísticas do jogador logado
+app.put('/api/user/stats', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    const playerStatsFromClient = req.body;
+
+    if (!userId) {
+        return res.status(400).json({ success: false, message: 'ID do usuário não encontrado no token.' });
+    }
+    if (!playerStatsFromClient || typeof playerStatsFromClient !== 'object') {
+        return res.status(400).json({ success: false, message: 'Dados de estatísticas inválidos ou não fornecidos.' });
+    }
+
+    try {
+        // A função savePlayerStats em database.js usa INSERT OR REPLACE (UPSERT)
+        const result = await db.savePlayerStats(userId, playerStatsFromClient);
+        if (result.success) {
+            res.status(200).json({ success: true, message: 'Estatísticas do jogador salvas com sucesso.', stats: result.stats });
+        } else {
+            // Este else pode não ser alcançado se savePlayerStats sempre resolve com success ou rejeita com erro.
+            res.status(500).json({ success: false, message: 'Falha ao salvar estatísticas do jogador no banco de dados.' });
+        }
+    } catch (error) {
+        console.error(`Put /api/user/stats error for user ${userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar estatísticas do jogador.' });
+    }
+});
+
+
 // Inicializar o BD e então iniciar o servidor
 db.initDb()
     .then(() => {
