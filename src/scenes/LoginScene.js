@@ -91,18 +91,22 @@ export default class LoginScene extends Phaser.Scene {
       localStorage.removeItem('playerStats'); // Current key for shop/game stats
       console.log('[LoginScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage PRIOR to server sync.');
 
+      console.log('[LoginScene] playerUpgrades, bomb_dash_sqlite_db, and playerStats limpos do localStorage PRIOR to server sync.');
+
       // Agora, tente carregar stats do servidor
+      console.log(`[LoginScene] Calling getPlayerStatsFromServer for user: ${result.user.username}`);
       const serverStatsResult = await getPlayerStatsFromServer(result.user.username, result.token);
+      console.log('[LoginScene] Full result from getPlayerStatsFromServer:', JSON.stringify(serverStatsResult));
+
       if (serverStatsResult.success && serverStatsResult.stats) {
+        console.log('[LoginScene] Server returned stats. Stats object:', JSON.stringify(serverStatsResult.stats));
+        console.log(`[LoginScene] Coins in received server stats: ${serverStatsResult.stats.coins}`);
         savePlayerStatsToLocalStorage(serverStatsResult.stats);
-        console.log('[LoginScene] Stats do jogador carregados do servidor e salvos no localStorage:', serverStatsResult.stats);
+        console.log('[LoginScene] Called savePlayerStatsToLocalStorage. Current localStorage for playerStats:', localStorage.getItem('playerStats'));
       } else if (serverStatsResult.success && !serverStatsResult.stats) {
-        console.log('[LoginScene] Nenhum stats encontrado no servidor para este usuário (novo usuário ou sem jogos salvos). localStorage permanece limpo para defaults.');
-        // localStorage já foi limpo, então o jogo usará defaults.
+        console.log('[LoginScene] Server reported success but no stats returned (e.g., new user). localStorage for playerStats should be null (was cleared). Value:', localStorage.getItem('playerStats'));
       } else {
-        // Falha ao buscar stats do servidor, mas o login foi bem-sucedido.
-        // Deixar localStorage limpo para usar defaults. Poderia mostrar uma mensagem se desejado.
-        console.warn('[LoginScene] Falha ao carregar stats do servidor após login:', serverStatsResult.message);
+        console.warn('[LoginScene] Failed to get stats from server or server reported error. Message:', serverStatsResult.message, 'localStorage for playerStats should be null. Value:', localStorage.getItem('playerStats'));
       }
 
       this.setMessage(`Bem-vindo, ${result.user.username}!`, 'success');
