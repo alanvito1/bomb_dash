@@ -6,14 +6,14 @@ Este projeto é uma refatoração do jogo "Bomb Dash" para mover sua arquitetura
 
 A nova arquitetura consiste em:
 
-*   **Frontend (Client-Side):** Construído com Phaser.js, responsável pela interface do jogo, interações do usuário e renderização. Toda a lógica de negócios crítica, como autenticação e gerenciamento de pontuações, foi removida do cliente. Ele agora se comunica com o backend através de uma API REST.
-*   **Backend (Server-Side):** Construído com Node.js e Express.js, este servidor é a única fonte de verdade para dados de usuários e pontuações. Ele se conecta a um banco de dados SQLite (`ranking.sqlite`) para persistência de dados.
+*   **Frontend (Client-Side):** Construído com Phaser.js, responsável pela interface do jogo, interações do usuário e renderização. Toda a lógica de negócios crítica, como autenticação, gerenciamento de pontuações e progresso do jogador (upgrades, moedas), foi removida do cliente ou sincronizada com o backend. Ele agora se comunica com o backend através de uma API REST.
+*   **Backend (Server-Side):** Construído com Node.js e Express.js, este servidor é a única fonte de verdade para dados de usuários, pontuações e progresso do jogador. Ele se conecta a um banco de dados SQLite (`databasebomb.sqlite`) para persistência de dados. Este banco de dados inclui tabelas para `users` (contas e pontuação máxima), `rankings` (geralmente derivado da tabela users, mas pode ser separada), e a nova tabela `player_stats` (para armazenar upgrades como dano, velocidade, vidas extras, taxa de tiro, tamanho da bomba, multi-shot e moedas).
 
 ## Segurança Implementada
 
 A refatoração aborda as seguintes vulnerabilidades da arquitetura original:
 
-1.  **Centralização da Lógica:** Toda a validação de dados, autenticação de usuários e atualizações de pontuação agora ocorrem no servidor. Isso impede que jogadores manipulem suas pontuações ou dados de conta diretamente no navegador.
+1.  **Centralização da Lógica:** Toda a validação de dados, autenticação de usuários, atualizações de pontuação e gerenciamento de progresso do jogador (upgrades, moedas) agora ocorrem no servidor. Isso impede que jogadores manipulem seus dados críticos diretamente no navegador.
 2.  **Hashing de Senhas (PINs):** Os PINs dos usuários são processados com `bcrypt` antes de serem armazenados no banco de dados. Isso significa que, mesmo que o banco de dados seja comprometido, as senhas originais não podem ser facilmente recuperadas.
 3.  **Tokens de Sessão (JWT):** Após o login bem-sucedido, o servidor gera um JSON Web Token (JWT) que é enviado ao cliente. Este token é usado para autenticar requisições subsequentes (como o envio de pontuações), garantindo que apenas usuários autenticados possam realizar ações protegidas.
 
@@ -59,7 +59,16 @@ A refatoração aborda as seguintes vulnerabilidades da arquitetura original:
     ```bash
     nodemon server.js
     ```
-    O servidor backend estará rodando em `http://localhost:3000` (ou a porta que você configurou). O banco de dados `ranking.sqlite` será criado automaticamente no diretório `backend/` na primeira execução.
+    O servidor backend estará rodando em `http://localhost:3000` (ou a porta que você configurou). O banco de dados `databasebomb.sqlite` será criado automaticamente no diretório `backend/` na primeira execução, contendo as tabelas para usuários, ranking (geralmente através da tabela de usuários) e estatísticas de jogador (`player_stats`).
+
+    Endpoints da API disponíveis (principais):
+    *   `POST /api/register` - Registrar novo usuário.
+    *   `POST /api/login` - Autenticar usuário.
+    *   `GET /api/auth/me` (protegido por JWT) - Validar token e buscar dados do usuário.
+    *   `POST /api/scores` (protegido por JWT) - Submeter nova pontuação.
+    *   `GET /api/ranking` - Obter o ranking dos top jogadores.
+    *   `GET /api/user/stats` (protegido por JWT) - Buscar estatísticas (upgrades, moedas) do jogador logado.
+    *   `PUT /api/user/stats` (protegido por JWT) - Salvar/atualizar estatísticas do jogador logado.
 
 ### Frontend
 
