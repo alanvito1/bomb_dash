@@ -162,6 +162,10 @@ export default class ShopScene extends Phaser.Scene {
   }
 
   initializeStats() {
+    console.log('[ShopScene INIT] Initializing stats...');
+    const rawLocalStorageStats = localStorage.getItem('playerStats');
+    console.log('[ShopScene INIT] Raw playerStats from localStorage:', rawLocalStorageStats);
+
     const defaultStats = {
       damage: 1,
       speed: 200,
@@ -171,7 +175,20 @@ export default class ShopScene extends Phaser.Scene {
       multiShot: 0,
       coins: 0
     };
-    const saved = getUpgradesFromLocalStorage();
-    return { ...defaultStats, ...(saved || {}) };
+    console.log('[ShopScene INIT] Default stats:', JSON.stringify(defaultStats));
+
+    const saved = getUpgradesFromLocalStorage(); // This function already parses JSON
+    console.log('[ShopScene INIT] Parsed stats from getUpgradesFromLocalStorage (saved object):', JSON.stringify(saved));
+    if (saved) {
+      console.log(`[ShopScene INIT] Coins in parsed 'saved' object: ${saved.coins}`);
+    } else {
+      console.log("[ShopScene INIT] 'saved' object is null/undefined (no stats in localStorage or parse error).");
+    }
+
+    const finalStats = { ...defaultStats, ...(saved || {}) };
+    console.log('[ShopScene INIT] Final merged playerStats for ShopScene:', JSON.stringify(finalStats));
+    console.log(`[ShopScene INIT] Coins in final merged playerStats: ${finalStats.coins}`);
+
+    return finalStats;
   }
 }

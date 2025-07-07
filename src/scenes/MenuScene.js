@@ -97,12 +97,13 @@ export default class MenuScene extends Phaser.Scene {
             const currentStats = getPlayerStatsFromLocalStorage();
 
             if (username && token && currentStats) {
-              console.log('[MenuScene] Attempting to save stats to server before logout...', currentStats);
+              console.log(`[MenuScene LOGOUT] Attempting to save stats for user: ${username}. Token: ${token ? 'present' : 'MISSING!'}. Stats to save:`, JSON.stringify(currentStats));
+              console.log(`[MenuScene LOGOUT] Coins in stats to save: ${currentStats.coins}`);
               try {
-                await savePlayerStatsToServer(username, currentStats, token);
-                console.log('[MenuScene] Stats successfully sent to server on logout.');
+                const saveResult = await savePlayerStatsToServer(username, currentStats, token);
+                console.log('[MenuScene LOGOUT] Server response from savePlayerStatsToServer:', JSON.stringify(saveResult));
               } catch (error) {
-                console.warn('[MenuScene] Failed to save stats to server on logout:', error);
+                console.error('[MenuScene LOGOUT] Error calling savePlayerStatsToServer:', error);
                 // Proceed with logout anyway
               }
             } else {

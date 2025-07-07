@@ -111,7 +111,7 @@ export async function getPlayerStatsFromServer(username, token) {
     return { success: false, message: 'Token não fornecido.' };
   }
   // O username pode não ser necessário no path se o backend identificar o usuário pelo token.
-  console.log(`[API] Carregando stats para usuário ${username || 'identificado por token'}...`);
+  console.log(`[API GETSTATS] Called for username: ${username}. Token: ${token ? 'present' : 'MISSING!'}`);
   try {
     const response = await fetch(`${API_BASE_URL}/user/stats`, { // Assumindo endpoint /user/stats
       method: 'GET',
@@ -119,23 +119,41 @@ export async function getPlayerStatsFromServer(username, token) {
         'Authorization': `Bearer ${token}`,
       },
     });
+    console.log(`[API GETSTATS] Response status for ${username}: ${response.status}`);
+    const responseText = await response.text();
+    console.log(`[API GETSTATS] Raw response text for ${username}:`, responseText);
+
     if (!response.ok) {
-      if (response.status === 404) { // Comum para "não encontrado" = sem stats para este usuário
-        console.log('[API] getPlayerStatsFromServer: Nenhum stats encontrado no servidor para o usuário (404).');
-        return { success: true, stats: null }; // Tratado como sucesso, mas sem dados.
+      if (response.status === 404) {
+        console.log(`[API GETSTATS] User ${username} not found on server or no stats (404). Returning null stats.`);
+        return { success: true, stats: null };
       }
-      const errorData = await response.json().catch(() => ({ message: 'Erro ao carregar estatísticas.' }));
-      console.error('[API] getPlayerStatsFromServer falhou:', response.status, errorData);
+      // Attempt to parse errorData even from responseText if response.json() might fail
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = { message: responseText || 'Erro ao carregar estatísticas (resposta não-JSON).' };
+      }
+      console.error(`[API GETSTATS] Fetch failed for ${username}:`, response.status, errorData);
       return { success: false, message: errorData.message || `Erro ${response.status} ao carregar stats.` };
     }
-    const responseData = await response.json();
-    console.log('[API] getPlayerStatsFromServer sucesso, stats recebidos:', responseData);
-    // Assumindo que o backend retorna um objeto onde os stats estão na raiz ou em uma propriedade "stats"
-    // Ex: { "damage": 1, "coins": 10 } ou { "stats": { "damage": 1, "coins": 10 } }
-    // Ajuste responseData.stats se a estrutura for diferente.
-    return { success: true, stats: responseData.stats || responseData };
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error(`[API GETSTATS] Failed to parse JSON response for ${username}:`, responseText, e);
+      return { success: false, message: 'Resposta do servidor em formato JSON inválido.' };
+    }
+
+    console.log(`[API GETSTATS] Parsed responseData for ${username}:`, responseData);
+
+    const finalStats = responseData.stats || responseData;
+    console.log(`[API GETSTATS] Final stats object being returned for ${username}:`, JSON.stringify(finalStats));
+    return { success: true, stats: finalStats };
   } catch (error) {
-    console.error('[API] getPlayerStatsFromServer erro de rede/conexão:', error);
+    console.error(`[API GETSTATS] Network/connection error for ${username}:`, error);
     return { success: false, message: error.message || 'Erro de rede ao carregar estatísticas.' };
   }
 }
