@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [],
   "author": "",
@@ -14,12 +14,15 @@
     "cors": "^2.8.5",
     "ethers": "^6.15.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
     "siwe": "^3.0.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "axios": "^1.12.2"
+    "axios": "^1.12.2",
+    "chai": "^6.2.0",
+    "mocha": "^11.7.2"
   }
 }

@@ -177,6 +177,20 @@ function startCronJobs() {
 }
 
 
+/**
+ * Busca informações públicas do ciclo de recompensas diretamente do contrato.
+ * @returns {Promise<{rewardPerGame: BigNumber, lastCycleTimestamp: BigNumber}>}
+ */
+async function getRewardCycleInfo() {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    // O Ethers.js permite chamar funções `public view` diretamente.
+    const rewardPerGame = await perpetualRewardPoolContract.rewardPerGameThisCycle();
+    const lastCycleTimestamp = await perpetualRewardPoolContract.lastCycleTimestamp();
+
+    return { rewardPerGame, lastCycleTimestamp };
+}
+
 module.exports = {
     initOracle,
     reportMatchResult,
@@ -184,5 +198,6 @@ module.exports = {
     reportSoloGamePlayed,
     signClaimReward,
     triggerLevelUpPayment,
-    startCronJobs
+    startCronJobs,
+    getRewardCycleInfo
 };
