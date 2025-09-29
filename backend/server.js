@@ -5,6 +5,7 @@ const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
 const db = require('./database.js');
 const nft = require('./nft.js');
+const oracle = require('./oracle.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -137,13 +138,13 @@ app.post('/api/user/select-nft', async (req, res) => {
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
-        const user = await db.findUserByAddress(req.user.address);
+        const user = await db.getUserByAddress(req.user.address); // Using the new comprehensive fetcher
         if (!user) {
             return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
         }
         res.json({
             success: true,
-            user: { address: user.wallet_address, max_score: user.max_score }
+            user: { address: user.wallet_address, level: user.level, xp: user.xp, coins: user.coins }
         });
     } catch (error) {
         console.error("Erro em /api/auth/me:", error);
@@ -151,7 +152,92 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     }
 });
 
+app.post('/api/pvp/wager/enter', verifyToken, async (req, res) => {
+    const { tierId } = req.body;
+    if (!tierId) {
+        return res.status(400).json({ success: false, message: 'O ID do tier de aposta é obrigatório.' });
+    }
+
+    try {
+        const user = await db.getUserByAddress(req.user.address);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+        }
+
+        const tier = await db.getWagerTier(tierId);
+        if (!tier) {
+            return res.status(404).json({ success: false, message: 'Tier de aposta não encontrado.' });
+        }
+
+        // Check if the user has enough BCOIN (coins) and XP
+        if (user.coins < tier.bcoin_cost) {
+            return res.status(403).json({ success: false, message: `BCOINs insuficientes. Necessário: ${tier.bcoin_cost}, Você tem: ${user.coins}.` });
+        }
+        if (user.xp < tier.xp_cost) {
+            return res.status(403).json({ success: false, message: `XP insuficiente. Necessário: ${tier.xp_cost}, Você tem: ${user.xp}.` });
+        }
+
+        // If checks pass, the client is now responsible for calling the smart contract
+        res.json({
+            success: true,
+            message: 'Você é elegível para esta aposta. Prossiga com a transação no contrato.',
+            tier: tier
+        });
+
+    } catch (error) {
+        console.error("Erro em /api/pvp/wager/enter:", error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao entrar na fila de aposta.' });
+    }
+});
+
+app.post('/api/pvp/wager/report', verifyToken, async (req, res) => {
+    const { matchId } = req.body;
+    if (!matchId) {
+        return res.status(400).json({ success: false, message: 'O ID da partida é obrigatório.' });
+    }
+
+    try {
+        const match = await db.getWagerMatch(matchId);
+        if (!match) {
+            return res.status(404).json({ success: false, message: 'Partida não encontrada.' });
+        }
+
+        if (match.status !== 'pending') {
+            return res.status(403).json({ success: false, message: `Esta partida já foi finalizada. Vencedor: ${match.winner_address}` });
+        }
+
+        const winnerAddress = req.user.address;
+        let loserAddress;
+
+        if (winnerAddress === match.player1_address) {
+            loserAddress = match.player2_address;
+        } else if (winnerAddress === match.player2_address) {
+            loserAddress = match.player1_address;
+        } else {
+            return res.status(403).json({ success: false, message: 'Você não é um participante desta partida.' });
+        }
+
+        console.log(`Reportando resultado da partida ${matchId}. Vencedor (auto-reportado): ${winnerAddress}`);
+
+        // Acionar o oráculo para a liquidação on-chain e off-chain
+        await oracle.reportWagerMatchResult(match.match_id, winnerAddress, loserAddress, match.tier_id);
+
+        // Atualizar o status da partida no banco de dados
+        await db.updateWagerMatch(match.match_id, 'completed', winnerAddress);
+
+        res.json({ success: true, message: 'Resultado da partida reportado e processado com sucesso!' });
+
+    } catch (error) {
+        console.error(`Erro ao reportar resultado da partida ${matchId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao reportar o resultado.' });
+    }
+});
+
+
 db.initDb().then(() => {
+    // Inicializa o oráculo e seus listeners depois que o DB está pronto
+    oracle.initOracle();
+
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
     });
