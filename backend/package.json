@@ -17,5 +17,8 @@
     "jsonwebtoken": "^9.0.2",
     "siwe": "^3.0.0",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "axios": "^1.12.2"
   }
 }
