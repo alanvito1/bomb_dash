@@ -44,11 +44,11 @@ contract PerpetualRewardPool {
     }
 
     /**
-     * @dev Starts a new 24-hour reward cycle. Can be called by anyone.
+     * @dev Starts a new 10-minute reward cycle. Can be called by anyone.
      * Calculates the reward per game for the new cycle based on the pool's balance.
      */
     function startNewCycle() external {
-        require(block.timestamp > lastCycleTimestamp + 24 hours, "A new cycle can only be started every 24 hours");
+        require(block.timestamp > lastCycleTimestamp + 10 minutes, "A new cycle can only be started every 10 minutes");
 
         // Use the game count from the previous cycle for calculation.
         // If no games were played, the reward per game is 0.

@@ -1,19 +1,41 @@
-# Dependencies
-/node_modules
-
-# Build artifacts
-/artifacts
-/cache
-
-# Logs
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/logs
-
-# Coverage
-/coverage
-coverage.json
+package-lock.json
 
 # Hardhat
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
 hardhat.config.js.backup
+
+# Logs
+*.log
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.test
+.env.production
+.env.development
+
+# Local Database
+*.sqlite
+*.sqlite3
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

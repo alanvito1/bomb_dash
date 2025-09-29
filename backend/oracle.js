@@ -1,4 +1,6 @@
 const { ethers } = require('ethers');
+const cron = require('node-cron');
+const { addXpToUser } = require('./database'); // Importar a função de XP
 
 // --- Configuração do Oráculo ---
 // Estas variáveis devem ser carregadas de um arquivo .env em produção
@@ -10,10 +12,12 @@ const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
 // ABIs (Application Binary Interface) dos contratos - construídas manualmente
 const TOURNAMENT_CONTROLLER_ABI = [
     "function reportMatchResult(uint256 matchId, address winner)",
-    "function reportTournamentResult(uint256 tournamentId, address[] calldata winners)"
+    "function reportTournamentResult(uint256 tournamentId, address[] calldata winners)",
+    "function payLevelUpFee(address player)"
 ];
 const PERPETUAL_REWARD_POOL_ABI = [
-    "function reportSoloGamePlayed(uint256 gameCount)"
+    "function reportSoloGamePlayed(uint256 gameCount)",
+    "function startNewCycle()"
 ];
 
 
@@ -67,8 +71,23 @@ function initOracle() {
 async function reportMatchResult(matchId, winnerAddress) {
     if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
     console.log(`Reportando resultado da partida ${matchId}. Vencedor: ${winnerAddress}`);
+
     const tx = await tournamentControllerContract.reportMatchResult(matchId, winnerAddress, { gasLimit: 300000 });
-    console.log(`Transação enviada: ${tx.hash}`);
+    console.log(`Transação on-chain enviada: ${tx.hash}`);
+
+    // We await confirmation to ensure the result is locked in before awarding XP
+    await tx.wait();
+    console.log(`Transação confirmada. Vencedor ${winnerAddress} registrado no contrato.`);
+
+    try {
+        const xpAmount = 50; // Fixed XP for a win
+        await addXpToUser(winnerAddress, xpAmount);
+        console.log(`Sucesso! Concedido ${xpAmount} de XP para ${winnerAddress}.`);
+    } catch (error) {
+        // Log the error, but don't let it crash the process. The on-chain part is the most critical.
+        console.error(`Falha ao conceder XP (off-chain) para ${winnerAddress}:`, error.message);
+    }
+
     return tx;
 }
 
@@ -103,10 +122,67 @@ async function signClaimReward(playerAddress, gamesPlayed) {
     return signature;
 }
 
+async function triggerLevelUpPayment(playerAddress) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+    console.log(`Iniciando pagamento da taxa de level-up para: ${playerAddress}`);
+
+    // The oracle calls the contract, which in turn pulls the fee from the player's wallet
+    const tx = await tournamentControllerContract.payLevelUpFee(playerAddress, { gasLimit: 200000 });
+    console.log(`Transação de pagamento de taxa enviada: ${tx.hash}`);
+
+    // We await confirmation to ensure the fee was processed before returning
+    await tx.wait();
+    console.log(`Transação de pagamento de taxa confirmada para ${playerAddress}.`);
+
+    return tx;
+}
+
+// --- Cron Jobs ---
+
+/**
+ * Tenta iniciar um novo ciclo de recompensas no contrato PerpetualRewardPool.
+ */
+async function triggerNewRewardCycle() {
+    if (!isOracleInitialized) {
+        console.log("Cron job: Oráculo não inicializado, pulando o início do novo ciclo.");
+        return;
+    }
+    try {
+        console.log("Cron job: Tentando iniciar um novo ciclo de recompensas...");
+        const tx = await perpetualRewardPoolContract.startNewCycle({ gasLimit: 150000 });
+        await tx.wait();
+        console.log(`Cron job: Novo ciclo de recompensas iniciado com sucesso. Tx: ${tx.hash}`);
+    } catch (error) {
+        // É normal que isso falhe se o tempo mínimo não tiver passado.
+        // Apenas logamos erros "reais" para evitar poluir os logs.
+        if (!error.message.includes("A new cycle can only be started every 10 minutes")) {
+            console.error("Cron job: Erro ao tentar iniciar novo ciclo:", error.message);
+        }
+    }
+}
+
+/**
+ * Inicia todos os cron jobs agendados para o Oráculo.
+ */
+function startCronJobs() {
+    if (!isOracleInitialized) {
+        console.warn("Cron jobs não iniciados porque o Oráculo está desativado.");
+        return;
+    }
+
+    // Agendado para rodar a cada 10 minutos.
+    cron.schedule('*/10 * * * *', triggerNewRewardCycle);
+
+    console.log("Cron job para o ciclo de recompensas agendado para rodar a cada 10 minutos.");
+}
+
+
 module.exports = {
     initOracle,
     reportMatchResult,
     reportTournamentResult,
     reportSoloGamePlayed,
-    signClaimReward
+    signClaimReward,
+    triggerLevelUpPayment,
+    startCronJobs
 };

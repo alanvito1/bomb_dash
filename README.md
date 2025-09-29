@@ -1,147 +1,123 @@
-# Bomb Dash - Refatoração Backend
+# Bomb Dash - Web3 Edition
 
-Este projeto é uma refatoração do jogo "Bomb Dash" para mover sua arquitetura de um modelo puramente client-side para um modelo cliente-servidor seguro e robusto.
+Este é o repositório do backend e dos contratos inteligentes para o Bomb Dash, um jogo de ação 2D com uma arquitetura Web3 completa, integrando blockchain para matchmaking, recompensas e progressão de personagem.
 
-## Arquitetura
+## Arquitetura Web3
 
-A nova arquitetura consiste em:
+O projeto é construído sobre uma base que separa a lógica do jogo (cliente) da lógica de negócios e estado (backend e blockchain), garantindo segurança e descentralização das funcionalidades críticas.
 
-*   **Frontend (Client-Side):** Construído com Phaser.js, responsável pela interface do jogo, interações do usuário e renderização. Toda a lógica de negócios crítica, como autenticação, gerenciamento de pontuações e progresso do jogador (upgrades, moedas), foi removida do cliente ou sincronizada com o backend. Ele agora se comunica com o backend através de uma API REST.
-*   **Backend (Server-Side):** Construído com Node.js e Express.js, este servidor é a única fonte de verdade para dados de usuários, pontuações e progresso do jogador. Ele se conecta a um banco de dados SQLite (`databasebomb.sqlite`) para persistência de dados. Este banco de dados inclui tabelas para `users` (contas e pontuação máxima), `rankings` (geralmente derivado da tabela users, mas pode ser separada), e a nova tabela `player_stats` (para armazenar upgrades como dano, velocidade, vidas extras, taxa de tiro, tamanho da bomba, multi-shot e moedas).
+*   **Client (Frontend):** Um cliente de jogo (não neste repositório) construído com Phaser.js, responsável apenas pela renderização e entrada do usuário. Ele se comunica com o backend via API REST.
 
-## Segurança Implementada
+*   **Backend (Node.js/Express):** O servidor atua como a autoridade central para ações que não precisam de consenso on-chain. Ele gerencia a autenticação, o estado off-chain do jogador (nível, XP, HP) e serve como o **Oráculo** para o sistema.
+    *   **Autenticação:** Utiliza **Sign-In with Ethereum (SIWE)**, permitindo que os jogadores façam login de forma segura usando suas carteiras Ethereum, eliminando a necessidade de senhas.
+    *   **Banco de Dados (SQLite):** Armazena dados do jogador que não são críticos para a segurança on-chain, como XP, nível, HP e estatísticas de jogo.
+    *   **Oráculo (`oracle.js`):** Um serviço confiável que monitora eventos do jogo e reporta resultados (como vencedores de partidas) para os contratos inteligentes. Ele é o único autorizado a executar certas funções de contrato, servindo como uma ponte segura entre o mundo off-chain e on-chain.
 
-A refatoração aborda as seguintes vulnerabilidades da arquitetura original:
+*   **Blockchain (Hardhat/Solidity):** O ambiente de desenvolvimento e os contratos inteligentes que governam a economia e as regras do jogo.
+    *   **`TournamentController.sol`:** Gerencia as taxas de entrada para partidas PvP, a criação de torneios e a distribuição de prêmios e taxas. Também processa a taxa de level-up.
+    *   **`PerpetualRewardPool.sol`:** Um pool de recompensas para o modo solo, operando em um ciclo de emissão de 10 minutos.
+    *   **`MockBCOIN.sol`:** Um token ERC20 de teste para o ambiente de desenvolvimento local.
 
-1.  **Centralização da Lógica:** Toda a validação de dados, autenticação de usuários, atualizações de pontuação e gerenciamento de progresso do jogador (upgrades, moedas) agora ocorrem no servidor. Isso impede que jogadores manipulem seus dados críticos diretamente no navegador.
-2.  **Hashing de Senhas (PINs):** Os PINs dos usuários são processados com `bcrypt` antes de serem armazenados no banco de dados. Isso significa que, mesmo que o banco de dados seja comprometido, as senhas originais não podem ser facilmente recuperadas.
-3.  **Tokens de Sessão (JWT):** Após o login bem-sucedido, o servidor gera um JSON Web Token (JWT) que é enviado ao cliente. Este token é usado para autenticar requisições subsequentes (como o envio de pontuações), garantindo que apenas usuários autenticados possam realizar ações protegidas.
+## Core Mechanics
 
-## Configuração e Execução
+### Sistema de Progressão RPG
+- **Níveis e Experiência (XP):** Jogadores ganham XP ao vencer partidas. A quantidade de XP necessária para o próximo nível é baseada na fórmula de progressão do jogo Tibia.
+- **Level Up:** Quando um jogador acumula XP suficiente, ele pode subir de nível.
+    - **Custo:** Para subir de nível, o jogador deve pagar uma taxa de **1 BCOIN**.
+    - **Endpoint:** `POST /api/user/levelup`
+    - **Processo:** O backend verifica o XP, o oráculo aciona o pagamento on-chain, e o contrato distribui a taxa (50% para o pool de recompensas solo, 50% para a carteira da equipe). Após a confirmação, o nível e os atributos (HP) do jogador são atualizados no banco de dados.
+
+### Ciclo de Recompensa (Modo Solo)
+- O `PerpetualRewardPool.sol` distribui recompensas em BCOIN para jogadores do modo solo.
+- **Ciclo de 10 Minutos:** A cada 10 minutos, um novo ciclo de recompensas é iniciado. Um cron job no backend (via `oracle.js`) chama a função `startNewCycle` no contrato para calcular a nova taxa de recompensa por jogo com base no saldo atual do pool e no número de jogos jogados no ciclo anterior.
+
+## Local Development Setup
+
+Para rodar o ambiente de desenvolvimento completo (blockchain local, backend, contratos implantados), siga os passos abaixo.
 
 ### Pré-requisitos
+*   Node.js (v16 ou superior)
+*   npm
 
-*   Node.js (versão 12.x ou superior recomendada)
-*   npm (geralmente vem com o Node.js)
-*   Um servidor web para servir os arquivos do frontend (ex: Live Server do VSCode, http-server do npm, ou configurar o Express para servir arquivos estáticos).
+### 1. Instalação
+Clone o repositório e instale as dependências na raiz e na pasta `backend`.
 
-### Backend
+```bash
+# Clone o repositório
+git clone <URL_DO_REPOSITORIO>
+cd <NOME_DO_REPOSITORIO>
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone <url-do-seu-repositorio>
-    cd <nome-do-repositorio>
-    ```
+# Instale as dependências do Hardhat (raiz)
+npm install
 
-2.  **Navegue até o diretório do backend:**
-    ```bash
-    cd backend
-    ```
+# Instale as dependências do Backend
+cd backend
+npm install
+cd ..
+```
 
-3.  **Instale as dependências:**
-    ```bash
-    npm install
-    ```
+### 2. Configuração do Ambiente
+Copie o arquivo de exemplo de variáveis de ambiente e preencha-o.
 
-4.  **Variáveis de Ambiente (Opcional, mas recomendado para produção):**
-    Crie um arquivo `.env` dentro da pasta `backend/` para configurar o `JWT_SECRET`:
-    ```env
-    JWT_SECRET=suaChaveSecretaSuperForteEF lungaAquiPeloMenos32Caracteres
-    PORT=3001 # Opcional, padrão é 3000
-    ```
-    Lembre-se de adicionar `.env` ao seu arquivo `.gitignore` se ainda não estiver lá. Se a variável `JWT_SECRET` não for definida, uma chave padrão será usada (inseguro para produção).
+```bash
+# Navegue até a pasta do backend
+cd backend
 
-5.  **Inicie o servidor backend:**
-    ```bash
-    node server.js
-    ```
-    Ou, se você tiver `nodemon` instalado globalmente (para desenvolvimento, reinicia automaticamente em mudanças):
-    ```bash
-    nodemon server.js
-    ```
-    O servidor backend estará rodando em `http://localhost:3000` (ou a porta que você configurou). O banco de dados `databasebomb.sqlite` será criado automaticamente no diretório `backend/` na primeira execução, contendo as tabelas para usuários, ranking (geralmente através da tabela de usuários) e estatísticas de jogador (`player_stats`).
+# Copie o arquivo de exemplo
+cp .env.example .env
+```
+Você precisará de uma chave privada para o `ORACLE_PRIVATE_KEY`. Ao iniciar o nó Hardhat no próximo passo, ele listará 20 contas de teste. Copie a chave privada de uma delas (ex: Account #1) e cole-a em seu arquivo `.env`.
 
-    Endpoints da API disponíveis (principais):
-    *   `POST /api/register` - Registrar novo usuário.
-    *   `POST /api/login` - Autenticar usuário.
-    *   `GET /api/auth/me` (protegido por JWT) - Validar token e buscar dados do usuário.
-    *   `POST /api/scores` (protegido por JWT) - Submeter nova pontuação.
-    *   `GET /api/ranking` - Obter o ranking dos top jogadores.
-    *   `GET /api/user/stats` (protegido por JWT) - Buscar estatísticas (upgrades, moedas) do jogador logado.
-    *   `PUT /api/user/stats` (protegido por JWT) - Salvar/atualizar estatísticas do jogador logado.
+### 3. Rodando o Ambiente
 
-### Frontend
+Você precisará de **três terminais** abertos na raiz do projeto.
 
-1.  **Servir os arquivos do jogo:**
-    O frontend consiste em arquivos HTML, CSS e JavaScript (incluindo o Phaser.js) que estão na raiz do projeto e no diretório `src/`.
-    Você precisará de um servidor HTTP para servi-los. Uma maneira fácil é usar o `http-server`:
+**Terminal 1: Iniciar o Nó Blockchain**
+Este comando inicia uma blockchain local, simulando a rede Ethereum.
 
-    *   Se não tiver, instale globalmente: `npm install -g http-server`
-    *   Navegue até a raiz do projeto (o diretório que contém `index.html`):
-        ```bash
-        cd .. # Se você estiver em backend/
-        # ou navegue para o diretório raiz do projeto
-        ```
-    *   Inicie o servidor:
-        ```bash
-        http-server . -p 8080
-        ```
-    *   Abra seu navegador e acesse `http://localhost:8080` (ou a porta que o `http-server` indicar).
+```bash
+npx hardhat node
+```
+Mantenha este terminal rodando.
 
-2.  **Configuração da URL da API no Cliente:**
-    O arquivo `src/api.js` contém uma constante `BASE_URL` configurada como `http://localhost:3000/api`. Se o seu backend estiver rodando em uma URL ou porta diferente, você precisará ajustar esta constante.
+**Terminal 2: Implantar os Contratos**
+Com o nó rodando, implante os contratos na sua blockchain local.
 
-## Como Rodar em um Servidor de Hospedagem (Ex: HostGator)
+```bash
+npx hardhat run scripts/deploy.js --network localhost
+```
+Este script irá implantar `MockBCOIN`, `TournamentController`, e `PerpetualRewardPool`, configurar suas interações e salvar seus endereços e ABIs na pasta `backend/contracts` para o servidor usar.
 
-Hospedar uma aplicação Node.js como o backend do Bomb Dash em plataformas como a HostGator geralmente envolve o uso de um ambiente que suporte Node.js, como VPS (Servidor Privado Virtual) ou através de painéis de controle que oferecem setup de aplicações Node.js (ex: cPanel com "Setup Node.js App").
+**Terminal 3: Iniciar o Servidor Backend**
+Finalmente, inicie o servidor backend.
 
-**Passos Gerais (podem variar dependendo do plano e painel da HostGator):**
+```bash
+# Navegue até a pasta do backend
+cd backend
 
-1.  **Acesso ao Servidor:**
-    *   Você precisará de acesso SSH ao seu servidor se for um VPS, ou acesso ao cPanel.
+# Inicie o servidor
+node server.js
+```
+O servidor se conectará automaticamente à blockchain local e aos contratos implantados.
 
-2.  **Upload dos Arquivos:**
-    *   Envie os arquivos do seu projeto para o servidor. Normalmente, você enviaria todo o conteúdo da pasta `backend/`. Você pode fazer isso via FTP/SFTP (FileZilla) ou usando `git clone` diretamente no servidor.
+## API Endpoints
 
-3.  **Instalação do Node.js (se necessário):**
-    *   Em um VPS, você pode precisar instalar o Node.js manualmente.
-    *   No cPanel, a ferramenta "Setup Node.js App" geralmente permite que você escolha uma versão do Node.js.
+A API é servida em `http://localhost:3000/api`.
 
-4.  **Configuração da Aplicação Node.js no Painel (Ex: cPanel):**
-    *   Acesse "Setup Node.js App" ou similar.
-    *   Crie uma nova aplicação.
-    *   **Application root:** Especifique o caminho para a pasta `backend` que você enviou (ex: `/home/seuusuario/bombdash/backend`).
-    *   **Application URL:** Defina o subdomínio ou domínio que servirá sua API (ex: `api.seusite.com`).
-    *   **Application startup file:** Especifique `server.js`.
-    *   **Variáveis de Ambiente:** Adicione a variável `JWT_SECRET` com sua chave segura. Você também pode precisar definir `PORT` se a hospedagem exigir que sua aplicação escute em uma porta específica fornecida pelo ambiente deles (muitas vezes eles gerenciam a porta externamente e expõem via porta 80/443). Se a hospedagem gerencia a porta, você pode precisar remover a parte `process.env.PORT || 3000` e deixar o Node.js usar a porta que o ambiente da HostGator designar. Consulte a documentação da HostGator para isso.
-    *   Clique em "Create".
+### Autenticação
+*   `GET /auth/nonce`: Gera um nonce para a assinatura SIWE.
+*   `POST /auth/verify`: Verifica a assinatura SIWE e retorna um JWT.
+*   `GET /auth/me` (Protegido): Retorna os dados do usuário autenticado.
 
-5.  **Instalar Dependências no Servidor:**
-    *   Após criar a aplicação, o painel geralmente oferece um comando para rodar `npm install` (ou você pode fazer isso via terminal SSH na pasta `backend`).
+### Usuário e Progressão
+*   `GET /user/stats` (Protegido): Busca as estatísticas de jogo do jogador (dano, velocidade, etc.).
+*   `PUT /user/stats` (Protegido): Atualiza as estatísticas de jogo.
+*   `POST /user/levelup` (Protegido): Inicia o processo de level-up.
 
-6.  **Iniciar a Aplicação:**
-    *   Use o botão "Start App" no painel.
-    *   Verifique os logs para quaisquer erros.
-
-7.  **Configurar o Frontend:**
-    *   Os arquivos do frontend (`index.html`, `src/`, etc.) podem ser hospedados como um site estático normal no mesmo servidor (ex: na pasta `public_html` do seu domínio principal ou de um subdomínio).
-    *   **IMPORTANTE:** Atualize a constante `BASE_URL` em `src/api.js` no seu código frontend para apontar para a URL pública da sua API backend (ex: `https://api.seusite.com/api`). Recompile/re-uploade o frontend com essa mudança.
-
-8.  **Gerenciador de Processos (PM2):**
-    *   Para manter sua aplicação Node.js rodando continuamente e reiniciá-la em caso de falhas, use um gerenciador de processos como o PM2.
-    *   Se estiver em um VPS, instale o PM2: `npm install pm2 -g`.
-    *   Na pasta `backend`, inicie sua aplicação com PM2: `pm2 start server.js --name bombdash-api`.
-    *   Use `pm2 startup` para gerar um script que reinicia o PM2 e suas aplicações no boot do servidor.
-    *   Muitas ferramentas "Setup Node.js App" em painéis de controle já usam algo similar ao PM2 por baixo dos panos (geralmente Phusion Passenger).
-
-9.  **Domínio e SSL:**
-    *   Configure seu domínio/subdomínio para apontar para a aplicação Node.js (geralmente feito automaticamente pelo painel ao definir a Application URL).
-    *   Instale um certificado SSL (Let's Encrypt é uma boa opção gratuita, frequentemente disponível via cPanel) para usar HTTPS, o que é crucial para a segurança.
-
-**Considerações para HostGator:**
-*   Planos de hospedagem compartilhada mais básicos da HostGator podem não suportar aplicações Node.js diretamente ou ter limitações severas. Um VPS ou um plano específico para aplicações Node.js é geralmente necessário.
-*   Verifique a documentação específica da HostGator para o seu tipo de plano, pois os passos exatos podem variar.
+### Jogo e Ranking
+*   `POST /scores` (Protegido): Submete uma nova pontuação.
+*   `GET /ranking`: Retorna o top 10 do ranking.
+*   `POST /pvp/match/enter`: (Exemplo de endpoint para entrar no matchmaking, a lógica real pode variar).
 
 ---
-
-Este `README.md` deve fornecer uma boa base para entender, rodar e implantar o projeto.
+Este README fornece uma visão geral completa do estado atual do projeto, facilitando a contribuição e o desenvolvimento contínuo.
