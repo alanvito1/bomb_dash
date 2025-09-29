@@ -8,50 +8,42 @@ O projeto é construído sobre uma base que separa a lógica do jogo (cliente) d
 
 *   **Client (Frontend):** Um cliente de jogo (não neste repositório) construído com Phaser.js, responsável apenas pela renderização e entrada do usuário. Ele se comunica com o backend via API REST.
 
-*   **Backend (Node.js/Express):** O servidor atua como a autoridade central para ações que não precisam de consenso on-chain. Ele gerencia a autenticação, o estado off-chain do jogador (nível, XP, HP, dano) e serve como o **Oráculo** para o sistema.
-    *   **Autenticação:** Utiliza **Sign-In with Ethereum (SIWE)**, permitindo que os jogadores façam login de forma segura usando suas carteiras Ethereum.
-    *   **Banco de Dados (SQLite):** Armazena dados do jogador, como estatísticas, progresso e gerenciamento de torneios.
-    *   **Oráculo (`oracle.js`):** Um serviço confiável que reporta resultados de partidas para os contratos inteligentes e assina mensagens para autorizar ações on-chain (como o resgate de recompensas).
+*   **Backend (Node.js/Express):** O servidor atua como a autoridade central para ações que não precisam de consenso on-chain. Ele gerencia a autenticação, o estado off-chain do jogador (nível, XP, HP) e serve como o **Oráculo** para o sistema.
+    *   **Autenticação:** Utiliza **Sign-In with Ethereum (SIWE)**, permitindo que os jogadores façam login de forma segura usando suas carteiras Ethereum, eliminando a necessidade de senhas.
+    *   **Banco de Dados (SQLite):** Armazena dados do jogador que não são críticos para a segurança on-chain, como XP, nível, HP e estatísticas de jogo.
+    *   **Oráculo (`oracle.js`):** Um serviço confiável que monitora eventos do jogo e reporta resultados (como vencedores de partidas) para os contratos inteligentes. Ele é o único autorizado a executar certas funções de contrato, servindo como uma ponte segura entre o mundo off-chain e on-chain.
 
 *   **Blockchain (Hardhat/Solidity):** O ambiente de desenvolvimento e os contratos inteligentes que governam a economia e as regras do jogo.
-    *   **`TournamentController.sol`:** Gerencia as taxas de entrada para torneios, a distribuição de prêmios e as taxas de level-up.
+    *   **`TournamentController.sol`:** Gerencia as taxas de entrada para partidas PvP, a criação de torneios e a distribuição de prêmios e taxas. Também processa a taxa de level-up.
     *   **`PerpetualRewardPool.sol`:** Um pool de recompensas para o modo solo, operando em um ciclo de emissão de 10 minutos.
+    *   **`MockBCOIN.sol`:** Um token ERC20 de teste para o ambiente de desenvolvimento local.
 
 ## Core Mechanics
 
-### Sistema de Progressão RPG (Expandido)
-- **Níveis e Experiência (XP):** Jogadores ganham XP de duas formas:
-    - **Vitórias em PvP:** Ganhar partidas em torneios concede uma quantidade fixa de XP.
-    - **Modo Solo:** Derrotar inimigos no modo solo concede XP (ex: **1 XP por minion**, **10 XP por boss**).
+### Sistema de Progressão RPG
+- **Níveis e Experiência (XP):** Jogadores ganham XP ao vencer partidas. A quantidade de XP necessária para o próximo nível é baseada na fórmula de progressão do jogo Tibia.
 - **Level Up:** Quando um jogador acumula XP suficiente, ele pode subir de nível.
     - **Custo:** Para subir de nível, o jogador deve pagar uma taxa de **1 BCOIN**.
-    - **Bônus:** A cada nível, o jogador recebe **+10 HP** e **+1 de Dano**.
-    - **Processo:** O backend verifica o XP, o oráculo aciona o pagamento on-chain, e o contrato distribui a taxa. Após a confirmação, o nível, HP e dano do jogador são atualizados no banco de dados.
+    - **Endpoint:** `POST /api/user/levelup`
+    - **Processo:** O backend verifica o XP, o oráculo aciona o pagamento on-chain, e o contrato distribui a taxa (50% para o pool de recompensas solo, 50% para a carteira da equipe). Após a confirmação, o nível e os atributos (HP) do jogador são atualizados no banco de dados.
 
 ### Ciclo de Recompensa (Modo Solo)
-- **Distribuição:** O `PerpetualRewardPool.sol` distribui recompensas em BCOIN para jogadores do modo solo a cada 10 minutos.
-- **Transparência:** Os jogadores podem consultar a recompensa estimada por jogo e o tempo restante no ciclo atual através de um endpoint da API.
-- **Resgate (Claim):** Para resgatar as recompensas, o jogador solicita uma assinatura criptográfica segura ao backend e a utiliza para chamar a função `claimReward` no contrato, garantindo que apenas o jogador autorizado possa sacar seus ganhos.
-
-### Sistema de Torneios (4 e 8 Jogadores)
-- O backend agora gerencia a lógica de matchmaking e a criação de chaves (brackets) para torneios.
-- **Fluxo:**
-    1.  Jogadores entram em um torneio através da API.
-    2.  Quando o torneio atinge a capacidade (4 ou 8 jogadores), o backend gera as chaves da primeira rodada.
-    3.  Após cada partida, o resultado é reportado à API.
-    4.  O backend avança o vencedor para a próxima rodada.
-    5.  Quando os 3 melhores são definidos, o oráculo reporta o resultado final ao contrato `TournamentController.sol` para a distribuição automática dos prêmios.
+- O `PerpetualRewardPool.sol` distribui recompensas em BCOIN para jogadores do modo solo.
+- **Ciclo de 10 Minutos:** A cada 10 minutos, um novo ciclo de recompensas é iniciado. Um cron job no backend (via `oracle.js`) chama a função `startNewCycle` no contrato para calcular a nova taxa de recompensa por jogo com base no saldo atual do pool e no número de jogos jogados no ciclo anterior.
 
 ## Local Development Setup
+
+Para rodar o ambiente de desenvolvimento completo (blockchain local, backend, contratos implantados), siga os passos abaixo.
 
 ### Pré-requisitos
 *   Node.js (v16 ou superior)
 *   npm
 
 ### 1. Instalação
-Clone o repositório e instale as dependências.
+Clone o repositório e instale as dependências na raiz e na pasta `backend`.
+
 ```bash
-# Clone o repositório e navegue até ele
+# Clone o repositório
 git clone <URL_DO_REPOSITORIO>
 cd <NOME_DO_REPOSITORIO>
 
@@ -65,69 +57,67 @@ cd ..
 ```
 
 ### 2. Configuração do Ambiente
-No diretório `backend`, copie o arquivo de exemplo `.env.example` para um novo arquivo `.env`.
-```bash
-cd backend
-cp .env.example .env
-```
-Abra o arquivo `.env` e preencha as variáveis. Para desenvolvimento local, você só precisa da `ORACLE_PRIVATE_KEY`. Ao iniciar o nó Hardhat no próximo passo, copie a chave privada de uma das contas de teste (ex: Account #1) e cole-a no seu arquivo `.env`.
+Copie o arquivo de exemplo de variáveis de ambiente e preencha-o.
 
-### 3. Rodando o Ambiente
-Você precisará de **três terminais** abertos na raiz do projeto.
-
-**Terminal 1: Iniciar o Nó Blockchain**
-```bash
-npx hardhat node
-```
-
-**Terminal 2: Implantar os Contratos**
-Com o nó rodando, implante os contratos na sua blockchain local.
-```bash
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-**Terminal 3: Iniciar o Servidor Backend**
-```bash
-cd backend
-node server.js
-```
-
-### 4. Rodando os Testes (Opcional)
-Para verificar se a lógica do backend está funcionando corretamente, você pode rodar os testes unitários.
 ```bash
 # Navegue até a pasta do backend
 cd backend
 
-# Rode os testes
-npm test
+# Copie o arquivo de exemplo
+cp .env.example .env
 ```
+Você precisará de uma chave privada para o `ORACLE_PRIVATE_KEY`. Ao iniciar o nó Hardhat no próximo passo, ele listará 20 contas de teste. Copie a chave privada de uma delas (ex: Account #1) e cole-a em seu arquivo `.env`.
 
-## API Endpoints (`http://localhost:3000/api`)
+### 3. Rodando o Ambiente
+
+Você precisará de **três terminais** abertos na raiz do projeto.
+
+**Terminal 1: Iniciar o Nó Blockchain**
+Este comando inicia uma blockchain local, simulando a rede Ethereum.
+
+```bash
+npx hardhat node
+```
+Mantenha este terminal rodando.
+
+**Terminal 2: Implantar os Contratos**
+Com o nó rodando, implante os contratos na sua blockchain local.
+
+```bash
+npx hardhat run scripts/deploy.js --network localhost
+```
+Este script irá implantar `MockBCOIN`, `TournamentController`, e `PerpetualRewardPool`, configurar suas interações e salvar seus endereços e ABIs na pasta `backend/contracts` para o servidor usar.
+
+**Terminal 3: Iniciar o Servidor Backend**
+Finalmente, inicie o servidor backend.
+
+```bash
+# Navegue até a pasta do backend
+cd backend
+
+# Inicie o servidor
+node server.js
+```
+O servidor se conectará automaticamente à blockchain local e aos contratos implantados.
+
+## API Endpoints
+
+A API é servida em `http://localhost:3000/api`.
 
 ### Autenticação
 *   `GET /auth/nonce`: Gera um nonce para a assinatura SIWE.
-*   `POST /auth/verify`: Verifica a assinatura e retorna um JWT.
+*   `POST /auth/verify`: Verifica a assinatura SIWE e retorna um JWT.
 *   `GET /auth/me` (Protegido): Retorna os dados do usuário autenticado.
 
 ### Usuário e Progressão
-*   `GET /user/stats` (Protegido): Busca as estatísticas de jogo do jogador.
+*   `GET /user/stats` (Protegido): Busca as estatísticas de jogo do jogador (dano, velocidade, etc.).
+*   `PUT /user/stats` (Protegido): Atualiza as estatísticas de jogo.
 *   `POST /user/levelup` (Protegido): Inicia o processo de level-up.
 
-### Modo Solo
-*   `POST /solo/game-over` (Protegido): Submete o resultado de uma partida solo para ganhar XP.
-    -   **Body:** `{ "minionsDefeated": number, "bossesDefeated": number }`
-*   `POST /solo/claim-rewards` (Protegido): Gera a assinatura para resgatar recompensas do modo solo.
-    -   **Body:** `{ "gamesPlayed": number }`
-*   `GET /solo/reward-info`: Retorna a recompensa estimada por jogo e o tempo restante no ciclo.
+### Jogo e Ranking
+*   `POST /scores` (Protegido): Submete uma nova pontuação.
+*   `GET /ranking`: Retorna o top 10 do ranking.
+*   `POST /pvp/match/enter`: (Exemplo de endpoint para entrar no matchmaking, a lógica real pode variar).
 
-### Torneios
-*   `POST /tournaments/join` (Protegido): Entra em um torneio.
-    -   **Body:** `{ "capacity": number, "entryFee": string, "onchainTournamentId": number }`
-*   `POST /tournaments/report-match` (Protegido): Reporta o vencedor de uma partida de torneio.
-    -   **Body:** `{ "matchId": number, "winnerId": number }`
-
-## Segurança
-*   **Rate Limiting:** A API implementa um limite de 100 requisições por 15 minutos por IP para proteger contra ataques de DoS e força bruta.
-*   **Gestão de Chaves:** A chave do Oráculo é carregada via variáveis de ambiente para evitar exposição no código-fonte. Em produção, recomenda-se o uso de um serviço de gerenciamento de segredos.
 ---
 Este README fornece uma visão geral completa do estado atual do projeto, facilitando a contribuição e o desenvolvimento contínuo.
