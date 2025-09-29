@@ -211,5 +211,45 @@
       <p class="form-tip">Entre com seu username e PIN de 4 dígitos.</p>
     </div>
   </div>
+
+  <!-- Lobby de Seleção PvP (inicialmente escondido) -->
+  <div id="pvp-lobby-container" class="form-container" style="display: none;">
+      <div class="form-box">
+          <h2 class="form-title">Modo PvP</h2>
+          <p class="form-message" style="color: #ffffff; min-height: 40px;">Escolha seu campo de batalha. A glória ou o risco te aguardam.</p>
+          <button type="button" id="ranked-mode-button" class="form-button">Modo Ranqueado</button>
+          <button type="button" id="wager-arena-button" class="form-button">Arena de Alto Risco</button>
+          <button type="button" id="pvp-lobby-back-button" class="form-button secondary">Voltar ao Menu</button>
+      </div>
+  </div>
+
+  <!-- Arena de Alto Risco (inicialmente escondida) -->
+  <div id="wager-arena-container" class="form-container" style="display: none;">
+      <div class="form-box">
+          <h2 class="form-title">Arena de Alto Risco</h2>
+          <p id="wager-arena-message" class="form-message" style="color: #ffffff;">Selecione o tier da sua aposta. A fortuna favorece os bravos.</p>
+
+          <!-- Tiers de Aposta -->
+          <div id="wager-tiers-list" style="width: 100%; max-width: 300px; margin-bottom: 20px;">
+              <!-- Os tiers serão populados dinamicamente via JS, mas aqui está um exemplo estático -->
+              <button type="button" class="form-button wager-tier-button" data-tier-id="1">Bronze: 10 BCOIN / 20 XP</button>
+              <button type="button" class="form-button wager-tier-button" data-tier-id="2">Prata: 50 BCOIN / 100 XP</button>
+              <button type="button" class="form-button wager-tier-button" data-tier-id="3">Ouro: 200 BCOIN / 500 XP</button>
+          </div>
+
+          <button type="button" id="wager-arena-back-button" class="form-button secondary">Voltar ao Lobby PvP</button>
+      </div>
+
+      <!-- Tela de Confirmação (dentro do container da arena, mas controlada separadamente) -->
+      <div id="wager-confirm-dialog" class="form-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+          <div class="form-box">
+              <h2 class="form-title" style="color: #ffcc00;">Confirmação Final</h2>
+              <p id="wager-confirm-message" class="form-message" style="color: #ffffff; font-size: 12px; min-height: 60px;">Você está prestes a arriscar X BCOIN e Y XP. Se perder, você pode perder um nível. Esta ação não pode ser desfeita.</p>
+              <button type="button" id="wager-confirm-button" class="form-button">Confirmar Aposta</button>
+              <button type="button" id="wager-cancel-button" class="form-button secondary">Cancelar</button>
+          </div>
+      </div>
+  </div>
+
 </body>
 </html>
