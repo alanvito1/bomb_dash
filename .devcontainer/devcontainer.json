@@ -1,0 +1,23 @@
+{
+  "name": "Bomb Dash Web3 Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
+
+  "features": {
+    "ghcr.io/devcontainers/features/solidity:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "NomicFoundation.hardhat-solidity",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+
+  "postCreateCommand": "npm install && (cd backend && npm install)",
+
+  "forwardPorts": [3000, 8545],
+
+  "remoteUser": "node"
+}

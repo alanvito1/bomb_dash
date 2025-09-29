@@ -1,0 +1,25 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Este projeto é uma refatoração do jogo \"Bomb Dash\" para mover sua arquitetura de um modelo puramente client-side para um modelo cliente-servidor seguro e robusto.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alanvito1/bomb_dash.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/alanvito1/bomb_dash/issues"
+  },
+  "homepage": "https://github.com/alanvito1/bomb_dash#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.6"
+  }
+}

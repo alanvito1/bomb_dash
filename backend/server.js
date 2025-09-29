@@ -1,17 +1,21 @@
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { SiweMessage } = require('siwe');
+const { randomBytes } = require('crypto');
 const db = require('./database.js'); // Nosso módulo de banco de dados
+const oracle = require('./oracle.js'); // Importar o nosso serviço de Oráculo
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Porta do servidor
-const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key'; // Mude em produção!
-const SALT_ROUNDS = 10;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-web3'; // Mude em produção!
 
 // Middleware
 app.use(cors()); // Habilita CORS para todas as rotas
 app.use(express.json()); // Para parsear JSON no corpo das requisições
+
+// Armazenamento de nonce em memória. Para produção, use uma solução mais robusta como Redis.
+const nonceStore = new Map();
 
 // Função de Middleware para verificar Token JWT
 function verifyToken(req, res, next) {
@@ -23,7 +27,7 @@ function verifyToken(req, res, next) {
                 console.error("JWT verification error:", err.message);
                 return res.status(403).json({ success: false, message: 'Token inválido ou expirado.' });
             }
-            req.user = decoded; // Adiciona o payload decodificado (ex: { username: 'user1' }) à requisição
+            req.user = decoded; // Adiciona o payload decodificado (ex: { address: '0x...', userId: 1 }) à requisição
             next();
         });
     } else {
@@ -31,156 +35,105 @@ function verifyToken(req, res, next) {
     }
 }
 
-// --- Endpoints da API ---
+// --- Endpoints de Autenticação Web3 (SIWE) ---
 
-// POST /api/register - Registrar um novo usuário
-app.post('/api/register', async (req, res) => {
-    const { username, pin } = req.body;
+// GET /api/auth/nonce - Gerar um nonce para o cliente assinar
+app.get('/api/auth/nonce', (req, res) => {
+    const nonce = randomBytes(16).toString('hex');
+    const expirationTime = Date.now() + (5 * 60 * 1000); // 5 minutos de validade
+    nonceStore.set(nonce, expirationTime);
+    res.json({ success: true, nonce });
+});
 
-    // Validação básica
-    if (!username || !pin) {
-        return res.status(400).json({ success: false, message: 'Usuário e PIN são obrigatórios.' });
+// POST /api/auth/verify - Verificar a mensagem assinada e emitir um JWT
+app.post('/api/auth/verify', async (req, res) => {
+    const { message, signature } = req.body;
+    if (!message || !signature) {
+        return res.status(400).json({ success: false, message: 'Requisição inválida: message e signature são obrigatórios.' });
     }
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { // Validar se o PIN tem 4 dígitos numéricos
-        return res.status(400).json({ success: false, message: 'PIN deve ter 4 dígitos numéricos.' });
-    }
-     if (/\s/.test(username) || username.length < 3) {
-        return res.status(400).json({ success: false, message: 'Usuário deve ter pelo menos 3 caracteres e não conter espaços.' });
-    }
-
 
     try {
-        // Verificar se o usuário já existe
-        const existingUser = await db.findUserByUsername(username);
-        if (existingUser) {
-            return res.status(409).json({ success: false, message: 'Usuário já existe.' }); // 409 Conflict
+        const siweMessage = new SiweMessage(message);
+
+        // Validar o nonce
+        const expirationTime = nonceStore.get(siweMessage.nonce);
+        if (!expirationTime || Date.now() > expirationTime) {
+            nonceStore.delete(siweMessage.nonce);
+            return res.status(403).json({ success: false, message: 'Nonce inválido ou expirado.' });
         }
 
-        const hashedPassword = await bcrypt.hash(pin, SALT_ROUNDS);
-        const result = await db.createUser(username, hashedPassword);
-        if (result.success) {
-            res.status(201).json({ success: true, message: 'Usuário registrado com sucesso!', userId: result.userId });
-        } else {
-            // Este caso é mais genérico, pois o createUser já trata o UNIQUE constraint
-            res.status(500).json({ success: false, message: 'Erro ao registrar usuário.' });
+        // Verificar a assinatura
+        const { success, data: { address } } = await siweMessage.verify({ signature });
+        nonceStore.delete(siweMessage.nonce); // Nonce utilizado, deve ser removido
+
+        if (!success) {
+            return res.status(403).json({ success: false, message: 'A verificação da assinatura falhou.' });
         }
+
+        // Usuário autenticado. Encontre ou crie no banco de dados.
+        let user = await db.findUserByAddress(address);
+        if (!user) {
+            console.log(`Primeiro login de ${address}. Criando novo usuário.`);
+            const result = await db.createUserByAddress(address);
+            user = { id: result.userId, wallet_address: address, max_score: 0 };
+        }
+
+        // Gerar token JWT
+        const tokenPayload = { userId: user.id, address: user.wallet_address };
+        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
+
+        res.json({
+            success: true,
+            message: 'Login bem-sucedido!',
+            token: token,
+            user: {
+                address: user.wallet_address,
+                max_score: user.max_score
+            }
+        });
     } catch (error) {
-        console.error("Register error:", error);
-        if (error.message && error.message.toLowerCase().includes("username already exists")) {
-             return res.status(409).json({ success: false, message: 'Usuário já existe.' });
+        console.error("Erro em /api/auth/verify:", error);
+        if (req.body.message) {
+            try {
+                const siweMessage = new SiweMessage(req.body.message);
+                nonceStore.delete(siweMessage.nonce);
+            } catch {}
         }
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao registrar.' });
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 });
 
 // GET /api/auth/me - Validar token e retornar dados do usuário logado
 app.get('/api/auth/me', verifyToken, async (req, res) => {
-    const username = req.user.username; // Obtido do token JWT verificado
-
-    if (!username) {
-        // Isso não deveria acontecer se verifyToken funcionou corretamente
-        return res.status(400).json({ success: false, message: 'Nome de usuário não encontrado no token.' });
-    }
-
     try {
-        const user = await db.findUserByUsername(username);
+        const user = await db.findUserByAddress(req.user.address);
         if (!user) {
-            // Usuário no token não existe mais no banco de dados
-            return res.status(404).json({ success: false, message: 'Usuário não encontrado no banco de dados.' });
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
         }
-
-        // Retornar os dados essenciais do usuário
         res.json({
             success: true,
-            user: {
-                username: user.username,
-                max_score: user.max_score
-                // Não retorne o password_hash!
-            }
+            user: { address: user.wallet_address, max_score: user.max_score }
         });
     } catch (error) {
-        console.error("Get /api/auth/me error:", error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar dados do usuário.' });
-    }
-});
-
-// POST /api/login - Autenticar um usuário
-app.post('/api/login', async (req, res) => {
-    const { username, pin } = req.body;
-
-    if (!username || !pin) {
-        return res.status(400).json({ success: false, message: 'Usuário e PIN são obrigatórios.' });
-    }
-
-    try {
-        const user = await db.findUserByUsername(username);
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Usuário ou PIN inválido.' }); // Usuário não encontrado
-        }
-
-        const isMatch = await bcrypt.compare(pin, user.password_hash);
-        if (isMatch) {
-            // Gerar token JWT
-            const tokenPayload = { username: user.username, userId: user.id }; // Incluir ID do usuário no token se útil
-            const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' }); // Token expira em 24 horas
-
-            res.json({
-                success: true,
-                message: 'Login bem-sucedido!',
-                token: token,
-                user: {
-                    username: user.username,
-                    max_score: user.max_score
-                }
-            });
-        } else {
-            res.status(401).json({ success: false, message: 'Usuário ou PIN inválido.' }); // Senha não confere
-        }
-    } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao fazer login.' });
+        console.error("Erro em /api/auth/me:", error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 });
 
 // POST /api/scores - Submeter uma nova pontuação (protegido por JWT)
 app.post('/api/scores', verifyToken, async (req, res) => {
     const { score } = req.body;
-    const username = req.user.username; // Obtido do token JWT verificado
+    const address = req.user.address;
 
     if (typeof score !== 'number' || score < 0) {
         return res.status(400).json({ success: false, message: 'Pontuação inválida.' });
     }
 
-    // Adicionar uma validação de limite de pontuação, se necessário
-    const MAX_POSSIBLE_SCORE = 1000000; // Exemplo, defina um limite razoável
-    if (score > MAX_POSSIBLE_SCORE) {
-        console.warn(`Score ${score} for user ${username} exceeds MAX_POSSIBLE_SCORE. Clamping or rejecting.`);
-        // Poderia retornar erro ou apenas registrar a pontuação máxima permitida
-        // return res.status(400).json({ success: false, message: 'Pontuação excede o limite máximo permitido.' });
-    }
-
-
     try {
-        const result = await db.updateUserScore(username, score);
-        if (result.success) {
-            res.json({
-                success: true,
-                message: result.message || 'Pontuação atualizada com sucesso!',
-                new_max_score: result.new_max_score
-            });
-        } else {
-            // Se updateUserScore resolve com success: false (ex: pontuação não é maior)
-            res.status(200).json({ // Ainda é um sucesso da requisição, mas a pontuação pode não ter sido atualizada
-                success: true, // Ou false, dependendo de como quer tratar "não foi novo recorde"
-                message: result.message || 'Não foi um novo recorde ou usuário não encontrado.',
-                current_max_score: result.current_max_score || (await db.findUserByUsername(username)).max_score
-            });
-        }
+        const result = await db.updateUserScore(address, score);
+        res.json({ success: true, ...result });
     } catch (error) {
-        console.error("Update score error:", error);
-        if(error.message === "User not found.") { // Tratamento específico se o usuário do token não for encontrado no BD
-             return res.status(404).json({ success: false, message: 'Usuário do token não encontrado no banco de dados.' });
-        }
+        console.error("Erro em /api/scores:", error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao atualizar pontuação.' });
     }
 });
@@ -189,99 +142,76 @@ app.post('/api/scores', verifyToken, async (req, res) => {
 app.get('/api/ranking', async (req, res) => {
     try {
         const ranking = await db.getTop10Players();
-        res.json({ success: true, ranking: ranking });
+        res.json({ success: true, ranking });
     } catch (error) {
-        console.error("Get ranking error:", error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar ranking.' });
+        console.error("Erro em /api/ranking:", error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 });
 
-// --- Player Stats Endpoints ---
-
 // GET /api/user/stats - Obter estatísticas do jogador logado
 app.get('/api/user/stats', verifyToken, async (req, res) => {
-    const userId = req.user.userId; // Obtido do token JWT verificado (payload should have userId)
-
-    if (!userId) {
-        return res.status(400).json({ success: false, message: 'ID do usuário não encontrado no token.' });
-    }
-
     try {
-        const stats = await db.getPlayerStats(userId);
+        const stats = await db.getPlayerStats(req.user.userId);
         if (stats) {
-            res.json({ success: true, stats: stats });
+            res.json({ success: true, stats });
         } else {
-            // Nenhum stats encontrado para este usuário, o que é normal para um novo usuário.
-            // O cliente espera um 404 ou stats: null para lidar com isso criando defaults.
             res.status(404).json({ success: false, message: 'Nenhuma estatística encontrada para este usuário.' });
         }
     } catch (error) {
-        console.error(`Get /api/user/stats error for user ${userId}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar estatísticas do jogador.' });
+        console.error(`Erro em /api/user/stats for user ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 });
 
 // PUT /api/user/stats - Salvar/atualizar estatísticas do jogador logado
 app.put('/api/user/stats', verifyToken, async (req, res) => {
-    const userId = req.user.userId;
-    const playerStatsFromClient = req.body;
-
-    if (!userId) {
-        return res.status(400).json({ success: false, message: 'ID do usuário não encontrado no token.' });
-    }
-    if (!playerStatsFromClient || typeof playerStatsFromClient !== 'object') {
-        return res.status(400).json({ success: false, message: 'Dados de estatísticas inválidos ou não fornecidos.' });
-    }
-
+    const { userId } = req.user;
     try {
-        // A função savePlayerStats em database.js usa INSERT OR REPLACE (UPSERT)
-        const result = await db.savePlayerStats(userId, playerStatsFromClient);
-        if (result.success) {
-            res.status(200).json({ success: true, message: 'Estatísticas do jogador salvas com sucesso.', stats: result.stats });
-        } else {
-            // Este else pode não ser alcançado se savePlayerStats sempre resolve com success ou rejeita com erro.
-            res.status(500).json({ success: false, message: 'Falha ao salvar estatísticas do jogador no banco de dados.' });
-        }
+        const result = await db.savePlayerStats(userId, req.body);
+        res.json({ success: true, message: 'Estatísticas salvas com sucesso.', stats: result.stats });
     } catch (error) {
-        console.error(`Put /api/user/stats error for user ${userId}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar estatísticas do jogador.' });
+        console.error(`Erro em /api/user/stats for user ${userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar estatísticas.' });
+    }
+});
+
+// --- Exemplo de Endpoint que utiliza o Oráculo ---
+// Em um cenário real, isso seria chamado pela lógica interna do servidor de jogo.
+app.post('/api/admin/report-match', verifyToken, async (req, res) => {
+    // Adicionar verificação se o usuário é um admin, se necessário
+    const { matchId, winnerAddress } = req.body;
+    if (!matchId || !winnerAddress) {
+        return res.status(400).json({ success: false, message: 'matchId e winnerAddress são obrigatórios.' });
+    }
+    try {
+        const tx = await oracle.reportMatchResult(matchId, winnerAddress);
+        res.json({ success: true, message: 'Resultado da partida reportado com sucesso.', transactionHash: tx.hash });
+    } catch (error) {
+        console.error("Erro ao reportar resultado da partida:", error);
+        res.status(500).json({ success: false, message: 'Falha ao reportar resultado da partida.' });
     }
 });
 
 
-// Inicializar o BD e então iniciar o servidor
+// Inicializar o BD, depois o Oráculo, e então iniciar o servidor
 db.initDb()
     .then(() => {
+        // Após o BD estar pronto, inicializar o Oráculo
+        oracle.initOracle();
+
         app.listen(PORT, () => {
-            console.log(`Servidor Bomb Dash rodando na porta ${PORT}`);
-            console.log(`Endpoints disponíveis:`);
-            console.log(`  POST /api/register`);
-            console.log(`  POST /api/login`);
-            console.log(`  POST /api/scores (protegido por JWT)`);
-            console.log(`  GET /api/ranking`);
-            console.log(`  GET /api/auth/me (protegido por JWT)`);
-            console.log(`JWT_SECRET está configurado como: ${JWT_SECRET === 'your-very-strong-secret-key' ? 'CHAVE PADRÃO (INSEGURA!)' : 'CHAVE PERSONALIZADA'}`)
-            if (JWT_SECRET === 'your-very-strong-secret-key') {
-                console.warn("AVISO: JWT_SECRET está usando a chave padrão. Mude para uma chave forte em um ambiente de produção!");
-            }
+            console.log(`Servidor Bomb Dash (Web3) rodando na porta ${PORT}`);
+            console.log(`JWT_SECRET está configurado como: ${JWT_SECRET.startsWith('your-very-strong') ? 'CHAVE PADRÃO (INSEGURA!)' : 'CHAVE PERSONALIZADA'}`);
         });
     })
     .catch(err => {
         console.error("Falha ao inicializar o banco de dados. Servidor não iniciado.", err);
-        process.exit(1); // Termina o processo se o BD não puder ser inicializado
+        process.exit(1);
     });
 
-// Graceful shutdown - fechar conexão com BD
-process.on('SIGINT', () => {
-    console.log('Recebido SIGINT. Fechando conexões...');
-    db.closeDb();
-    process.exit(0);
-});
+// Graceful shutdown
+process.on('SIGINT', () => { db.closeDb(); process.exit(0); });
+process.on('SIGTERM', () => { db.closeDb(); process.exit(0); });
 
-process.on('SIGTERM', () => {
-    console.log('Recebido SIGTERM. Fechando conexões...');
-    db.closeDb();
-    process.exit(0);
-});
-
-module.exports = app; // Para possíveis testes
+module.exports = app;
