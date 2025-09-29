@@ -5,6 +5,7 @@ const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
 const db = require('./database.js'); // Nosso módulo de banco de dados
 const oracle = require('./oracle.js'); // Importar o nosso serviço de Oráculo
+const { getExperienceForLevel } = require('./rpg.js'); // Importar a lógica de XP
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Porta do servidor
@@ -176,6 +177,55 @@ app.put('/api/user/stats', verifyToken, async (req, res) => {
     }
 });
 
+// POST /api/user/levelup - Processar o level-up de um jogador
+app.post('/api/user/levelup', verifyToken, async (req, res) => {
+    const { address, userId } = req.user;
+
+    try {
+        // 1. Buscar dados atuais do usuário (nível e XP)
+        const user = await db.findUserByAddress(address);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Usuário não encontrado." });
+        }
+
+        // 2. Verificar se o jogador tem XP suficiente
+        const xpForNextLevel = getExperienceForLevel(user.level + 1);
+        if (user.xp < xpForNextLevel) {
+            return res.status(400).json({
+                success: false,
+                message: "XP insuficiente para o próximo nível.",
+                currentXp: user.xp,
+                requiredXp: xpForNextLevel,
+            });
+        }
+
+        // 3. Verificar se o jogador tem 1 BCOIN (verificação off-chain para feedback rápido)
+        // A verificação final e real é feita pelo contrato `transferFrom`.
+        // Esta parte do código assume que o frontend já verificou o saldo e a aprovação.
+        // Em uma implementação mais robusta, o backend poderia verificar o saldo aqui.
+
+        // 4. Iniciar a transação on-chain via Oráculo
+        await oracle.triggerLevelUpPayment(address);
+
+        // 5. Atualizar nível e HP no banco de dados
+        const newLevel = user.level + 1;
+        const newHp = user.hp + 10; // Aumenta 10 de HP a cada nível
+        await db.levelUpUser(userId, newLevel, newHp);
+
+        res.json({
+            success: true,
+            message: `Parabéns! Você alcançou o nível ${newLevel}!`,
+            newLevel,
+            newHp,
+        });
+
+    } catch (error) {
+        console.error(`Falha no processo de level-up para ${address}:`, error.message);
+        // Pode ser um erro de transação (saldo/aprovação insuficiente) ou de banco de dados
+        res.status(500).json({ success: false, message: "Ocorreu um erro durante o processo de level-up. Verifique seu saldo de BCOIN e a aprovação do contrato." });
+    }
+});
+
 // --- Exemplo de Endpoint que utiliza o Oráculo ---
 // Em um cenário real, isso seria chamado pela lógica interna do servidor de jogo.
 app.post('/api/admin/report-match', verifyToken, async (req, res) => {
@@ -198,7 +248,10 @@ app.post('/api/admin/report-match', verifyToken, async (req, res) => {
 db.initDb()
     .then(() => {
         // Após o BD estar pronto, inicializar o Oráculo
-        oracle.initOracle();
+        if (oracle.initOracle()) {
+            // Se o oráculo inicializou com sucesso, inicie os cron jobs
+            oracle.startCronJobs();
+        }
 
         app.listen(PORT, () => {
             console.log(`Servidor Bomb Dash (Web3) rodando na porta ${PORT}`);

@@ -63,6 +63,7 @@ contract TournamentController {
     event PlayerJoinedTournament(uint256 indexed tournamentId, address indexed player);
     event TournamentStarted(uint256 indexed tournamentId);
     event PrizeDistributed(address[] winners, uint256 totalPrize);
+    event LevelUpFeePaid(address indexed player, uint256 fee);
 
     // Modifiers
     modifier onlyOwner() {
@@ -214,6 +215,35 @@ contract TournamentController {
 
         uint256 totalPot = tournamentToUpdate.entryFee * tournamentToUpdate.participants.length;
         _distributeFeesAndPrize(totalPot, winners);
+    }
+
+    /**
+     * @dev Called by the Oracle to execute the 1 BCOIN payment for a player's level-up.
+     * The player must have previously approved the contract to spend 1 BCOIN.
+     * @param player The address of the player who is leveling up.
+     */
+    function payLevelUpFee(address player) external onlyOracle {
+        require(soloRewardPoolAddress != address(0), "Reward pool address not set");
+
+        IBEP20 token = IBEP20(bcoinTokenAddress);
+        uint256 levelUpFee = 1 * 10**18; // 1 BCOIN
+
+        // Transfer the fee from the player to this contract.
+        // Requires the player to have approved this contract address beforehand.
+        require(token.transferFrom(player, address(this), levelUpFee), "Level-up fee transfer failed");
+
+        // Distribute the fee 50/50
+        uint256 teamShare = levelUpFee / 2;
+        uint256 poolShare = levelUpFee - teamShare;
+
+        if (teamShare > 0) {
+            token.transfer(teamWallet, teamShare);
+        }
+        if (poolShare > 0) {
+            token.transfer(soloRewardPoolAddress, poolShare);
+        }
+
+        emit LevelUpFeePaid(player, levelUpFee);
     }
 
     /**

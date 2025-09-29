@@ -1,59 +1,111 @@
 const { ethers } = require("hardhat");
+const fs = require('fs');
+const path = require('path');
 
 async function main() {
-    // Hardhat nos dá 10 contas de teste. Vamos atribuir papéis a algumas delas.
-    const [deployer, teamWallet, oracle, player1, player2] = await ethers.getSigners();
+    // 1. Get Signers
+    const [deployer, oracle, teamWallet] = await ethers.getSigners();
+    console.log("Deploying contracts with the account:", deployer.address);
+    console.log("Oracle address:", oracle.address);
+    console.log("Team Wallet address:", teamWallet.address);
+    console.log("Account balance:", (await deployer.provider.getBalance(deployer.address)).toString());
 
-    console.log("--- Início do Deploy ---");
-    console.log("Deployer:", deployer.address);
-    console.log("Team Wallet:", teamWallet.address);
-    console.log("Oracle:", oracle.address);
-    console.log("Player 1:", player1.address);
-    console.log("Player 2:", player2.address);
-    console.log("---------------------------\n");
+    // 2. Deploy MockBCOIN
+    const MockBCOIN = await ethers.getContractFactory("MockBCOIN");
+    const bcoin = await MockBCOIN.deploy();
+    await bcoin.waitForDeployment();
+    const bcoinAddress = await bcoin.getAddress();
+    console.log("MockBCOIN deployed to:", bcoinAddress);
 
-    // 1. Deploy do MockBCOIN
-    console.log("Deploying MockBCOIN...");
-    const MockBCOINFactory = await ethers.getContractFactory("MockBCOIN");
-    const bcoin = await MockBCOINFactory.deploy();
-    await bcoin.deployed();
-    console.log("✅ MockBCOIN deployed to:", bcoin.address);
+    // Mint initial supply to the deployer
+    const initialMintAmount = ethers.parseUnits("1000000", 18); // 1,000,000 BCOIN
+    await bcoin.mint(deployer.address, initialMintAmount);
+    console.log(`Minted ${ethers.formatUnits(initialMintAmount, 18)} BCOIN to deployer`);
 
-    // 2. Deploy do PerpetualRewardPool
-    console.log("\nDeploying PerpetualRewardPool...");
-    const PerpetualRewardPoolFactory = await ethers.getContractFactory("PerpetualRewardPool");
-    const emissionRate = 5000; // 0.5% com 6 casas decimais de precisão
-    const rewardPool = await PerpetualRewardPoolFactory.deploy(bcoin.address, oracle.address, emissionRate);
-    await rewardPool.deployed();
-    console.log("✅ PerpetualRewardPool deployed to:", rewardPool.address);
+    // 3. Deploy TournamentController
+    const TournamentController = await ethers.getContractFactory("TournamentController");
+    const tournamentController = await TournamentController.deploy(
+        bcoinAddress,
+        teamWallet.address,
+        oracle.address
+    );
+    await tournamentController.waitForDeployment();
+    const tournamentControllerAddress = await tournamentController.getAddress();
+    console.log("TournamentController deployed to:", tournamentControllerAddress);
 
-    // 3. Deploy do TournamentController
-    console.log("\nDeploying TournamentController...");
-    const TournamentControllerFactory = await ethers.getContractFactory("TournamentController");
-    const tournamentController = await TournamentControllerFactory.deploy(bcoin.address, teamWallet.address, oracle.address);
-    await tournamentController.deployed();
-    console.log("✅ TournamentController deployed to:", tournamentController.address);
+    // 4. Deploy PerpetualRewardPool
+    // Emission rate: 0.5% with 1,000,000 precision -> 5000
+    const emissionRate = 5000;
+    const PerpetualRewardPool = await ethers.getContractFactory("PerpetualRewardPool");
+    const perpetualRewardPool = await PerpetualRewardPool.deploy(
+        bcoinAddress,
+        oracle.address,
+        emissionRate
+    );
+    await perpetualRewardPool.waitForDeployment();
+    const perpetualRewardPoolAddress = await perpetualRewardPool.getAddress();
+    console.log("PerpetualRewardPool deployed to:", perpetualRewardPoolAddress);
 
-    // 4. Configurar o endereço da pool de recompensas no TournamentController
-    console.log("\nConfiguring TournamentController...");
-    const tx = await tournamentController.setSoloRewardPool(rewardPool.address);
-    await tx.wait();
-    console.log("✅ SoloRewardPool address set in TournamentController.");
+    // 5. Configure Contracts
+    console.log("\nConfiguring contract interactions...");
+    // Set the solo reward pool address in the tournament controller
+    const tx1 = await tournamentController.setSoloRewardPool(perpetualRewardPoolAddress);
+    await tx1.wait();
+    console.log(`- Set solo reward pool address in TournamentController.`);
 
-    // 5. Distribuir BCOINs para os jogadores de teste
-    console.log("\nDistributing test BCOINs...");
-    const mintAmount = ethers.utils.parseEther("1000"); // 1000 BCOIN
-    await bcoin.mint(player1.address, mintAmount);
-    await bcoin.mint(player2.address, mintAmount);
-    console.log(`✅ Minted ${ethers.utils.formatEther(mintAmount)} BCOIN to Player 1 and Player 2.`);
+    // 6. Fund the Reward Pool
+    console.log("\nFunding the perpetual reward pool...");
+    const initialPoolFunding = ethers.parseUnits("100000", 18); // 100,000 BCOIN
+    const tx2 = await bcoin.transfer(perpetualRewardPoolAddress, initialPoolFunding);
+    await tx2.wait();
+    const poolBalance = await bcoin.balanceOf(perpetualRewardPoolAddress);
+    console.log(`- Transferred ${ethers.formatUnits(initialPoolFunding, 18)} BCOIN to the reward pool.`);
+    console.log(`- PerpetualRewardPool BCOIN balance: ${ethers.formatUnits(poolBalance, 18)}`);
 
-    console.log("\n\n--- 🚀 DEPLOYMENT COMPLETO 🚀 ---\n");
-    console.log("Copie as seguintes variáveis para o seu arquivo .env no diretório /backend:\n");
-    console.log(`TOURNAMENT_CONTROLLER_ADDRESS=${tournamentController.address}`);
-    console.log(`PERPETUAL_REWARD_POOL_ADDRESS=${rewardPool.address}`);
-    console.log("# Esta é a chave privada da conta do Oráculo. Use apenas para testes locais.");
-    console.log(`ORACLE_PRIVATE_KEY=${oracle.privateKey}`);
-    console.log("\n-------------------------------------\n");
+    // 7. Save Artifacts for Backend
+    console.log("\nSaving contract addresses and ABIs for the backend...");
+    const backendDir = path.join(__dirname, '..', 'backend', 'contracts');
+    if (!fs.existsSync(backendDir)) {
+        fs.mkdirSync(backendDir, { recursive: true });
+    }
+
+    const addresses = {
+        bcoinTokenAddress: bcoinAddress,
+        tournamentControllerAddress: tournamentControllerAddress,
+        perpetualRewardPoolAddress: perpetualRewardPoolAddress,
+        oracleAddress: oracle.address,
+        teamWalletAddress: teamWallet.address,
+    };
+
+    fs.writeFileSync(
+        path.join(backendDir, 'contract-addresses.json'),
+        JSON.stringify(addresses, null, 2)
+    );
+    console.log("- Wrote contract addresses to backend/contracts/contract-addresses.json");
+
+    // Function to save ABI
+    const saveAbi = (contractIdentifier) => {
+        const artifact = artifacts.readArtifactSync(contractIdentifier);
+        // If the identifier is fully qualified (e.g., "contracts/file.sol:Contract"),
+        // extract just the contract name for the filename.
+        const contractName = contractIdentifier.includes(':')
+            ? contractIdentifier.split(':')[1]
+            : contractIdentifier;
+
+        fs.writeFileSync(
+            path.join(backendDir, `${contractName}.json`),
+            JSON.stringify(artifact.abi, null, 2)
+        );
+        console.log(`- Wrote ${contractName} ABI to backend/contracts/${contractName}.json`);
+    };
+
+    // Adjust contract names if they differ in your artifacts
+    saveAbi("TournamentController");
+    saveAbi("PerpetualRewardPool");
+    // Use a fully qualified name to resolve the ambiguity for the IBEP20 interface
+    saveAbi("contracts/PerpetualRewardPool.sol:IBEP20");
+
+    console.log("\nDeployment and setup complete! 🎉");
 }
 
 main()

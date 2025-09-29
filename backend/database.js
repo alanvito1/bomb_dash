@@ -25,6 +25,9 @@ async function initDb() {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     wallet_address TEXT UNIQUE NOT NULL,
                     max_score INTEGER DEFAULT 0,
+                    level INTEGER DEFAULT 1,
+                    xp INTEGER DEFAULT 0,
+                    hp INTEGER DEFAULT 100,
                     last_score_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             `;
@@ -113,7 +116,7 @@ async function createUserByAddress(address) {
 async function findUserByAddress(address) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const querySQL = "SELECT id, wallet_address, max_score FROM users WHERE wallet_address = ?;";
+        const querySQL = "SELECT id, wallet_address, max_score, level, xp, hp FROM users WHERE wallet_address = ?;";
         db.get(querySQL, [address], (err, row) => {
             if (err) {
                 console.error(`Error finding user with address ${address}:`, err.message);
@@ -202,6 +205,42 @@ function closeDb() {
     }
 }
 
+// Função para adicionar XP a um usuário
+async function addXpToUser(address, xpAmount) {
+    if (!db) await initDb();
+    return new Promise(async (resolve, reject) => {
+        try {
+            const user = await findUserByAddress(address);
+            if (!user) {
+                return reject(new Error("User not found."));
+            }
+
+            const updateSQL = "UPDATE users SET xp = xp + ? WHERE wallet_address = ?;";
+            db.run(updateSQL, [xpAmount, address], function(err) {
+                if (err) return reject(err);
+                resolve({ success: true, message: `Awarded ${xpAmount} XP.` });
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Função para subir o nível de um usuário e resetar seu HP
+async function levelUpUser(userId, newLevel, newHp) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const updateSQL = "UPDATE users SET level = ?, hp = ? WHERE id = ?;";
+        db.run(updateSQL, [newLevel, newHp, userId], function(err) {
+            if (err) return reject(err);
+            if (this.changes === 0) {
+                return reject(new Error("User not found or no changes made."));
+            }
+            resolve({ success: true, message: `User leveled up to ${newLevel}!` });
+        });
+    });
+}
+
 module.exports = {
     initDb,
     createUserByAddress,
@@ -210,5 +249,7 @@ module.exports = {
     getTop10Players,
     getPlayerStats,
     savePlayerStats,
+    addXpToUser,
+    levelUpUser,
     closeDb
 };
