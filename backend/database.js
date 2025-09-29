@@ -1,5 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
-const DB_PATH = './databasebomb.sqlite'; // Changed database filename
+const DB_PATH = './ranking.sqlite'; // Consistent filename
 
 let db = null;
 
@@ -14,17 +14,16 @@ async function initDb() {
         db = new sqlite3.Database(DB_PATH, (err) => {
             if (err) {
                 console.error('Error opening database', err.message);
-                db = null; // Garante que db seja nulo em caso de erro
+                db = null;
                 return reject(err);
             }
             console.log('Connected to the SQLite database.');
 
-            // Criar a tabela users se não existir
+            // Modificar a tabela users para Web3: wallet_address como chave
             const createUserTableSQL = `
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
+                    wallet_address TEXT UNIQUE NOT NULL,
                     max_score INTEGER DEFAULT 0,
                     last_score_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
@@ -36,9 +35,8 @@ async function initDb() {
                     db = null;
                     return reject(err);
                 }
-                console.log("Users table initialized or already exists.");
+                console.log("Users table (Web3) initialized or already exists.");
 
-                // Criar a tabela player_stats se não existir
                 const createPlayerStatsTableSQL = `
                     CREATE TABLE IF NOT EXISTS player_stats (
                         user_id INTEGER PRIMARY KEY,
@@ -68,69 +66,82 @@ async function initDb() {
     });
 }
 
-// Função para criar um novo usuário
-async function createUser(username, passwordHash) {
-    if (!db) await initDb(); // Garante que o BD esteja inicializado
+// Função para criar um novo usuário e suas estatísticas iniciais atomicamente
+async function createUserByAddress(address) {
+    if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const insertSQL = "INSERT INTO users (username, password_hash, max_score) VALUES (?, ?, 0);";
-        db.run(insertSQL, [username, passwordHash], function(err) { // Usar function() para ter acesso a this.lastID
-            if (err) {
-                console.error(`Error creating user ${username}:`, err.message);
-                if (err.message && err.message.toLowerCase().includes("unique constraint failed")) {
-                    return reject(new Error("Username already exists."));
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION;", (err) => {
+                if (err) return reject(err);
+            });
+
+            const userInsertSQL = "INSERT INTO users (wallet_address, max_score) VALUES (?, 0);";
+            db.run(userInsertSQL, [address], function(err) {
+                if (err) {
+                    console.error(`Error creating user for address ${address}:`, err.message);
+                    return db.run("ROLLBACK;", () => reject(new Error("Failed to create user.")));
                 }
-                return reject(new Error("Failed to create user."));
-            }
-            console.log(`User ${username} created with ID ${this.lastID}.`);
-            resolve({ success: true, userId: this.lastID });
+
+                const userId = this.lastID;
+                console.log(`User for address ${address} created with ID ${userId}.`);
+
+                const statsInsertSQL = `
+                    INSERT INTO player_stats (user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins)
+                    VALUES (?, 1, 200, 1, 600, 1.0, 0, 0);
+                `;
+                db.run(statsInsertSQL, [userId], function(err) {
+                    if (err) {
+                        console.error(`Error creating initial stats for user ID ${userId}:`, err.message);
+                        return db.run("ROLLBACK;", () => reject(new Error("Failed to create user stats.")));
+                    }
+
+                    db.run("COMMIT;", (err) => {
+                        if (err) {
+                            console.error("Commit failed:", err.message);
+                            return db.run("ROLLBACK;", () => reject(new Error("Transaction commit failed.")));
+                        }
+                        console.log(`Initial stats created for user ID ${userId}. Transaction committed.`);
+                        resolve({ success: true, userId: userId });
+                    });
+                });
+            });
         });
     });
 }
 
-// Função para encontrar um usuário pelo username
-async function findUserByUsername(username) {
+// Função para encontrar um usuário pelo endereço da carteira
+async function findUserByAddress(address) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const querySQL = "SELECT id, username, password_hash, max_score FROM users WHERE username = ?;";
-        db.get(querySQL, [username], (err, row) => {
+        const querySQL = "SELECT id, wallet_address, max_score FROM users WHERE wallet_address = ?;";
+        db.get(querySQL, [address], (err, row) => {
             if (err) {
-                console.error(`Error finding user ${username}:`, err.message);
+                console.error(`Error finding user with address ${address}:`, err.message);
                 return reject(err);
             }
-            resolve(row); // Retorna a linha do usuário ou undefined se não encontrado
+            resolve(row);
         });
     });
 }
 
-// Função para atualizar a pontuação máxima de um usuário
-async function updateUserScore(username, score) {
+// Função para atualizar a pontuação máxima de um usuário (identificado pelo endereço)
+async function updateUserScore(address, score) {
     if (!db) await initDb();
-    return new Promise(async (resolve, reject) => { // Adicionado async aqui
+    return new Promise(async (resolve, reject) => {
         try {
-            const user = await findUserByUsername(username);
+            const user = await findUserByAddress(address);
             if (!user) {
                 return reject(new Error("User not found."));
             }
 
             if (score > user.max_score) {
-                const updateSQL = "UPDATE users SET max_score = ?, last_score_timestamp = CURRENT_TIMESTAMP WHERE username = ?;";
-                db.run(updateSQL, [score, username], function(err) {
-                    if (err) {
-                        console.error(`Error updating max score for ${username}:`, err.message);
-                        return reject(err);
-                    }
-                    if (this.changes > 0) {
-                        console.log(`Max score updated for ${username} to ${score}.`);
-                        resolve({ success: true, new_max_score: score });
-                    } else {
-                        // Isso não deveria acontecer se o usuário foi encontrado e a pontuação é maior
-                        console.log(`No score update needed or user not found for ${username}.`);
-                        resolve({ success: false, message: "Score not higher or user issue." });
-                    }
+                const updateSQL = "UPDATE users SET max_score = ?, last_score_timestamp = CURRENT_TIMESTAMP WHERE wallet_address = ?;";
+                db.run(updateSQL, [score, address], function(err) {
+                    if (err) return reject(err);
+                    resolve({ success: true, message: "New high score!", new_max_score: score });
                 });
             } else {
-                console.log(`New score ${score} is not higher than current max score ${user.max_score} for ${username}.`);
-                resolve({ success: true, new_max_score: user.max_score, message: "Score not higher than current max." });
+                resolve({ success: true, message: "Score not higher than current max.", current_max_score: user.max_score });
             }
         } catch (error) {
             reject(error);
@@ -138,62 +149,25 @@ async function updateUserScore(username, score) {
     });
 }
 
-// Função para obter os 10 melhores jogadores
+// Função para obter os 10 melhores jogadores (retorna endereço em vez de username)
 async function getTop10Players() {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const querySQL = "SELECT username, max_score FROM users ORDER BY max_score DESC LIMIT 10;";
+        const querySQL = "SELECT wallet_address, max_score FROM users ORDER BY max_score DESC LIMIT 10;";
         db.all(querySQL, [], (err, rows) => {
-            if (err) {
-                console.error("Error getting ranking:", err.message);
-                return reject(err);
-            }
-            // Mapeia para o formato { username: 'name', score: value } como no cliente original
-            resolve(rows.map(row => ({ username: row.username, score: row.max_score })));
+            if (err) return reject(err);
+            resolve(rows.map(row => ({ address: row.wallet_address, score: row.max_score })));
         });
     });
 }
-
-// Exportar as funções e a instância do BD (opcionalmente, para fechar)
-module.exports = {
-    initDb,
-    createUser,
-    findUserByUsername,
-    updateUserScore,
-    getTop10Players,
-    getPlayerStats, // Added new function
-    savePlayerStats,  // Added new function
-    // Função para fechar a conexão com o BD (útil para graceful shutdown)
-    closeDb: () => {
-        if (db) {
-            db.close((err) => {
-                if (err) {
-                    return console.error(err.message);
-                }
-                console.log('Closed the database connection.');
-                db = null;
-            });
-        }
-    }
-};
 
 // Função para buscar as estatísticas de um jogador
 async function getPlayerStats(userId) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const querySQL = `
-            SELECT user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins
-            FROM player_stats
-            WHERE user_id = ?;
-        `;
+        const querySQL = "SELECT * FROM player_stats WHERE user_id = ?;";
         db.get(querySQL, [userId], (err, row) => {
-            if (err) {
-                console.error(`Error finding player_stats for user_id ${userId}:`, err.message);
-                return reject(err);
-            }
-            // Retorna a linha de stats ou undefined se não encontrado
-            // O servidor pode querer retornar 404 se for undefined.
-            // O cliente espera null para stats se não houver, que é o que undefined vai gerar no JSON.
+            if (err) return reject(err);
             resolve(row);
         });
     });
@@ -203,38 +177,38 @@ async function getPlayerStats(userId) {
 async function savePlayerStats(userId, stats) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const {
-            damage = 1, // Default values matching table schema if not provided in stats object
-            speed = 200,
-            extraLives = 1,
-            fireRate = 600,
-            bombSize = 1.0,
-            multiShot = 0,
-            coins = 0
-        } = stats;
-
+        const { damage=1, speed=200, extraLives=1, fireRate=600, bombSize=1.0, multiShot=0, coins=0 } = stats;
         const upsertSQL = `
             INSERT INTO player_stats (user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins, last_updated)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(user_id) DO UPDATE SET
-                damage = excluded.damage,
-                speed = excluded.speed,
-                extraLives = excluded.extraLives,
-                fireRate = excluded.fireRate,
-                bombSize = excluded.bombSize,
-                multiShot = excluded.multiShot,
-                coins = excluded.coins,
-                last_updated = CURRENT_TIMESTAMP;
+                damage=excluded.damage, speed=excluded.speed, extraLives=excluded.extraLives, fireRate=excluded.fireRate,
+                bombSize=excluded.bombSize, multiShot=excluded.multiShot, coins=excluded.coins, last_updated=CURRENT_TIMESTAMP;
         `;
         db.run(upsertSQL, [userId, damage, speed, extraLives, fireRate, bombSize, multiShot, coins], function(err) {
-            if (err) {
-                console.error(`Error saving player_stats for user_id ${userId}:`, err.message);
-                return reject(err);
-            }
-            console.log(`Player_stats saved/updated for user_id ${userId}. Changes: ${this.changes}`);
-            // Retorna o objeto de stats salvo/atualizado para consistência com o que foi escrito.
-            // Para obter o ID do último insert (this.lastID) ou changes (this.changes), é preciso usar function() e não arrow func.
+            if (err) return reject(err);
             resolve({ success: true, userId: userId, stats: stats });
         });
     });
 }
+
+function closeDb() {
+    if (db) {
+        db.close((err) => {
+            if (err) return console.error(err.message);
+            console.log('Closed the database connection.');
+            db = null;
+        });
+    }
+}
+
+module.exports = {
+    initDb,
+    createUserByAddress,
+    findUserByAddress,
+    updateUserScore,
+    getTop10Players,
+    getPlayerStats,
+    savePlayerStats,
+    closeDb
+};
