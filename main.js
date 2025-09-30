@@ -2,9 +2,6 @@
 
 // 🎬 Importação das cenas principais do jogo
 import LoadingScene from './src/scenes/LoadingScene.js';
-import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
-import RegisterScene from './src/scenes/RegisterScene.js';
-import LoginScene from './src/scenes/LoginScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
 import GameScene from './src/scenes/GameScene.js';
@@ -33,9 +30,6 @@ const config = {
   },
   scene: [
     LoadingScene,
-    AuthChoiceScene,
-    RegisterScene,
-    LoginScene,
     StartScene,
     MenuScene,
     GameScene,

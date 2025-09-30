@@ -9,6 +9,7 @@ const nft = require('./nft.js');
 const oracle = require('./oracle.js');
 const tournamentService = require('./tournament_service.js');
 const admin = require('./admin.js'); // Importar o módulo admin
+const gameState = require('./game_state.js'); // Importar o módulo de estado do jogo
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -353,10 +354,18 @@ app.post('/api/rewards/generate-claim-signature', verifyToken, async (req, res) 
     }
 });
 
+// Rota para verificar o status atual do PvP
+app.get('/api/pvp/status', (req, res) => {
+    res.json({ success: true, status: gameState.getPvpStatus() });
+});
+
 
 db.initDb().then(() => {
     // Inicializa o oráculo e seus listeners depois que o DB está pronto
     oracle.initOracle();
+
+    // Inicia o cron job para o ciclo de PvP
+    gameState.startPvpCycleCron();
 
     app.listen(PORT, () => {
         console.log(`Servidor rodando na porta ${PORT}`);
