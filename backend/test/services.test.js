@@ -29,7 +29,7 @@ describe('Backend Services', function() {
         it('should handle non-numeric stats without errors', function() {
             const baseStats = { hp: 100, name: "Goblin", type: "Melee" };
             const playerLevel = 5;
-            // Note: scalingFactor would be 1 + (5 * 0.07) = 1.35
+            // Nota: scalingFactor seria 1 + (5 * 0.07) = 1.35
             const expectedStats = { hp: 135, name: "Goblin", type: "Melee" };
 
             const scaledStats = getMonsterStats(baseStats, playerLevel);
