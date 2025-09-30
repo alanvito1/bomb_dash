@@ -3,10 +3,12 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
+const path = require('path');
 const db = require('./database.js');
 const nft = require('./nft.js');
 const oracle = require('./oracle.js');
 const tournamentService = require('./tournament_service.js');
+const admin = require('./admin.js'); // Importar o módulo admin
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +16,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-we
 
 app.use(cors());
 app.use(express.json());
+
+// Servir arquivos estáticos da raiz do projeto (para admin.html, etc.)
+app.use(express.static(path.join(__dirname, '..')));
 
 const nonceStore = new Map();
 
@@ -112,6 +117,68 @@ app.post('/api/auth/verify', async (req, res) => {
     } catch (error) {
         console.error("Erro em /api/auth/verify:", error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+
+// Middleware de verificação de administrador (simples)
+function verifyAdmin(req, res, next) {
+    // Usando um header 'x-admin-secret' para autenticação simples.
+    // Em produção, isso deveria ser uma verificação de role no JWT.
+    const adminSecret = req.headers['x-admin-secret'];
+    if (adminSecret && adminSecret === (process.env.ADMIN_SECRET || 'supersecret')) {
+        next();
+    } else {
+        res.status(403).json({ success: false, message: 'Acesso negado. Requer privilégios de administrador.' });
+    }
+}
+
+// =================================================================
+// ROTAS DO PAINEL DE ADMIN
+// =================================================================
+
+// Obter as configurações globais do jogo
+app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
+    try {
+        const settings = await admin.getGameSettings();
+        res.json({ success: true, settings });
+    } catch (error) {
+        console.error("Erro em /api/admin/settings:", error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar as configurações do jogo.' });
+    }
+});
+
+// Atualizar as configurações globais do jogo
+app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
+    try {
+        await admin.saveGameSettings(req.body);
+        res.json({ success: true, message: 'Configurações salvas com sucesso!' });
+    } catch (error) {
+        console.error("Erro em /api/admin/settings:", error);
+        res.status(500).json({ success: false, message: 'Erro ao salvar as configurações do jogo.' });
+    }
+});
+
+// Obter todos os jogadores
+app.get('/api/admin/players', verifyAdmin, async (req, res) => {
+    try {
+        const players = await db.getAllPlayers();
+        res.json({ success: true, players });
+    } catch (error) {
+        console.error("Erro em /api/admin/players:", error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar jogadores.' });
+    }
+});
+
+// Atualizar estatísticas de um jogador específico
+app.post('/api/admin/player/:id', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const stats = req.body; // Espera um objeto com as estatísticas a serem atualizadas
+    try {
+        await db.updatePlayerStats(id, stats);
+        res.json({ success: true, message: `Estatísticas do jogador ${id} atualizadas com sucesso.` });
+    } catch (error) {
+        console.error(`Erro ao atualizar jogador ${id}:`, error);
+        res.status(500).json({ success: false, message: 'Erro ao atualizar estatísticas do jogador.' });
     }
 });
 

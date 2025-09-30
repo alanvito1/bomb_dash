@@ -482,6 +482,79 @@ async function getPlayerCheckpoint(userId) {
     });
 }
 
+async function getAllPlayers() {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const querySQL = `
+            SELECT u.id, u.wallet_address, u.level, u.xp, ps.*
+            FROM users u
+            LEFT JOIN player_stats ps ON u.id = ps.user_id
+            ORDER BY u.id;
+        `;
+        db.all(querySQL, [], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
+
+async function updatePlayerStats(userId, stats) {
+    if (!db) await initDb();
+
+    const userFields = {};
+    const playerStatsFields = {};
+
+    // Separate fields for each table based on what's provided in the stats object
+    if (stats.level !== undefined) userFields.level = stats.level;
+    if (stats.xp !== undefined) userFields.xp = stats.xp;
+    if (stats.damage !== undefined) playerStatsFields.damage = stats.damage;
+    if (stats.speed !== undefined) playerStatsFields.speed = stats.speed;
+    if (stats.extraLives !== undefined) playerStatsFields.extraLives = stats.extraLives;
+    if (stats.fireRate !== undefined) playerStatsFields.fireRate = stats.fireRate;
+    if (stats.bombSize !== undefined) playerStatsFields.bombSize = stats.bombSize;
+    if (stats.multiShot !== undefined) playerStatsFields.multiShot = stats.multiShot;
+    if (stats.coins !== undefined) playerStatsFields.coins = stats.coins;
+
+    const userKeys = Object.keys(userFields);
+    const playerStatsKeys = Object.keys(playerStatsFields);
+
+    if (userKeys.length === 0 && playerStatsKeys.length === 0) {
+        return { success: true, message: 'No valid fields provided for update.' };
+    }
+
+    return new Promise((resolve, reject) => {
+        db.serialize(async () => {
+            try {
+                await new Promise((res, rej) => db.run("BEGIN TRANSACTION;", (err) => { if (err) rej(err); else res(); }));
+
+                if (userKeys.length > 0) {
+                    const setClause = userKeys.map(key => `${key} = ?`).join(', ');
+                    const params = userKeys.map(key => userFields[key]);
+                    params.push(userId);
+                    const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
+                    await new Promise((res, rej) => db.run(sql, params, (err) => { if (err) rej(err); else res(); }));
+                }
+
+                if (playerStatsKeys.length > 0) {
+                    const setClause = playerStatsKeys.map(key => `${key} = ?`).join(', ');
+                    const params = playerStatsKeys.map(key => playerStatsFields[key]);
+                    params.push(userId);
+                    const sql = `UPDATE player_stats SET ${setClause}, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?`;
+                    await new Promise((res, rej) => db.run(sql, params, (err) => { if (err) rej(err); else res(); }));
+                }
+
+                await new Promise((res, rej) => db.run("COMMIT;", (err) => { if (err) rej(err); else res(); }));
+                resolve({ success: true, userId: userId });
+
+            } catch (error) {
+                console.error('Database update failed, rolling back transaction.', error);
+                await new Promise((res, rej) => db.run("ROLLBACK;", (err) => { if (err) rej(err); else res(); }));
+                reject(error);
+            }
+        });
+    });
+}
+
 module.exports = {
     initDb,
     createUserByAddress,
@@ -500,5 +573,7 @@ module.exports = {
     getWagerMatch,
     updateWagerMatch,
     savePlayerCheckpoint,
-    getPlayerCheckpoint
+    getPlayerCheckpoint,
+    getAllPlayers,
+    updatePlayerStats
 };

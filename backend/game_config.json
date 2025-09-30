@@ -1,0 +1,12 @@
+{
+  "levelUpCost": 3,
+  "monsterScaleFactor": 8,
+  "pvpWinXp": 60,
+  "monsterXp": {
+    "mob1": 12,
+    "mob2": 18,
+    "mob3": 25
+  },
+  "pvpCycleOpenHours": 20,
+  "pvpCycleClosedHours": 28
+}
