@@ -14,7 +14,9 @@ const WAGER_ARENA_ADDRESS = process.env.WAGER_ARENA_ADDRESS; // Novo endereço d
 const TOURNAMENT_CONTROLLER_ABI = [
     "function reportMatchResult(uint256 matchId, address winner)",
     "function reportTournamentResult(uint256 tournamentId, address[] calldata winners)",
-    "function payLevelUpFee(address player)"
+    "function payLevelUpFee(address player)",
+    "function setBcoinLevelUpCost(uint256 newCost)",
+    "function levelUpCost() view returns (uint256)"
 ];
 const PERPETUAL_REWARD_POOL_ABI = [
     "function reportSoloGamePlayed(uint256 gameCount)",
@@ -212,27 +214,30 @@ async function triggerNewRewardCycle() {
  * Inicia todos os cron jobs agendados para o Oráculo.
  */
 /**
- * Tarefa agendada que aumenta a dificuldade do jogo anualmente (o "Halving").
+ * Tarefa agendada que reduz o custo de level-up pela metade anualmente.
  */
-async function triggerDifficultyHalving() {
+async function triggerLevelUpCostHalving() {
     if (!isOracleInitialized) {
-        console.log("Cron job: Oráculo não inicializado, pulando o Halving de Dificuldade.");
+        console.log("Cron job: Oráculo não inicializado, pulando o Halving do Custo de Level-Up.");
         return;
     }
     try {
-        console.log("Cron job: Verificando o Halving Anual de Dificuldade...");
-        const currentMultiplierStr = await db.getGameSetting('xp_multiplier');
-        const currentMultiplier = parseFloat(currentMultiplierStr || '1.0');
+        console.log("Cron job: Verificando o Halving Anual do Custo de Level-Up...");
 
-        // A lógica de quando o halving deve ocorrer seria mais complexa em produção
-        // (ex: verificar a data). Para este exemplo, vamos apenas incrementar.
-        const newMultiplier = currentMultiplier + 0.1;
+        const currentCost = await tournamentControllerContract.levelUpCost();
+        const newCost = currentCost.div(2);
 
-        await db.updateGameSetting('xp_multiplier', newMultiplier.toFixed(1));
-        console.log(`HALVING DE DIFICULDADE COMPLETO! Novo multiplicador de XP é ${newMultiplier.toFixed(1)}.`);
+        if (newCost.gt(0)) {
+            console.log(`Novo custo de level-up calculado: ${ethers.utils.formatEther(newCost)} BCOIN. Atualizando contrato...`);
+            const tx = await tournamentControllerContract.setBcoinLevelUpCost(newCost, { gasLimit: 100000 });
+            await tx.wait();
+            console.log(`HALVING DE CUSTO COMPLETO! Novo custo de level-up é ${ethers.utils.formatEther(newCost)} BCOIN. Tx: ${tx.hash}`);
+        } else {
+            console.log("Custo de level-up já está no mínimo. Nenhuma ação necessária.");
+        }
 
     } catch (error) {
-        console.error("Cron job: Erro ao executar o Halving de Dificuldade:", error.message);
+        console.error("Cron job: Erro ao executar o Halving do Custo de Level-Up:", error.message);
     }
 }
 
@@ -290,17 +295,21 @@ function startCronJobs() {
     console.log("Cron job para o ciclo de recompensas agendado para rodar a cada 10 minutos.");
 
     // Agendado para rodar anualmente à meia-noite de 1º de janeiro.
-    // cron.schedule('*/5 * * * *', triggerDifficultyHalving); // Para teste: a cada 5 minutos
-    cron.schedule('0 0 1 1 *', triggerDifficultyHalving);
-    console.log("Cron job para o Halving de Dificuldade agendado para rodar anualmente.");
+    // Para teste: `cron.schedule('* * * * *', triggerLevelUpCostHalving);` // a cada minuto
+    cron.schedule('0 0 1 1 *', triggerLevelUpCostHalving);
+    console.log("Cron job para o Halving do Custo de Level-Up agendado para rodar anualmente.");
 }
 
 // Sobrescrevendo a função initOracle para incluir o listener
+const tournamentService = require('./tournament_service');
+
 const originalInitOracle = initOracle;
 function initOracleAndListeners() {
     if (originalInitOracle()) { // Se a inicialização do oráculo for bem-sucedida
         startWagerMatchListener();
         startCronJobs();
+        // Pass the contract instance to the tournament service
+        tournamentService.initTournamentService(tournamentControllerContract);
         return true;
     }
     return false;

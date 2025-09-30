@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ranking_data:/app/data
+    environment:
+      - DB_PATH=/app/data/ranking.sqlite
+      - JWT_SECRET=your-very-strong-secret-key-for-web3-in-compose
+      # Add other necessary environment variables here
+    networks:
+      - bombdash-net
+
+volumes:
+  ranking_data:
+
+networks:
+  bombdash-net:
+    driver: bridge

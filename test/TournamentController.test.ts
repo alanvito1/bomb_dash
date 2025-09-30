@@ -18,8 +18,8 @@ describe("TournamentController", function () {
     let player2: Signer;
     let addrs: Signer[];
 
-    const MINT_AMOUNT = ethers.utils.parseEther("10000"); // 10,000 BCOIN
-    const ENTRY_FEE_1V1 = ethers.utils.parseEther("10"); // 10 BCOIN
+    const MINT_AMOUNT = ethers.parseEther("10000"); // 10,000 BCOIN
+    const ENTRY_FEE_1V1 = ethers.parseEther("10"); // 10 BCOIN
 
     beforeEach(async function () {
         // Obter as contas de teste do Hardhat
@@ -28,40 +28,40 @@ describe("TournamentController", function () {
         // Deploy do MockBCOIN
         MockBCOIN = await ethers.getContractFactory("MockBCOIN");
         bcoin = await MockBCOIN.deploy();
-        await bcoin.deployed();
+        await bcoin.waitForDeployment();
 
         // Mint de tokens para os jogadores
-        await bcoin.mint(await player1.getAddress(), MINT_AMOUNT);
-        await bcoin.mint(await player2.getAddress(), MINT_AMOUNT);
+        await bcoin.mint(player1.address, MINT_AMOUNT);
+        await bcoin.mint(player2.address, MINT_AMOUNT);
 
         // Deploy do TournamentController
         TournamentController = await ethers.getContractFactory("TournamentController");
         tournamentController = await TournamentController.deploy(
-            bcoin.address,
-            await teamWallet.getAddress(),
-            await oracle.getAddress() // Supondo que o endereço do Oracle é passado no construtor
+            await bcoin.getAddress(),
+            teamWallet.address,
+            oracle.address
         );
-        await tournamentController.deployed();
+        await tournamentController.waitForDeployment();
 
         // Definir o endereço do PerpetualRewardPool (usaremos um endereço mock por enquanto)
-        await tournamentController.setSoloRewardPool(addrs[0].getAddress()); // Usando uma conta de teste como pool
+        await tournamentController.setSoloRewardPool(addrs[0].address); // Usando uma conta de teste como pool
     });
 
     describe("Deployment", function () {
         it("Should set the right owner", async function () {
-            expect(await tournamentController.owner()).to.equal(await owner.getAddress());
+            expect(await tournamentController.owner()).to.equal(owner.address);
         });
 
         it("Should set the correct BCOIN token address", async function () {
-            expect(await tournamentController.bcoinTokenAddress()).to.equal(bcoin.address);
+            expect(await tournamentController.bcoinTokenAddress()).to.equal(await bcoin.getAddress());
         });
 
         it("Should set the correct team wallet address", async function () {
-            expect(await tournamentController.teamWallet()).to.equal(await teamWallet.getAddress());
+            expect(await tournamentController.teamWallet()).to.equal(teamWallet.address);
         });
 
         it("Should set the correct oracle address", async function () {
-            expect(await tournamentController.oracle()).to.equal(await oracle.getAddress());
+            expect(await tournamentController.oracle()).to.equal(oracle.address);
         });
     });
 

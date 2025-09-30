@@ -135,7 +135,22 @@ async function initDb() {
                             db.close(); db = null; return reject(err);
                         }
                         console.log("Wager_matches table initialized or already exists.");
-                        resolve(db);
+
+                        const createPlayerCheckpointsTableSQL = `
+                            CREATE TABLE IF NOT EXISTS player_checkpoints (
+                                user_id INTEGER PRIMARY KEY,
+                                highest_wave_reached INTEGER DEFAULT 0 NOT NULL,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            );
+                        `;
+                        db.run(createPlayerCheckpointsTableSQL, (err) => {
+                            if (err) {
+                                console.error('Error creating player_checkpoints table', err.message);
+                                db.close(); db = null; return reject(err);
+                            }
+                            console.log("Player_checkpoints table initialized or already exists.");
+                            resolve(db);
+                        });
                     });
                     });
                 });
@@ -439,6 +454,34 @@ async function updateWagerMatch(matchId, status, winnerAddress) {
     });
 }
 
+async function savePlayerCheckpoint(userId, waveNumber) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const upsertSQL = `
+            INSERT INTO player_checkpoints (user_id, highest_wave_reached)
+            VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                highest_wave_reached = excluded.highest_wave_reached
+            WHERE excluded.highest_wave_reached > player_checkpoints.highest_wave_reached;
+        `;
+        db.run(upsertSQL, [userId, waveNumber], function(err) {
+            if (err) return reject(err);
+            resolve({ success: true, userId: userId, updated: this.changes > 0 });
+        });
+    });
+}
+
+async function getPlayerCheckpoint(userId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const querySQL = "SELECT highest_wave_reached FROM player_checkpoints WHERE user_id = ?;";
+        db.get(querySQL, [userId], (err, row) => {
+            if (err) return reject(err);
+            resolve(row ? row.highest_wave_reached : 0);
+        });
+    });
+}
+
 module.exports = {
     initDb,
     createUserByAddress,
@@ -455,5 +498,7 @@ module.exports = {
     updateGameSetting,
     createWagerMatch,
     getWagerMatch,
-    updateWagerMatch
+    updateWagerMatch,
+    savePlayerCheckpoint,
+    getPlayerCheckpoint
 };

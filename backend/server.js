@@ -6,6 +6,7 @@ const { randomBytes } = require('crypto');
 const db = require('./database.js');
 const nft = require('./nft.js');
 const oracle = require('./oracle.js');
+const tournamentService = require('./tournament_service.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,18 +67,36 @@ app.post('/api/auth/verify', async (req, res) => {
             console.log(`Primeiro login de ${address}. Verificando NFTs...`);
             const userNfts = await nft.getNftsForPlayer(address);
 
-            if (userNfts && userNfts.length > 0) {
-                console.log(`Encontrado(s) ${userNfts.length} NFT(s). Requer seleção do usuário.`);
-                await db.createUserByAddress(address); // Creates user with default stats for now
-                return res.json({
-                    success: true,
-                    selectionRequired: true,
-                    nfts: userNfts,
-                    message: "Bem-vindo! Por favor, selecione um herói para começar."
+            // Helper to find the strongest NFT based on a scoring system
+            const findStrongestNft = (nfts) => {
+                return nfts.reduce((strongest, current) => {
+                    const strongestScore = (strongest.bombPower * 5) + (strongest.speed * 2) + strongest.rarity;
+                    const currentScore = (current.bombPower * 5) + (current.speed * 2) + current.rarity;
+                    return currentScore > strongestScore ? current : strongest;
                 });
+            };
+
+            if (userNfts && userNfts.length > 0) {
+                const strongestNft = findStrongestNft(userNfts);
+                console.log(`Encontrado(s) ${userNfts.length} NFT(s). Selecionando o mais forte: ID ${strongestNft.id}`);
+
+                // Map NFT stats to game stats
+                const initialStats = {
+                    damage: strongestNft.bombPower,
+                    speed: strongestNft.speed,
+                    extraLives: 1, // Default value
+                    fireRate: 600, // Default value
+                    bombSize: 1.0, // Default value
+                    multiShot: 0, // Default value
+                    coins: 1000 // Starting coins
+                };
+
+                const result = await db.createUserByAddress(address, initialStats);
+                user = { id: result.userId, wallet_address: address };
+
             } else {
                 console.log('Nenhum NFT encontrado. Usando estatísticas padrão.');
-                const result = await db.createUserByAddress(address);
+                const result = await db.createUserByAddress(address); // Creates user with default stats
                 user = { id: result.userId, wallet_address: address };
             }
         }
@@ -96,55 +115,44 @@ app.post('/api/auth/verify', async (req, res) => {
     }
 });
 
-app.post('/api/user/select-nft', async (req, res) => {
-    const { message, signature, nftId } = req.body;
-    if (!message || !signature || !nftId) {
-        return res.status(400).json({ success: false, message: 'Message, signature, e nftId são obrigatórios.' });
+app.post('/api/game/checkpoint', verifyToken, async (req, res) => {
+    const { waveNumber } = req.body;
+    if (typeof waveNumber === 'undefined' || waveNumber < 0) {
+        return res.status(400).json({ success: false, message: 'O número da onda (waveNumber) é obrigatório e não pode ser negativo.' });
     }
 
     try {
-        const siweMessage = new SiweMessage(message);
-        const { success, data: { address } } = await siweMessage.verify({ signature });
-        if (!success) {
-            return res.status(403).json({ success: false, message: 'A verificação da assinatura falhou.' });
+        const userId = req.user.userId;
+        const result = await db.savePlayerCheckpoint(userId, waveNumber);
+        if (result.updated) {
+            res.json({ success: true, message: `Checkpoint salvo com sucesso na onda ${waveNumber}.` });
+        } else {
+            res.json({ success: true, message: `Progresso atual (${waveNumber}) não é maior que o checkpoint salvo.` });
         }
-
-        const user = await db.findUserByAddress(address);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
-        }
-
-        const userNfts = await nft.getNftsForPlayer(address);
-        const selectedNft = userNfts.find(n => n.id === nftId);
-        if (!selectedNft) {
-            return res.status(403).json({ success: false, message: 'NFT não encontrado ou não pertence a este usuário.' });
-        }
-
-        await db.updatePlayerStatsFromNFT(user.id, selectedNft);
-
-        const tokenPayload = { userId: user.id, address: user.wallet_address };
-        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
-
-        res.json({
-            success: true,
-            message: `Herói ${nftId} selecionado! Login completo.`,
-            token: token,
-        });
     } catch (error) {
-        console.error("Erro em /api/user/select-nft:", error);
-        res.status(500).json({ success: false, message: 'Erro interno ao selecionar o NFT.' });
+        console.error(`Erro ao salvar checkpoint:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar o checkpoint.' });
     }
 });
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
-        const user = await db.getUserByAddress(req.user.address); // Using the new comprehensive fetcher
+        const user = await db.getUserByAddress(req.user.address);
         if (!user) {
             return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
         }
+        // Also fetch the user's checkpoint
+        const checkpoint = await db.getPlayerCheckpoint(user.id);
+
         res.json({
             success: true,
-            user: { address: user.wallet_address, level: user.level, xp: user.xp, coins: user.coins }
+            user: {
+                address: user.wallet_address,
+                level: user.level,
+                xp: user.xp,
+                coins: user.coins,
+                highest_wave_reached: checkpoint
+            }
         });
     } catch (error) {
         console.error("Erro em /api/auth/me:", error);
@@ -230,6 +238,51 @@ app.post('/api/pvp/wager/report', verifyToken, async (req, res) => {
     } catch (error) {
         console.error(`Erro ao reportar resultado da partida ${matchId}:`, error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao reportar o resultado.' });
+    }
+});
+
+app.post('/api/tournaments/report-match', verifyToken, async (req, res) => {
+    const { tournamentId, matchId, winnerAddress } = req.body;
+    if (!tournamentId || !matchId || !winnerAddress) {
+        return res.status(400).json({ success: false, message: 'tournamentId, matchId, e winnerAddress são obrigatórios.' });
+    }
+
+    // In a real application, you'd have more validation here to ensure
+    // that the reporting user (from the JWT) is authorized to report this match.
+    // For V1, we trust the authenticated user.
+
+    try {
+        await tournamentService.reportTournamentMatchWinner(tournamentId, matchId, winnerAddress);
+        res.json({ success: true, message: `Resultado para a partida ${matchId} do torneio ${tournamentId} reportado com sucesso.` });
+    } catch (error) {
+        console.error(`Erro ao reportar resultado do torneio:`, error);
+        // Provide a more specific error message if available
+        res.status(500).json({ success: false, message: error.message || 'Erro interno do servidor ao reportar o resultado do torneio.' });
+    }
+});
+
+app.post('/api/rewards/generate-claim-signature', verifyToken, async (req, res) => {
+    const { gamesPlayed } = req.body;
+    if (typeof gamesPlayed === 'undefined' || gamesPlayed <= 0) {
+        return res.status(400).json({ success: false, message: 'O número de jogos jogados (gamesPlayed) é obrigatório e deve ser positivo.' });
+    }
+
+    try {
+        const playerAddress = req.user.address;
+        console.log(`Gerando assinatura de claim para ${playerAddress} por ${gamesPlayed} jogos.`);
+
+        const signature = await oracle.signClaimReward(playerAddress, gamesPlayed);
+
+        res.json({
+            success: true,
+            message: 'Assinatura gerada com sucesso.',
+            signature: signature,
+            gamesPlayed: gamesPlayed,
+            playerAddress: playerAddress
+        });
+    } catch (error) {
+        console.error(`Erro ao gerar assinatura de claim:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao gerar a assinatura.' });
     }
 });
 
