@@ -349,10 +349,20 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
         const multiplier = parseFloat(multiplierStr || '1.0');
 
         // 1. Update Winner's stats
-        const winnerNewCoins = winner.coins + tier.bcoin_cost;
+        let finalXpReward = tier.xp_cost;
+        let finalCoinReward = tier.bcoin_cost;
+        const isSunday = new Date().getDay() === 0; // 0 = Sunday
+
+        if (isSunday) {
+            finalXpReward = Math.floor(finalXpReward * 1.10);
+            finalCoinReward = Math.floor(finalCoinReward * 1.10);
+            console.log(`[Sunday Bonus] Aplicando bônus de 10%. Recompensas: ${finalXpReward} XP, ${finalCoinReward} BCOIN.`);
+        }
+
+        const winnerNewCoins = winner.coins + finalCoinReward;
         await run("UPDATE player_stats SET coins = ? WHERE user_id = ?", [winnerNewCoins, winner.id]);
         // Use the internal function to add XP without creating a new transaction
-        const { newXp: winnerNewXp } = await _addXpToUser_noTX(winnerAddress, tier.xp_cost, { get, run });
+        const { newXp: winnerNewXp } = await _addXpToUser_noTX(winnerAddress, finalXpReward, { get, run });
 
         // 2. Update Loser's stats
         const loserNewCoins = loser.coins - tier.bcoin_cost;
