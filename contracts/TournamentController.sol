@@ -23,6 +23,8 @@ contract TournamentController {
     address public teamWallet;
     address public soloRewardPoolAddress;
 
+    uint256 public levelUpCost; // The cost in BCOIN to level up
+
     uint256 public matchCounter;
     uint256 public tournamentCounter;
 
@@ -64,6 +66,7 @@ contract TournamentController {
     event TournamentStarted(uint256 indexed tournamentId);
     event PrizeDistributed(address[] winners, uint256 totalPrize);
     event LevelUpFeePaid(address indexed player, uint256 fee);
+    event LevelUpCostChanged(uint256 newCost);
 
     // Modifiers
     modifier onlyOwner() {
@@ -81,6 +84,7 @@ contract TournamentController {
         bcoinTokenAddress = _bcoinToken;
         teamWallet = _teamWallet;
         oracle = _oracle;
+        levelUpCost = 1 * 10**18; // Initialize level up cost to 1 BCOIN
     }
 
     /**
@@ -88,6 +92,16 @@ contract TournamentController {
      */
     function setSoloRewardPool(address _poolAddress) external onlyOwner {
         soloRewardPoolAddress = _poolAddress;
+    }
+
+    /**
+     * @dev Sets the BCOIN cost for leveling up. Can only be called by the oracle.
+     * @param _newCost The new cost for leveling up.
+     */
+    function setBcoinLevelUpCost(uint256 _newCost) external onlyOracle {
+        require(_newCost > 0, "Level up cost must be positive");
+        levelUpCost = _newCost;
+        emit LevelUpCostChanged(_newCost);
     }
 
     /**
@@ -226,15 +240,15 @@ contract TournamentController {
         require(soloRewardPoolAddress != address(0), "Reward pool address not set");
 
         IBEP20 token = IBEP20(bcoinTokenAddress);
-        uint256 levelUpFee = 1 * 10**18; // 1 BCOIN
+        uint256 currentFee = levelUpCost; // Use the state variable
 
         // Transfer the fee from the player to this contract.
         // Requires the player to have approved this contract address beforehand.
-        require(token.transferFrom(player, address(this), levelUpFee), "Level-up fee transfer failed");
+        require(token.transferFrom(player, address(this), currentFee), "Level-up fee transfer failed");
 
         // Distribute the fee 50/50
-        uint256 teamShare = levelUpFee / 2;
-        uint256 poolShare = levelUpFee - teamShare;
+        uint256 teamShare = currentFee / 2;
+        uint256 poolShare = currentFee - teamShare;
 
         if (teamShare > 0) {
             token.transfer(teamWallet, teamShare);
@@ -243,7 +257,7 @@ contract TournamentController {
             token.transfer(soloRewardPoolAddress, poolShare);
         }
 
-        emit LevelUpFeePaid(player, levelUpFee);
+        emit LevelUpFeePaid(player, currentFee);
     }
 
     /**
