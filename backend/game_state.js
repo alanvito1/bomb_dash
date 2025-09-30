@@ -4,8 +4,10 @@ const db = require('./database');
 const cron = require('node-cron');
 
 const CONFIG_PATH = path.join(__dirname, 'game_config.json');
+const PVP_STATUS_KEY = 'pvp_status';
+const PVP_TIMESTAMP_KEY = 'pvp_last_change_timestamp';
 
-let pvpStatus = 'closed'; // Default state
+let pvpStatus = 'closed'; // Estado padrão em memória
 
 /**
  * Retorna o status atual do PvP.
@@ -16,58 +18,77 @@ function getPvpStatus() {
 }
 
 /**
- * Alterna o estado do PvP entre 'open' e 'closed'.
+ * Lógica central do ciclo de PvP, executada pelo cron job.
  */
-async function togglePvpStatus() {
-    pvpStatus = (pvpStatus === 'open' ? 'closed' : 'open');
-    console.log(`[Game State] O status do PvP foi alterado para: ${pvpStatus.toUpperCase()}`);
+async function checkAndTogglePvpStatus() {
+    console.log('[Game State] Verificando o estado do ciclo de PvP...');
+    try {
+        // 1. Obter configurações e estado atual
+        const configData = await fs.readFile(CONFIG_PATH, 'utf8');
+        const config = JSON.parse(configData);
+        const openHours = config.pvpCycleOpenHours || 24;
+        const closedHours = config.pvpCycleClosedHours || 24;
 
-    // Opcional: Persistir o estado atual no banco de dados para resiliência
-    await db.updateGameSetting('pvp_status', pvpStatus);
+        const currentStatus = await db.getGameSetting(PVP_STATUS_KEY) || 'closed';
+        const lastChangeTimestamp = parseInt(await db.getGameSetting(PVP_TIMESTAMP_KEY) || Date.now(), 10);
+
+        const now = Date.now();
+        const hoursSinceLastChange = (now - lastChangeTimestamp) / (1000 * 60 * 60);
+
+        let shouldToggle = false;
+
+        // 2. Determinar se a troca de estado é necessária
+        if (currentStatus === 'open' && hoursSinceLastChange >= openHours) {
+            shouldToggle = true;
+        } else if (currentStatus === 'closed' && hoursSinceLastChange >= closedHours) {
+            shouldToggle = true;
+        }
+
+        // 3. Se necessário, alternar o estado
+        if (shouldToggle) {
+            const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+            pvpStatus = newStatus; // Atualiza o estado em memória
+
+            // Atualiza o estado e o timestamp no banco de dados
+            await db.updateGameSetting(PVP_STATUS_KEY, newStatus);
+            await db.updateGameSetting(PVP_TIMESTAMP_KEY, now.toString());
+
+            console.log(`[Game State] O status do PvP foi alterado para: ${newStatus.toUpperCase()}`);
+        } else {
+            console.log(`[Game State] Nenhuma mudança no status do PvP necessária. Status atual: ${currentStatus.toUpperCase()}. Horas na fase atual: ${hoursSinceLastChange.toFixed(2)}.`);
+        }
+
+    } catch (error) {
+        console.error('[Game State] Erro durante a verificação do ciclo de PvP:', error);
+    }
 }
 
 /**
  * Inicia o cron job para gerenciar o ciclo de PvP.
  */
 async function startPvpCycleCron() {
-    console.log('[Game State] Iniciando o cron job para o ciclo de PvP...');
+    console.log('[Game State] Iniciando o serviço de ciclo de PvP...');
 
-    try {
-        const configData = await fs.readFile(CONFIG_PATH, 'utf8');
-        const config = JSON.parse(configData);
-
-        const openHours = config.pvpCycleOpenHours || 24;
-        const closedHours = config.pvpCycleClosedHours || 24;
-
-        // Para simplificar, vamos alternar a cada X horas, começando do estado atual.
-        // Uma implementação mais robusta usaria um padrão de cron mais complexo.
-        // Exemplo: a cada 12 horas, o estado é alternado.
-        // Nota: Esta é uma simplificação. Um ciclo de 24h aberto/24h fechado é mais complexo.
-        // Vamos usar um cron que roda a cada X horas para alternar.
-        cron.schedule(`0 */${openHours} * * *`, () => {
-             if (pvpStatus === 'closed') {
-                togglePvpStatus();
-             }
-        });
-
-        cron.schedule(`0 */${closedHours} * * *`, () => {
-            if (pvpStatus === 'open') {
-               togglePvpStatus();
-            }
-       });
-
-        // Inicializa o estado a partir do banco de dados, se disponível
-        const savedStatus = await db.getGameSetting('pvp_status');
-        if (savedStatus && (savedStatus === 'open' || savedStatus === 'closed')) {
-            pvpStatus = savedStatus;
-        }
-
-        console.log(`[Game State] Cron job do ciclo de PvP configurado. Duração Aberto: ${openHours}h, Fechado: ${closedHours}h.`);
-        console.log(`[Game State] Status inicial do PvP: ${pvpStatus.toUpperCase()}`);
-
-    } catch (error) {
-        console.error('[Game State] Erro ao configurar o cron job do ciclo de PvP:', error);
+    // Inicializa o estado a partir do banco de dados ao iniciar
+    const savedStatus = await db.getGameSetting(PVP_STATUS_KEY);
+    if (savedStatus) {
+        pvpStatus = savedStatus;
+    } else {
+        // Se não houver estado salvo, define um estado inicial
+        await db.updateGameSetting(PVP_STATUS_KEY, 'closed');
+        await db.updateGameSetting(PVP_TIMESTAMP_KEY, Date.now().toString());
+        pvpStatus = 'closed';
     }
+
+    console.log(`[Game State] Status inicial do PvP carregado: ${pvpStatus.toUpperCase()}`);
+
+    // Roda a verificação a cada hora. A lógica interna decide se a troca é necessária.
+    cron.schedule('0 * * * *', checkAndTogglePvpStatus);
+
+    console.log('[Game State] Cron job do ciclo de PvP agendado para rodar a cada hora.');
+
+    // Roda uma verificação inicial para garantir que o estado esteja correto no momento do boot.
+    await checkAndTogglePvpStatus();
 }
 
 module.exports = {

@@ -399,28 +399,6 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
     }
 }
 
-async function getGameSetting(key) {
-    if (!db) await initDb();
-    return new Promise((resolve, reject) => {
-        db.get("SELECT value FROM game_settings WHERE key = ?", [key], (err, row) => {
-            if (err) return reject(err);
-            resolve(row ? row.value : null);
-        });
-    });
-}
-
-async function updateGameSetting(key, value) {
-    if (!db) await initDb();
-    return new Promise((resolve, reject) => {
-        const upsertSQL = "INSERT INTO game_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value;";
-        db.run(upsertSQL, [key, value], function(err) {
-            if (err) return reject(err);
-            resolve({ success: true });
-        });
-    });
-}
-
-
 function closeDb() {
     if (db) {
         db.close((err) => {
@@ -492,11 +470,32 @@ async function getPlayerCheckpoint(userId) {
     });
 }
 
+async function getGameSetting(key) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        db.get("SELECT value FROM game_settings WHERE key = ?", [key], (err, row) => {
+            if (err) return reject(err);
+            resolve(row ? row.value : null);
+        });
+    });
+}
+
+async function updateGameSetting(key, value) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const upsertSQL = "INSERT INTO game_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value;";
+        db.run(upsertSQL, [key, value], function(err) {
+            if (err) return reject(err);
+            resolve({ success: true });
+        });
+    });
+}
+
 async function getAllPlayers() {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
         const querySQL = `
-            SELECT u.id, u.wallet_address, u.level, u.xp, ps.*
+            SELECT u.id, u.wallet_address, u.level, u.xp, ps.coins, ps.damage, ps.speed, ps.extraLives, ps.fireRate, ps.bombSize, ps.multiShot
             FROM users u
             LEFT JOIN player_stats ps ON u.id = ps.user_id
             ORDER BY u.id;
@@ -511,23 +510,26 @@ async function getAllPlayers() {
 async function updatePlayerStats(userId, stats) {
     if (!db) await initDb();
 
-    const userFields = {};
-    const playerStatsFields = {};
+    // Mapeia quais campos pertencem a qual tabela
+    const userFields = ['level', 'xp'];
+    const playerStatsFields = ['damage', 'speed', 'extraLives', 'fireRate', 'bombSize', 'multiShot', 'coins'];
 
-    // Separate fields for each table based on what's provided in the stats object
-    if (stats.level !== undefined) userFields.level = stats.level;
-    if (stats.xp !== undefined) userFields.xp = stats.xp;
-    if (stats.damage !== undefined) playerStatsFields.damage = stats.damage;
-    if (stats.speed !== undefined) playerStatsFields.speed = stats.speed;
-    if (stats.extraLives !== undefined) playerStatsFields.extraLives = stats.extraLives;
-    if (stats.fireRate !== undefined) playerStatsFields.fireRate = stats.fireRate;
-    if (stats.bombSize !== undefined) playerStatsFields.bombSize = stats.bombSize;
-    if (stats.multiShot !== undefined) playerStatsFields.multiShot = stats.multiShot;
-    if (stats.coins !== undefined) playerStatsFields.coins = stats.coins;
+    const userUpdates = {};
+    const playerStatsUpdates = {};
 
-    const userKeys = Object.keys(userFields);
-    const playerStatsKeys = Object.keys(playerStatsFields);
+    // Separa os campos do objeto 'stats' para suas respectivas tabelas
+    for (const key in stats) {
+        if (userFields.includes(key)) {
+            userUpdates[key] = stats[key];
+        } else if (playerStatsFields.includes(key)) {
+            playerStatsUpdates[key] = stats[key];
+        }
+    }
 
+    const userKeys = Object.keys(userUpdates);
+    const playerStatsKeys = Object.keys(playerStatsUpdates);
+
+    // Se nenhum campo válido foi fornecido, não faz nada
     if (userKeys.length === 0 && playerStatsKeys.length === 0) {
         return { success: true, message: 'No valid fields provided for update.' };
     }
@@ -535,30 +537,32 @@ async function updatePlayerStats(userId, stats) {
     return new Promise((resolve, reject) => {
         db.serialize(async () => {
             try {
-                await new Promise((res, rej) => db.run("BEGIN TRANSACTION;", (err) => { if (err) rej(err); else res(); }));
+                await new Promise((res, rej) => db.run("BEGIN TRANSACTION;", err => err ? rej(err) : res()));
 
+                // Atualiza a tabela 'users' se houver campos para ela
                 if (userKeys.length > 0) {
                     const setClause = userKeys.map(key => `${key} = ?`).join(', ');
-                    const params = userKeys.map(key => userFields[key]);
+                    const params = userKeys.map(key => userUpdates[key]);
                     params.push(userId);
                     const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
-                    await new Promise((res, rej) => db.run(sql, params, (err) => { if (err) rej(err); else res(); }));
+                    await new Promise((res, rej) => db.run(sql, params, err => err ? rej(err) : res()));
                 }
 
+                // Atualiza a tabela 'player_stats' se houver campos para ela
                 if (playerStatsKeys.length > 0) {
                     const setClause = playerStatsKeys.map(key => `${key} = ?`).join(', ');
-                    const params = playerStatsKeys.map(key => playerStatsFields[key]);
+                    const params = playerStatsKeys.map(key => playerStatsUpdates[key]);
                     params.push(userId);
                     const sql = `UPDATE player_stats SET ${setClause}, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?`;
-                    await new Promise((res, rej) => db.run(sql, params, (err) => { if (err) rej(err); else res(); }));
+                    await new Promise((res, rej) => db.run(sql, params, err => err ? rej(err) : res()));
                 }
 
-                await new Promise((res, rej) => db.run("COMMIT;", (err) => { if (err) rej(err); else res(); }));
+                await new Promise((res, rej) => db.run("COMMIT;", err => err ? rej(err) : res()));
                 resolve({ success: true, userId: userId });
 
             } catch (error) {
                 console.error('Database update failed, rolling back transaction.', error);
-                await new Promise((res, rej) => db.run("ROLLBACK;", (err) => { if (err) rej(err); else res(); }));
+                await new Promise((res, rej) => db.run("ROLLBACK;", err => err ? rej(err) : res()));
                 reject(error);
             }
         });
@@ -577,13 +581,14 @@ module.exports = {
     getUserByAddress,
     getWagerTier,
     processWagerMatchResult,
-    getGameSetting,
-    updateGameSetting,
     createWagerMatch,
     getWagerMatch,
     updateWagerMatch,
     savePlayerCheckpoint,
     getPlayerCheckpoint,
+    // Funções adicionadas/corrigidas
+    getGameSetting,
+    updateGameSetting,
     getAllPlayers,
     updatePlayerStats
 };
