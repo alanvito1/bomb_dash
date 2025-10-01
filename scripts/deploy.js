@@ -3,12 +3,30 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-    // 1. Get Signers
-    const [deployer, oracle, teamWallet] = await ethers.getSigners();
+    // 1. Get Signers and provider
+    const provider = ethers.provider;
+    let deployer, oracle, teamWallet;
+
+    if (hre.network.name === "bscTestnet") {
+        if (!process.env.PRIVATE_KEY || !process.env.ORACLE_PRIVATE_KEY) {
+            throw new Error("PRIVATE_KEY and ORACLE_PRIVATE_KEY must be set in .env for bscTestnet");
+        }
+        deployer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        oracle = new ethers.Wallet(process.env.ORACLE_PRIVATE_KEY, provider);
+        // For testnet, we can generate a new wallet for the team or use a predefined one.
+        // Here, we'll use the deployer's address as the team wallet for simplicity.
+        teamWallet = deployer;
+        console.log("Running on bscTestnet...");
+    } else {
+        // For local hardhat network
+        [deployer, oracle, teamWallet] = await ethers.getSigners();
+        console.log("Running on local network...");
+    }
+
     console.log("Deploying contracts with the account:", deployer.address);
     console.log("Oracle address:", oracle.address);
     console.log("Team Wallet address:", teamWallet.address);
-    console.log("Account balance:", (await deployer.provider.getBalance(deployer.address)).toString());
+    console.log("Account balance:", (await provider.getBalance(deployer.address)).toString());
 
     // 2. Deploy MockBCOIN
     const MockBCOIN = await ethers.getContractFactory("MockBCOIN");
