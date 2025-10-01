@@ -37,12 +37,21 @@ WAGER_ARENA_ADDRESS=""
 
 O projeto possui dependências tanto na raiz (para Hardhat) quanto no backend.
 
+Para uma instalação inicial ou para atualizar dependências, use `npm install`:
 ```bash
 # Instalar dependências do Hardhat e do projeto principal
 npm install
 
 # Instalar dependências do backend
 npm install --prefix backend
+```
+
+**Nota sobre Instalação Limpa:** Para garantir que todos os desenvolvedores e servidores usem as mesmas versões exatas de pacotes, é recomendado usar `npm ci` para instalações limpas e reproduzíveis, que se baseiam no arquivo `package-lock.json`.
+
+```bash
+# Exemplo de instalação limpa para garantir consistência
+npm ci
+npm ci --prefix backend
 ```
 
 ## 2. Configuração da Carteira MetaMask

@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:frontend": "vite build",
     "deploy:testnet": "npx hardhat run scripts/deploy.js --network bscTestnet",
     "start:backend": "node backend/server.js",
     "install:all": "npm install && npm install --prefix backend",
@@ -34,7 +35,8 @@
     "eslint-plugin-prettier": "^4.2.5",
     "hardhat": "^2.22.6",
     "prettier": "^2.8.8",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
     "buffer": "^6.0.3",
