@@ -14,8 +14,8 @@ export async function web3Login() {
         throw new Error('MetaMask is not installed. Please install it to continue.');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
     const address = await signer.getAddress();
 
     // 1. Get a unique message (nonce) from the backend

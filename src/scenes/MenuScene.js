@@ -221,9 +221,8 @@ export default class MenuScene extends Phaser.Scene {
             if (typeof window.ethereum === 'undefined') {
                 throw new Error(LanguageManager.get(this, 'metamask_not_installed'));
             }
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []); // Solicita conexão com a carteira
-            const signer = provider.getSigner();
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
 
             // Usa as constantes definidas no topo do arquivo
             const wagerArenaContract = new ethers.Contract(WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI, signer);
