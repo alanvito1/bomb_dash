@@ -1,7 +1,6 @@
-// src/scenes/RankingScene.js
-// import { initDB, getRankingTop10 } from '../database/database.js'; // REMOVIDO
-import { getRanking } from '../api.js'; // ADICIONADO
+import { getRanking } from '../api.js';
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 
 export default class RankingScene extends Phaser.Scene {
   constructor() {
@@ -11,25 +10,21 @@ export default class RankingScene extends Phaser.Scene {
   preload() {
     SoundManager.loadAll(this);
     this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
-    // Carregar assets se necessário, ex: this.load.image('background_ranking', 'src/assets/ranking_bg.png');
   }
 
-  async create() { // Marcado como async para o await getRanking()
-    // await initDB(); // REMOVIDO
-    this.cameras.main.setBackgroundColor('#000022'); // Um fundo simples
+  async create() {
+    this.cameras.main.setBackgroundColor('#000022');
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Título
-     this.add.text(centerX, centerY - 250, 'TOP 10 RANKING', {
+    this.add.text(centerX, centerY - 250, LanguageManager.get(this, 'ranking_title'), {
         fontFamily: '"Press Start 2P"',
         fontSize: '28px',
         fill: '#FFD700',
         align: 'center'
     }).setOrigin(0.5);
 
-    // Botão Voltar
-    const backButton = this.add.text(centerX, this.scale.height - 50, '[ BACK TO MENU ]', {
+    const backButton = this.add.text(centerX, this.scale.height - 50, LanguageManager.get(this, 'shop_back_to_menu'), {
         fontFamily: '"Press Start 2P"',
         fontSize: '16px',
         fill: '#00ffff',
@@ -44,8 +39,7 @@ export default class RankingScene extends Phaser.Scene {
     backButton.on('pointerover', () => backButton.setStyle({ fill: '#ffffff'}));
     backButton.on('pointerout', () => backButton.setStyle({ fill: '#00ffff'}));
 
-    // Carregar e exibir ranking
-    const loadingText = this.add.text(centerX, centerY, 'Loading ranking...', {
+    const loadingText = this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_loading'), {
         fontFamily: '"Press Start 2P"',
         fontSize: '14px',
         fill: '#cccccc',
@@ -53,32 +47,30 @@ export default class RankingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     try {
-        // const rankingData = await getRankingTop10(); // ANTIGO
-        const rankingData = await getRanking(); // NOVO - Espera que retorne um array diretamente
-        loadingText.destroy(); // Remove "Loading..."
+        const rankingData = await getRanking();
+        loadingText.destroy();
 
         if (rankingData && rankingData.length > 0) {
-            let yPos = centerY - 180; // Posição inicial para a lista de ranking
+            let yPos = centerY - 180;
             rankingData.forEach((player, index) => {
-                const rankText = `${index + 1}. ${player.username} - ${player.score}`;
+                const rankText = LanguageManager.get(this, 'ranking_entry', { rank: index + 1, username: player.username, score: player.score });
                 this.add.text(centerX, yPos, rankText, {
                     fontFamily: '"Press Start 2P"',
                     fontSize: '14px',
                     fill: '#ffffff',
                     align: 'center'
                 }).setOrigin(0.5);
-                yPos += 30; // Espaçamento entre entradas
+                yPos += 30;
             });
         } else if (rankingData && rankingData.length === 0) {
-            this.add.text(centerX, centerY, 'Ranking is empty or could not be loaded.', {
+            this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_empty'), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
                 fill: '#ffdddd',
                 align: 'center'
             }).setOrigin(0.5);
         } else {
-             // Se rankingData for null ou undefined (getRanking pode retornar [] em caso de erro de fetch)
-             this.add.text(centerX, centerY, 'Failed to load ranking data.', {
+             this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_failed'), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
                 fill: '#ffdddd',
@@ -88,7 +80,7 @@ export default class RankingScene extends Phaser.Scene {
     } catch (error) {
         loadingText.destroy();
         console.error("Error fetching ranking for scene:", error);
-        this.add.text(centerX, centerY, 'Error displaying ranking. Check console.', {
+        this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_error'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '12px',
             fill: '#ff0000',

@@ -590,5 +590,25 @@ module.exports = {
     getGameSetting,
     updateGameSetting,
     getAllPlayers,
-    updatePlayerStats
+    updatePlayerStats,
+    getTop10Ranking
 };
+
+async function getTop10Ranking() {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const querySQL = `
+            SELECT wallet_address as username, max_score as score
+            FROM users
+            ORDER BY max_score DESC
+            LIMIT 10;
+        `;
+        db.all(querySQL, [], (err, rows) => {
+            if (err) {
+                console.error("Error fetching top 10 ranking:", err);
+                return reject(err);
+            }
+            resolve(rows);
+        });
+    });
+}

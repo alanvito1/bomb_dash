@@ -1,6 +1,7 @@
 // src/scenes/LoadingScene.js
 import SoundManager from '../utils/sound.js';
-import { validateCurrentSession } from '../api.js'; // Importa a função de validação da API
+import LanguageManager from '../utils/LanguageManager.js';
+import { getCurrentUser } from '../api.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -11,76 +12,68 @@ export default class LoadingScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Estilo do texto de carregamento
     const textStyle = {
-      fontFamily: 'monospace', // Fonte fallback caso Press Start 2P não carregue a tempo
+      fontFamily: 'monospace',
       fontSize: '20px',
       fill: '#00ffff'
     };
     const titleStyle = { ...textStyle, fontSize: '28px', fill: '#FFD700'};
 
-
     this.add.text(centerX, centerY - 50, '💣 Bomb Dash', titleStyle).setOrigin(0.5);
+    this.loadingText = this.add.text(centerX, centerY + 10, 'Loading...', textStyle).setOrigin(0.5);
 
-    const loadingText = this.add.text(centerX, centerY + 10, 'Loading...', textStyle).setOrigin(0.5);
-
-    // Barra de progresso
-    const progressBar = this.add.graphics();
-    const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(centerX - 160, centerY + 40, 320, 30); // Posição e tamanho da caixa da barra
+    this.progressBar = this.add.graphics();
+    this.progressBox = this.add.graphics();
+    this.progressBox.fillStyle(0x222222, 0.8);
+    this.progressBox.fillRect(centerX - 160, centerY + 40, 320, 30);
 
     this.load.on('progress', (value) => {
-      progressBar.clear();
-      progressBar.fillStyle(0x00ffff, 1);
-      progressBar.fillRect(centerX - 155, centerY + 45, 310 * value, 20); // Posição e tamanho da barra de progresso
+      this.progressBar.clear();
+      this.progressBar.fillStyle(0x00ffff, 1);
+      this.progressBar.fillRect(centerX - 155, centerY + 45, 310 * value, 20);
     });
 
-    this.load.on('complete', () => {
-      progressBar.destroy();
-      progressBox.destroy();
-      loadingText.setText('Complete!');
-    });
-
-    // Carregar assets essenciais
-    SoundManager.loadAll(this); // Garante que todos os sons definidos em SoundManager sejam carregados
-    this.load.image('auth_bg', 'src/assets/menu_bg_vertical.png'); // Background para cenas de autenticação
-    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'); // WebFontLoader
+    SoundManager.loadAll(this);
+    this.load.image('auth_bg', 'src/assets/menu_bg_vertical.png');
+    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
   async create() {
-    // Adiciona um pequeno atraso para garantir que 'Complete!' seja visível antes da transição
+    // 1. Initialize translations first
+    await LanguageManager.init(this);
+
+    // 2. Update loading text now that translations are ready
+    this.loadingText.setText(LanguageManager.get(this, 'loading'));
+
+    // 3. Destroy progress bar elements
+    this.progressBar.destroy();
+    this.progressBox.destroy();
+
+    // 4. Set final text and proceed with game logic
+    this.loadingText.setText(LanguageManager.get(this, 'complete'));
+
+    // 5. Check session and transition to the correct scene
     this.time.delayedCall(500, async () => {
-        const jwtToken = localStorage.getItem('jwtToken');
+        const jwtToken = localStorage.getItem('jwt_token');
 
         if (jwtToken) {
             console.log('LoadingScene: Found JWT token. Validating session...');
-            const validationResult = await validateCurrentSession(jwtToken);
+            const validationResult = await getCurrentUser(); // No need to pass token, it's read from localStorage
 
-            if (validationResult.success && validationResult.user) {
-                console.log(`LoadingScene: Session validated for user: ${validationResult.user.username}. Max score: ${validationResult.user.max_score}.`);
-
-                localStorage.setItem('loggedInUser', validationResult.user.username);
+            if (validationResult && validationResult.success) {
+                console.log(`LoadingScene: Session validated for user: ${validationResult.user.address}.`);
                 this.registry.set('loggedInUser', validationResult.user);
                 this.registry.set('jwtToken', jwtToken);
-
-                this.scene.start('StartScene'); // Ou MenuScene, conforme preferência
+                this.scene.start('MenuScene'); // Go to Menu on success
             } else {
-                console.log(`LoadingScene: Session validation failed. ${validationResult.message || 'Redirecting to AuthChoiceScene.'}`);
-                localStorage.removeItem('loggedInUser');
-                localStorage.removeItem('jwtToken');
+                console.log(`LoadingScene: Session validation failed. Proceeding to login.`);
+                localStorage.removeItem('jwt_token');
                 this.registry.remove('loggedInUser');
-                this.registry.remove('jwtToken');
-                this.scene.start('AuthChoiceScene'); // CORRIGIDO: Redireciona para AuthChoiceScene
+                this.scene.start('AuthChoiceScene'); // Go to login on failure
             }
         } else {
-            // No JWT token found in localStorage
-            console.log('LoadingScene: No JWT token found. Proceeding to AuthChoiceScene.'); // CORRIGIDO
-            localStorage.removeItem('loggedInUser');
-            localStorage.removeItem('jwtToken'); // Garantir que ambos sejam limpos
-            this.registry.remove('loggedInUser');
-            this.registry.remove('jwtToken');
-            this.scene.start('AuthChoiceScene'); // CORRIGIDO: Redireciona para AuthChoiceScene
+            console.log('LoadingScene: No JWT token found. Proceeding to login.');
+            this.scene.start('AuthChoiceScene'); // Go to login if no token
         }
     });
   }

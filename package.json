@@ -4,7 +4,15 @@
   "description": "Este projeto é uma refatoração do jogo \"Bomb Dash\" para mover sua arquitetura de um modelo puramente client-side para um modelo cliente-servidor seguro e robusto.",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy:testnet": "npx hardhat run scripts/deploy.js --network bscTestnet",
+    "start:backend": "node backend/server.js",
+    "install:all": "npm install && npm install --prefix backend",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "repository": {
     "type": "git",
@@ -20,6 +28,16 @@
   "homepage": "https://github.com/alanvito1/bomb_dash#readme",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.6"
+    "dotenv": "^17.2.3",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^8.10.2",
+    "eslint-plugin-prettier": "^4.2.5",
+    "hardhat": "^2.22.6",
+    "prettier": "^2.8.8",
+    "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "ethers": "^6.15.0",
+    "siwe": "^3.0.0"
   }
 }

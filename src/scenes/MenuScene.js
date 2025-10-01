@@ -1,6 +1,7 @@
 // src/scenes/MenuScene.js
 import { backgroundImages } from '../config/background.js';
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 import { savePlayerStatsToServer, enterWagerMatch } from '../api.js'; // Import for saving stats and entering wager
 
 // --- Configuração da Wager Arena ---
@@ -62,7 +63,7 @@ export default class MenuScene extends Phaser.Scene {
 
   createMenuContent(centerX, centerY, useFallback = false) {
     // 🎮 Título do jogo
-    this.add.text(centerX, 100, '💣 BOMB DASH 💥', {
+    this.add.text(centerX, 100, LanguageManager.get(this, 'game_title'), {
       fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
       fontSize: '20px',
       fill: '#FFD700',
@@ -76,12 +77,12 @@ export default class MenuScene extends Phaser.Scene {
 
   createMenu(centerX, centerY, useFallback = false) {
     const menuItems = [
-      { label: '⚔️ PVP', scene: null, action: 'showPvpLobby' }, // Alterado de PLAY para PVP
-      { label: '🛒 SHOP', scene: 'ShopScene', action: null },
-      { label: '📊 STATS', scene: 'StatsScene', action: null },
-      { label: '🏆 RANKING', scene: 'RankingScene', action: null },
-      { label: '⚙️ SETTINGS', scene: 'ConfigScene', action: null },
-      { label: '↪️ LOGOUT', scene: 'LoginScene', action: 'logout' }
+      { label: LanguageManager.get(this, 'menu_pvp'), scene: null, action: 'showPvpLobby' },
+      { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene', action: null },
+      { label: LanguageManager.get(this, 'menu_stats'), scene: 'StatsScene', action: null },
+      { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene', action: null },
+      { label: LanguageManager.get(this, 'menu_settings'), scene: 'ConfigScene', action: null },
+      { label: LanguageManager.get(this, 'menu_logout'), scene: 'LoginScene', action: 'logout' }
     ];
 
     const buttonStartY = centerY - 100;
@@ -164,7 +165,7 @@ export default class MenuScene extends Phaser.Scene {
     const wagerArena = document.getElementById('wager-arena-container');
     const messageEl = document.getElementById('wager-arena-message');
     wagerArena.style.display = 'flex';
-    messageEl.textContent = 'Selecione o tier da sua aposta. A fortuna favorece os bravos.'; // Reset message
+    messageEl.textContent = LanguageManager.get(this, 'wager_arena_welcome');
     messageEl.style.color = '#ffffff';
 
     // Adiciona listeners uma única vez
@@ -176,7 +177,7 @@ export default class MenuScene extends Phaser.Scene {
           const tierId = button.dataset.tierId;
           const token = localStorage.getItem('jwtToken');
 
-          messageEl.textContent = 'Verificando elegibilidade...';
+          messageEl.textContent = LanguageManager.get(this, 'wager_arena_checking');
           messageEl.style.color = '#ffff00'; // Amarelo para processamento
 
           try {
@@ -184,12 +185,12 @@ export default class MenuScene extends Phaser.Scene {
             if (response.success) {
               this.showWagerConfirmation(response.tier);
             } else {
-              messageEl.textContent = response.message || 'Você não pode entrar nesta aposta.';
+              messageEl.textContent = response.message || LanguageManager.get(this, 'wager_arena_fail');
               messageEl.style.color = '#ff0000'; // Vermelho para erro
             }
           } catch (error) {
             console.error('Erro ao verificar aposta:', error);
-            messageEl.textContent = error.message || 'Erro de comunicação com o servidor.';
+            messageEl.textContent = error.message || LanguageManager.get(this, 'wager_arena_error');
             messageEl.style.color = '#ff0000';
           }
         });
@@ -211,7 +212,7 @@ export default class MenuScene extends Phaser.Scene {
     const messageEl = document.getElementById('wager-confirm-message');
     const wagerArenaMsg = document.getElementById('wager-arena-message');
 
-    messageEl.innerHTML = `Você está prestes a arriscar <span style="color: #00ffff;">${tier.bcoin_cost} BCOIN</span> e <span style="color: #ffff00;">${tier.xp_cost} XP</span>. Se perder, você pode perder um nível. Esta ação não pode ser desfeita.`;
+    messageEl.innerHTML = LanguageManager.get(this, 'wager_confirm_message', { bcoin: tier.bcoin_cost, xp: tier.xp_cost });
     confirmDialog.style.display = 'flex';
 
     const confirmButton = document.getElementById('wager-confirm-button');
@@ -224,13 +225,13 @@ export default class MenuScene extends Phaser.Scene {
     newConfirmButton.addEventListener('click', async () => {
         SoundManager.play(this, 'click');
         confirmDialog.style.display = 'none';
-        wagerArenaMsg.textContent = 'Abra sua carteira para aprovar a transação...';
+        wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_wallet_prompt');
         wagerArenaMsg.style.color = '#ffff00'; // Amarelo
 
         try {
             // 1. Conectar à carteira e ao contrato
             if (typeof window.ethereum === 'undefined') {
-                throw new Error('MetaMask não está instalado. Por favor, instale para continuar.');
+                throw new Error(LanguageManager.get(this, 'metamask_not_installed'));
             }
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             await provider.send("eth_requestAccounts", []); // Solicita conexão com a carteira
@@ -240,13 +241,13 @@ export default class MenuScene extends Phaser.Scene {
             const wagerArenaContract = new ethers.Contract(WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI, signer);
 
             // 2. Chamar a função do contrato
-            wagerArenaMsg.textContent = 'Enviando transação para a blockchain...';
+            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_sending');
             const tx = await wagerArenaContract.enterWagerQueue(tier.id);
 
-            wagerArenaMsg.textContent = 'Aguardando confirmação da transação...';
+            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_confirming');
             await tx.wait(); // Espera a transação ser minerada
 
-            wagerArenaMsg.textContent = `Transação confirmada! Buscando oponente para a aposta ${tier.name}...`;
+            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_success', { tierName: tier.name });
             wagerArenaMsg.style.color = '#00ff00'; // Verde
 
             // Aqui, o jogo entraria em um estado de "espera", escutando por um evento do backend/websocket
@@ -254,7 +255,7 @@ export default class MenuScene extends Phaser.Scene {
 
         } catch (error) {
             console.error('Falha na transação da aposta:', error);
-            wagerArenaMsg.textContent = `Erro: ${error.message.substring(0, 50)}...`;
+            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_fail', { errorMessage: error.message.substring(0, 50) });
             wagerArenaMsg.style.color = '#ff0000'; // Vermelho
         }
     }, { once: true });

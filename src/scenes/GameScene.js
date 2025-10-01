@@ -1,5 +1,5 @@
 // 🎮 GameScene.js – Cena principal do jogo (gameplay)
-import { submitScore, savePlayerStatsToServer } from '../api.js'; // Import savePlayerStatsToServer
+import { saveCheckpoint, savePlayerStatsToServer } from '../api.js'; // Corrected import
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
@@ -276,16 +276,14 @@ export default class GameScene extends Phaser.Scene {
     let statsSaveResponse = null; // For stats submission
 
     if (token && loggedInUser && loggedInUser.username && !cheatDetected) {
-      // Submit score
-      console.log(`Submitting score: ${finalScore} for user: ${loggedInUser.username}`);
-      serverResponse = await submitScore(finalScore, token);
+      // Save checkpoint (wave number)
+      console.log(`Saving checkpoint (level): ${this.level} for user: ${loggedInUser.username}`);
+      serverResponse = await saveCheckpoint(this.level, token);
       if (serverResponse.success) {
-        console.log('Score submitted successfully to server.', serverResponse);
-        if (serverResponse.new_max_score !== undefined) {
-            loggedInUser.max_score = serverResponse.new_max_score; // Update local registry for immediate use
-        }
+        console.log('Checkpoint saved successfully to server.', serverResponse);
+        // The /me endpoint will provide the updated highest wave on next load
       } else {
-        console.warn('Failed to submit score to server:', serverResponse.message);
+        console.warn('Failed to save checkpoint to server:', serverResponse.message);
       }
 
       // Save all player stats (including updated coins and any upgrades)

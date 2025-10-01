@@ -1,6 +1,6 @@
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 
-// Helper function to replace getUpgrades using localStorage
 function getUpgradesFromLocalStorage() {
   const stats = localStorage.getItem('playerStats');
   return stats ? JSON.parse(stats) : null;
@@ -25,7 +25,7 @@ export default class StatsScene extends Phaser.Scene {
   }
 
   createTitle(centerX) {
-    this.add.text(centerX, 50, '🔧 PLAYER STATS', {
+    this.add.text(centerX, 50, LanguageManager.get(this, 'stats_title'), {
       fontSize: '28px',
       fill: '#00ffff',
       fontFamily: 'monospace',
@@ -36,7 +36,7 @@ export default class StatsScene extends Phaser.Scene {
 
   displayStats(centerX) {
     const upgrades = getUpgradesFromLocalStorage() || {
-      damage: 1, // Default values if nothing in localStorage
+      damage: 1,
       speed: 200,
       extraLives: 1,
       fireRate: 600,
@@ -46,13 +46,13 @@ export default class StatsScene extends Phaser.Scene {
     };
 
     const statsToShow = [
-      ['Damage', upgrades.damage],
-      ['Speed', upgrades.speed],
-      ['Extra Lives', upgrades.extraLives],
-      ['Fire Rate (ms)', upgrades.fireRate],
-      ['Bomb Size', upgrades.bombSize],
-      ['Multi-Shot', upgrades.multiShot],
-      ['Coins', upgrades.coins]
+      [LanguageManager.get(this, 'stats_damage'), upgrades.damage],
+      [LanguageManager.get(this, 'stats_speed'), upgrades.speed],
+      [LanguageManager.get(this, 'stats_extra_lives'), upgrades.extraLives],
+      [LanguageManager.get(this, 'stats_fire_rate'), upgrades.fireRate],
+      [LanguageManager.get(this, 'stats_bomb_size'), upgrades.bombSize],
+      [LanguageManager.get(this, 'stats_multi_shot'), upgrades.multiShot],
+      [LanguageManager.get(this, 'stats_coins'), upgrades.coins]
     ];
 
     statsToShow.forEach(([label, value], i) => {
@@ -67,7 +67,7 @@ export default class StatsScene extends Phaser.Scene {
   }
 
   createBackButton(centerX, y) {
-    const backBtn = this.add.text(centerX, y, '[ BACK TO MENU ]', {
+    const backBtn = this.add.text(centerX, y, LanguageManager.get(this, 'shop_back_to_menu'), {
       fontSize: '20px',
       fill: '#00ffff',
       backgroundColor: '#111',

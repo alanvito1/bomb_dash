@@ -10,6 +10,7 @@ import RankingScene from './src/scenes/RankingScene.js';
 import GameOverScene from './src/scenes/GameOverScene.js';
 import ConfigScene from './src/scenes/ConfigScene.js';
 import StatsScene from './src/scenes/StatsScene.js';
+import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
 
 // ⚙️ Configurações gerais do Phaser
 const config = {
@@ -31,6 +32,7 @@ const config = {
   scene: [
     LoadingScene,
     StartScene,
+    AuthChoiceScene,
     MenuScene,
     GameScene,
     ShopScene,
