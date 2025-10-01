@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // Carrega as variáveis de ambiente do arquivo .env que está na pasta raiz do projeto
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
@@ -30,7 +31,6 @@ validateEnvVariables();
 const jwt = require('jsonwebtoken');
 const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
-const path = require('path');
 const db = require('./database.js');
 const nft = require('./nft.js');
 const oracle = require('./oracle.js');
@@ -409,7 +409,7 @@ async function startServer() {
         console.log("[OK] Conexão com o banco de dados estabelecida com sucesso.");
 
         // 2. Inicializar o Oráculo
-        const oracleInitialized = oracle.initOracle();
+        const oracleInitialized = await oracle.initOracle();
         if (oracleInitialized) {
             console.log("[OK] Oráculo da blockchain inicializado.");
             console.log(` - Wallet do Oráculo: ${process.env.ORACLE_WALLET_ADDRESS}`); // Supondo que você tenha a wallet

@@ -16,15 +16,15 @@
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
     "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
-    "siwe": "^3.0.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "axios": "^1.12.2",
     "chai": "^6.2.0",
+    "jsonwebtoken": "^9.0.2",
     "sinon": "^21.0.0",
+    "siwe": "^3.0.0",
     "supertest": "^7.1.4"
   }
 }

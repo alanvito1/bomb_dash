@@ -5,7 +5,7 @@ const db = require('./database');
 // --- Configuração do Oráculo ---
 // Estas variáveis devem ser carregadas de um arquivo .env em produção
 const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY;
-const BSC_RPC_URL = process.env.BSC_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/'; // BSC Testnet
+const BSC_RPC_URL = process.env.TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/'; // BSC Testnet
 const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
 const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
 const WAGER_ARENA_ADDRESS = process.env.WAGER_ARENA_ADDRESS; // Novo endereço do contrato
@@ -16,7 +16,8 @@ const TOURNAMENT_CONTROLLER_ABI = [
     "function reportTournamentResult(uint256 tournamentId, address[] calldata winners)",
     "function payLevelUpFee(address player)",
     "function setBcoinLevelUpCost(uint256 newCost)",
-    "function levelUpCost() view returns (uint256)"
+    "function levelUpCost() view returns (uint256)",
+    "event TournamentStarted(uint256 indexed tournamentId)"
 ];
 const PERPETUAL_REWARD_POOL_ABI = [
     "function reportSoloGamePlayed(uint256 gameCount)",
@@ -39,15 +40,16 @@ let isOracleInitialized = false;
 /**
  * Inicializa o serviço do Oráculo, conectando-se à blockchain e carregando os contratos.
  */
-function initOracle() {
-    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS || !WAGER_ARENA_ADDRESS) {
-        console.warn("Variáveis de ambiente do Oráculo não estão configuradas. O serviço do Oráculo está desativado.");
+async function initOracle() {
+    // A WagerArena é opcional para a V1, então não a incluímos na verificação principal.
+    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS) {
+        console.warn("Variáveis de ambiente essenciais do Oráculo não estão configuradas. O serviço do Oráculo está desativado.");
         isOracleInitialized = false;
         return false;
     }
 
     try {
-        provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
+        provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
         oracleWallet = new ethers.Wallet(ORACLE_PRIVATE_KEY, provider);
 
         tournamentControllerContract = new ethers.Contract(
@@ -62,16 +64,21 @@ function initOracle() {
             oracleWallet
         );
 
-        wagerArenaContract = new ethers.Contract(
-            WAGER_ARENA_ADDRESS,
-            WAGER_ARENA_ABI,
-            oracleWallet
-        );
+        if (WAGER_ARENA_ADDRESS) {
+            wagerArenaContract = new ethers.Contract(
+                WAGER_ARENA_ADDRESS,
+                WAGER_ARENA_ABI,
+                oracleWallet
+            );
+            console.log(`Conectado à WagerArena em: ${await wagerArenaContract.getAddress()}`);
+        } else {
+            console.warn("Endereço da WagerArena não fornecido. Funcionalidades de aposta (wager) estarão desativadas.");
+        }
+
 
         console.log(`Oráculo inicializado com sucesso. Endereço: ${oracleWallet.address}`);
-        console.log(`Conectado ao TournamentController em: ${tournamentControllerContract.address}`);
-        console.log(`Conectado ao PerpetualRewardPool em: ${perpetualRewardPoolContract.address}`);
-        console.log(`Conectado à WagerArena em: ${wagerArenaContract.address}`);
+        console.log(`Conectado ao TournamentController em: ${await tournamentControllerContract.getAddress()}`);
+        console.log(`Conectado ao PerpetualRewardPool em: ${await perpetualRewardPoolContract.getAddress()}`);
         isOracleInitialized = true;
         return true;
     } catch (error) {
@@ -161,13 +168,13 @@ async function signClaimReward(playerAddress, gamesPlayed) {
 
     // O hash deve corresponder exatamente ao que é gerado no smart contract:
     // keccak256(abi.encodePacked(player, gamesPlayed, address(this)))
-    const messageHash = ethers.utils.solidityKeccak256(
+    const messageHash = ethers.solidityPackedKeccak256(
         ['address', 'uint256', 'address'],
         [playerAddress, gamesPlayed, PERPETUAL_REWARD_POOL_ADDRESS]
     );
 
     // ethers.js signMessage irá automaticamente prefixar o hash com "\x19Ethereum Signed Message:\n32"
-    const signature = await oracleWallet.signMessage(ethers.utils.arrayify(messageHash));
+    const signature = await oracleWallet.signMessage(ethers.toBeArray(messageHash));
     return signature;
 }
 
@@ -304,8 +311,8 @@ function startCronJobs() {
 const tournamentService = require('./tournament_service');
 
 const originalInitOracle = initOracle;
-function initOracleAndListeners() {
-    if (originalInitOracle()) { // Se a inicialização do oráculo for bem-sucedida
+async function initOracleAndListeners() {
+    if (await originalInitOracle()) { // Se a inicialização do oráculo for bem-sucedida
         startWagerMatchListener();
         startCronJobs();
         // Pass the contract instance to the tournament service

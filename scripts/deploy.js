@@ -2,6 +2,37 @@ const { ethers } = require("hardhat");
 const fs = require('fs');
 const path = require('path');
 
+// Helper function to update the .env file
+function updateEnvFile(updates) {
+    const envPath = path.join(__dirname, '..', '.env');
+    if (!fs.existsSync(envPath)) {
+        console.warn(`[WARNING] .env file not found at ${envPath}. Creating a new one.`);
+        // If you want to create it, you can use fs.writeFileSync, otherwise just return.
+        // For this script, we'll assume it should exist and just warn.
+        return;
+    }
+
+    let content = fs.readFileSync(envPath, 'utf8');
+
+    for (const key in updates) {
+        const value = updates[key];
+        const regex = new RegExp(`^${key}=.*$`, 'm');
+        const newLine = `${key}=${value}`;
+
+        if (content.match(regex)) {
+            // Update existing key
+            content = content.replace(regex, newLine);
+        } else {
+            // Append new key
+            content += `\n${newLine}`;
+        }
+    }
+
+    fs.writeFileSync(envPath, content);
+    console.log('- Successfully updated the .env file with new contract addresses.');
+}
+
+
 async function main() {
     // 1. Get Signers and provider
     const provider = ethers.provider;
@@ -122,6 +153,18 @@ async function main() {
     saveAbi("PerpetualRewardPool");
     // Use a fully qualified name to resolve the ambiguity for the IBEP20 interface
     saveAbi("contracts/PerpetualRewardPool.sol:IBEP20");
+
+    // 8. Update .env file
+    console.log("\nUpdating .env file with contract addresses...");
+    const envUpdates = {
+        TOURNAMENT_CONTROLLER_ADDRESS: tournamentControllerAddress,
+        PERPETUAL_REWARD_POOL_ADDRESS: perpetualRewardPoolAddress,
+        BCOIN_TESTNET_ADDRESS: bcoinAddress,
+        ORACLE_WALLET_ADDRESS: oracle.address,
+        // WAGER_ARENA_ADDRESS is not deployed in this script, so we leave it untouched.
+    };
+    updateEnvFile(envUpdates);
+
 
     console.log("\nDeployment and setup complete! 🎉");
 }

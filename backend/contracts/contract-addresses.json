@@ -1,7 +1,7 @@
 {
-  "bcoinTokenAddress": "0x181aB8F8442bD3E18557788ac50fF5f3505f257e",
-  "tournamentControllerAddress": "0x6B0B463B5cCd736A667f1B21f606d2a85ca4240B",
-  "perpetualRewardPoolAddress": "0x46973C32D5BE5736fD0EC8b9822E70C13ee0934a",
+  "bcoinTokenAddress": "0xf2f3B5241cAEC21FF801caCcc4cA6c9FF17f289D",
+  "tournamentControllerAddress": "0x4262518d501ED3Ccf6851536414bC8b735EA4F27",
+  "perpetualRewardPoolAddress": "0xbc934d4513925955D573faCdF587f17F1f2607b8",
   "oracleAddress": "0x4a9e067d8324547E8B1Bd2aEEF1b8D2515424D9E",
   "teamWalletAddress": "0x4a9e067d8324547E8B1Bd2aEEF1b8D2515424D9E"
 }

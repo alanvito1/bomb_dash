@@ -1,5 +1,4 @@
 const { ethers } = require('ethers');
-const oracle = require('./oracle');
 
 // In-memory store for active tournaments.
 // In a production environment, this should be a persistent store like Redis or a database table.
@@ -127,6 +126,7 @@ async function reportTournamentMatchWinner(tournamentId, matchId, winnerAddress)
             const finalWinners = [winners[0]]; // For now, only report the champion.
 
             // Report final result to the oracle
+            const oracle = require('./oracle');
             await oracle.reportTournamentResult(tournamentId, finalWinners);
             console.log(`Final tournament result reported to the oracle for tournament ${tournamentId}.`);
             activeTournaments.delete(tournamentId); // Clean up finished tournament
