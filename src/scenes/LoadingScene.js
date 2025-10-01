@@ -1,5 +1,4 @@
 // src/scenes/LoadingScene.js
-import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import { getCurrentUser } from '../api.js';
 
@@ -33,48 +32,81 @@ export default class LoadingScene extends Phaser.Scene {
       this.progressBar.fillRect(centerX - 155, centerY + 45, 310 * value, 20);
     });
 
-    SoundManager.loadAll(this);
-    this.load.image('auth_bg', 'src/assets/menu_bg_vertical.png');
+    // Only load the manifest file here
+    this.load.json('asset-manifest', 'src/config/asset-manifest.json');
     this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
-  async create() {
-    // 1. Initialize translations first
-    await LanguageManager.init(this);
+  create() {
+    const manifest = this.cache.json.get('asset-manifest');
 
-    // 2. Update loading text now that translations are ready
-    this.loadingText.setText(LanguageManager.get(this, 'loading'));
+    // Enqueue all assets from the manifest for loading
+    const { assets, sounds } = manifest;
 
-    // 3. Destroy progress bar elements
-    this.progressBar.destroy();
-    this.progressBox.destroy();
-
-    // 4. Set final text and proceed with game logic
-    this.loadingText.setText(LanguageManager.get(this, 'complete'));
-
-    // 5. Check session and transition to the correct scene
-    this.time.delayedCall(500, async () => {
-        const jwtToken = localStorage.getItem('jwt_token');
-
-        if (jwtToken) {
-            console.log('LoadingScene: Found JWT token. Validating session...');
-            const validationResult = await getCurrentUser(); // No need to pass token, it's read from localStorage
-
-            if (validationResult && validationResult.success) {
-                console.log(`LoadingScene: Session validated for user: ${validationResult.user.address}.`);
-                this.registry.set('loggedInUser', validationResult.user);
-                this.registry.set('jwtToken', jwtToken);
-                this.scene.start('MenuScene'); // Go to Menu on success
-            } else {
-                console.log(`LoadingScene: Session validation failed. Proceeding to login.`);
-                localStorage.removeItem('jwt_token');
-                this.registry.remove('loggedInUser');
-                this.scene.start('AuthChoiceScene'); // Go to login on failure
+    // Load image assets
+    for (const categoryKey in assets) {
+        const category = assets[categoryKey];
+        for (const assetKey in category) {
+            const path = category[assetKey];
+            if (typeof path === 'string') {
+                this.load.image(assetKey, path);
             }
-        } else {
-            console.log('LoadingScene: No JWT token found. Proceeding to login.');
-            this.scene.start('AuthChoiceScene'); // Go to login if no token
+            // Note: Complex assets like spritesheets defined with 'frames' are not handled here.
+            // This would require more info in the manifest (e.g., frameWidth, frameHeight).
         }
+    }
+
+    // Load sound assets
+    for (const categoryKey in sounds) {
+        const category = sounds[categoryKey];
+        for (const assetKey in category) {
+            this.load.audio(assetKey, category[assetKey]);
+        }
+    }
+
+    this.load.on('complete', async () => {
+        // The original logic from create() goes here, to run after assets are loaded.
+
+        // 1. Initialize translations first
+        await LanguageManager.init(this);
+
+        // 2. Update loading text now that translations are ready
+        this.loadingText.setText(LanguageManager.get(this, 'loading'));
+
+        // 3. Destroy progress bar elements
+        this.progressBar.destroy();
+        this.progressBox.destroy();
+
+        // 4. Set final text and proceed with game logic
+        this.loadingText.setText(LanguageManager.get(this, 'complete'));
+
+        // 5. Check session and transition to the correct scene
+        this.time.delayedCall(500, async () => {
+            const jwtToken = localStorage.getItem('jwt_token');
+
+            if (jwtToken) {
+                console.log('LoadingScene: Found JWT token. Validating session...');
+                const validationResult = await getCurrentUser();
+
+                if (validationResult && validationResult.success) {
+                    console.log(`LoadingScene: Session validated for user: ${validationResult.user.address}.`);
+                    this.registry.set('loggedInUser', validationResult.user);
+                    this.registry.set('jwtToken', jwtToken);
+                    this.scene.start('MenuScene');
+                } else {
+                    console.log(`LoadingScene: Session validation failed. Proceeding to login.`);
+                    localStorage.removeItem('jwt_token');
+                    this.registry.remove('loggedInUser');
+                    this.scene.start('AuthChoiceScene');
+                }
+            } else {
+                console.log('LoadingScene: No JWT token found. Proceeding to login.');
+                this.scene.start('AuthChoiceScene');
+            }
+        });
     });
+
+    // This starts the asset loading process
+    this.load.start();
   }
 }

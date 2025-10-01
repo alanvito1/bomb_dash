@@ -37,6 +37,7 @@
     "vite": "^7.1.7"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
     "ethers": "^6.15.0",
     "siwe": "^3.0.0"
   }
