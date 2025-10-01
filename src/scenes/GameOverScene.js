@@ -7,13 +7,28 @@ export default class GameOverScene extends Phaser.Scene {
     super('GameOverScene');
   }
 
+  init(data) {
+    this.data = data;
+  }
+
   preload() {
-    SoundManager.loadAll(this);
-    this.load.image('gameover_bg', 'src/assets/gameover_bg.png');
+    this.load.json('assetManifest', 'src/config/asset-manifest.json');
     this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
   }
 
-  create(data) {
+  create() {
+    const manifest = this.cache.json.get('assetManifest');
+    this.load.image('gameover_bg', manifest.assets.backgrounds.gameover_bg);
+    SoundManager.loadFromManifest(this, manifest);
+
+    this.load.on('complete', () => {
+      this.initializeScene(this.data);
+    });
+
+    this.load.start();
+  }
+
+  initializeScene(data) {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 

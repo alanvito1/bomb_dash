@@ -6,10 +6,6 @@ export default class ConfigScene extends Phaser.Scene {
     super('ConfigScene');
   }
 
-  preload() {
-    SoundManager.loadAll(this);
-  }
-
   create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;

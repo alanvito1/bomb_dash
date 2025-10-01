@@ -24,18 +24,6 @@ export default class MenuScene extends Phaser.Scene {
     super('MenuScene');
   }
 
-  preload() {
-    // 🎨 Carrega o fundo visual específico dessa cena
-    const bgImage = backgroundImages[this.scene.key] || 'menu_bg_vertical.png';
-    this.load.image('bg', `src/assets/${bgImage}`);
-
-    // 🔊 Carrega todos os sons via gerenciador
-    SoundManager.loadAll(this);
-
-    // 🅰️ Fonte retrô arcade
-    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
-  }
-
   create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
@@ -56,7 +44,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createBackground(centerX, centerY) {
-    this.add.image(centerX, centerY, 'bg')
+    this.add.image(centerX, centerY, 'menu_bg_vertical')
       .setOrigin(0.5)
       .setDisplaySize(this.scale.width, this.scale.height);
   }

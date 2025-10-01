@@ -40,27 +40,64 @@ export default class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    SoundManager.loadAll(this);
-    this.load.image('player', 'src/assets/player.png');
-    this.load.image('bomb', 'src/assets/bomb.png');
-    this.load.image('explosion', 'src/assets/explosion.png');
-    this.load.image('btn_pause', 'src/assets/btn_pause.png');
-    this.load.image('btn_menu', 'src/assets/btn_menu.png');
-    const MAX_ASSET_COUNT = 5;
-    for (let i = 1; i <= MAX_ASSET_COUNT; i++) {
-      this.load.image(`enemy${i}`, `src/assets/enemy${i}.png`);
-      this.load.image(`boss${i}`, `src/assets/boss${i}.png`);
+    // Carrega todos os assets (imagens e sons) a partir do manifesto.
+    // O SoundManager não precisa mais de um método loadAll, pois tudo é centralizado aqui.
+    this.load.json('assetManifest', 'src/config/asset-manifest.json');
+  }
+
+  loadAssetsFromManifest() {
+    const manifest = this.cache.json.get('assetManifest');
+
+    // Carregar imagens
+    for (const key in manifest.assets.heroes) {
+        if (typeof manifest.assets.heroes[key] === 'string') {
+            this.load.image(key, manifest.assets.heroes[key]);
+        } else if (manifest.assets.heroes[key].frames) {
+            manifest.assets.heroes[key].frames.forEach((frame, index) => {
+                this.load.image(`${key}_${index}`, frame);
+            });
+        }
     }
-    // Powerup assets de 1 a 10 já são carregados, cobrindo 1-5 para buffs e 6-8 para anti-buffs
-    for (let i = 1; i <= 10; i++) {
-      this.load.image(`powerup${i}`, `src/assets/powerups/powerup${i}.png`);
+    for (const key in manifest.assets.enemies) {
+        this.load.image(key, manifest.assets.enemies[key]);
     }
-    for (let i = 1; i <= MAX_ASSET_COUNT; i++) {
-      this.load.image(`bg${i}`, `src/assets/bg${i}.png`);
+    for (const key in manifest.assets.bosses) {
+        this.load.image(key, manifest.assets.bosses[key]);
     }
+    for (const key in manifest.assets.powerups) {
+        this.load.image(key, manifest.assets.powerups[key]);
+    }
+    for (const key in manifest.assets.ui) {
+        this.load.image(key, manifest.assets.ui[key]);
+    }
+    for (const key in manifest.assets.backgrounds) {
+        this.load.image(key, manifest.assets.backgrounds[key]);
+    }
+    for (const key in manifest.assets.projectiles) {
+        this.load.image(key, manifest.assets.projectiles[key]);
+    }
+    for (const key in manifest.assets.effects) {
+        this.load.image(key, manifest.assets.effects[key]);
+    }
+
+    // Carregar sons
+    SoundManager.loadFromManifest(this, manifest);
   }
 
   create() {
+    // Após o preload do manifesto, carregamos os assets listados nele.
+    this.loadAssetsFromManifest();
+
+    // O evento 'complete' é disparado quando o Loader termina de processar todos os arquivos.
+    this.load.on('complete', () => {
+      this.initializeScene();
+    });
+
+    // Inicia o processo de carregamento manualmente, pois estamos fora do ciclo de vida do `preload`.
+    this.load.start();
+  }
+
+  initializeScene() {
     SoundManager.stop(this, 'menu_music');
 
     // Inicialização de variáveis de estado do jogo

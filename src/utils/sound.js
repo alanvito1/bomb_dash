@@ -1,34 +1,26 @@
 // src/utils/sound.js
 
 export default class SoundManager {
-  static loadAll(scene) {
-    if (!scene || !scene.load) {
-      console.error('[SoundManager] Cena inválida para carregar sons');
+  static loadFromManifest(scene, manifest) {
+    if (!scene || !scene.load || !manifest || !manifest.sounds) {
+      console.error('[SoundManager] Cena, loader ou manifesto inválido para carregar sons');
       return;
     }
 
-    const sounds = [
-      'menu_music', 'click', 'bomb_fire', 'explosion',
-      'coin_collect', 'powerup_collect', 'enemy_death', 'boss_death',
-      'gameover', 'next_stage', 'submit', 'pause', 'open_shop',
-      'hit_enemy', 'player_hit', 'upgrade', 'wave_start',
-      'boss_spawn', 'powerup_expire'
-    ];
+    const { music, sfx } = manifest.sounds;
 
-    sounds.forEach(key => {
-      const mp3 = `src/assets/sounds/${key}.mp3`;
-      const wav = `src/assets/sounds/${key}.wav`;
-      scene.load.audio(key, [mp3, wav]);
-      console.log(`[SoundManager] Carregando som: ${key} (${mp3}, ${wav})`);
-    });
+    // Carregar músicas
+    for (const key in music) {
+      const path = music[key];
+      scene.load.audio(key, path);
+      console.log(`[SoundManager] Carregando música: ${key} (${path})`);
+    }
 
-    // 🎶 Carregar músicas dos mundos (world1_music até world5_music)
-    for (let i = 1; i <= 5; i++) {
-      const key = `world${i}_music`;
-      const mp3 = `src/assets/sounds/${key}.mp3`;
-      const wav = `src/assets/sounds/${key}.wav`;
-      scene.load.audio(key, [mp3, wav]);
-      console.log(`[SoundManager] Carregando música do mundo: ${key} (${mp3}, ${wav})`);
+    // Carregar efeitos sonoros
+    for (const key in sfx) {
+      const path = sfx[key];
+      scene.load.audio(key, path);
+      console.log(`[SoundManager] Carregando SFX: ${key} (${path})`);
     }
   }
 
