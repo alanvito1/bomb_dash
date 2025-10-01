@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path'); // Importe o 'path' aqui no topo
 
 // Carrega as variáveis de ambiente do arquivo .env que está na pasta raiz do projeto
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
