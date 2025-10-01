@@ -1,14 +1,16 @@
 // vite.config.js
 import { defineConfig } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
-    // ... other config ...
-    define: {
-        'global': 'window' // Or an empty object {}
-    },
-    resolve: {
-        alias: {
-            buffer: 'buffer/'
-        }
+  plugins: [
+    nodePolyfills()
+  ],
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
     }
+  }
 });
