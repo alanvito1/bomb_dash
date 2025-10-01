@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha 'test/**/*.test.js'"
+    "test": "DOTENV_CONFIG_PATH=../.env mocha --require dotenv/config 'test/**/*.test.js'"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +12,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "axios": "^1.12.2",
     "chai": "^6.2.0",
-    "sinon": "^21.0.0"
+    "sinon": "^21.0.0",
+    "supertest": "^7.1.4"
   }
 }

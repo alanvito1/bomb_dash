@@ -1,5 +1,30 @@
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+
+// Função para validar variáveis de ambiente
+function validateEnvVariables() {
+    const requiredEnvVars = [
+        'PRIVATE_KEY',
+        'JWT_SECRET',
+        'ADMIN_SECRET',
+        'TESTNET_RPC_URL',
+        'ORACLE_PRIVATE_KEY',
+        'TOURNAMENT_CONTROLLER_ADDRESS',
+        'PERPETUAL_REWARD_POOL_ADDRESS',
+        'WAGER_ARENA_ADDRESS'
+    ];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+    if (missingVars.length > 0) {
+        console.error(`[FATAL] As seguintes variáveis de ambiente críticas não foram definidas: ${missingVars.join(', ')}.`);
+        console.error("Por favor, copie o arquivo .env.example para .env e preencha as variáveis necessárias.");
+        process.exit(1); // Encerra a aplicação se variáveis críticas estiverem faltando
+    }
+}
+
+// Validar as variáveis de ambiente na inicialização
+validateEnvVariables();
 const jwt = require('jsonwebtoken');
 const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
@@ -359,20 +384,62 @@ app.get('/api/pvp/status', (req, res) => {
     res.json({ success: true, status: gameState.getPvpStatus() });
 });
 
-
-db.initDb().then(() => {
-    // Inicializa o oráculo e seus listeners depois que o DB está pronto
-    oracle.initOracle();
-
-    // Inicia o cron job para o ciclo de PvP
-    gameState.startPvpCycleCron();
-
-    app.listen(PORT, () => {
-        console.log(`Servidor rodando na porta ${PORT}`);
-    });
-}).catch(err => {
-    console.error("Falha ao inicializar o banco de dados. Servidor não iniciado.", err);
-    process.exit(1);
+// Rota para obter o ranking dos top 10 jogadores
+app.get('/api/ranking', async (req, res) => {
+    try {
+        const ranking = await db.getTop10Ranking();
+        res.json({ success: true, ranking });
+    } catch (error) {
+        console.error("Erro ao buscar ranking:", error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar o ranking.' });
+    }
 });
+
+
+async function startServer() {
+    console.log("=============================================");
+    console.log("     INICIALIZANDO O SERVIDOR DO JOGO      ");
+    console.log("=============================================");
+
+    try {
+        // 1. Inicializar o Banco de Dados
+        await db.initDb();
+        console.log("[OK] Conexão com o banco de dados estabelecida com sucesso.");
+
+        // 2. Inicializar o Oráculo
+        const oracleInitialized = oracle.initOracle();
+        if (oracleInitialized) {
+            console.log("[OK] Oráculo da blockchain inicializado.");
+            console.log(` - Wallet do Oráculo: ${process.env.ORACLE_WALLET_ADDRESS}`); // Supondo que você tenha a wallet
+            console.log(" - Contratos Utilizados:");
+            console.log(`   - TournamentController: ${process.env.TOURNAMENT_CONTROLLER_ADDRESS}`);
+            console.log(`   - PerpetualRewardPool: ${process.env.PERPETUAL_REWARD_POOL_ADDRESS}`);
+            console.log(`   - WagerArena: ${process.env.WAGER_ARENA_ADDRESS}`);
+        } else {
+            console.warn("[AVISO] Oráculo da blockchain não foi inicializado. Verifique as variáveis de ambiente.");
+        }
+
+        // 3. Iniciar Cron Jobs
+        await gameState.startPvpCycleCron();
+        console.log("[OK] Cron jobs (Ciclo de PvP, etc.) foram iniciados.");
+
+        // 4. Iniciar o Servidor Express
+        app.listen(PORT, () => {
+            console.log("---------------------------------------------");
+            console.log(`[OK] Servidor HTTP iniciado e escutando na porta ${PORT}.`);
+            console.log("=============================================");
+            console.log("      O SERVIDOR ESTÁ TOTALMENTE OPERACIONAL      ");
+            console.log("=============================================");
+        });
+
+    } catch (error) {
+        console.error("[FATAL] Falha crítica durante a inicialização do servidor:", error);
+        process.exit(1);
+    }
+}
+
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

@@ -1,5 +1,6 @@
 // src/scenes/StartScene.js
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 
 export default class StartScene extends Phaser.Scene {
   constructor() {
@@ -23,7 +24,7 @@ export default class StartScene extends Phaser.Scene {
       .setDisplaySize(this.scale.width, this.scale.height);
 
     // 🕹️ Texto de introdução
-    const pressText = this.add.text(centerX, centerY, 'PRESS ANY KEY TO START', {
+    const pressText = this.add.text(centerX, centerY, LanguageManager.get(this, 'press_any_key'), {
       fontSize: '20px',
       fill: '#00ffff',
       fontFamily: 'monospace',

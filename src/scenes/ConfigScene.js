@@ -1,4 +1,5 @@
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 
 export default class ConfigScene extends Phaser.Scene {
   constructor() {
@@ -13,19 +14,17 @@ export default class ConfigScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    this.add.text(centerX, 80, 'SETTINGS', {
+    this.add.text(centerX, 80, LanguageManager.get(this, 'config_title'), {
       fontSize: '28px',
       fill: '#ffffff',
       fontFamily: 'monospace'
     }).setOrigin(0.5);
 
-    // Carrega configurações
     let musicEnabled = this.registry.get('musicEnabled') ?? true;
     let sfxEnabled = this.registry.get('sfxEnabled') ?? true;
     let volume = this.registry.get('volume') ?? 0.5;
 
-    // === Música ===
-    const musicLabel = () => `[ MUSIC: ${musicEnabled ? 'ON' : 'OFF'} ]`;
+    const musicLabel = () => LanguageManager.get(this, musicEnabled ? 'config_music_on' : 'config_music_off');
     const musicText = this.add.text(centerX, 150, musicLabel(), {
       fontSize: '20px',
       fill: '#ffff00',
@@ -46,8 +45,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    // === Efeitos Sonoros ===
-    const sfxLabel = () => `[ SFX: ${sfxEnabled ? 'ON' : 'OFF'} ]`;
+    const sfxLabel = () => LanguageManager.get(this, sfxEnabled ? 'config_sfx_on' : 'config_sfx_off');
     const sfxText = this.add.text(centerX, 210, sfxLabel(), {
       fontSize: '20px',
       fill: '#00ffff',
@@ -63,8 +61,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    // === Volume ===
-    const volumeLabel = () => `[ VOLUME: ${Math.round(volume * 100)}% ]`;
+    const volumeLabel = () => LanguageManager.get(this, 'config_volume', { volume: Math.round(volume * 100) });
     const volumeText = this.add.text(centerX, 270, volumeLabel(), {
       fontSize: '20px',
       fill: '#00ff88',
@@ -83,8 +80,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    // === Reset ===
-    this.add.text(centerX, 350, '[ RESET GAME DATA ]', {
+    this.add.text(centerX, 350, LanguageManager.get(this, 'config_reset_data'), {
       fontSize: '20px',
       fill: '#ff5555',
       fontFamily: 'monospace'
@@ -93,14 +89,13 @@ export default class ConfigScene extends Phaser.Scene {
       .setInteractive()
       .on('pointerdown', () => {
         SoundManager.play(this, 'click');
-        if (confirm('This will erase all progress. Are you sure?')) {
+        if (confirm(LanguageManager.get(this, 'config_reset_confirm'))) {
           localStorage.clear();
           this.scene.start('MenuScene');
         }
       });
 
-    // === Voltar ===
-    this.add.text(centerX, 420, '[ BACK ]', {
+    this.add.text(centerX, 420, LanguageManager.get(this, 'config_back'), {
       fontSize: '20px',
       fill: '#00ffff',
       fontFamily: 'monospace'
