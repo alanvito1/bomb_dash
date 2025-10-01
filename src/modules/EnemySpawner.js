@@ -1,32 +1,34 @@
 import SoundManager from '../utils/sound.js';
 
 // Constantes
-const MAX_WORLD = 5;
 const BOSS_INTERVAL = 5;
-const MAX_ENEMIES_BASE = 11; // Renomeado para indicar que é o base
-const SPAWN_DELAY_BASE = 800; // Renomeado para indicar que é o base
+const MAX_ENEMIES_BASE = 11;
+const SPAWN_DELAY_BASE = 800;
 
 export default class EnemySpawner {
   constructor(scene) {
     this.scene = scene;
-    this.spawnInterval = SPAWN_DELAY_BASE; // Usar this.spawnInterval para que possa ser modificado
-    this.maxEnemiesBase = MAX_ENEMIES_BASE; // Usar this.maxEnemiesBase
+    this.spawnInterval = SPAWN_DELAY_BASE;
+    this.maxEnemiesBase = MAX_ENEMIES_BASE;
 
-    // getUpgrades e saveUpgrades não são mais usados aqui desde a remoção do sistema de upgrades.js
-    // A lógica de fim de jogo no nível 25 foi movida para GameScene.js ou será tratada lá.
+    const manifest = this.scene.cache.json.get('assetManifest');
+    if (manifest && manifest.assets) {
+      this.enemyKeys = Object.keys(manifest.assets.enemies || {});
+      this.bossKeys = Object.keys(manifest.assets.bosses || {});
+    } else {
+      console.error('[EnemySpawner] Manifesto de assets não encontrado ou inválido.');
+      this.enemyKeys = [];
+      this.bossKeys = [];
+    }
   }
 
-  // Método para PowerupLogic obter o intervalo de spawn atual
   getSpawnInterval() {
     return this.spawnInterval;
   }
 
-  // Método para PowerupLogic definir um novo intervalo de spawn
   setSpawnInterval(newInterval) {
-    this.spawnInterval = Math.max(50, newInterval); // Adicionar um limite mínimo para o intervalo (ex: 50ms)
+    this.spawnInterval = Math.max(50, newInterval);
     console.log(`[EnemySpawner] Spawn interval set to: ${this.spawnInterval}`);
-    // Se um timer de spawn estiver ativo, ele precisaria ser reiniciado para usar o novo intervalo.
-    // A lógica atual em spawn() já cria um novo timer a cada chamada, então isso deve funcionar.
   }
 
   spawn() {
@@ -36,12 +38,6 @@ export default class EnemySpawner {
     }
 
     const level = this.scene.level || 1;
-    const world = Math.min(Math.ceil(level / BOSS_INTERVAL), MAX_WORLD);
-    const stageInWorld = ((level - 1) % BOSS_INTERVAL) + 1;
-    this.scene.stageCode = `${world}-${stageInWorld}`;
-
-    // Lógica de fim de jogo no nível 25 foi movida para GameScene.js (ou será tratada lá)
-    // if (level > 25) { ... return 'GAME_SHOULD_END'; } // REMOVIDO DAQUI
 
     this.scene.enemies.clear(true, true);
     this.scene.bossDefeated = false;
@@ -49,9 +45,42 @@ export default class EnemySpawner {
     this.scene.enemiesSpawned = 0;
     this.scene.enemiesKilled = 0;
 
+    // Lógica de Ondas Infinitas para níveis 21+
+    if (level >= 21) {
+      const randomEnemyKey = this.enemyKeys[Phaser.Math.Between(0, this.enemyKeys.length - 1)];
+      if (!randomEnemyKey) {
+        console.error('[EnemySpawner] Nenhuma chave de inimigo encontrada para a onda infinita.');
+        return;
+      }
+
+      const maxEnemies = this.maxEnemiesBase;
+      this._spawnEnemy(randomEnemyKey, level, true); // O 'true' ativa o scaling infinito
+
+      if (maxEnemies > 1) {
+        this.scene.time.addEvent({
+          delay: this.spawnInterval,
+          repeat: maxEnemies - 1,
+          callback: () => this._spawnEnemy(randomEnemyKey, level, true)
+        });
+      }
+      console.log(`[ENEMY SPAWNER] Infinite wave ${level} - Spawning ${maxEnemies} ${randomEnemyKey} enemies.`);
+      return;
+    }
+
+    // Lógica Padrão para níveis 1-20
+    const world = Math.min(Math.ceil(level / BOSS_INTERVAL), this.bossKeys.length || 1);
+    const stageInWorld = ((level - 1) % BOSS_INTERVAL) + 1;
+    this.scene.stageCode = `${world}-${stageInWorld}`;
+
     if (level % BOSS_INTERVAL === 0) {
-      const bossIndex = Math.min(world, MAX_WORLD);
-      const bossKey = this.scene.textures.exists(`boss${bossIndex}`) ? `boss${bossIndex}` : 'boss5';
+      const bossIndex = Math.min(world - 1, this.bossKeys.length - 1);
+      const bossKey = this.bossKeys[bossIndex] || this.bossKeys[this.bossKeys.length - 1];
+
+      if (!bossKey) {
+        console.error(`[EnemySpawner] Nenhuma chave de chefe encontrada para o mundo ${world}.`);
+        return;
+      }
+
       const boss = this.scene.enemies.create(this.scene.scale.width / 2, -50, bossKey);
       boss.setVelocityY(28);
       boss.setDisplaySize(48, 48);
@@ -64,44 +93,37 @@ export default class EnemySpawner {
       return;
     }
 
-    const enemyIndex = Math.min(world, MAX_WORLD);
-    const spriteKey = this.scene.textures.exists(`enemy${enemyIndex}`) ? `enemy${enemyIndex}` : 'enemy5';
+    const enemyIndex = Math.min(world - 1, this.enemyKeys.length - 1);
+    const spriteKey = this.enemyKeys[enemyIndex] || this.enemyKeys[this.enemyKeys.length - 1];
 
-    // Aplicar multiplicador de inimigos do powerup6 (Anti-buff)
+    if (!spriteKey) {
+        console.error(`[EnemySpawner] Nenhuma chave de inimigo encontrada para o mundo ${world}.`);
+        return;
+    }
+
     let currentMaxEnemies = this.maxEnemiesBase;
     if (this.scene.enemySpawnMultiplierActive) {
       currentMaxEnemies = Math.floor(this.maxEnemiesBase * (this.scene.enemySpawnMultiplier || 1));
-      console.log(`[EnemySpawner] Anti-buff: Multiplicando inimigos. Base: ${this.maxEnemiesBase}, Multiplicador: ${this.scene.enemySpawnMultiplier}, Atual: ${currentMaxEnemies}`);
     }
-
-    // Garante que pelo menos um inimigo seja spawnado se currentMaxEnemies for maior que 0
     currentMaxEnemies = Math.max(1, currentMaxEnemies);
 
+    this._spawnEnemy(spriteKey, level);
 
-    this._spawnEnemy(spriteKey, level); // Spawna o primeiro inimigo
-
-    if (currentMaxEnemies > 1) { // Só cria o timer se houver mais inimigos para spawnar
-        // O timer usará this.spawnInterval, que pode ser modificado pelo powerup7
-        this.scene.time.addEvent({
+    if (currentMaxEnemies > 1) {
+      this.scene.time.addEvent({
         delay: this.spawnInterval,
-        repeat: currentMaxEnemies - 1, // Ajustado para currentMaxEnemies
+        repeat: currentMaxEnemies - 1,
         callback: () => this._spawnEnemy(spriteKey, level)
-        });
-    } else {
-        // Se currentMaxEnemies for 1 (ou menos, mas corrigido para 1),
-        // e o primeiro já foi spawnado, não precisamos do timer de repetição.
-        // A lógica de this.scene.enemiesSpawned já conta o primeiro.
+      });
     }
-
 
     SoundManager.play(this.scene, 'wave_start');
     console.log(`[ENEMY SPAWNER] Regular wave ${level} (world ${world}) - Spawning up to ${currentMaxEnemies} ${spriteKey} enemies with interval ${this.spawnInterval}ms`);
   }
 
-  _spawnEnemy(spriteKey, level) {
+  _spawnEnemy(spriteKey, level, isInfinite = false) {
     if (!this.scene.enemies || !this.scene.player || !this.scene.player.active) {
-        // Não spawna se o jogador não estiver ativo (ex: durante transição de game over)
-        return;
+      return;
     }
 
     const enemy = this.scene.enemies.create(
@@ -111,13 +133,23 @@ export default class EnemySpawner {
     );
 
     let baseSpeed = (100 + level * 2) * 0.7;
+    let enemyHp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+
+    if (isInfinite) {
+      const scalingFactor = 1 + 0.07 * (level - 20);
+      const baselineHp = (this.scene.baseEnemyHp || 1) + Math.floor((20 - 1) / 2);
+      const baselineSpeed = (100 + 20 * 2) * 0.7;
+
+      enemyHp = Math.floor(baselineHp * scalingFactor);
+      baseSpeed = baselineSpeed * scalingFactor;
+    }
+
     if (this.scene.increaseEnemySpeedActive) {
-      baseSpeed *= 1.5; // Increase speed by 50% if anti-buff is active
-      console.log(`[EnemySpawner] Anti-buff: Spawning enemy with increased speed: ${baseSpeed}`);
+      baseSpeed *= 1.5;
     }
     enemy.setVelocityY(baseSpeed);
     enemy.setDisplaySize(32, 32);
-    enemy.hp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+    enemy.hp = enemyHp;
     enemy.isBoss = false;
 
     this.scene.enemiesSpawned++;
@@ -125,39 +157,38 @@ export default class EnemySpawner {
 
   spawnImmediateWave(count = 10, specificSpriteKey = null) {
     if (!this.scene || !this.scene.enemies || !this.scene.player || !this.scene.player.active) {
-      console.warn('[EnemySpawner] Cannot spawn immediate wave: Scene, enemies group, or player invalid/inactive.');
       return;
     }
     console.log(`[EnemySpawner] Spawning immediate wave of ${count} enemies.`);
 
     const level = this.scene.level || 1;
-    const world = Math.min(Math.ceil(level / BOSS_INTERVAL), MAX_WORLD);
+    const world = Math.min(Math.ceil(level / BOSS_INTERVAL), this.enemyKeys.length || 1);
 
-    // Determine the enemy sprite key for this wave
-    // If a specificSpriteKey is provided (e.g., for a special event), use it. Otherwise, determine by world.
-    const enemySpriteKey = specificSpriteKey || (this.scene.textures.exists(`enemy${world}`) ? `enemy${world}` : 'enemy5');
+    const enemyIndex = Math.min(world - 1, this.enemyKeys.length - 1);
+    const defaultSpriteKey = this.enemyKeys[enemyIndex] || this.enemyKeys[this.enemyKeys.length - 1];
+    const enemySpriteKey = specificSpriteKey || defaultSpriteKey;
+
+    if (!enemySpriteKey) {
+        console.error(`[EnemySpawner] Nenhuma chave de inimigo padrão encontrada para spawn imediato.`);
+        return;
+    }
 
     for (let i = 0; i < count; i++) {
-      // Use a slight delay for each enemy in the immediate wave to prevent them all overlapping perfectly
       this.scene.time.delayedCall(i * 50, () => {
-        if (!this.scene.player || !this.scene.player.active || this.scene.gamePaused) return; // Check player status again before actual spawn
+        if (!this.scene.player || !this.scene.player.active || this.scene.gamePaused) return;
 
         const enemy = this.scene.enemies.create(
           Phaser.Math.Between(50, this.scene.scale.width - 50),
-          Phaser.Math.Between(-20, -100), // Spawn them slightly off-screen from top, varied
+          Phaser.Math.Between(-20, -100),
           enemySpriteKey
         );
 
-        enemy.setVelocityY((100 + level * 2) * 0.7); // Standard speed
+        enemy.setVelocityY((100 + level * 2) * 0.7);
         enemy.setDisplaySize(32, 32);
-        enemy.hp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2); // Standard HP
+        enemy.hp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
         enemy.isBoss = false;
-
-        // this.scene.enemiesSpawned++; // Do not increment global this.scene.enemiesSpawned for this special wave,
-                                      // as it might interfere with normal wave completion logic.
-                                      // Or, decide if these count towards "wave total". For an anti-buff, maybe they shouldn't clear the wave.
       });
     }
-    SoundManager.play(this.scene, 'boss_spawn'); // Re-use a dramatic sound
+    SoundManager.play(this.scene, 'boss_spawn');
   }
 }

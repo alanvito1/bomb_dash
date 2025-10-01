@@ -1,0 +1,109 @@
+{
+  "assets": {
+    "heroes": {
+      "ninja": {
+        "frames": [
+          "src/assets/Ninja Hero/ninja/ninja_01.png",
+          "src/assets/Ninja Hero/ninja/ninja_02.png",
+          "src/assets/Ninja Hero/ninja/ninja_03.png",
+          "src/assets/Ninja Hero/ninja/ninja_04.png",
+          "src/assets/Ninja Hero/ninja/ninja_05.png",
+          "src/assets/Ninja Hero/ninja/ninja_06.png",
+          "src/assets/Ninja Hero/ninja/ninja_07.png",
+          "src/assets/Ninja Hero/ninja/ninja_08.png",
+          "src/assets/Ninja Hero/ninja/ninja_09.png",
+          "src/assets/Ninja Hero/ninja/ninja_10.png",
+          "src/assets/Ninja Hero/ninja/ninja_11.png",
+          "src/assets/Ninja Hero/ninja/ninja_12.png"
+        ]
+      },
+      "witch": {
+        "frames": [
+          "src/assets/Witch Hero/Red/Layer 256.png",
+          "src/assets/Witch Hero/Red/Layer 257 copy.png",
+          "src/assets/Witch Hero/Red/Layer 257.png",
+          "src/assets/Witch Hero/Red/Layer 258 copy.png",
+          "src/assets/Witch Hero/Red/Layer 258.png",
+          "src/assets/Witch Hero/Red/Layer 259 copy.png",
+          "src/assets/Witch Hero/Red/Layer 259.png",
+          "src/assets/Witch Hero/Red/Layer 260.png",
+          "src/assets/Witch Hero/Red/Layer 261.png",
+          "src/assets/Witch Hero/Red/Layer 262.png",
+          "src/assets/Witch Hero/Red/Layer 263 copy.png",
+          "src/assets/Witch Hero/Red/Layer 263.png"
+        ]
+      },
+      "player_default": "src/assets/player.png"
+    },
+    "enemies": {
+      "enemy1": "src/assets/enemy1.png",
+      "enemy2": "src/assets/enemy2.png",
+      "enemy3": "src/assets/enemy3.png",
+      "enemy4": "src/assets/enemy4.png",
+      "enemy5": "src/assets/enemy5.png"
+    },
+    "bosses": {
+      "robot": "src/assets/Boss and Creeps/Boss/Robot/robot_front-(1).png",
+      "boss_tank": "src/assets/Boss and Creeps/Boss/boss_tank/down (1).png",
+      "golzilla": "src/assets/Boss and Creeps/Boss/golzilla/golzilla_small_front (1).png",
+      "soldier": "src/assets/Boss and Creeps/Boss/soldier/soldier (1).png",
+      "boss5": "src/assets/boss5.png"
+    },
+    "powerups": {
+      "rapid_fire": "src/assets/powerups/powerup1.png",
+      "multi_shot": "src/assets/powerups/powerup2.png",
+      "power_bomb": "src/assets/powerups/powerup3.png",
+      "mega_bomb": "src/assets/powerups/powerup4.png",
+      "energy_shield": "src/assets/powerups/powerup5.png"
+    },
+    "ui": {
+      "btn_menu": "src/assets/btn_menu.png",
+      "btn_pause": "src/assets/btn_pause.png"
+    },
+    "backgrounds": {
+      "bg1": "src/assets/bg1.png",
+      "bg2": "src/assets/bg2.png",
+      "bg3": "src/assets/bg3.png",
+      "bg4": "src/assets/bg4.png",
+      "bg5": "src/assets/bg5.png",
+      "gameover_bg": "src/assets/gameover_bg.png",
+      "menu_bg_vertical": "src/assets/menu_bg_vertical.png"
+    },
+    "projectiles": {
+      "bomb": "src/assets/bomb.png"
+    },
+    "effects": {
+      "explosion": "src/assets/explosion.png"
+    }
+  },
+  "sounds": {
+    "music": {
+      "menu": "src/assets/sounds/menu_music.mp3",
+      "world1": "src/assets/sounds/world1_music.mp3",
+      "world2": "src/assets/sounds/world2_music.mp3",
+      "world3": "src/assets/sounds/world3_music.mp3",
+      "world4": "src/assets/sounds/world4_music.mp3",
+      "world5": "src/assets/sounds/world5_music.mp3"
+    },
+    "sfx": {
+      "click": "src/assets/sounds/click.mp3",
+      "bomb_fire": "src/assets/sounds/bomb_fire.mp3",
+      "explosion": "src/assets/sounds/explosion.mp3",
+      "coin_collect": "src/assets/sounds/coin_collect.mp3",
+      "powerup_collect": "src/assets/sounds/powerup_collect.mp3",
+      "enemy_death": "src/assets/sounds/enemy_death.mp3",
+      "boss_death": "src/assets/sounds/boss_death.mp3",
+      "gameover": "src/assets/sounds/gameover.mp3",
+      "next_stage": "src/assets/sounds/next_stage.mp3",
+      "submit": "src/assets/sounds/submit.mp3",
+      "pause": "src/assets/sounds/pause.mp3",
+      "open_shop": "src/assets/sounds/open_shop.mp3",
+      "hit_enemy": "src/assets/sounds/hit_enemy.mp3",
+      "player_hit": "src/assets/sounds/player_hit.mp3",
+      "upgrade": "src/assets/sounds/upgrade.mp3",
+      "wave_start": "src/assets/sounds/wave_start.mp3",
+      "boss_spawn": "src/assets/sounds/boss_spawn.mp3",
+      "powerup_expire": "src/assets/sounds/powerup_expire.mp3"
+    }
+  }
+}

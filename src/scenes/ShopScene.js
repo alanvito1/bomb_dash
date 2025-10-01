@@ -32,10 +32,6 @@ export default class ShopScene extends Phaser.Scene {
     super('ShopScene');
   }
 
-  preload() {
-    SoundManager.loadAll(this);
-  }
-
   create() {
     const centerX = this.cameras.main.centerX;
     this.playerStats = this.initializeStats();

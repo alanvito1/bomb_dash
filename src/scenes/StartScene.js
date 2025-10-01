@@ -8,18 +8,12 @@ export default class StartScene extends Phaser.Scene {
     this.started = false; // ✅ Previne múltiplos disparos
   }
 
-  preload() {
-    // 🔊 Pré-carregar todos os sons e a imagem de fundo do menu
-    SoundManager.loadAll(this);
-    this.load.image('bg', 'src/assets/menu_bg_vertical.png');
-  }
-
   create() {
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height / 2;
 
     // 🎨 Fundo visual do menu (bg vertical)
-    this.add.image(centerX, centerY, 'bg')
+    this.add.image(centerX, centerY, 'menu_bg_vertical')
       .setOrigin(0.5)
       .setDisplaySize(this.scale.width, this.scale.height);
 

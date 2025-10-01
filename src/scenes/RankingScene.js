@@ -7,11 +7,6 @@ export default class RankingScene extends Phaser.Scene {
     super('RankingScene');
   }
 
-  preload() {
-    SoundManager.loadAll(this);
-    this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
-  }
-
   async create() {
     this.cameras.main.setBackgroundColor('#000022');
     const centerX = this.cameras.main.centerX;

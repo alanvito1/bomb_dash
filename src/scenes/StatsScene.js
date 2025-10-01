@@ -11,10 +11,6 @@ export default class StatsScene extends Phaser.Scene {
     super('StatsScene');
   }
 
-  preload() {
-    SoundManager.loadAll(this);
-  }
-
   create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
