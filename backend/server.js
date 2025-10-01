@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+const path = require('path'); // Importe o 'path' aqui no topo
 
-// Função para validar variáveis de ambiente
+// Carrega as variáveis de ambiente do arquivo .env que está na pasta raiz do projeto
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+// --- FUNÇÃO DE VALIDAÇÃO (SEU CÓDIGO ESTÁ PERFEITO AQUI) ---
 function validateEnvVariables() {
     const requiredEnvVars = [
         'PRIVATE_KEY',
@@ -12,13 +15,13 @@ function validateEnvVariables() {
         'ORACLE_PRIVATE_KEY',
         'TOURNAMENT_CONTROLLER_ADDRESS',
         'PERPETUAL_REWARD_POOL_ADDRESS',
-        'WAGER_ARENA_ADDRESS'
+        // 'WAGER_ARENA_ADDRESS' // Vamos deixar este comentado por enquanto, pois ainda não o implantamos
     ];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
     if (missingVars.length > 0) {
         console.error(`[FATAL] As seguintes variáveis de ambiente críticas não foram definidas: ${missingVars.join(', ')}.`);
-        console.error("Por favor, copie o arquivo .env.example para .env e preencha as variáveis necessárias.");
+        console.error("Por favor, verifique se o seu arquivo .env está correto e na pasta raiz do projeto.");
         process.exit(1); // Encerra a aplicação se variáveis críticas estiverem faltando
     }
 }
