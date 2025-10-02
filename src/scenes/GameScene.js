@@ -3,7 +3,7 @@ import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
-import HUD from '../modules/hud.js';
+// import HUD from '../modules/hud.js'; // SIF 21.3: Replaced by HUDScene
 import { showNextStageDialog as StageDialog } from '../modules/NextStageDialog.js';
 import PlayerController from '../modules/PlayerController.js';
 import PowerupLogic from '../modules/PowerupLogic.js';
@@ -73,17 +73,33 @@ export default class GameScene extends Phaser.Scene {
     this.baseBossHp = 100;
     this.gamePaused = false;
 
-    // Combina os stats do jogador
-    const selectedCharacterStats = this.registry.get('selectedCharacterStats');
+    // SIF 21.3: Refactored stat initialization for the new HUD
+    const loggedInUser = this.registry.get('loggedInUser') || {};
+    const selectedHero = this.registry.get('selectedHero') || {};
+
+    // Build the composite player stats object
     this.playerStats = {
-      ...this.DEFAULT_STATS,
-      ...(selectedCharacterStats || {}),
+        // Core gameplay defaults that are not hero-specific
+        ...this.DEFAULT_STATS,
+
+        // Hero-specific combat stats from the selected hero
+        hp: selectedHero.max_hp || this.DEFAULT_STATS.maxHp, // Start with full health
+        maxHp: selectedHero.max_hp || this.DEFAULT_STATS.maxHp,
+        damage: selectedHero.damage || this.DEFAULT_STATS.damage,
+        speed: selectedHero.speed || this.DEFAULT_STATS.speed,
+
+        // Hero progression stats
+        hero_xp: selectedHero.xp || 0,
+        hero_xp_for_next_level: selectedHero.xp_for_next_level || 100,
+
+        // Account-wide progression stats from the logged-in user
+        account_xp: loggedInUser.account_xp || 0,
+        account_xp_for_next_level: loggedInUser.account_xp_for_next_level || 100,
+        bcoin: loggedInUser.bcoin || 0,
     };
-    const loggedInUser = this.registry.get('loggedInUser');
-    if (loggedInUser && typeof loggedInUser.coins === 'number') {
-      this.playerStats.coins = loggedInUser.coins;
-    }
-    this.registry.remove('selectedCharacterStats');
+
+    // Clean up registry key
+    this.registry.remove('selectedHero');
 
     // Setup do cenário
     this.bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg1').setOrigin(0.5).setDisplaySize(480, 800);
@@ -91,26 +107,38 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.powerups = this.physics.add.group();
 
-    // --- Nova Integração do HUD V1.0 ---
-    this.hud = new HUD(this);
-    this.hud.create(this.playerStats);
-    this.hud.addChatMessage('Welcome! The battle begins.', '#00ff00');
+    // SIF 21.3: Launch the HUD Scene
+    this.scene.launch('HUDScene');
 
-    // Busca o status inicial do jogo e inicia o timer de atualização
-    this.fetchGameStatus();
-    this.gameStatusTimer = this.time.addEvent({
-      delay: 30000, // Atualiza a cada 30 segundos
-      callback: this.fetchGameStatus,
-      callbackScope: this,
-      loop: true,
+    // SIF 21.3: Emit initial data to the HUD after it has been launched.
+    // A small delay ensures the HUD scene's create() method has finished and listeners are ready.
+    this.time.delayedCall(100, () => {
+        this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+        this.events.emit('update-xp', {
+            accountXP: this.playerStats.account_xp,
+            accountXPForNextLevel: this.playerStats.account_xp_for_next_level,
+            heroXP: this.playerStats.hero_xp,
+            heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
+        });
+        this.events.emit('update-bcoin', { balance: this.playerStats.bcoin });
     });
+
+    // Busca o status inicial do jogo e inicia o timer de atualização (Placeholder for HUD functionality)
+    // this.fetchGameStatus();
+    // this.gameStatusTimer = this.time.addEvent({
+    //   delay: 30000, // Atualiza a cada 30 segundos
+    //   callback: this.fetchGameStatus,
+    //   callbackScope: this,
+    //   loop: true,
+    // });
 
     // Setup dos Módulos do Jogo
     this.playerController = new PlayerController(this);
     this.player = this.playerController.create();
     this.cursors = this.input.keyboard.createCursorKeys();
     this.powerupLogic = new PowerupLogic(this);
-    this.collisionHandler = new CollisionHandler(this, this.hud, this.powerupLogic);
+    // SIF 21.3: Pass scene events to CollisionHandler so it can emit HUD updates
+    this.collisionHandler = new CollisionHandler(this, this.events, this.powerupLogic);
     this.collisionHandler.register();
     this.enemySpawner = new EnemySpawner(this, this.gameSettings.monsterScaleFactor);
 
@@ -128,6 +156,16 @@ export default class GameScene extends Phaser.Scene {
 
     createUIButtons(this, this.playerStats);
     SoundManager.playWorldMusic(this, 1);
+
+    // SIF 21.4: Add listener for the ESC key to pause the game
+    this.input.keyboard.on('keydown-ESC', this.togglePause, this);
+
+    // SIF 21.4: Handle resume event from PauseScene
+    this.events.on('resume', () => {
+        this.gamePaused = false;
+        this.physics.resume();
+        this.bombTimer.paused = false;
+    });
   }
 
   fireBomb() {
@@ -155,8 +193,8 @@ export default class GameScene extends Phaser.Scene {
     this.stageCode = `${this.stage}-${((this.level - 1) % 5) + 1}`;
 
     this.bg.setTexture(`bg${Math.min(this.stage, 5)}`);
-    this.hud.updateHUD();
-    this.hud.addChatMessage(`Stage ${this.stageCode} begins!`, '#00ffff');
+    // this.hud.updateHUD(); // Old HUD call
+    // this.hud.addChatMessage(`Stage ${this.stageCode} begins!`, '#00ffff'); // Old HUD call
     SoundManager.playWorldMusic(this, this.stage);
     SoundManager.play(this, 'wave_start');
   }
@@ -168,14 +206,15 @@ export default class GameScene extends Phaser.Scene {
     if (this.bombTimer) {
       this.bombTimer.paused = true;
     }
-    this.gameStatusTimer?.destroy(); // Para o timer de atualização do status
+    // this.gameStatusTimer?.destroy(); // Para o timer de atualização do status
 
     SoundManager.stopAll(this);
     SoundManager.play(this, 'gameover');
-    this.hud.addChatMessage('GAME OVER', '#ff0000');
+    // this.hud.addChatMessage('GAME OVER', '#ff0000'); // Old HUD call
 
     this.coinsEarned = Math.floor(this.score / 10);
 
+    this.scene.stop('HUDScene'); // Stop the HUD on game over
     this.scene.start('GameOverScene', { score: this.score, level: this.level, coins: this.coinsEarned });
   }
 
@@ -184,10 +223,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerController.update(this.cursors, this.playerStats.speed);
 
-    // --- Atualizações do HUD V1.0 ---
-    this.updateTarget();
-    this.hud.update(this.playerStats);
-    this.hud.updatePowerupDisplay(this.activePowerups);
+    // Old HUD updates are removed
+    // this.updateTarget();
+    // this.hud.update(this.playerStats);
+    // this.hud.updatePowerupDisplay(this.activePowerups);
 
     // Lógica de transição de fase
     if (this.bossSpawned && !this.bossDefeated && this.enemies.countActive(true) === 0 && !this.transitioning) {
@@ -204,23 +243,31 @@ export default class GameScene extends Phaser.Scene {
 
         const damageTaken = 50; // Dano de exemplo
         this.playerStats.hp -= damageTaken;
-        this.hud.addChatMessage(`Took ${damageTaken} damage!`, '#ff5555');
+        // this.hud.addChatMessage(`Took ${damageTaken} damage!`, '#ff5555'); // Old HUD call
+
+        // SIF 21.3: Emit health update event
+        this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+
 
         if (this.playerStats.hp <= 0) {
           this.playerStats.extraLives--;
           if (this.playerStats.extraLives >= 0) {
             this.playerStats.hp = this.playerStats.maxHp;
-            this.hud.addChatMessage(`Life lost! ${this.playerStats.extraLives} remaining.`, '#ffcc00');
+            // this.hud.addChatMessage(`Life lost! ${this.playerStats.extraLives} remaining.`, '#ffcc00'); // Old HUD call
             SoundManager.play(this, 'player_hit');
+            // SIF 21.3: Emit health update event after restoring HP
+            this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
           } else {
             this.playerStats.hp = 0;
             this.playerStats.extraLives = 0;
+            // SIF 21.3: Emit final health update
+            this.events.emit('update-health', { health: 0, maxHealth: this.playerStats.maxHp });
             this.handleGameOver();
           }
         } else {
           SoundManager.play(this, 'player_hit');
         }
-        this.hud.updateHUD();
+        // this.hud.updateHUD(); // Old HUD call
       }
     });
 
@@ -237,44 +284,21 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  // --- Novos Métodos para o HUD V1.0 ---
+  togglePause() {
+    // Prevent pausing if the game is already paused, over, or in a transition
+    if (this.gamePaused || this.transitioning || !this.player.active) {
+        return;
+    }
 
-  async fetchGameStatus() {
-    try {
-      const pvpStatus = await api.getPvpStatus();
-      this.hud.updatePvpStatus(pvpStatus);
-    } catch (error) {
-      console.warn('[GameScene] Could not fetch PvP status.', error);
-    }
-    try {
-      const globalBuffs = await api.getGlobalBuffs();
-      this.hud.updateGlobalBuffs(globalBuffs);
-    } catch (error) {
-      console.warn('[GameScene] Could not fetch global buffs.', error);
-    }
+    this.gamePaused = true;
+    this.physics.pause();
+    this.bombTimer.paused = true;
+
+    // Launch the Pause Scene on top of the current scene
+    this.scene.launch('PauseScene');
+    // Pause this scene, stopping updates and input
+    this.scene.pause();
   }
 
-  updateTarget() {
-    let closestEnemy = null;
-    let minDistance = Infinity;
-
-    this.enemies.getChildren().forEach(enemy => {
-      if (enemy.active) {
-        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-        if (distance < minDistance && enemy.y < this.scale.height) {
-          minDistance = distance;
-          closestEnemy = enemy;
-        }
-      }
-    });
-
-    if (closestEnemy && minDistance < 400) { // Raio de "lock" do alvo
-      this.currentTarget = closestEnemy;
-      if (!this.currentTarget.name) this.currentTarget.name = "Monster";
-      if (!this.currentTarget.maxHp) this.currentTarget.maxHp = this.baseEnemyHp;
-    } else {
-      this.currentTarget = null;
-    }
-    this.hud.showTarget(this.currentTarget);
-  }
+  // --- Old HUD Methods Removed ---
 }

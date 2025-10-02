@@ -12,6 +12,8 @@ import ConfigScene from './src/scenes/ConfigScene.js';
 import ProfileScene from './src/scenes/ProfileScene.js';
 import CharacterSelectionScene from './src/scenes/CharacterSelectionScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
+import HUDScene from './src/scenes/HUDScene.js';
+import PauseScene from './src/scenes/PauseScene.js';
 
 // ⚙️ Configurações gerais do Phaser
 const config = {
@@ -41,7 +43,9 @@ const config = {
     GameOverScene,
     ConfigScene,
     ProfileScene,
-    CharacterSelectionScene
+    CharacterSelectionScene,
+    HUDScene,
+    PauseScene
   ],
   render: {
     antialias: false,

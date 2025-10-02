@@ -2,9 +2,10 @@ import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
 
 export default class CollisionHandler {
-  constructor(scene, hud, powerupLogic) {
+  // SIF 21.3: The HUD is now driven by events from the scene
+  constructor(scene, events, powerupLogic) {
     this.scene = scene;
-    this.hud = hud;
+    this.events = events; // The scene's event emitter
     this.powerupLogic = powerupLogic;
   }
 
@@ -37,15 +38,14 @@ export default class CollisionHandler {
   handlePowerup(player, powerup) {
     this.powerupLogic.collect(player, powerup);
     SoundManager.play(this.scene, 'powerup_collect');
-    this.scene.hud.updateHUD();
   }
 
   hitEnemy(bomb, enemy) {
     if (!enemy.active) return;
     bomb.destroy();
 
-    const damage = this.scene.playerStats?.damage ?? 1; // Manter ?? 1 para damage, pois é de playerStats
-    enemy.hp = enemy.hp - damage; // Fallback ?? 1 removido para enemy.hp
+    const damage = this.scene.playerStats?.damage ?? 1;
+    enemy.hp = enemy.hp - damage;
 
     SoundManager.play(this.scene, 'hit_enemy');
 
@@ -53,11 +53,27 @@ export default class CollisionHandler {
       ExplosionEffect(this.scene, enemy.x, enemy.y);
       SoundManager.play(this.scene, enemy.isBoss ? 'boss_death' : 'enemy_death');
 
-      this.scene.score += enemy.isBoss ? 50 : 10;
-      this.scene.coinsEarned += enemy.isBoss ? 5 : 1;
+      // SIF 21.3: Update stats and emit events for the HUD
+      const xpGained = enemy.isBoss ? 50 : 10;
+      const coinsGained = enemy.isBoss ? 5 : 1;
+
+      const stats = this.scene.playerStats;
+      stats.account_xp += xpGained;
+      stats.hero_xp += xpGained;
+      stats.bcoin += coinsGained;
+
+      this.events.emit('update-xp', {
+          accountXP: stats.account_xp,
+          accountXPForNextLevel: stats.account_xp_for_next_level,
+          heroXP: stats.hero_xp,
+          heroXPForNextLevel: stats.hero_xp_for_next_level,
+      });
+
+      this.events.emit('update-bcoin', {
+          balance: stats.bcoin,
+      });
 
       this.scene.enemiesKilled++;
-      this.scene.hud.updateHUD();
 
       if (enemy.isBoss) {
         this.scene.bossDefeated = true;
@@ -73,21 +89,29 @@ export default class CollisionHandler {
   }
 
   onHit(player, enemy) {
+    if (this.scene.gamePaused || this.scene.transitioning) return;
+
+    if (!enemy.isBoss) {
+        enemy.destroy();
+    }
+
     const stats = this.scene.playerStats;
-    stats.extraLives = Math.max(0, stats.extraLives - 1);
+    const damageTaken = 100; // Damage from direct collision
+    stats.hp -= damageTaken;
 
+    this.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
     SoundManager.play(this.scene, 'player_hit');
-    this.scene.hud.updateHUD();
 
-    if (stats.extraLives > 0) {
-      enemy.destroy();
-    } else {
-      // localStorage.setItem('playerStats', JSON.stringify(stats)); // Removido
-      SoundManager.play(this.scene, 'gameover'); // Som de gameover ainda é relevante aqui
-      // A chamada para handleGameOver() já está implícita ao perder todas as vidas,
-      // e GameScene.handleGameOver() centralizará o salvamento e a transição de cena.
-      // this.scene.scene.start('GameOverScene', ...); // Será chamado por handleGameOver
-      this.scene.handleGameOver(); // Chama o método centralizado em GameScene
+    if (stats.hp <= 0) {
+        stats.extraLives--;
+        if (stats.extraLives >= 0) {
+            stats.hp = stats.maxHp;
+            this.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
+        } else {
+            stats.hp = 0;
+            this.events.emit('update-health', { health: 0, maxHealth: stats.maxHp });
+            this.scene.handleGameOver();
+        }
     }
   }
 }

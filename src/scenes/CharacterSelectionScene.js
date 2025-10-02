@@ -11,122 +11,101 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Adiciona um fundo
     this.add.image(centerX, centerY, 'menu_bg_vertical')
       .setOrigin(0.5)
       .setDisplaySize(this.scale.width, this.scale.height);
 
-    // Título da cena
-    this.add.text(centerX, 50, 'Selecione seu Herói', {
+    this.add.text(centerX, 50, 'Select Your Hero', {
       fontSize: '28px',
       fill: '#FFD700',
-      fontFamily: 'monospace',
+      fontFamily: '"Press Start 2P"',
       stroke: '#000',
       strokeThickness: 4
     }).setOrigin(0.5);
 
-    // Texto de carregamento
-    const loadingText = this.add.text(centerX, centerY, 'Carregando heróis...', {
+    const loadingText = this.add.text(centerX, centerY, 'Loading Heroes...', {
       fontSize: '20px',
       fill: '#ffffff',
-      fontFamily: 'monospace'
+      fontFamily: '"Press Start 2P"'
     }).setOrigin(0.5);
 
-    // Botão de voltar
     this.createBackButton(centerX, this.scale.height - 50);
 
-    this.fetchAndDisplayNfts(loadingText);
+    this.fetchAndDisplayHeroes(loadingText);
   }
 
-  async fetchAndDisplayNfts(loadingText) {
+  async fetchAndDisplayHeroes(loadingText) {
     try {
-      const response = await api.getOwnedNfts();
-      if (response.success && response.nfts.length > 0) {
+      const response = await api.getHeroes(); // SIF 21.1: Fetch heroes
+      if (response.success && response.heroes.length > 0) {
         loadingText.destroy();
-        this.displayNfts(response.nfts);
-      } else if (response.success && response.nfts.length === 0) {
-        loadingText.setText('Nenhum herói encontrado.\nJogue para conseguir um!');
+        this.displayHeroes(response.heroes);
+      } else if (response.success && response.heroes.length === 0) {
+        loadingText.setText('No heroes found.\nPlay a match to get one!');
       } else {
-        loadingText.setText(`Erro: ${response.message}`);
+        loadingText.setText(`Error: ${response.message}`);
       }
     } catch (error) {
-      console.error('Falha ao buscar NFTs:', error);
-      loadingText.setText('Erro ao conectar ao servidor.');
+      console.error('Failed to fetch heroes:', error);
+      loadingText.setText('Error connecting to the server.');
     }
   }
 
-  displayNfts(nfts) {
+  displayHeroes(heroes) {
     const centerX = this.cameras.main.centerX;
-    const startY = 120;
-    const cardSpacingY = 110;
-    const cardWidth = 300;
-    const cardHeight = 100;
+    const startY = 150;
+    const cardSpacingX = 180;
+    const numHeroes = heroes.length;
+    const startX = centerX - ((numHeroes - 1) * cardSpacingX) / 2;
 
-    nfts.forEach((nft, index) => {
-      const cardY = startY + (index * cardSpacingY);
+    heroes.forEach((hero, index) => {
+      const cardX = startX + (index * cardSpacingX);
 
-      // Cria um container para o card do herói
-      const card = this.add.container(centerX, cardY);
-
-      // Fundo do card
+      const card = this.add.container(cardX, startY);
       const background = this.add.graphics();
       background.fillStyle(0x000000, 0.7);
-      background.fillRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10);
+      background.fillRoundedRect(-75, -100, 150, 200, 15);
       background.lineStyle(2, 0x00ffff, 1);
-      background.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10);
+      background.strokeRoundedRect(-75, -100, 150, 200, 15);
       card.add(background);
 
-      // Adiciona o nome/ID do herói
-      const heroIdText = this.add.text(-cardWidth / 2 + 15, -cardHeight / 2 + 15, `Herói ID: ${nft.id}`, {
+      // Display Hero Sprite
+      // The sprite key should match the one in asset-manifest.json
+      const heroSprite = this.add.sprite(0, -20, hero.sprite_name).setScale(2);
+      card.add(heroSprite);
+
+      // Display Hero Name
+      const heroNameText = this.add.text(0, 70, hero.name, {
         fontSize: '16px',
         fill: '#FFD700',
-        fontFamily: 'monospace'
-      });
-      card.add(heroIdText);
+        fontFamily: '"Press Start 2P"',
+        align: 'center'
+      }).setOrigin(0.5);
+      card.add(heroNameText);
 
-      // Adiciona as estatísticas
-      const statsText = `Poder: ${nft.bombPower} | Velocidade: ${nft.speed} | Raridade: ${nft.rarity}`;
-      const heroStatsText = this.add.text(-cardWidth / 2 + 15, -cardHeight / 2 + 45, statsText, {
-        fontSize: '14px',
-        fill: '#ffffff',
-        fontFamily: 'monospace'
-      });
-      card.add(heroStatsText);
-
-      // Torna o card interativo
-      card.setSize(cardWidth, cardHeight);
+      card.setSize(150, 200);
       card.setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
-          this.selectCharacter(nft);
+          this.selectHero(hero);
         })
-        .on('pointerover', () => background.lineStyle(3, 0xFFD700, 1).strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10))
-        .on('pointerout', () => background.lineStyle(2, 0x00ffff, 1).strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10));
+        .on('pointerover', () => background.lineStyle(3, 0xFFD700, 1).strokeRoundedRect(-75, -100, 150, 200, 15))
+        .on('pointerout', () => background.lineStyle(2, 0x00ffff, 1).strokeRoundedRect(-75, -100, 150, 200, 15));
     });
   }
 
-  selectCharacter(nft) {
-    console.log('Personagem selecionado:', nft);
-
-    // Mapeia os stats do NFT para os stats do jogador no jogo
-    const playerStats = {
-        damage: nft.bombPower,
-        speed: nft.speed * 10, // Ajuste de escala, se necessário
-        // Outros stats podem ser definidos aqui com base na raridade, etc.
-    };
-
-    // Armazena os stats do personagem selecionado no registro para a GameScene usar
-    this.registry.set('selectedCharacterStats', playerStats);
-
-    // Inicia a GameScene
+  selectHero(heroData) {
+    console.log('Selected Hero:', heroData);
+    // SIF 21.1: Store the selected hero's data in the registry
+    this.registry.set('selectedHero', heroData);
     this.scene.start('GameScene');
   }
 
   createBackButton(centerX, y) {
-    const backBtn = this.add.text(centerX, y, '< Voltar', {
+    const backBtn = this.add.text(centerX, y, '< Back', {
       fontSize: '20px',
       fill: '#00ffff',
-      fontFamily: 'monospace'
+      fontFamily: '"Press Start 2P"'
     })
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true });
