@@ -92,7 +92,9 @@ class ApiClient {
         // 3. Send message and signature to the backend for verification (public call)
         const verifyData = await this.fetch('/auth/verify', {
             method: 'POST',
-            body: JSON.stringify({ message, signature }),
+            body: JSON.stringify({ message, signature }, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value
+            ),
         }, false);
 
         if (verifyData.success && verifyData.token) {
