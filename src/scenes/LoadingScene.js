@@ -46,7 +46,14 @@ export default class LoadingScene extends Phaser.Scene {
             for (const categoryKey in assets) {
                 const category = assets[categoryKey];
                 for (const assetKey in category) {
-                    this.load.image(assetKey, category[assetKey]);
+                    const path = category[assetKey];
+                    // Defensive check: Ensure the path is a valid string before loading
+                    if (typeof path === 'string' && path.length > 0) {
+                        this.load.image(assetKey, path);
+                    } else {
+                        // Log a warning for assets with invalid paths (e.g., objects for animations) and skip them
+                        console.warn(`[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid path. Skipping.`);
+                    }
                 }
             }
         }
@@ -55,7 +62,13 @@ export default class LoadingScene extends Phaser.Scene {
             for (const categoryKey in sounds) {
                 const category = sounds[categoryKey];
                 for (const assetKey in category) {
-                    this.load.audio(assetKey, category[assetKey]);
+                    const path = category[assetKey];
+                    // Defensive check: Ensure the path is a valid string before loading
+                    if (typeof path === 'string' && path.length > 0) {
+                        this.load.audio(assetKey, path);
+                    } else {
+                        console.warn(`[AssetLoader] Warning: Sound asset with key '${assetKey}' has an invalid path. Skipping.`);
+                    }
                 }
             }
         }
