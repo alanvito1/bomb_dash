@@ -137,6 +137,10 @@ class ApiClient {
 
     // --- Métodos da API do Jogo ---
 
+    async getHeroes() {
+        return this.fetch('/heroes');
+    }
+
     async enterWagerMatch(tierId) {
         return this.fetch('/pvp/wager/enter', {
             method: 'POST',

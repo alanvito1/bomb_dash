@@ -98,14 +98,13 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createMenu(centerX, centerY, useFallback = false) {
-    // Part 2.3: Menu Structure Change
     const menuItems = [
-      { label: 'SOLO', scene: 'CharacterSelectionScene', action: 'start_solo' },
-      { label: 'PVP', scene: null, action: 'showPvpLobby' },
-      { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene', action: null },
-      { label: 'PROFILE', scene: 'ProfileScene', action: null },
-      { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene', action: null },
-      { label: LanguageManager.get(this, 'menu_logout'), scene: 'LoginScene', action: 'logout' }
+      { label: 'SOLO', scene: 'CharacterSelectionScene' },
+      { label: 'PVP', action: 'showPvpLobby' },
+      { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene' },
+      { label: 'PROFILE', scene: 'ProfileScene' },
+      { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene' },
+      { label: LanguageManager.get(this, 'menu_logout'), action: 'logout', color: '#FF6347' }
     ];
 
     const buttonStartY = centerY - 120;
@@ -115,32 +114,28 @@ export default class MenuScene extends Phaser.Scene {
       const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
         fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
         fontSize: '16px',
-        fill: item.action === 'logout' ? '#FF6347' : '#00ffff',
+        fill: item.color || '#00ffff',
         backgroundColor: '#000000cc',
         padding: { x: 15, y: 10 },
         align: 'center'
       })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', async () => {
+        .on('pointerdown', () => {
           SoundManager.play(this, 'click');
 
           if (item.action === 'showPvpLobby') {
             this.showPvpLobby();
-          } else if (item.action === 'start_solo') {
-            // As per plan 2.1, this will eventually go to CharacterSelectionScene first
-            // For now, it goes directly to GameScene
-            this.scene.start(item.scene);
           } else if (item.action === 'logout') {
             api.logout();
             this.registry.remove('loggedInUser');
             this.scene.start('AuthChoiceScene');
-          } else {
+          } else if (item.scene) {
             this.scene.start(item.scene);
           }
         })
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
-        .on('pointerout', () => button.setStyle({ fill: item.action === 'logout' ? '#FF6347' : '#00ffff' }));
+        .on('pointerout', () => button.setStyle({ fill: item.color || '#00ffff' }));
     });
   }
 
