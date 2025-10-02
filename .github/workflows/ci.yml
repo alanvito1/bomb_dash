@@ -1,0 +1,44 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install root dependencies
+      run: npm install
+
+    - name: Install backend dependencies
+      run: npm install --prefix backend
+
+    - name: Run backend tests
+      run: npm test --prefix backend
+      env:
+        # Provide dummy values for CI environment validation
+        PRIVATE_KEY: "0x0000000000000000000000000000000000000000000000000000000000000001"
+        JWT_SECRET: "test-secret"
+        ADMIN_SECRET: "test-admin-secret"
+        TESTNET_RPC_URL: "http://localhost:8545"
+        ORACLE_PRIVATE_KEY: "0x0000000000000000000000000000000000000000000000000000000000000002"
+        TOURNAMENT_CONTROLLER_ADDRESS: "0x0000000000000000000000000000000000000000"
+        PERPETUAL_REWARD_POOL_ADDRESS: "0x0000000000000000000000000000000000000000"
+        ORACLE_WALLET_ADDRESS: "0x0000000000000000000000000000000000000000"
