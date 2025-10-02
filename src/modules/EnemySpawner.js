@@ -101,9 +101,15 @@ export default class EnemySpawner {
         return;
     }
 
+    // 2.4: Game Balancing - Reduce initial difficulty
     let currentMaxEnemies = this.maxEnemiesBase;
+    if (level === 1) {
+      currentMaxEnemies = 5; // Set a new base for level 1
+    }
+
     if (this.scene.enemySpawnMultiplierActive) {
-      currentMaxEnemies = Math.floor(this.maxEnemiesBase * (this.scene.enemySpawnMultiplier || 1));
+      // Apply multiplier to the potentially adjusted base
+      currentMaxEnemies = Math.floor(currentMaxEnemies * (this.scene.enemySpawnMultiplier || 1));
     }
     currentMaxEnemies = Math.max(1, currentMaxEnemies);
 
@@ -134,6 +140,11 @@ export default class EnemySpawner {
 
     let baseSpeed = (100 + level * 2) * 0.7;
     let enemyHp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+
+    // 2.4: Game Balancing - Reduce initial speed
+    if (level === 1) {
+      baseSpeed *= 0.8; // Reduce speed by 20% for the first wave
+    }
 
     if (isInfinite) {
       const scalingFactor = 1 + 0.07 * (level - 20);

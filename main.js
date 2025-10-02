@@ -9,7 +9,8 @@ import ShopScene from './src/scenes/ShopScene.js';
 import RankingScene from './src/scenes/RankingScene.js';
 import GameOverScene from './src/scenes/GameOverScene.js';
 import ConfigScene from './src/scenes/ConfigScene.js';
-import StatsScene from './src/scenes/StatsScene.js';
+import ProfileScene from './src/scenes/ProfileScene.js';
+import CharacterSelectionScene from './src/scenes/CharacterSelectionScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
 
 // ⚙️ Configurações gerais do Phaser
@@ -39,7 +40,8 @@ const config = {
     RankingScene,
     GameOverScene,
     ConfigScene,
-    StatsScene
+    ProfileScene,
+    CharacterSelectionScene
   ],
   render: {
     antialias: false,

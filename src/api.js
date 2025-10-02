@@ -3,151 +3,180 @@ import { SiweMessage } from 'siwe';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
-export async function web3Login() {
-    if (!window.ethereum) {
-        throw new Error('MetaMask not detected. Please install the extension.');
-    }
-
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const address = await signer.getAddress();
-
-    // 1. Get nonce from backend
-    const nonceRes = await fetch(`${API_BASE_URL}/auth/nonce`);
-    const { nonce } = await nonceRes.json();
-    if (!nonce) {
-        throw new Error('Failed to retrieve nonce from server.');
-    }
-
-    // 2. Create SIWE message
-    const message = new SiweMessage({
-        domain: window.location.host,
-        address,
-        statement: 'Sign in with Ethereum to Bomb Dash.',
-        uri: window.location.origin,
-        version: '1',
-        chainId: await provider.getNetwork().then(network => network.chainId),
-        nonce: nonce,
-    });
-
-    // 3. Sign the message
-    const signature = await signer.signMessage(message.prepareMessage());
-
-    // 4. Verify signature with backend
-    const verifyRes = await fetch(`${API_BASE_URL}/auth/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, signature }),
-    });
-
-    const verifyData = await verifyRes.json();
-    if (!verifyData.success) {
-        throw new Error(verifyData.message || 'Signature verification failed.');
-    }
-
-    // 5. Store JWT token
-    localStorage.setItem('jwtToken', verifyData.token);
-    console.log('Login successful, JWT token stored.');
-    return true;
-}
-
 /**
- * Envia uma solicitação para entrar em uma partida de aposta na Arena de Alto Risco.
- * Esta função valida a elegibilidade no backend antes do cliente chamar o contrato.
- * @param {string} tierId - O ID do tier de aposta selecionado.
- * @param {string} token - O token JWT para autenticação.
- * @returns {Promise<object>} A resposta do servidor.
+ * Classe de cliente de API para centralizar a lógica de fetch e autenticação.
  */
-export async function enterWagerMatch(tierId, token) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/pvp/wager/enter`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ tierId })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Falha ao entrar na partida de aposta:', error);
-        throw error;
+class ApiClient {
+    constructor() {
+        this.jwtToken = localStorage.getItem('jwtToken');
     }
-}
 
-export async function getRanking() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/ranking`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        const data = await response.json();
-        if (data.success) {
-            return data.ranking;
+    /**
+     * Define o token JWT e o armazena no localStorage.
+     * @param {string} token - O token JWT.
+     */
+    setJwtToken(token) {
+        this.jwtToken = token;
+        if (token) {
+            localStorage.setItem('jwtToken', token);
         } else {
-            console.error('Failed to fetch ranking:', data.message);
-            return [];
+            localStorage.removeItem('jwtToken');
         }
-    } catch (error) {
-        console.error('Error fetching ranking:', error);
-        return [];
     }
-}
 
-/**
- * Salva as estatísticas do jogador no servidor.
- * @param {string} username - O nome de usuário.
- * @param {object} stats - O objeto de estatísticas do jogador.
- * @param {string} token - O token JWT para autenticação.
- * @returns {Promise<object>} A resposta do servidor.
- */
-export async function saveCheckpoint(waveNumber, token) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/game/checkpoint`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ waveNumber })
+    /**
+     * Realiza uma requisição fetch com o token de autenticação.
+     * @param {string} endpoint - O endpoint da API (ex: '/auth/me').
+     * @param {object} options - As opções da requisição fetch.
+     * @returns {Promise<any>} A resposta da API em JSON.
+     */
+    async fetch(endpoint, options = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        };
+
+        if (this.jwtToken) {
+            headers['Authorization'] = `Bearer ${this.jwtToken}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers,
         });
-        return await response.json();
-    } catch (error) {
-        console.error('Falha ao salvar checkpoint:', error);
-        throw error;
-    }
-}
 
-export async function getCurrentUser(token) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(errorData.message || 'API request failed');
+        }
+
+        // Handle cases with no content
+        if (response.status === 204) {
+            return null;
+        }
+
+        return response.json();
+    }
+
+    // --- Métodos de Autenticação ---
+
+    async web3Login() {
+        if (!window.ethereum) {
+            throw new Error('MetaMask not detected. Please install the extension.');
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const address = await signer.getAddress();
+
+        const { nonce } = await this.fetch('/auth/nonce');
+
+        const message = new SiweMessage({
+            domain: window.location.host,
+            address,
+            statement: 'Sign in with Ethereum to Bomb Dash.',
+            uri: window.location.origin,
+            version: '1',
+            chainId: await provider.getNetwork().then(network => network.chainId),
+            nonce: nonce,
+        });
+
+        const signature = await signer.signMessage(message.prepareMessage());
+
+        const verifyData = await this.fetch('/auth/verify', {
+            method: 'POST',
+            body: JSON.stringify({ message, signature }),
+        });
+
+        if (verifyData.success && verifyData.token) {
+            this.setJwtToken(verifyData.token);
+            console.log('Login successful, JWT token stored.');
+            return verifyData;
+        } else {
+            throw new Error(verifyData.message || 'Signature verification failed.');
+        }
+    }
+
+    /**
+     * Verifica o status do token atual com o backend. Lança um erro se o token for inválido.
+     * @returns {Promise<object>} A resposta do servidor com os dados do usuário se o token for válido.
+     */
+    async checkLoginStatus() {
+        if (!this.jwtToken) {
+            throw new Error('No token found in storage.');
+        }
+        try {
+            // Este endpoint (/api/auth/me) valida o token e retorna os dados do usuário.
+            // O wrapper `fetch` já lançará um erro para respostas não-OK (ex: 401, 403, 500).
+            const data = await this.fetch('/auth/me');
+            if (!data.success) {
+                // Caso o servidor retorne 200 OK mas com success: false
+                throw new Error(data.message || 'Token validation failed on server.');
             }
+            return data;
+        } catch (error) {
+            console.error('Session check failed:', error.message);
+            this.setJwtToken(null); // Limpa o token inválido antes de relançar o erro
+            throw error; // Relança o erro para que o chamador possa lidar com ele (ex: redirecionar para o login)
+        }
+    }
+
+    logout() {
+        this.setJwtToken(null);
+        // Opcional: notificar o backend sobre o logout
+    }
+
+    // --- Métodos da API do Jogo ---
+
+    async enterWagerMatch(tierId) {
+        return this.fetch('/pvp/wager/enter', {
+            method: 'POST',
+            body: JSON.stringify({ tierId }),
         });
-        return await response.json();
-    } catch (error) {
-        console.error('Falha ao buscar usuário atual:', error);
-        throw error;
+    }
+
+    async getRanking() {
+        const data = await this.fetch('/ranking');
+        return data.success ? data.ranking : [];
+    }
+
+    async saveCheckpoint(waveNumber) {
+        return this.fetch('/game/checkpoint', {
+            method: 'POST',
+            body: JSON.stringify({ waveNumber }),
+        });
+    }
+
+    async getCurrentUser() {
+        return this.fetch('/auth/me');
+    }
+
+    async getOwnedNfts() {
+        return this.fetch('/user/nfts');
+    }
+
+    async levelUp() {
+        return this.fetch('/user/level-up', {
+            method: 'POST'
+        });
+    }
+
+    // --- Métodos de Admin ---
+
+    async getGameSettings(adminSecret) {
+         return this.fetch('/admin/settings', {
+            headers: { 'X-Admin-Secret': adminSecret }
+        });
+    }
+
+    async savePlayerStats(stats) {
+        return this.fetch('/user/stats', {
+            method: 'POST',
+            body: JSON.stringify({ stats }),
+        });
     }
 }
 
-export async function savePlayerStatsToServer(username, stats, token) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/user/stats`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ username, stats })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Falha ao salvar estatísticas do jogador:', error);
-        throw error;
-    }
-}
+// Exporta uma instância única do cliente
+const api = new ApiClient();
+export default api;

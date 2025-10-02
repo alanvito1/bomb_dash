@@ -1,6 +1,6 @@
 // src/scenes/LoadingScene.js
 import LanguageManager from '../utils/LanguageManager.js';
-import { getCurrentUser } from '../api.js';
+import api from '../api.js'; // Import the centralized api client
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -51,8 +51,6 @@ export default class LoadingScene extends Phaser.Scene {
             if (typeof path === 'string') {
                 this.load.image(assetKey, path);
             }
-            // Note: Complex assets like spritesheets defined with 'frames' are not handled here.
-            // This would require more info in the manifest (e.g., frameWidth, frameHeight).
         }
     }
 
@@ -65,48 +63,29 @@ export default class LoadingScene extends Phaser.Scene {
     }
 
     this.load.on('complete', async () => {
-        // The original logic from create() goes here, to run after assets are loaded.
-
-        // 1. Initialize translations first
         await LanguageManager.init(this);
-
-        // 2. Update loading text now that translations are ready
         this.loadingText.setText(LanguageManager.get(this, 'loading'));
 
-        // 3. Destroy progress bar elements
         this.progressBar.destroy();
         this.progressBox.destroy();
 
-        // 4. Set final text and proceed with game logic
         this.loadingText.setText(LanguageManager.get(this, 'complete'));
 
-        // 5. Check session and transition to the correct scene
         this.time.delayedCall(500, async () => {
-            const jwtToken = localStorage.getItem('jwt_token');
-
-            if (jwtToken) {
-                console.log('LoadingScene: Found JWT token. Validating session...');
-                const validationResult = await getCurrentUser();
-
-                if (validationResult && validationResult.success) {
-                    console.log(`LoadingScene: Session validated for user: ${validationResult.user.address}.`);
-                    this.registry.set('loggedInUser', validationResult.user);
-                    this.registry.set('jwtToken', jwtToken);
-                    this.scene.start('MenuScene');
-                } else {
-                    console.log(`LoadingScene: Session validation failed. Proceeding to login.`);
-                    localStorage.removeItem('jwt_token');
-                    this.registry.remove('loggedInUser');
-                    this.scene.start('AuthChoiceScene');
-                }
-            } else {
-                console.log('LoadingScene: No JWT token found. Proceeding to login.');
+            console.log('LoadingScene: Checking for existing session...');
+            try {
+                const loginStatus = await api.checkLoginStatus();
+                console.log(`LoadingScene: Session validated for user: ${loginStatus.user.address}.`);
+                this.registry.set('loggedInUser', loginStatus.user);
+                this.scene.start('MenuScene');
+            } catch (error) {
+                console.log(`LoadingScene: No valid session found. Proceeding to login. Reason: ${error.message}`);
+                this.registry.remove('loggedInUser');
                 this.scene.start('AuthChoiceScene');
             }
         });
     });
 
-    // This starts the asset loading process
     this.load.start();
   }
 }

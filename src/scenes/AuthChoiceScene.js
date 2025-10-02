@@ -1,6 +1,6 @@
 // src/scenes/AuthChoiceScene.js
 
-import { web3Login } from '../utils/api.js';
+import api from '../api.js';
 
 export default class AuthChoiceScene extends Phaser.Scene {
     constructor() {
@@ -44,17 +44,17 @@ export default class AuthChoiceScene extends Phaser.Scene {
 
             try {
                 // Call the central Web3 login function from our api utility
-                const loginSuccess = await web3Login();
+                const loginResult = await api.web3Login();
 
-                if (loginSuccess) {
+                if (loginResult.success) {
                     statusText.setText('Success! Loading game...');
                     // On successful login, transition to the main menu
                     this.time.delayedCall(1000, () => {
                         this.scene.start('MenuScene');
                     });
                 } else {
-                    // This case handles if the user rejects the connection in MetaMask
-                    throw new Error('Wallet connection was rejected.');
+                    // This case is now unlikely as api.web3Login throws on failure
+                    throw new Error(loginResult.message || 'Wallet connection was rejected.');
                 }
             } catch (error) {
                 console.error('Authentication failed:', error);
