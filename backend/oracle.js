@@ -41,50 +41,57 @@ let isOracleInitialized = false;
  * Inicializa o serviço do Oráculo, conectando-se à blockchain e carregando os contratos.
  */
 async function initOracle() {
-    // A WagerArena é opcional para a V1, então não a incluímos na verificação principal.
     if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS) {
         console.warn("Variáveis de ambiente essenciais do Oráculo não estão configuradas. O serviço do Oráculo está desativado.");
         isOracleInitialized = false;
-        return false;
+        return { success: false, contracts: null };
     }
 
     try {
         provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
         oracleWallet = new ethers.Wallet(ORACLE_PRIVATE_KEY, provider);
 
-        tournamentControllerContract = new ethers.Contract(
-            TOURNAMENT_CONTROLLER_ADDRESS,
-            TOURNAMENT_CONTROLLER_ABI,
-            oracleWallet
+        const localTournamentController = new ethers.Contract(
+            TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, oracleWallet
         );
 
-        perpetualRewardPoolContract = new ethers.Contract(
-            PERPETUAL_REWARD_POOL_ADDRESS,
-            PERPETUAL_REWARD_POOL_ABI,
-            oracleWallet
+        const localPerpetualRewardPool = new ethers.Contract(
+            PERPETUAL_REWARD_POOL_ADDRESS, PERPETUAL_REWARD_POOL_ABI, oracleWallet
         );
 
+        let localWagerArena = null;
         if (WAGER_ARENA_ADDRESS) {
-            wagerArenaContract = new ethers.Contract(
-                WAGER_ARENA_ADDRESS,
-                WAGER_ARENA_ABI,
-                oracleWallet
+            localWagerArena = new ethers.Contract(
+                WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI, oracleWallet
             );
-            console.log(`Conectado à WagerArena em: ${await wagerArenaContract.getAddress()}`);
+            console.log(`Conectado à WagerArena em: ${await localWagerArena.getAddress()}`);
         } else {
             console.warn("Endereço da WagerArena não fornecido. Funcionalidades de aposta (wager) estarão desativadas.");
         }
 
-
         console.log(`Oráculo inicializado com sucesso. Endereço: ${oracleWallet.address}`);
-        console.log(`Conectado ao TournamentController em: ${await tournamentControllerContract.getAddress()}`);
-        console.log(`Conectado ao PerpetualRewardPool em: ${await perpetualRewardPoolContract.getAddress()}`);
+        console.log(`Conectado ao TournamentController em: ${await localTournamentController.getAddress()}`);
+        console.log(`Conectado ao PerpetualRewardPool em: ${await localPerpetualRewardPool.getAddress()}`);
+
         isOracleInitialized = true;
-        return true;
+
+        // Assign to module-level variables for functions that still use them
+        tournamentControllerContract = localTournamentController;
+        perpetualRewardPoolContract = localPerpetualRewardPool;
+        wagerArenaContract = localWagerArena;
+
+        return {
+            success: true,
+            contracts: {
+                tournamentControllerContract: localTournamentController,
+                perpetualRewardPoolContract: localPerpetualRewardPool,
+                wagerArenaContract: localWagerArena,
+            }
+        };
     } catch (error) {
         console.error("Falha ao inicializar o Oráculo:", error.message);
         isOracleInitialized = false;
-        return false;
+        return { success: false, contracts: null };
     }
 }
 
@@ -251,16 +258,21 @@ async function triggerLevelUpCostHalving() {
 
 /**
  * Inicia o listener para eventos `WagerMatchCreated` do contrato WagerArena.
+ * @param {ethers.Contract} contract - A instância do contrato WagerArena já inicializada.
  */
-function startWagerMatchListener() {
-    if (!isOracleInitialized || !wagerArenaContract) {
+function startWagerMatchListener(contract) {
+    if (!isOracleInitialized) {
         console.warn("Listener de partidas de aposta não iniciado porque o Oráculo não está pronto.");
+        return;
+    }
+     if (!contract) {
+        console.warn("Listener de partidas de aposta não iniciado porque o contrato WagerArena é inválido.");
         return;
     }
 
     console.log("Iniciando listener para eventos de criação de partidas de aposta...");
 
-    wagerArenaContract.on("WagerMatchCreated", async (matchId, tierId, player1, player2, totalWager, event) => {
+    contract.on("WagerMatchCreated", async (matchId, tierId, player1, player2, totalWager, event) => {
         console.log("--- Evento WagerMatchCreated Recebido ---");
         console.log(`Match ID: ${matchId.toString()}`);
         console.log(`Tier ID: ${tierId.toString()}`);
@@ -284,7 +296,7 @@ function startWagerMatchListener() {
         }
     });
 
-    wagerArenaContract.provider.on("error", (error) => {
+    provider.on("error", (error) => {
         console.error("Erro no provedor do listener de eventos:", error);
         // Tentar reiniciar o listener ou a conexão pode ser uma estratégia aqui.
     });
@@ -308,15 +320,14 @@ function startCronJobs() {
 }
 
 // Sobrescrevendo a função initOracle para incluir o listener
-const tournamentService = require('./tournament_service');
-
 const originalInitOracle = initOracle;
 async function initOracleAndListeners() {
-    if (await originalInitOracle()) { // Se a inicialização do oráculo for bem-sucedida
-        startWagerMatchListener();
+    const { success, contracts } = await originalInitOracle();
+    if (success) {
+        const tournamentService = require('./tournament_service');
+        startWagerMatchListener(contracts.wagerArenaContract);
         startCronJobs();
-        // Pass the contract instance to the tournament service
-        tournamentService.initTournamentService(tournamentControllerContract);
+        tournamentService.initTournamentService(contracts.tournamentControllerContract);
         return true;
     }
     return false;
