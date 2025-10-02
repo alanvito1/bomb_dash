@@ -27,9 +27,9 @@ async function initDb() {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     wallet_address TEXT UNIQUE NOT NULL,
                     max_score INTEGER DEFAULT 0,
-                    level INTEGER DEFAULT 1,
-                    xp INTEGER DEFAULT 0,
-                    hp INTEGER DEFAULT 100,
+                    account_level INTEGER DEFAULT 1,
+                    account_xp INTEGER DEFAULT 0,
+                    coins INTEGER DEFAULT 1000,
                     last_score_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             `;
@@ -40,26 +40,33 @@ async function initDb() {
                 }
                 console.log("Users table (Web3) initialized or already exists.");
 
-                const createPlayerStatsTableSQL = `
-                    CREATE TABLE IF NOT EXISTS player_stats (
-                        user_id INTEGER PRIMARY KEY,
+                const createHeroesTableSQL = `
+                    CREATE TABLE IF NOT EXISTS heroes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        hero_type TEXT NOT NULL CHECK(hero_type IN ('mock', 'nft')),
+                        nft_id INTEGER,
+                        level INTEGER DEFAULT 1,
+                        xp INTEGER DEFAULT 0,
+                        hp INTEGER DEFAULT 100,
+                        maxHp INTEGER DEFAULT 100,
                         damage INTEGER DEFAULT 1,
                         speed INTEGER DEFAULT 200,
                         extraLives INTEGER DEFAULT 1,
                         fireRate INTEGER DEFAULT 600,
                         bombSize REAL DEFAULT 1.0,
                         multiShot INTEGER DEFAULT 0,
-                    coins INTEGER DEFAULT 1000, -- BCOIN balance
                         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        UNIQUE(user_id, nft_id)
                     );
                 `;
-                db.run(createPlayerStatsTableSQL, (err) => {
+                db.run(createHeroesTableSQL, (err) => {
                     if (err) {
-                        console.error('Error creating player_stats table', err.message);
+                        console.error('Error creating heroes table', err.message);
                         db.close(); db = null; return reject(err);
                     }
-                    console.log("Player_stats table initialized or already exists.");
+                    console.log("Heroes table initialized or already exists.");
 
                 // Create Wager Tiers Table
                 const createWagerTiersTableSQL = `
@@ -161,44 +168,19 @@ async function initDb() {
 }
 
 // Função para criar um novo usuário e suas estatísticas iniciais atomicamente
-async function createUserByAddress(address, initialStats = null) {
+async function createUserByAddress(address, initialCoins = 1000) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        db.serialize(() => {
-            db.run("BEGIN TRANSACTION;", (err) => {
-                if (err) return reject(err);
-            });
-
-            const userInsertSQL = "INSERT INTO users (wallet_address) VALUES (?);";
-            db.run(userInsertSQL, [address], function(err) {
-                if (err) {
-                    console.error(`Error creating user for address ${address}:`, err.message);
-                    return db.run("ROLLBACK;", () => reject(new Error("Failed to create user.")));
-                }
-
+        const userInsertSQL = "INSERT INTO users (wallet_address, coins) VALUES (?, ?);";
+        db.run(userInsertSQL, [address, initialCoins], function (err) {
+            if (err) {
+                console.error(`Error creating user for address ${address}:`, err.message);
+                reject(new Error("Failed to create user."));
+            } else {
                 const userId = this.lastID;
                 console.log(`User for address ${address} created with ID ${userId}.`);
-
-                const { damage = 1, speed = 200, extraLives = 1, fireRate = 600, bombSize = 1.0, multiShot = 0, coins = 0 } = initialStats || {};
-                const statsInsertSQL = `
-                    INSERT INTO player_stats (user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-                `;
-                db.run(statsInsertSQL, [userId, damage, speed, extraLives, fireRate, bombSize, multiShot, coins], function(err) {
-                    if (err) {
-                        console.error(`Error creating initial stats for user ID ${userId}:`, err.message);
-                        return db.run("ROLLBACK;", () => reject(new Error("Failed to create user stats.")));
-                    }
-                    db.run("COMMIT;", (err) => {
-                        if (err) {
-                            console.error("Commit failed:", err.message);
-                            return db.run("ROLLBACK;", () => reject(new Error("Transaction commit failed.")));
-                        }
-                        console.log(`Initial stats created for user ID ${userId}. Transaction committed.`);
-                        resolve({ success: true, userId: userId });
-                    });
-                });
-            });
+                resolve({ success: true, userId: userId });
+            }
         });
     });
 }
@@ -214,49 +196,6 @@ async function findUserByAddress(address) {
     });
 }
 
-async function getPlayerStats(userId) {
-    if (!db) await initDb();
-    return new Promise((resolve, reject) => {
-        const querySQL = "SELECT * FROM player_stats WHERE user_id = ?;";
-        db.get(querySQL, [userId], (err, row) => {
-            if (err) return reject(err);
-            resolve(row);
-        });
-    });
-}
-
-async function savePlayerStats(userId, stats) {
-    if (!db) await initDb();
-    return new Promise((resolve, reject) => {
-        const { damage=1, speed=200, extraLives=1, fireRate=600, bombSize=1.0, multiShot=0, coins=0 } = stats;
-        const upsertSQL = `
-            INSERT INTO player_stats (user_id, damage, speed, extraLives, fireRate, bombSize, multiShot, coins, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                damage=excluded.damage, speed=excluded.speed, extraLives=excluded.extraLives, fireRate=excluded.fireRate,
-                bombSize=excluded.bombSize, multiShot=excluded.multiShot, coins=excluded.coins, last_updated=CURRENT_TIMESTAMP;
-        `;
-        db.run(upsertSQL, [userId, damage, speed, extraLives, fireRate, bombSize, multiShot, coins], function(err) {
-            if (err) return reject(err);
-            resolve({ success: true, userId: userId, stats: stats });
-        });
-    });
-}
-
-async function updatePlayerStatsFromNFT(userId, nftStats) {
-    if (!db) await initDb();
-    const gameStats = {
-        damage: nftStats.bombPower,
-        speed: nftStats.speed,
-        // Keep default values for stats not provided by the NFT
-        extraLives: 1,
-        fireRate: 600,
-        bombSize: 1.0,
-        multiShot: 0,
-        coins: 0,
-    };
-    return savePlayerStats(userId, gameStats);
-}
 
 const { getExperienceForLevel } = require('./rpg');
 
@@ -265,11 +204,11 @@ const { getExperienceForLevel } = require('./rpg');
 async function _addXpToUser_noTX(address, xpAmount, db_helpers) {
     const { get, run } = db_helpers;
 
-    const user = await get("SELECT id, level, xp FROM users WHERE wallet_address = ?;", [address]);
+    const user = await get("SELECT id, account_level, account_xp FROM users WHERE wallet_address = ?;", [address]);
     if (!user) throw new Error(`User not found with address ${address} during XP addition.`);
 
-    const newXp = user.xp + xpAmount;
-    let newLevel = user.level;
+    const newXp = user.account_xp + xpAmount;
+    let newLevel = user.account_level;
 
     const multiplierRow = await get("SELECT value FROM game_settings WHERE key = ?", ['xp_multiplier']);
     const multiplier = parseFloat(multiplierRow ? multiplierRow.value : '1.0');
@@ -284,7 +223,7 @@ async function _addXpToUser_noTX(address, xpAmount, db_helpers) {
         }
     }
 
-    await run("UPDATE users SET xp = ?, level = ? WHERE id = ?;", [newXp, newLevel, user.id]);
+    await run("UPDATE users SET account_xp = ?, account_level = ? WHERE id = ?;", [newXp, newLevel, user.id]);
     return { newXp, newLevel };
 }
 
@@ -311,19 +250,12 @@ async function getUserByAddress(address) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
         const querySQL = `
-            SELECT
-                u.id, u.wallet_address, u.level, u.xp, u.hp,
-                ps.damage, ps.speed, ps.extraLives, ps.fireRate, ps.bombSize, ps.multiShot, ps.coins
-            FROM users u
-            LEFT JOIN player_stats ps ON u.id = ps.user_id
-            WHERE u.wallet_address = ?;
+            SELECT id, wallet_address, account_level, account_xp, coins
+            FROM users
+            WHERE wallet_address = ?;
         `;
         db.get(querySQL, [address], (err, row) => {
             if (err) return reject(err);
-            // Add maxHp for consistency, assuming it's the same as hp from db
-            if (row) {
-                row.maxHp = row.hp;
-            }
             resolve(row);
         });
     });
@@ -366,18 +298,18 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
         }
 
         const winnerNewCoins = winner.coins + finalCoinReward;
-        await run("UPDATE player_stats SET coins = ? WHERE user_id = ?", [winnerNewCoins, winner.id]);
+        await run("UPDATE users SET coins = ? WHERE id = ?", [winnerNewCoins, winner.id]);
         // Use the internal function to add XP without creating a new transaction
         const { newXp: winnerNewXp } = await _addXpToUser_noTX(winnerAddress, finalXpReward, { get, run });
 
         // 2. Update Loser's stats
         const loserNewCoins = loser.coins - tier.bcoin_cost;
-        const loserNewXp = Math.max(0, loser.xp - tier.xp_cost);
-        await run("UPDATE player_stats SET coins = ? WHERE user_id = ?", [loserNewCoins, loser.id]);
-        await run("UPDATE users SET xp = ? WHERE id = ?", [loserNewXp, loser.id]);
+        const loserNewXp = Math.max(0, loser.account_xp - tier.xp_cost);
+        await run("UPDATE users SET coins = ? WHERE id = ?", [loserNewCoins, loser.id]);
+        await run("UPDATE users SET account_xp = ? WHERE id = ?", [loserNewXp, loser.id]);
 
         // 3. Check for de-level on the loser
-        let loserNewLevel = loser.level;
+        let loserNewLevel = loser.account_level;
         // Keep checking in case of multiple de-levels from a huge XP loss
         while (true) {
             const xpForCurrentLevel = getExperienceForLevel(loserNewLevel, multiplier);
@@ -388,8 +320,8 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
             }
         }
 
-        if (loserNewLevel !== loser.level) {
-            await run("UPDATE users SET level = ? WHERE id = ?", [loserNewLevel, loser.id]);
+        if (loserNewLevel !== loser.account_level) {
+            await run("UPDATE users SET account_level = ? WHERE id = ?", [loserNewLevel, loser.id]);
         }
 
         await run("COMMIT;");
@@ -501,10 +433,9 @@ async function getAllPlayers() {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
         const querySQL = `
-            SELECT u.id, u.wallet_address, u.level, u.xp, ps.coins, ps.damage, ps.speed, ps.extraLives, ps.fireRate, ps.bombSize, ps.multiShot
-            FROM users u
-            LEFT JOIN player_stats ps ON u.id = ps.user_id
-            ORDER BY u.id;
+            SELECT id, wallet_address, account_level, account_xp, coins
+            FROM users
+            ORDER BY id;
         `;
         db.all(querySQL, [], (err, rows) => {
             if (err) return reject(err);
@@ -517,26 +448,21 @@ async function updatePlayerStats(userId, stats) {
     if (!db) await initDb();
 
     // Mapeia quais campos pertencem a qual tabela
-    const userFields = ['level', 'xp'];
-    const playerStatsFields = ['damage', 'speed', 'extraLives', 'fireRate', 'bombSize', 'multiShot', 'coins'];
+    const userFields = ['account_level', 'account_xp', 'coins'];
 
     const userUpdates = {};
-    const playerStatsUpdates = {};
 
     // Separa os campos do objeto 'stats' para suas respectivas tabelas
     for (const key in stats) {
         if (userFields.includes(key)) {
             userUpdates[key] = stats[key];
-        } else if (playerStatsFields.includes(key)) {
-            playerStatsUpdates[key] = stats[key];
         }
     }
 
     const userKeys = Object.keys(userUpdates);
-    const playerStatsKeys = Object.keys(playerStatsUpdates);
 
     // Se nenhum campo válido foi fornecido, não faz nada
-    if (userKeys.length === 0 && playerStatsKeys.length === 0) {
+    if (userKeys.length === 0) {
         return { success: true, message: 'No valid fields provided for update.' };
     }
 
@@ -554,15 +480,6 @@ async function updatePlayerStats(userId, stats) {
                     await new Promise((res, rej) => db.run(sql, params, err => err ? rej(err) : res()));
                 }
 
-                // Atualiza a tabela 'player_stats' se houver campos para ela
-                if (playerStatsKeys.length > 0) {
-                    const setClause = playerStatsKeys.map(key => `${key} = ?`).join(', ');
-                    const params = playerStatsKeys.map(key => playerStatsUpdates[key]);
-                    params.push(userId);
-                    const sql = `UPDATE player_stats SET ${setClause}, last_updated = CURRENT_TIMESTAMP WHERE user_id = ?`;
-                    await new Promise((res, rej) => db.run(sql, params, err => err ? rej(err) : res()));
-                }
-
                 await new Promise((res, rej) => db.run("COMMIT;", err => err ? rej(err) : res()));
                 resolve({ success: true, userId: userId });
 
@@ -575,13 +492,70 @@ async function updatePlayerStats(userId, stats) {
     });
 }
 
+async function createHeroForUser(userId, heroData) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const {
+            hero_type, nft_id = null, level = 1, xp = 0, hp = 100, maxHp = 100,
+            damage = 1, speed = 200, extraLives = 1, fireRate = 600,
+            bombSize = 1.0, multiShot = 0
+        } = heroData;
+
+        const sql = `INSERT INTO heroes (user_id, hero_type, nft_id, level, xp, hp, maxHp, damage, speed, extraLives, fireRate, bombSize, multiShot)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+
+        db.run(sql, [
+            userId, hero_type, nft_id, level, xp, hp, maxHp, damage, speed,
+            extraLives, fireRate, bombSize, multiShot
+        ], function(err) {
+            if (err) {
+                console.error(`Error creating hero for user ${userId}:`, err.message);
+                return reject(err);
+            }
+            resolve({ success: true, heroId: this.lastID });
+        });
+    });
+}
+
+async function getHeroesByUserId(userId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT * FROM heroes WHERE user_id = ?;";
+        db.all(sql, [userId], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
+
+async function updateHeroStats(heroId, stats) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const fields = Object.keys(stats);
+        const values = Object.values(stats);
+
+        if (fields.length === 0) {
+            return resolve({ success: true, message: "No fields to update." });
+        }
+
+        const setClause = fields.map(field => `${field} = ?`).join(', ');
+        const sql = `UPDATE heroes SET ${setClause}, last_updated = CURRENT_TIMESTAMP WHERE id = ?;`;
+
+        db.run(sql, [...values, heroId], function(err) {
+            if (err) {
+                console.error(`Error updating hero ${heroId}:`, err.message);
+                return reject(err);
+            }
+            resolve({ success: true, changes: this.changes });
+        });
+    });
+}
+
+
 module.exports = {
     initDb,
     createUserByAddress,
     findUserByAddress,
-    getPlayerStats,
-    savePlayerStats,
-    updatePlayerStatsFromNFT,
     closeDb,
     addXpToUser,
     getUserByAddress,
@@ -597,7 +571,11 @@ module.exports = {
     updateGameSetting,
     getAllPlayers,
     updatePlayerStats,
-    getTop10Ranking
+    getTop10Ranking,
+    // Funções de Herói
+    createHeroForUser,
+    getHeroesByUserId,
+    updateHeroStats
 };
 
 async function getTop10Ranking() {

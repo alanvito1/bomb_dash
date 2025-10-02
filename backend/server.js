@@ -107,40 +107,34 @@ app.post('/api/auth/verify', async (req, res) => {
 
         let user = await db.findUserByAddress(address);
         if (!user) {
-            console.log(`Primeiro login de ${address}. Verificando NFTs...`);
+            console.log(`First login for ${address}. Creating user and assigning heroes...`);
+            // 1. Create the user record first.
+            const newUserResult = await db.createUserByAddress(address);
+            user = { id: newUserResult.userId, wallet_address: address };
+            console.log(`User created with ID: ${user.id}`);
+
+            // 2. Fetch their NFTs from the blockchain.
             const userNfts = await nft.getNftsForPlayer(address);
 
-            // Helper to find the strongest NFT based on a scoring system
-            const findStrongestNft = (nfts) => {
-                return nfts.reduce((strongest, current) => {
-                    const strongestScore = (strongest.bombPower * 5) + (strongest.speed * 2) + strongest.rarity;
-                    const currentScore = (current.bombPower * 5) + (current.speed * 2) + current.rarity;
-                    return currentScore > strongestScore ? current : strongest;
-                });
-            };
-
             if (userNfts && userNfts.length > 0) {
-                const strongestNft = findStrongestNft(userNfts);
-                console.log(`Encontrado(s) ${userNfts.length} NFT(s). Selecionando o mais forte: ID ${strongestNft.id}`);
-
-                // Map NFT stats to game stats
-                const initialStats = {
-                    damage: strongestNft.bombPower,
-                    speed: strongestNft.speed,
-                    extraLives: 1, // Default value
-                    fireRate: 600, // Default value
-                    bombSize: 1.0, // Default value
-                    multiShot: 0, // Default value
-                    coins: 1000 // Starting coins
-                };
-
-                const result = await db.createUserByAddress(address, initialStats);
-                user = { id: result.userId, wallet_address: address };
-
+                console.log(`Found ${userNfts.length} NFT(s). Creating hero records for them.`);
+                for (const nftData of userNfts) {
+                    const heroStats = {
+                        hero_type: 'nft',
+                        nft_id: nftData.id,
+                        level: nftData.level,
+                        hp: 100, // Default values, can be adjusted
+                        maxHp: 100,
+                        damage: nftData.bombPower,
+                        speed: nftData.speed,
+                        // ... map other relevant stats
+                    };
+                    await db.createHeroForUser(user.id, heroStats);
+                }
             } else {
-                console.log('Nenhum NFT encontrado. Atribuindo herói mock padrão.');
-                const result = await nft.assignMockHero(address); // Assigns mock hero
-                user = { id: result.userId, wallet_address: address };
+                // 3. If no NFTs, assign the default mock heroes.
+                console.log('No NFTs found. Assigning default mock heroes.');
+                await nft.assignMockHeroes(user.id);
             }
         }
 
@@ -155,6 +149,68 @@ app.post('/api/auth/verify', async (req, res) => {
     } catch (error) {
         console.error("Erro em /api/auth/verify:", error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+
+// =================================================================
+// ROTAS DE HERÓI
+// =================================================================
+
+app.get('/api/heroes', verifyToken, async (req, res) => {
+    try {
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        res.json({ success: true, heroes });
+    } catch (error) {
+        console.error(`Error fetching heroes for user ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Failed to fetch heroes.' });
+    }
+});
+
+app.post('/api/heroes/:heroId/level-up', verifyToken, async (req, res) => {
+    const { heroId } = req.params;
+    const LEVEL_UP_COST = 1; // The cost in BCOIN to level up a hero
+
+    try {
+        const user = await db.getUserByAddress(req.user.address);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        if (user.coins < LEVEL_UP_COST) {
+            return res.status(403).json({
+                success: false,
+                message: `Insufficient BCOIN. You need ${LEVEL_UP_COST} to level up a hero.`
+            });
+        }
+
+        // This is a simplified level-up logic. A real implementation would
+        // check the hero's current XP against an XP curve.
+        // To increment in SQL, we cannot pass a string. We must construct the query carefully.
+        // For simplicity in this step, we'll fetch the hero, increment, and then save.
+        const heroes = await db.getHeroesByUserId(user.id);
+        const heroToLevelUp = heroes.find(h => h.id.toString() === heroId);
+
+        if (!heroToLevelUp) {
+            return res.status(404).json({ success: false, message: "Hero not found for this user." });
+        }
+
+        const newHeroStats = {
+            level: heroToLevelUp.level + 1
+        };
+        await db.updateHeroStats(heroId, newHeroStats);
+
+        const newCoinBalance = user.coins - LEVEL_UP_COST;
+        await db.updateUserStats(user.id, { coins: newCoinBalance });
+
+        res.json({
+            success: true,
+            message: 'Hero leveled up successfully!',
+            newCoinBalance: newCoinBalance
+        });
+
+    } catch (error) {
+        console.error(`Error leveling up hero ${heroId} for user ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error during hero level-up.' });
     }
 });
 
@@ -228,8 +284,13 @@ app.post('/api/debug/assign-mock-hero', verifyAdmin, async (req, res) => {
     }
 
     try {
-        const result = await nft.assignMockHero(walletAddress);
-        res.json({ success: true, message: 'Herói mock atribuído com sucesso!', data: result });
+        let user = await db.findUserByAddress(walletAddress);
+        if (!user) {
+            const newUser = await db.createUserByAddress(walletAddress);
+            user = { id: newUser.userId };
+        }
+        const result = await nft.assignMockHeroes(user.id);
+        res.json({ success: true, message: 'Heróis mock atribuídos com sucesso!', data: result });
     } catch (error) {
         console.error(`Erro ao atribuir herói mock para ${walletAddress}:`, error);
         res.status(500).json({ success: false, message: 'Erro interno ao atribuir o herói mock.' });
@@ -269,8 +330,8 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             success: true,
             user: {
                 address: user.wallet_address,
-                level: user.level,
-                xp: user.xp,
+                account_level: user.account_level,
+                account_xp: user.account_xp,
                 coins: user.coins,
                 highest_wave_reached: checkpoint
             }
@@ -278,72 +339,6 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Erro em /api/auth/me:", error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
-});
-
-// Endpoint to save player stats (shop upgrades, etc.)
-app.post('/api/user/stats', verifyToken, async (req, res) => {
-    const { stats } = req.body;
-    if (!stats) {
-        return res.status(400).json({ success: false, message: 'O objeto de estatísticas (stats) é obrigatório.' });
-    }
-
-    try {
-        const userId = req.user.userId;
-        await db.updatePlayerStats(userId, stats);
-        res.json({ success: true, message: 'Estatísticas do jogador atualizadas com sucesso.' });
-    } catch (error) {
-        console.error(`Erro ao atualizar estatísticas para o usuário ${req.user.userId}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar as estatísticas.' });
-    }
-});
-
-// Endpoint to get the user's owned NFTs
-app.get('/api/user/nfts', verifyToken, async (req, res) => {
-    try {
-        const userAddress = req.user.address;
-        const nfts = await nft.getNftsForPlayer(userAddress);
-        res.json({ success: true, nfts });
-    } catch (error) {
-        console.error(`Erro ao buscar NFTs para o usuário ${req.user.address}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar os NFTs.' });
-    }
-});
-
-// Endpoint for the player to level up
-app.post('/api/user/level-up', verifyToken, async (req, res) => {
-    const LEVEL_UP_COST = 1; // The cost in BCOIN to level up
-
-    try {
-        const user = await db.getUserByAddress(req.user.address);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
-        }
-
-        if (user.coins < LEVEL_UP_COST) {
-            return res.status(403).json({
-                success: false,
-                message: `Moedas insuficientes. Você precisa de ${LEVEL_UP_COST} BCOIN para subir de nível.`
-            });
-        }
-
-        const newStats = {
-            level: user.level + 1,
-            coins: user.coins - LEVEL_UP_COST
-        };
-
-        await db.updatePlayerStats(user.id, newStats);
-
-        res.json({
-            success: true,
-            message: 'Você subiu de nível com sucesso!',
-            newLevel: newStats.level,
-            newCoinBalance: newStats.coins
-        });
-
-    } catch (error) {
-        console.error(`Erro ao tentar subir o nível do usuário ${req.user.userId}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao processar o level-up.' });
     }
 });
 

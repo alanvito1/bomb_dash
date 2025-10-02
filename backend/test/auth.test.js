@@ -44,7 +44,7 @@ describe('Auth and NFT Selection Flow', () => {
         sinon.restore();
     });
 
-    it('should create a standard user with default stats if no NFTs are found', async () => {
+    it('should create a user and assign two mock heroes if no NFTs are found', async () => {
         // Arrange: Stub getNftsForPlayer to return an empty array
         sinon.stub(nftService, 'getNftsForPlayer').resolves([]);
         const nonce = await getNonce();
@@ -58,19 +58,21 @@ describe('Auth and NFT Selection Flow', () => {
         // Assert
         expect(response.status).to.equal(200);
         expect(response.body.success).to.be.true;
-        expect(response.body.selectionRequired).to.be.undefined;
         expect(response.body.token).to.exist;
 
         const user = await db.findUserByAddress(wallet.address);
-        const stats = await db.getPlayerStats(user.id);
-        expect(stats.damage).to.equal(5); // Now expects damage from MOCK_HERO_STATS
+        expect(user).to.exist;
+        const heroes = await db.getHeroesByUserId(user.id);
+        expect(heroes).to.have.lengthOf(2);
+        expect(heroes[0].hero_type).to.equal('mock');
+        expect(heroes[1].damage).to.be.a('number'); // Basic check for mock hero stats
     });
 
-    it('should create a user with the strongest NFT stats if NFTs are found', async () => {
-        // Arrange: Stub getNftsForPlayer to return mock NFTs. The second NFT is stronger.
+    it('should create a user and a hero record for each found NFT', async () => {
+        // Arrange: Stub getNftsForPlayer to return mock NFTs.
         const mockNfts = [
-            { id: 1, bombPower: 5, speed: 220, rarity: 1 },
-            { id: 2, bombPower: 8, speed: 250, rarity: 2 } // Stronger NFT
+            { id: 1, bombPower: 5, speed: 220, rarity: 1, level: 1 },
+            { id: 2, bombPower: 8, speed: 250, rarity: 2, level: 2 }
         ];
         sinon.stub(nftService, 'getNftsForPlayer').resolves(mockNfts);
         const nonce = await getNonce();
@@ -85,12 +87,20 @@ describe('Auth and NFT Selection Flow', () => {
         expect(response.status).to.equal(200);
         expect(response.body.success).to.be.true;
         expect(response.body.token).to.exist;
-        expect(response.body.selectionRequired).to.be.undefined;
 
-        // Assert: Check that the user was created with the stats of the strongest NFT
+        // Assert: Check that the user and two hero records were created
         const user = await db.findUserByAddress(wallet.address);
-        const stats = await db.getPlayerStats(user.id);
-        expect(stats.damage).to.equal(8); // from the stronger NFT
-        expect(stats.speed).to.equal(250); // from the stronger NFT
+        expect(user).to.exist;
+        const heroes = await db.getHeroesByUserId(user.id);
+        expect(heroes).to.have.lengthOf(2);
+
+        const hero1 = heroes.find(h => h.nft_id === 1);
+        const hero2 = heroes.find(h => h.nft_id === 2);
+
+        expect(hero1).to.exist;
+        expect(hero2).to.exist;
+        expect(hero1.damage).to.equal(5);
+        expect(hero2.damage).to.equal(8);
+        expect(hero1.hero_type).to.equal('nft');
     });
 });
