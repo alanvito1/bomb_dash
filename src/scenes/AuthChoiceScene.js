@@ -30,6 +30,35 @@ export default class AuthChoiceScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
 
+        // --- "Login as Guest" Button ---
+        const guestButton = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 120, 'Login as Guest', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            color: '#dddddd',
+            backgroundColor: '#444444',
+            padding: { x: 15, y: 8 },
+            align: 'center'
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+
+        guestButton.on('pointerdown', () => {
+            // Set a mock user object for guest mode
+            this.registry.set('loggedInUser', {
+                address: 'guest-user',
+                coins: 100, // Give guests some starting coins
+                account_level: 1,
+                account_xp: 0
+            });
+            // Since this is a guest, we need to assign mock heroes.
+            // The backend would normally do this on first login, so we simulate it here.
+            // This logic is simplified for the frontend.
+            this.scene.start('MenuScene');
+        });
+
+        guestButton.on('pointerover', () => guestButton.setBackgroundColor('#666666'));
+        guestButton.on('pointerout', () => guestButton.setBackgroundColor('#444444'));
+
         // --- Status Text ---
         const statusText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 80, '', {
             fontFamily: '"Press Start 2P"',
