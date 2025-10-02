@@ -13,14 +13,12 @@ export default class SoundManager {
     for (const key in music) {
       const path = music[key];
       scene.load.audio(key, path);
-      console.log(`[SoundManager] Carregando música: ${key} (${path})`);
     }
 
     // Carregar efeitos sonoros
     for (const key in sfx) {
       const path = sfx[key];
       scene.load.audio(key, path);
-      console.log(`[SoundManager] Carregando SFX: ${key} (${path})`);
     }
   }
 
@@ -29,26 +27,31 @@ export default class SoundManager {
       console.error('[SoundManager] Cena inválida para tocar som:', key);
       return;
     }
-
-    let sound = scene.sound.get(key);
-    if (!sound) {
-      try {
-        sound = scene.sound.add(key, config);
-      } catch (e) {
-        console.error(`[SoundManager] Erro ao adicionar som ${key}:`, e);
-        return;
-      }
-    }
-
-    if (sound) {
-      sound.play();
-      console.log(`[SoundManager] 🔊 ${key} tocado`);
-    }
+    // Simple sfx play, assuming they are small and decode fast.
+    scene.sound.play(key, config);
   }
 
+  /**
+   * Toca uma música de forma robusta, lidando com a decodificação assíncrona.
+   * Garante que a música só toque quando estiver pronta.
+   * @param {Phaser.Scene} scene - A cena que está tocando a música.
+   * @param {string} key - A chave do recurso de áudio da música.
+   */
   static playMusic(scene, key) {
     if (!scene?.sound) {
       console.error('[SoundManager] Cena inválida para tocar música:', key);
+      return;
+    }
+
+    // Para qualquer música que esteja tocando atualmente para evitar sobreposição
+    if (scene.currentMusicKey && scene.currentMusicKey !== key) {
+      const oldMusic = scene.sound.get(scene.currentMusicKey);
+      if (oldMusic && oldMusic.isPlaying) {
+        oldMusic.stop();
+      }
+    }
+    // Se a música já for a mesma, não faz nada.
+    else if (scene.currentMusicKey === key && scene.sound.get(key)?.isPlaying) {
       return;
     }
 
@@ -62,9 +65,22 @@ export default class SoundManager {
       }
     }
 
-    if (!music.isPlaying) {
-      music.play();
-      console.log(`[SoundManager] 🎵 Música ${key} iniciada`);
+    // Função para tocar a música, a ser chamada quando o áudio estiver pronto
+    const play = () => {
+      if (music && !music.isPlaying) {
+        music.play();
+        scene.currentMusicKey = key; // Rastreia a música atual
+        console.log(`[SoundManager] 🎵 Música ${key} iniciada.`);
+      }
+    };
+
+    // 1.2: Fix Audio Race Condition.
+    // Verifica se o áudio está decodificado. Se não, espera pelo evento 'decoded'.
+    if (music.isDecoded) {
+      play();
+    } else {
+      console.log(`[SoundManager] Música ${key} não está decodificada. Aguardando...`);
+      music.once('decoded', play);
     }
   }
 
@@ -72,28 +88,19 @@ export default class SoundManager {
     if (!scene?.sound) return;
 
     const sound = scene.sound.get(key);
-    if (sound) {
+    if (sound && sound.isPlaying) {
       sound.stop();
-      console.log(`[SoundManager] ⏹️ Som ${key} parado`);
     }
   }
 
   static stopAll(scene) {
     if (!scene?.sound) return;
-
     scene.sound.stopAll();
-    console.log('[SoundManager] 🔇 Todos os sons parados');
   }
 
   static playWorldMusic(scene, worldNumber) {
     if (!scene?.sound) return;
-
-    const nextKey = `world${Math.min(worldNumber, 5)}_music`;
-    if (scene.currentMusicKey && scene.currentMusicKey !== nextKey) {
-      this.stop(scene, scene.currentMusicKey);
-    }
-
-    this.playMusic(scene, nextKey);
-    scene.currentMusicKey = nextKey;
+    const musicKey = `world${Math.min(worldNumber, 5)}_music`;
+    this.playMusic(scene, musicKey);
   }
 }

@@ -255,6 +255,73 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     }
 });
 
+// Endpoint to save player stats (shop upgrades, etc.)
+app.post('/api/user/stats', verifyToken, async (req, res) => {
+    const { stats } = req.body;
+    if (!stats) {
+        return res.status(400).json({ success: false, message: 'O objeto de estatísticas (stats) é obrigatório.' });
+    }
+
+    try {
+        const userId = req.user.userId;
+        await db.updatePlayerStats(userId, stats);
+        res.json({ success: true, message: 'Estatísticas do jogador atualizadas com sucesso.' });
+    } catch (error) {
+        console.error(`Erro ao atualizar estatísticas para o usuário ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao salvar as estatísticas.' });
+    }
+});
+
+// Endpoint to get the user's owned NFTs
+app.get('/api/user/nfts', verifyToken, async (req, res) => {
+    try {
+        const userAddress = req.user.address;
+        const nfts = await nft.getNftsForPlayer(userAddress);
+        res.json({ success: true, nfts });
+    } catch (error) {
+        console.error(`Erro ao buscar NFTs para o usuário ${req.user.address}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar os NFTs.' });
+    }
+});
+
+// Endpoint for the player to level up
+app.post('/api/user/level-up', verifyToken, async (req, res) => {
+    const LEVEL_UP_COST = 1; // The cost in BCOIN to level up
+
+    try {
+        const user = await db.getUserByAddress(req.user.address);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+        }
+
+        if (user.coins < LEVEL_UP_COST) {
+            return res.status(403).json({
+                success: false,
+                message: `Moedas insuficientes. Você precisa de ${LEVEL_UP_COST} BCOIN para subir de nível.`
+            });
+        }
+
+        const newStats = {
+            level: user.level + 1,
+            coins: user.coins - LEVEL_UP_COST
+        };
+
+        await db.updatePlayerStats(user.id, newStats);
+
+        res.json({
+            success: true,
+            message: 'Você subiu de nível com sucesso!',
+            newLevel: newStats.level,
+            newCoinBalance: newStats.coins
+        });
+
+    } catch (error) {
+        console.error(`Erro ao tentar subir o nível do usuário ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao processar o level-up.' });
+    }
+});
+
+
 app.post('/api/pvp/wager/enter', verifyToken, async (req, res) => {
     const { tierId } = req.body;
     if (!tierId) {
@@ -394,6 +461,17 @@ app.get('/api/ranking', async (req, res) => {
     } catch (error) {
         console.error("Erro ao buscar ranking:", error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar o ranking.' });
+    }
+});
+
+// Rota pública para obter as configurações do jogo (ex: monster scaling factor)
+app.get('/api/game/settings', async (req, res) => {
+    try {
+        const settings = await admin.getGameSettings();
+        res.json({ success: true, settings });
+    } catch (error) {
+        console.error("Erro em /api/game/settings:", error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar as configurações do jogo.' });
     }
 });
 

@@ -1,29 +1,27 @@
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
-import { savePlayerStatsToServer } from '../api.js';
-
-function getUpgradesFromLocalStorage() {
-  const stats = localStorage.getItem('playerStats');
-  return stats ? JSON.parse(stats) : null;
-}
+import api from '../api.js';
 
 async function saveUpgradesToLocalStorageAndServer(sceneContext, stats) {
+  // Always save to localStorage as a backup
   localStorage.setItem('playerStats', JSON.stringify(stats));
   console.log('[ShopScene] Stats saved to localStorage.');
 
-  const token = localStorage.getItem('jwtToken') || sceneContext.registry.get('jwtToken');
-  const loggedInUsername = sceneContext.registry.get('loggedInUser')?.username;
-
-  if (token && loggedInUsername) {
-    console.log(`[ShopScene] Attempting to save stats to server for user ${loggedInUsername}...`);
-    const result = await savePlayerStatsToServer(loggedInUsername, stats, token);
+  try {
+    const result = await api.savePlayerStats(stats);
     if (result.success) {
       console.log('[ShopScene] Stats successfully saved to server.');
+      // Optional: Update registry with the confirmed state from server if needed
+      const loggedInUser = sceneContext.registry.get('loggedInUser');
+      if (loggedInUser) {
+          const updatedUser = { ...loggedInUser, ...stats };
+          sceneContext.registry.set('loggedInUser', updatedUser);
+      }
     } else {
       console.warn('[ShopScene] Failed to save stats to server:', result.message);
     }
-  } else {
-    console.warn('[ShopScene] No token or username found, cannot save stats to server. Progress only saved locally.');
+  } catch (error) {
+     console.error('[ShopScene] Error saving stats to server:', error);
   }
 }
 
@@ -42,27 +40,29 @@ export default class ShopScene extends Phaser.Scene {
       fontFamily: 'monospace'
     }).setOrigin(0.5);
 
-    this.add.text(centerX, 80, LanguageManager.get(this, 'shop_coins', { coins: this.playerStats.coins }), {
+    // 1.4: Display coins from the synchronized playerStats
+    this.coinsText = this.add.text(centerX, 80, LanguageManager.get(this, 'shop_coins', { coins: Math.floor(this.playerStats.coins) }), {
       fontSize: '18px',
       fill: '#ffffff'
     }).setOrigin(0.5);
 
     const stats = [
-      LanguageManager.get(this, 'shop_stat_damage', { value: this.playerStats.damage }),
-      LanguageManager.get(this, 'shop_stat_speed', { value: this.playerStats.speed }),
-      LanguageManager.get(this, 'shop_stat_extra_lives', { value: this.playerStats.extraLives }),
-      LanguageManager.get(this, 'shop_stat_fire_rate', { value: this.playerStats.fireRate }),
-      LanguageManager.get(this, 'shop_stat_bomb_size', { value: this.playerStats.bombSize }),
-      LanguageManager.get(this, 'shop_stat_multi_shot', { value: this.playerStats.multiShot })
+      () => LanguageManager.get(this, 'shop_stat_damage', { value: this.playerStats.damage }),
+      () => LanguageManager.get(this, 'shop_stat_speed', { value: this.playerStats.speed }),
+      () => LanguageManager.get(this, 'shop_stat_extra_lives', { value: this.playerStats.extraLives }),
+      () => LanguageManager.get(this, 'shop_stat_fire_rate', { value: this.playerStats.fireRate }),
+      () => LanguageManager.get(this, 'shop_stat_bomb_size', { value: this.playerStats.bombSize }),
+      () => LanguageManager.get(this, 'shop_stat_multi_shot', { value: this.playerStats.multiShot })
     ];
 
-    stats.forEach((text, i) => {
-      this.add.text(centerX, 110 + i * 20, text, {
-        fontSize: '16px',
-        fill: '#cccccc',
-        fontFamily: 'monospace'
-      }).setOrigin(0.5);
+    this.statTexts = stats.map((textFunc, i) => {
+        return this.add.text(centerX, 110 + i * 20, textFunc(), {
+            fontSize: '16px',
+            fill: '#cccccc',
+            fontFamily: 'monospace'
+        }).setOrigin(0.5);
     });
+
 
     const buttons = [
       {
@@ -97,7 +97,7 @@ export default class ShopScene extends Phaser.Scene {
       }
     ];
 
-    buttons.forEach((btn, i) => {
+    this.upgradeButtons = buttons.map((btn, i) => {
       const y = 280 + i * 40;
       const button = this.add.text(centerX, y, btn.label(), {
         fontSize: '16px',
@@ -105,14 +105,14 @@ export default class ShopScene extends Phaser.Scene {
         fontFamily: 'monospace'
       }).setOrigin(0.5).setInteractive();
 
-      button.on('pointerdown', () => {
+      button.on('pointerdown', async () => {
         const cost = btn.cost();
         if (this.playerStats.coins >= cost) {
           btn.effect();
           this.playerStats.coins -= cost;
-          saveUpgradesToLocalStorageAndServer(this, this.playerStats);
+          await saveUpgradesToLocalStorageAndServer(this, this.playerStats);
           SoundManager.play(this, 'upgrade');
-          this.time.delayedCall(50, () => this.scene.restart());
+          this.refreshUI(); // Refresh UI instead of restarting scene
         } else {
           SoundManager.play(this, 'error');
           this.tweens.add({
@@ -125,6 +125,7 @@ export default class ShopScene extends Phaser.Scene {
           });
         }
       });
+      return { button, labelFunc: btn.label };
     });
 
     this.add.text(centerX, 550, LanguageManager.get(this, 'shop_back_to_menu'), {
@@ -133,29 +134,48 @@ export default class ShopScene extends Phaser.Scene {
       fontFamily: 'monospace'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
       SoundManager.play(this, 'click');
-      localStorage.setItem('playerStats', JSON.stringify(this.playerStats));
       this.scene.start('MenuScene');
     });
+  }
 
-    this.events.on('shutdown', () => {
-      localStorage.setItem('playerStats', JSON.stringify(this.playerStats));
-      console.log('[ShopScene] Shutdown: Stats ensured saved to localStorage.');
+  refreshUI() {
+    this.coinsText.setText(LanguageManager.get(this, 'shop_coins', { coins: Math.floor(this.playerStats.coins) }));
+
+    const stats = [
+      () => LanguageManager.get(this, 'shop_stat_damage', { value: this.playerStats.damage }),
+      () => LanguageManager.get(this, 'shop_stat_speed', { value: this.playerStats.speed }),
+      () => LanguageManager.get(this, 'shop_stat_extra_lives', { value: this.playerStats.extraLives }),
+      () => LanguageManager.get(this, 'shop_stat_fire_rate', { value: this.playerStats.fireRate }),
+      () => LanguageManager.get(this, 'shop_stat_bomb_size', { value: this.playerStats.bombSize }),
+      () => LanguageManager.get(this, 'shop_stat_multi_shot', { value: this.playerStats.multiShot })
+    ];
+
+    this.statTexts.forEach((text, i) => {
+        text.setText(stats[i]());
+    });
+
+    this.upgradeButtons.forEach(btn => {
+        btn.button.setText(btn.labelFunc());
     });
   }
 
   initializeStats() {
-    const rawLocalStorageStats = localStorage.getItem('playerStats');
     const defaultStats = {
-      damage: 1,
-      speed: 200,
-      extraLives: 1,
-      fireRate: 600,
-      bombSize: 1,
-      multiShot: 0,
-      coins: 0
+      damage: 1, speed: 200, extraLives: 1,
+      fireRate: 600, bombSize: 1, multiShot: 0, coins: 0
     };
-    const saved = getUpgradesFromLocalStorage();
-    const finalStats = { ...defaultStats, ...(saved || {}) };
+
+    const localStats = JSON.parse(localStorage.getItem('playerStats')) || {};
+    const userFromServer = this.registry.get('loggedInUser') || {};
+
+    // Combine stats: start with defaults, layer locally saved progress,
+    // then overwrite with authoritative data from the server (especially coins).
+    const finalStats = {
+      ...defaultStats,
+      ...localStats,
+      ...userFromServer // Server data (like coins) takes precedence
+    };
+
     return finalStats;
   }
 }

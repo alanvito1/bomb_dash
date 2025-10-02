@@ -2,7 +2,8 @@
 import { backgroundImages } from '../config/background.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
-import { savePlayerStatsToServer, enterWagerMatch } from '../api.js'; // Import for saving stats and entering wager
+import api from '../api.js'; // Import the centralized api client
+import { ethers } from 'ethers'; // Required for Wager Arena contract interaction
 
 // --- Configuração da Wager Arena ---
 // ATENÇÃO: Substitua este endereço pelo endereço do seu contrato WagerArena.sol após o deploy!
@@ -12,12 +13,6 @@ const WAGER_ARENA_ABI = [
     "event WagerMatchCreated(uint256 indexed matchId, uint256 indexed tierId, address player1, address player2, uint256 totalWager)"
 ];
 // ------------------------------------
-
-// Helper to get stats from localStorage, similar to other scenes
-function getPlayerStatsFromLocalStorage() {
-  const stats = localStorage.getItem('playerStats');
-  return stats ? JSON.parse(stats) : null;
-}
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -64,25 +59,26 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createMenu(centerX, centerY, useFallback = false) {
+    // Part 2.3: Menu Structure Change
     const menuItems = [
-      { label: LanguageManager.get(this, 'menu_pvp'), scene: null, action: 'showPvpLobby' },
+      { label: 'SOLO', scene: 'CharacterSelectionScene', action: 'start_solo' },
+      { label: 'PVP', scene: null, action: 'showPvpLobby' },
       { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene', action: null },
-      { label: LanguageManager.get(this, 'menu_stats'), scene: 'StatsScene', action: null },
+      { label: 'PROFILE', scene: 'ProfileScene', action: null },
       { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene', action: null },
-      { label: LanguageManager.get(this, 'menu_settings'), scene: 'ConfigScene', action: null },
       { label: LanguageManager.get(this, 'menu_logout'), scene: 'LoginScene', action: 'logout' }
     ];
 
-    const buttonStartY = centerY - 100;
-    const buttonSpacing = 50;
+    const buttonStartY = centerY - 120;
+    const buttonSpacing = 55;
 
     menuItems.forEach((item, i) => {
       const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
         fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
-        fontSize: '14px',
+        fontSize: '16px',
         fill: item.action === 'logout' ? '#FF6347' : '#00ffff',
         backgroundColor: '#000000cc',
-        padding: { x: 10, y: 8 },
+        padding: { x: 15, y: 10 },
         align: 'center'
       })
         .setOrigin(0.5)
@@ -92,23 +88,13 @@ export default class MenuScene extends Phaser.Scene {
 
           if (item.action === 'showPvpLobby') {
             this.showPvpLobby();
+          } else if (item.action === 'start_solo') {
+            // As per plan 2.1, this will eventually go to CharacterSelectionScene first
+            // For now, it goes directly to GameScene
+            this.scene.start(item.scene);
           } else if (item.action === 'logout') {
-            // Lógica de logout existente
-            const username = localStorage.getItem('loggedInUser') || this.registry.get('loggedInUser')?.username;
-            const token = localStorage.getItem('jwtToken') || this.registry.get('jwtToken');
-            const currentStats = getPlayerStatsFromLocalStorage();
-            if (username && token && currentStats) {
-              try {
-                await savePlayerStatsToServer(username, currentStats, token);
-              } catch (error) {
-                console.error('[MenuScene LOGOUT] Error calling savePlayerStatsToServer:', error);
-              }
-            }
-            localStorage.removeItem('loggedInUser');
-            localStorage.removeItem('jwtToken');
-            localStorage.removeItem('playerStats');
+            api.logout();
             this.registry.remove('loggedInUser');
-            this.registry.remove('jwtToken');
             this.scene.start('AuthChoiceScene');
           } else {
             this.scene.start(item.scene);
@@ -130,7 +116,8 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.play(this, 'click');
         pvpLobby.style.display = 'none';
         this.game.canvas.style.display = 'block';
-        this.scene.start('GameScene'); // Inicia o modo de jogo ranqueado
+        // This button now leads to the Character Selection screen before the game.
+        this.scene.start('CharacterSelectionScene');
       });
 
       document.getElementById('wager-arena-button').addEventListener('click', () => {
@@ -163,13 +150,13 @@ export default class MenuScene extends Phaser.Scene {
         button.addEventListener('click', async () => {
           SoundManager.play(this, 'click');
           const tierId = button.dataset.tierId;
-          const token = localStorage.getItem('jwtToken');
 
           messageEl.textContent = LanguageManager.get(this, 'wager_arena_checking');
           messageEl.style.color = '#ffff00'; // Amarelo para processamento
 
           try {
-            const response = await enterWagerMatch(tierId, token);
+            // 1.1: Use the new centralized API client. No need to pass the token.
+            const response = await api.enterWagerMatch(tierId);
             if (response.success) {
               this.showWagerConfirmation(response.tier);
             } else {
