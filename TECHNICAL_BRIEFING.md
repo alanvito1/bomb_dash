@@ -20,21 +20,23 @@ O projeto é dividido em três camadas principais que trabalham em conjunto:
 ## 2. O Fluxo Completo do Jogador (Jornada do Usuário)
 
 1.  **Login:** O jogador clica em "Login with Wallet". O cliente pede um `nonce` ao backend, o jogador assina uma mensagem com sua carteira (SIWE), e o backend verifica a assinatura, retornando um **Token JWT** que autoriza o jogador a usar a API.
-2.  **Visualização do Perfil:** Com o JWT, o cliente busca os dados do jogador no backend:
-    *   `GET /api/auth/me` -> Traz Nível, XP, HP.
-    *   `GET /api/user/stats` -> Traz estatísticas de jogo (Dano, Vidas Extras, etc.).
-3.  **Entrando em uma Partida PvP (1v1):**
+2.  **Visualização do Inventário de Heróis:** Com o JWT, o cliente acessa a nova tela de "Inventário" (antiga "Perfil"). O endpoint `GET /api/auth/me` agora retorna **todos os dados do jogador** (nível, XP, stats de combate), que são exibidos em um "card de herói".
+3.  **Comprando um Upgrade na Loja:**
+    *   O jogador vai para a `ShopScene`.
+    *   Ao clicar em um upgrade, o cliente solicita a aprovação (via MetaMask) para o contrato `TournamentController` gastar o custo em BCOIN.
+    *   Após a aprovação on-chain, o cliente chama `POST /api/user/stats` para que o backend salve o novo stat do jogador.
+4.  **Entrando em uma Partida PvP (1v1):**
     *   O jogador clica para entrar em uma partida com uma taxa de, por exemplo, 10 BCOIN.
     *   O cliente solicita que o jogador aprove (via MetaMask) o contrato `TournamentController` a gastar 10 BCOIN de sua carteira.
     *   Após a aprovação, o cliente chama o endpoint `POST /api/pvp/match/enter` no backend.
     *   O backend chama a função `enterMatch1v1` no contrato, que transfere os 10 BCOIN e coloca o jogador na fila. Quando outro jogador faz o mesmo, o contrato cria a partida.
-4.  **Fim da Partida:**
+5.  **Fim da Partida:**
     *   O servidor de jogo (lógica interna) determina o vencedor.
     *   O **Oráculo** do backend é notificado. Ele chama a função `reportMatchResult` no contrato `TournamentController`.
     *   O contrato distribui o prêmio (ex: 18 BCOIN) para o vencedor e as taxas (1 BCOIN para a Team Wallet, 1 BCOIN para o `PerpetualRewardPool`).
     *   O Oráculo, em seguida, concede **50 XP** ao vencedor, atualizando o banco de dados.
-5.  **Subindo de Nível (Level Up):**
-    *   Quando o jogador atinge o XP necessário, o botão "Subir de Nível" no cliente fica ativo.
+6.  **Subindo de Nível (Level Up):**
+    *   Quando o jogador atinge o XP necessário, o botão "Subir de Nível" na tela de Inventário fica ativo.
     *   Ao clicar, o cliente primeiro solicita a aprovação (via MetaMask) para o `TournamentController` gastar **1 BCOIN**.
     *   Em seguida, o cliente chama o endpoint `POST /api/user/levelup`.
     *   O backend verifica se o XP é suficiente, chama o Oráculo para executar a transação on-chain (`payLevelUpFee`), e, após a confirmação, atualiza o nível e o HP do jogador no banco de dados.
@@ -44,14 +46,17 @@ O projeto é dividido em três camadas principais que trabalham em conjunto:
 ## 3. Detalhamento dos Sistemas Implementados
 
 #### a) Sistema de Autenticação e Usuário:
-*   **Tecnologia:** Sign-In with Ethereum (SIWE). Sem senhas, apenas assinatura de carteira.
+*   **Tecnologia:** Sign-In with Ethereum (SIWE).
+*   **Herói Padrão (Mock Hero):** Se um jogador faz login pela primeira vez e não possui um Bombcrypto NFT, o backend **automaticamente atribui a ele um herói padrão** com stats pré-definidos, permitindo que ele jogue imediatamente.
+*   **Endpoint de Debug:** Um endpoint de administrador (`POST /api/debug/assign-mock-hero`) foi criado para facilitar testes, permitindo a atribuição manual de um herói mock a qualquer carteira.
 *   **Dados no DB (`users`):** `id`, `wallet_address`, `max_score`, `level`, `xp`, `hp`.
 *   **Dados no DB (`player_stats`):** `damage`, `speed`, `extraLives`, `fireRate`, `bombSize`, `multiShot`, `coins`.
 
 #### b) Sistema de Progressão (RPG):
-*   **Fórmula de XP:** Baseada na fórmula clássica do Tibia, garantindo uma curva de progressão exponencial.
+*   **Fórmula de XP:** Baseada na fórmula clássica do Tibia, garantindo uma curva de progressão exponencial. A lógica foi replicada no frontend em `src/utils/rpg.js` para consistência visual.
+*   **Visualização de XP:** Uma **barra de XP funcional** foi adicionada ao HUD do jogo, mostrando o progresso do jogador para o próximo nível.
 *   **Ganho de XP:** Atualmente, fixado em **50 XP** por vitória em partida PvP.
-*   **Custo de Level Up:** **1 BCOIN**, pago on-chain.
+*   **Custo de Level Up:** **1 BCOIN**. O fluxo de pagamento agora é iniciado pelo cliente: ele solicita a aprovação on-chain da taxa e, após a confirmação, chama o backend para registrar o level up.
 *   **Distribuição da Taxa:** 50% para a `PerpetualRewardPool` (recompensa solo) e 50% para a `TeamWallet`.
 *   **Bônus de Level Up:** Atualmente, o jogador ganha **+10 HP** por nível.
 

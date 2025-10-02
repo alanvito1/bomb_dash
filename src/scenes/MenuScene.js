@@ -5,9 +5,12 @@ import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import { ethers } from 'ethers'; // Required for Wager Arena contract interaction
 
-// --- Configuração da Wager Arena ---
-// ATENÇÃO: Substitua este endereço pelo endereço do seu contrato WagerArena.sol após o deploy!
-const WAGER_ARENA_ADDRESS = "0x0000000000000000000000000000000000000000";
+// --- Contract Configuration ---
+const WAGER_ARENA_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"; // From .env
+const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; // From .env
+const BCOIN_ABI = [
+    "function balanceOf(address owner) view returns (uint256)",
+];
 const WAGER_ARENA_ABI = [
     "function enterWagerQueue(uint256 _tierId)",
     "event WagerMatchCreated(uint256 indexed matchId, uint256 indexed tierId, address player1, address player2, uint256 totalWager)"
@@ -17,6 +20,7 @@ const WAGER_ARENA_ABI = [
 export default class MenuScene extends Phaser.Scene {
   constructor() {
     super('MenuScene');
+    this.bcoinBalanceText = null;
   }
 
   create() {
@@ -35,7 +39,8 @@ export default class MenuScene extends Phaser.Scene {
       this.createMenuContent(centerX, centerY, true);
     }
 
-    this.playMenuMusic(); // 🎵 Garante que a música do menu toque
+    this.playMenuMusic();
+    this.displayBcoinBalance();
   }
 
   createBackground(centerX, centerY) {
@@ -56,6 +61,40 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createMenu(centerX, centerY, useFallback);
+  }
+
+  async displayBcoinBalance() {
+    const textStyle = {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '14px',
+      fill: '#FFD700',
+      align: 'right'
+    };
+    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, 'BCOIN: ...', textStyle).setOrigin(1, 0);
+
+    try {
+      if (!window.ethereum) {
+        this.bcoinBalanceText.setText('BCOIN: Wallet not found');
+        return;
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
+
+      const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, provider);
+
+      const balance = await bcoinContract.balanceOf(userAddress);
+
+      // Format the balance to 8 decimal places.
+      const formattedBalance = parseFloat(ethers.formatUnits(balance, 18)).toFixed(8);
+
+      this.bcoinBalanceText.setText(`BCOIN: ${formattedBalance}`);
+
+    } catch (error) {
+      console.error('Failed to fetch BCOIN balance:', error);
+      this.bcoinBalanceText.setText('BCOIN: Error');
+    }
   }
 
   createMenu(centerX, centerY, useFallback = false) {

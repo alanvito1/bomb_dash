@@ -19,18 +19,18 @@
       },
       "witch": {
         "frames": [
-          "src/assets/Witch Hero/Red/Layer 256.png",
-          "src/assets/Witch Hero/Red/Layer 257.png",
-          "src/assets/Witch Hero/Red/Layer 257.png",
-          "src/assets/Witch Hero/Red/Layer 258.png",
-          "src/assets/Witch Hero/Red/Layer 258.png",
-          "src/assets/Witch Hero/Red/Layer 259.png",
-          "src/assets/Witch Hero/Red/Layer 259.png",
-          "src/assets/Witch Hero/Red/Layer 260.png",
-          "src/assets/Witch Hero/Red/Layer 261.png",
-          "src/assets/Witch Hero/Red/Layer 262.png",
-          "src/assets/Witch Hero/Red/Layer 263.png",
-          "src/assets/Witch Hero/Red/Layer 263.png"
+          "src/assets/Witch Hero/Red/witch_01.png",
+          "src/assets/Witch Hero/Red/witch_02.png",
+          "src/assets/Witch Hero/Red/witch_03.png",
+          "src/assets/Witch Hero/Red/witch_04.png",
+          "src/assets/Witch Hero/Red/witch_05.png",
+          "src/assets/Witch Hero/Red/witch_06.png",
+          "src/assets/Witch Hero/Red/witch_07.png",
+          "src/assets/Witch Hero/Red/witch_08.png",
+          "src/assets/Witch Hero/Red/witch_09.png",
+          "src/assets/Witch Hero/Red/witch_10.png",
+          "src/assets/Witch Hero/Red/witch_11.png",
+          "src/assets/Witch Hero/Red/witch_12.png"
         ]
       },
       "player_default": "src/assets/player.png"
@@ -78,7 +78,7 @@
   },
   "sounds": {
     "music": {
-      "menu": "src/assets/sounds/menu_music.mp3",
+      "menu_music": "src/assets/sounds/menu_music.mp3",
       "world1": "src/assets/sounds/world1_music.mp3",
       "world2": "src/assets/sounds/world2_music.mp3",
       "world3": "src/assets/sounds/world3_music.mp3",

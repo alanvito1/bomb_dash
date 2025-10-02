@@ -15,7 +15,7 @@ function validateEnvVariables() {
         'ORACLE_PRIVATE_KEY',
         'TOURNAMENT_CONTROLLER_ADDRESS',
         'PERPETUAL_REWARD_POOL_ADDRESS',
-        // 'WAGER_ARENA_ADDRESS' // Vamos deixar este comentado por enquanto, pois ainda não o implantamos
+        'WAGER_ARENA_ADDRESS'
     ];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
@@ -138,8 +138,8 @@ app.post('/api/auth/verify', async (req, res) => {
                 user = { id: result.userId, wallet_address: address };
 
             } else {
-                console.log('Nenhum NFT encontrado. Usando estatísticas padrão.');
-                const result = await db.createUserByAddress(address); // Creates user with default stats
+                console.log('Nenhum NFT encontrado. Atribuindo herói mock padrão.');
+                const result = await nft.assignMockHero(address); // Assigns mock hero
                 user = { id: result.userId, wallet_address: address };
             }
         }
@@ -217,6 +217,22 @@ app.post('/api/admin/player/:id', verifyAdmin, async (req, res) => {
     } catch (error) {
         console.error(`Erro ao atualizar jogador ${id}:`, error);
         res.status(500).json({ success: false, message: 'Erro ao atualizar estatísticas do jogador.' });
+    }
+});
+
+// Rota de Debug para atribuir um herói mock a uma carteira
+app.post('/api/debug/assign-mock-hero', verifyAdmin, async (req, res) => {
+    const { walletAddress } = req.body;
+    if (!walletAddress) {
+        return res.status(400).json({ success: false, message: 'O endereço da carteira (walletAddress) é obrigatório.' });
+    }
+
+    try {
+        const result = await nft.assignMockHero(walletAddress);
+        res.json({ success: true, message: 'Herói mock atribuído com sucesso!', data: result });
+    } catch (error) {
+        console.error(`Erro ao atribuir herói mock para ${walletAddress}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao atribuir o herói mock.' });
     }
 });
 

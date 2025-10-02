@@ -1,4 +1,5 @@
 // src/modules/hud.js
+import { getExperienceForLevel } from '../utils/rpg.js';
 
 /**
  * HUD (Heads-Up Display) para a cena do jogo.
@@ -12,8 +13,10 @@ export default class HUD {
         // Elementos da UI
         this.healthBar = null;
         this.manaBar = null;
+        this.xpBar = null;
         this.healthText = null;
         this.manaText = null;
+        this.xpText = null;
 
         this.targetFrame = null;
         this.targetNameText = null;
@@ -77,6 +80,11 @@ export default class HUD {
         this.manaBar = this.scene.add.graphics();
         this.scene.add.text(10, 35, 'MP', { fontSize: '16px', fill: '#ffffff' });
         this.manaText = this.scene.add.text(130, 35, '', { fontSize: '14px', fill: '#ffffff', align: 'center' }).setOrigin(0.5, 0);
+
+        // Barra de XP
+        this.xpBar = this.scene.add.graphics();
+        this.scene.add.text(10, 60, 'XP', { fontSize: '16px', fill: '#ffffff' });
+        this.xpText = this.scene.add.text(130, 60, '', { fontSize: '14px', fill: '#ffffff', align: 'center' }).setOrigin(0.5, 0);
     }
 
     createTargetFrame() {
@@ -144,15 +152,17 @@ export default class HUD {
     }
 
     updateStatusBars(stats) {
-        const maxHP = stats.maxHp || 300; // Valor padrão
+        const maxHP = stats.maxHp || 300;
         const currentHP = stats.hp ?? maxHP;
         this.updateBar(this.healthBar, 50, 12, 150, 18, currentHP / maxHP, 0xff0000);
         this.healthText.setText(`${currentHP} / ${maxHP}`);
 
-        const maxMana = stats.maxMana || 100; // Valor padrão
+        const maxMana = stats.maxMana || 100;
         const currentMana = stats.mana ?? maxMana;
         this.updateBar(this.manaBar, 50, 37, 150, 18, currentMana / maxMana, 0x0000ff);
         this.manaText.setText(`${currentMana} / ${maxMana}`);
+
+        this.updateXpBar(stats);
     }
 
     /**
@@ -166,6 +176,21 @@ export default class HUD {
         // Preenchimento
         graphics.fillStyle(color, 1);
         graphics.fillRect(x + 1, y + 1, (width - 2) * Math.max(0, percentage), height - 2);
+    }
+
+    updateXpBar(stats) {
+        const { level = 1, xp = 0 } = stats;
+
+        const xpForCurrentLevel = getExperienceForLevel(level);
+        const xpForNextLevel = getExperienceForLevel(level + 1);
+
+        const xpInCurrentLevel = xp - xpForCurrentLevel;
+        const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
+
+        const percentage = (xpNeededForLevel > 0) ? (xpInCurrentLevel / xpNeededForLevel) : 1;
+
+        this.updateBar(this.xpBar, 50, 62, 150, 18, percentage, 0xffff00); // Yellow for XP
+        this.xpText.setText(`${xp} / ${xpForNextLevel}`);
     }
 
     // --- Métodos de Controle de Componentes ---

@@ -46,13 +46,23 @@ export default class LoadingScene extends Phaser.Scene {
             for (const categoryKey in assets) {
                 const category = assets[categoryKey];
                 for (const assetKey in category) {
-                    const path = category[assetKey];
-                    // Defensive check: Ensure the path is a valid string before loading
-                    if (typeof path === 'string' && path.length > 0) {
-                        this.load.image(assetKey, path);
-                    } else {
-                        // Log a warning for assets with invalid paths (e.g., objects for animations) and skip them
-                        console.warn(`[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid path. Skipping.`);
+                    const assetData = category[assetKey];
+                    // Handle sprite animations (objects with a 'frames' array)
+                    if (typeof assetData === 'object' && assetData !== null && Array.isArray(assetData.frames)) {
+                        console.log(`[AssetLoader] Enqueuing animation frames for '${assetKey}'...`);
+                        assetData.frames.forEach((framePath, index) => {
+                            // Generate a unique key for each frame to avoid conflicts
+                            const frameKey = `${assetKey}_frame_${index}`;
+                            this.load.image(frameKey, framePath);
+                        });
+                    }
+                    // Handle single images (strings)
+                    else if (typeof assetData === 'string' && assetData.length > 0) {
+                        this.load.image(assetKey, assetData);
+                    }
+                    // Log warning for any other invalid format
+                    else {
+                        console.warn(`[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid format. Skipping.`);
                     }
                 }
             }
