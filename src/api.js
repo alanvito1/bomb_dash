@@ -25,18 +25,19 @@ class ApiClient {
     }
 
     /**
-     * Realiza uma requisição fetch com o token de autenticação.
+     * Realiza uma requisição fetch, adicionando o token de autenticação se necessário.
      * @param {string} endpoint - O endpoint da API (ex: '/auth/me').
      * @param {object} options - As opções da requisição fetch.
+     * @param {boolean} requiresAuth - Se a requisição requer o token JWT.
      * @returns {Promise<any>} A resposta da API em JSON.
      */
-    async fetch(endpoint, options = {}) {
+    async fetch(endpoint, options = {}, requiresAuth = true) {
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers,
         };
 
-        if (this.jwtToken) {
+        if (requiresAuth && this.jwtToken) {
             headers['Authorization'] = `Bearer ${this.jwtToken}`;
         }
 
@@ -69,8 +70,13 @@ class ApiClient {
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
 
-        const { nonce } = await this.fetch('/auth/nonce');
+        // 1. Fetch nonce from the backend (public call)
+        const { nonce } = await this.fetch('/auth/nonce', {}, false);
+        if (!nonce) {
+            throw new Error('Failed to retrieve nonce from the server.');
+        }
 
+        // 2. Create SIWE message on the client side
         const message = new SiweMessage({
             domain: window.location.host,
             address,
@@ -83,10 +89,11 @@ class ApiClient {
 
         const signature = await signer.signMessage(message.prepareMessage());
 
+        // 3. Send message and signature to the backend for verification (public call)
         const verifyData = await this.fetch('/auth/verify', {
             method: 'POST',
             body: JSON.stringify({ message, signature }),
-        });
+        }, false);
 
         if (verifyData.success && verifyData.token) {
             this.setJwtToken(verifyData.token);
