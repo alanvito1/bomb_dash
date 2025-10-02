@@ -5,6 +5,14 @@ import LanguageManager from '../utils/LanguageManager.js';
 export default class CharacterSelectionScene extends Phaser.Scene {
   constructor() {
     super('CharacterSelectionScene');
+    this.gameMode = 'solo'; // Default game mode
+    this.pollingTimer = null;
+    this.countdown = 30;
+  }
+
+  init(data) {
+    this.gameMode = data.gameMode || 'solo';
+    this.countdown = 30; // Reset countdown on init
   }
 
   create() {
@@ -38,6 +46,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     try {
       const response = await api.getHeroes(); // SIF 21.1: Fetch heroes
       if (response.success && response.heroes.length > 0) {
+        this.heroes = response.heroes; // Store heroes for access
         loadingText.destroy();
         this.displayHeroes(response.heroes);
       } else if (response.success && response.heroes.length === 0) {
@@ -95,10 +104,131 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   }
 
   selectHero(heroData) {
-    console.log('Selected Hero:', heroData);
-    // SIF 21.1: Store the selected hero's data in the registry
+    console.log('Selected Hero:', heroData, 'Game Mode:', this.gameMode);
     this.registry.set('selectedHero', heroData);
-    this.scene.start('GameScene');
+
+    if (this.gameMode === 'ranked') {
+      this.startMatchmaking(heroData);
+    } else {
+      // Default behavior: start a solo game
+      this.scene.start('GameScene', { gameMode: 'solo' });
+    }
+  }
+
+  async startMatchmaking(heroData) {
+    try {
+      await api.joinMatchmakingQueue(heroData.id);
+
+      this.launchMatchmakingPopup();
+
+      // Start polling for status updates every 2 seconds
+      this.pollingTimer = this.time.addEvent({
+        delay: 2000,
+        callback: this.pollMatchmakingStatus,
+        callbackScope: this,
+        loop: true
+      });
+
+    } catch (error) {
+      console.error('Failed to join matchmaking queue:', error);
+      // In a real scenario, you'd show an error popup to the user
+    }
+  }
+
+  launchMatchmakingPopup() {
+    const popupMessage = `Searching for Opponent...\nTime remaining: ${this.countdown}s`;
+
+    this.scene.launch('PopupScene', {
+      title: 'Ranked Matchmaking',
+      message: popupMessage,
+      buttons: [{
+        label: 'Cancel',
+        callback: () => {
+          this.stopPolling();
+          api.leaveMatchmakingQueue();
+          this.scene.stop('PopupScene');
+        }
+      }],
+      originScene: this.scene.key
+    });
+  }
+
+  async pollMatchmakingStatus() {
+    this.countdown -= 2; // Decrement by the polling interval
+    const popup = this.scene.get('PopupScene');
+
+    try {
+      const response = await api.getMatchmakingStatus();
+
+      if (response.success) {
+        switch (response.status) {
+          case 'found':
+            this.stopPolling();
+            this.registry.set('opponent', response.match.opponent);
+            popup.updateContent('Match Found!', []);
+            this.time.delayedCall(2000, () => {
+              this.scene.stop('PopupScene');
+              this.scene.start('GameScene', { gameMode: 'ranked' });
+            });
+            break;
+
+          case 'searching':
+            if (this.countdown <= 0) {
+              this.handleTimeout();
+            } else {
+              popup.updateContent(`Searching for Opponent...\nTime remaining: ${this.countdown}s`);
+            }
+            break;
+
+          default: // Not in queue, maybe cancelled
+            this.stopPolling();
+            this.scene.stop('PopupScene');
+            break;
+        }
+      } else {
+        console.error('Polling failed:', response.message);
+        this.stopPolling();
+        popup.updateContent('Error finding match.', [{ label: 'Close', callback: () => popup.close() }]);
+      }
+    } catch (error) {
+      console.error('Error during matchmaking poll:', error);
+      this.stopPolling();
+      if(popup.scene.isActive()){
+          popup.updateContent('Connection Error.', [{ label: 'Close', callback: () => popup.close() }]);
+      }
+    }
+  }
+
+  handleTimeout() {
+    this.stopPolling();
+    const popup = this.scene.get('PopupScene');
+    popup.updateContent('No opponents found in time.', [
+      {
+        label: 'Keep Searching',
+        callback: () => {
+          this.countdown = 30; // Reset timer
+          this.startMatchmaking(this.registry.get('selectedHero'));
+        }
+      },
+      {
+        label: 'Play Training',
+        callback: () => {
+          this.scene.stop('PopupScene');
+          this.scene.start('GameScene', { gameMode: 'solo' });
+        }
+      }
+    ]);
+  }
+
+  stopPolling() {
+    if (this.pollingTimer) {
+      this.pollingTimer.remove(false);
+      this.pollingTimer = null;
+    }
+  }
+
+  shutdown() {
+    this.stopPolling();
   }
 
   createBackButton(centerX, y) {

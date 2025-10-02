@@ -37,6 +37,7 @@ const oracle = require('./oracle.js');
 const tournamentService = require('./tournament_service.js');
 const admin = require('./admin.js'); // Importar o módulo admin
 const gameState = require('./game_state.js'); // Importar o módulo de estado do jogo
+const matchmaking = require('./matchmaking.js'); // Importar o módulo de matchmaking
 
 const app = express();
 
@@ -497,6 +498,45 @@ app.get('/api/game/settings', async (req, res) => {
 });
 
 
+// =================================================================
+// ROTAS DE MATCHMAKING
+// =================================================================
+
+app.post('/api/matchmaking/join', verifyToken, async (req, res) => {
+    const { heroId } = req.body;
+    if (!heroId) {
+        return res.status(400).json({ success: false, message: 'O ID do herói (heroId) é obrigatório.' });
+    }
+    try {
+        const result = await matchmaking.joinQueue(req.user.userId, heroId);
+        res.json(result);
+    } catch (error) {
+        console.error(`Erro ao adicionar usuário ${req.user.userId} à fila:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao entrar na fila.' });
+    }
+});
+
+app.post('/api/matchmaking/leave', verifyToken, async (req, res) => {
+    try {
+        const result = await matchmaking.leaveQueue(req.user.userId);
+        res.json(result);
+    } catch (error) {
+        console.error(`Erro ao remover usuário ${req.user.userId} da fila:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao sair da fila.' });
+    }
+});
+
+app.get('/api/matchmaking/status', verifyToken, async (req, res) => {
+    try {
+        const result = await matchmaking.getQueueStatus(req.user.userId);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        console.error(`Erro ao obter status da fila para o usuário ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao obter status da fila.' });
+    }
+});
+
+
 async function startServer() {
     console.log("=============================================");
     console.log("     INICIALIZANDO O SERVIDOR DO JOGO      ");
@@ -524,7 +564,11 @@ async function startServer() {
         await gameState.startPvpCycleCron();
         console.log("[OK] Cron jobs (Ciclo de PvP, etc.) foram iniciados.");
 
-        // 4. Iniciar o Servidor Express
+        // 4. Iniciar o processador da fila de Matchmaking
+        setInterval(matchmaking.processQueue, 5000); // Processa a cada 5 segundos
+        console.log("[OK] Processador da fila de matchmaking iniciado.");
+
+        // 5. Iniciar o Servidor Express
         app.listen(PORT, () => {
             console.log("---------------------------------------------");
             console.log(`[OK] Servidor HTTP iniciado e escutando na porta ${PORT}.`);

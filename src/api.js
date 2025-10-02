@@ -208,6 +208,25 @@ class ApiClient {
             body: JSON.stringify({ stats }),
         });
     }
+
+    // --- Matchmaking Methods ---
+
+    async joinMatchmakingQueue(heroId) {
+        return this.fetch('/matchmaking/join', {
+            method: 'POST',
+            body: JSON.stringify({ heroId }),
+        });
+    }
+
+    async leaveMatchmakingQueue() {
+        return this.fetch('/matchmaking/leave', {
+            method: 'POST',
+        });
+    }
+
+    async getMatchmakingStatus() {
+        return this.fetch('/matchmaking/status');
+    }
 }
 
 // Exporta uma instância única do cliente

@@ -156,7 +156,26 @@ async function initDb() {
                                 db.close(); db = null; return reject(err);
                             }
                             console.log("Player_checkpoints table initialized or already exists.");
-                            resolve(db);
+
+                            const createMatchmakingQueueTableSQL = `
+                                CREATE TABLE IF NOT EXISTS matchmaking_queue (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    user_id INTEGER NOT NULL UNIQUE,
+                                    hero_id INTEGER NOT NULL,
+                                    entry_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    status TEXT NOT NULL DEFAULT 'searching',
+                                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                    FOREIGN KEY (hero_id) REFERENCES heroes(id) ON DELETE CASCADE
+                                );
+                            `;
+                            db.run(createMatchmakingQueueTableSQL, (err) => {
+                                if (err) {
+                                    console.error('Error creating matchmaking_queue table', err.message);
+                                    db.close(); db = null; return reject(err);
+                                }
+                                console.log("Matchmaking_queue table initialized or already exists.");
+                                resolve(db);
+                            });
                         });
                     });
                     });
@@ -552,6 +571,58 @@ async function updateHeroStats(heroId, stats) {
 }
 
 
+async function addToMatchmakingQueue(userId, heroId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        // Using INSERT OR IGNORE to prevent errors on duplicate user_id,
+        // which is UNIQUE. We'll then update to ensure the hero_id and time are fresh.
+        const sql = `
+            INSERT INTO matchmaking_queue (user_id, hero_id, entry_time, status)
+            VALUES (?, ?, CURRENT_TIMESTAMP, 'searching')
+            ON CONFLICT(user_id) DO UPDATE SET
+                hero_id = excluded.hero_id,
+                entry_time = excluded.entry_time,
+                status = excluded.status;
+        `;
+        db.run(sql, [userId, heroId], function(err) {
+            if (err) {
+                console.error(`Error adding/updating user ${userId} in queue:`, err.message);
+                return reject(err);
+            }
+            // Since we use INSERT OR REPLACE, we need to get the ID of the inserted/updated row
+            db.get("SELECT id FROM matchmaking_queue WHERE user_id = ?", [userId], (err, row) => {
+                if (err) return reject(err);
+                resolve({ success: true, id: row ? row.id : null });
+            });
+        });
+    });
+}
+
+async function removeFromMatchmakingQueue(userId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const sql = "DELETE FROM matchmaking_queue WHERE user_id = ?";
+        db.run(sql, [userId], function(err) {
+            if (err) {
+                console.error(`Error removing user ${userId} from queue:`, err.message);
+                return reject(err);
+            }
+            resolve({ success: true, changes: this.changes });
+        });
+    });
+}
+
+async function getMatchmakingQueueUser(userId) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT * FROM matchmaking_queue WHERE user_id = ?";
+        db.get(sql, [userId], (err, row) => {
+            if (err) return reject(err);
+            resolve(row);
+        });
+    });
+}
+
 module.exports = {
     initDb,
     createUserByAddress,
@@ -575,7 +646,11 @@ module.exports = {
     // Funções de Herói
     createHeroForUser,
     getHeroesByUserId,
-    updateHeroStats
+    updateHeroStats,
+    // Matchmaking
+    addToMatchmakingQueue,
+    removeFromMatchmakingQueue,
+    getMatchmakingQueueUser
 };
 
 async function getTop10Ranking() {
