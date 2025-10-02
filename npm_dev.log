@@ -1,0 +1,31 @@
+
+> app@1.0.0 dev
+> vite
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  VITE v5.4.20  ready in 312 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+Error:   Failed to scan for dependencies from entries:
+  /app/admin.html
+/app/index.html
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mInvalid assignment target[0m
+
+    src/scenes/GameScene.js:181:4:
+[37m      181 │     [32m[37mthis.bombTimer?.paused = true;
+          ╵     [32m^[0m
+
+
+    at failureErrorWithLog (/app/node_modules/esbuild/lib/main.js:1472:15)
+    at /app/node_modules/esbuild/lib/main.js:945:25
+    at runOnEndCallbacks (/app/node_modules/esbuild/lib/main.js:1315:45)
+    at buildResponseToResult (/app/node_modules/esbuild/lib/main.js:943:7)
+    at /app/node_modules/esbuild/lib/main.js:955:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (/app/node_modules/esbuild/lib/main.js:954:54)
+    at handleRequest (/app/node_modules/esbuild/lib/main.js:647:17)
+    at handleIncomingPacket (/app/node_modules/esbuild/lib/main.js:672:7)
+    at Socket.readFromStdout (/app/node_modules/esbuild/lib/main.js:600:7)
