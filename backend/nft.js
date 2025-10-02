@@ -62,37 +62,48 @@ async function getNftsForPlayer(playerAddress) {
 
 // --- Mock Hero Functionality for MVP ---
 
-const MOCK_HERO_STATS = {
-    damage: 5,
-    speed: 220,
-    hp: 500,
-    maxHp: 500,
-    extraLives: 1,
-    fireRate: 500,
-    bombSize: 1.2,
-    multiShot: 1,
-    coins: 10000
-};
+const MOCK_HEROES = [
+    {
+        // Ninja Mock
+        hero_type: 'mock',
+        damage: 4,
+        speed: 240,
+        hp: 450,
+        maxHp: 450,
+        fireRate: 450,
+        bombSize: 1.1,
+        // Visual identifier for the frontend
+        asset_key: 'ninja_hero',
+    },
+    {
+        // Witch Mock
+        hero_type: 'mock',
+        damage: 6,
+        speed: 210,
+        hp: 400,
+        maxHp: 400,
+        fireRate: 550,
+        bombSize: 1.3,
+        asset_key: 'witch_hero',
+    }
+];
 
 /**
- * Assigns a default "mock" hero to a wallet address for testing purposes.
- * If the user exists, it updates their stats. If not, it creates a new user.
- * @param {string} walletAddress The wallet address to assign the mock hero to.
- * @returns {Promise<{userId: number, status: string}>} The result of the operation.
+ * Creates the default set of mock heroes for a new user.
+ * @param {number} userId The ID of the user for whom to create the heroes.
+ * @returns {Promise<{success: boolean, count: number}>} The result of the operation.
  */
-async function assignMockHero(walletAddress) {
-    console.log(`Attempting to assign mock hero to wallet: ${walletAddress}`);
-
-    let user = await db.findUserByAddress(walletAddress);
-
-    if (user) {
-        console.log(`User found (ID: ${user.id}). Updating stats to mock hero stats.`);
-        await db.updatePlayerStats(user.id, MOCK_HERO_STATS);
-        return { userId: user.id, status: 'updated' };
-    } else {
-        console.log(`No user found for address. Creating a new user with mock hero stats.`);
-        const newUserResult = await db.createUserByAddress(walletAddress, MOCK_HERO_STATS);
-        return { userId: newUserResult.userId, status: 'created' };
+async function assignMockHeroes(userId) {
+    console.log(`Assigning default mock heroes to user ID: ${userId}`);
+    try {
+        for (const heroData of MOCK_HEROES) {
+            await db.createHeroForUser(userId, heroData);
+        }
+        console.log(`Successfully created ${MOCK_HEROES.length} mock heroes for user ID: ${userId}.`);
+        return { success: true, count: MOCK_HEROES.length };
+    } catch (error) {
+        console.error(`Failed to assign mock heroes to user ID ${userId}:`, error);
+        throw error; // Re-throw the error to be handled by the caller
     }
 }
 
@@ -100,7 +111,7 @@ async function assignMockHero(walletAddress) {
 module.exports = {
     getNftsForPlayer,
     decodeHeroDetails,
-    assignMockHero, // Export the new function
+    assignMockHeroes, // Export the new function
     NFT_ABI,
     _nftContractForTest: nftContract, // Export for testing purposes
 };
