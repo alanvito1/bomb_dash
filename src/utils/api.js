@@ -84,3 +84,17 @@ export async function getCurrentUser() {
 
     return await res.json();
 }
+
+/**
+ * Fetches the top player ranking data from the backend.
+ * @returns {Promise<Array>} An array of player ranking objects.
+ */
+export async function getRanking() {
+    const res = await fetch(`${backendUrl}/api/ranking`);
+    if (!res.ok) {
+        console.error("Failed to fetch ranking data.");
+        return []; // Return an empty array on error
+    }
+    const data = await res.json();
+    return data.ranking || []; // Return the ranking array or an empty one
+}
