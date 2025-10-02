@@ -57,6 +57,10 @@ const config = {
 // Esperar o DOM estar completamente carregado antes de iniciar o jogo Phaser
 window.addEventListener('DOMContentLoaded', () => {
   console.log("DOM completamente carregado e processado. Iniciando Phaser...");
+
+  // Set up wallet event listeners as the app starts
+  setupWalletListeners();
+
   // 🚀 Criação da instância do jogo
   const game = new Phaser.Game(config);
 
@@ -66,3 +70,22 @@ window.addEventListener('DOMContentLoaded', () => {
     console.error("Detalhes do Erro:", msg, "Arquivo:", url, "Linha:", lineNo, "Coluna:", columnNo, "Erro Obj:", error);
   };
 });
+
+/**
+ * Sets up listeners for critical wallet events like account or network changes.
+ * To ensure the application state stays synchronized with the user's wallet,
+ * the page is reloaded upon detection of these events.
+ */
+function setupWalletListeners() {
+    if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+            console.log('Account changed, reloading page...');
+            window.location.reload();
+        });
+
+        window.ethereum.on('chainChanged', (chainId) => {
+            console.log('Network changed, reloading page...');
+            window.location.reload();
+        });
+    }
+}

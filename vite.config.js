@@ -6,11 +6,7 @@ export default defineConfig({
   plugins: [
     nodePolyfills()
   ],
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis'
-      }
-    }
+  define: {
+    global: 'globalThis'
   }
 });
