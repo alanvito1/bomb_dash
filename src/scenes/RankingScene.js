@@ -1,4 +1,4 @@
-import { getRanking } from '../utils/api.js';
+import api from '../api.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 
@@ -42,7 +42,7 @@ export default class RankingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     try {
-        const rankingData = await getRanking();
+        const rankingData = await api.getRanking();
         loadingText.destroy();
 
         if (rankingData && rankingData.length > 0) {
