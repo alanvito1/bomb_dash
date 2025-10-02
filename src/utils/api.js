@@ -15,10 +15,13 @@ export async function web3Login() {
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
+
+    // This single call will handle both prompting the user to connect (if not already connected)
+    // and getting the signer object for the connected account. It's more robust.
     const signer = await provider.getSigner();
     const address = await signer.getAddress();
 
-    // 1. Get a unique message (nonce) from the backend
+    // 1. Get nonce from the backend
     const nonceRes = await fetch(`${backendUrl}/api/auth/nonce`);
     const { nonce } = await nonceRes.json();
     if (!nonce) {
@@ -32,18 +35,16 @@ export async function web3Login() {
         statement: 'Sign in to Bomb Dash Web3',
         uri: window.location.origin,
         version: '1',
-        chainId: '97', // BSC Testnet Chain ID
+        chainId: 97, // BSC Testnet Chain ID
         nonce: nonce,
     });
 
     const signature = await signer.signMessage(message.prepareMessage());
 
-    // 3. Send the signature to the backend for verification
+    // 3. Verify signature with the backend
     const verifyRes = await fetch(`${backendUrl}/api/auth/verify`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, signature }),
     });
 
@@ -53,7 +54,7 @@ export async function web3Login() {
 
     const { token } = await verifyRes.json();
 
-    // 4. Store the JWT token for future API calls
+    // 4. Store JWT token
     localStorage.setItem('jwt_token', token);
 
     console.log('Login successful!');
