@@ -5,6 +5,8 @@ import { SiweMessage } from 'siwe';
 
 const backendUrl = 'http://localhost:3000'; // The address of your local backend server
 
+const replacer = (key, value) => (typeof value === 'bigint' ? value.toString() : value);
+
 /**
  * Handles the complete Sign-In with Ethereum (SIWE) flow.
  * @returns {Promise<boolean>} True if login was successful, false otherwise.
@@ -45,7 +47,7 @@ export async function web3Login() {
     const verifyRes = await fetch(`${backendUrl}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, signature }),
+        body: JSON.stringify({ message, signature }, replacer),
     });
 
     if (!verifyRes.ok) {
