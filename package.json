@@ -29,17 +29,18 @@
   "homepage": "https://github.com/alanvito1/bomb_dash#readme",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "buffer": "^6.0.3",
     "dotenv": "^17.2.3",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^8.10.2",
     "eslint-plugin-prettier": "^4.2.5",
     "hardhat": "^2.22.6",
     "prettier": "^2.8.8",
+    "process": "^0.11.10",
     "vite": "^5.2.0",
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
-    "buffer": "^6.0.3",
     "ethers": "^6.15.0",
     "siwe": "^3.0.0"
   }
