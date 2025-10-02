@@ -39,6 +39,16 @@ const admin = require('./admin.js'); // Importar o módulo admin
 const gameState = require('./game_state.js'); // Importar o módulo de estado do jogo
 
 const app = express();
+
+// Defina um "replacer" global para o JSON.stringify que o Express usa
+// Isso converte BigInts para strings, evitando o erro "TypeError: Do not know how to serialize a BigInt".
+app.set('json replacer', (key, value) => {
+    if (typeof value === 'bigint') {
+        return value.toString();
+    }
+    return value;
+});
+
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-web3';
 
