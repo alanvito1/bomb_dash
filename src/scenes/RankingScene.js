@@ -1,4 +1,4 @@
-import { getRanking } from '../api.js';
+import { getRanking } from '../utils/api.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 
