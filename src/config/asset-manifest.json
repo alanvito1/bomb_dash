@@ -20,16 +20,16 @@
       "witch": {
         "frames": [
           "src/assets/Witch Hero/Red/Layer 256.png",
-          "src/assets/Witch Hero/Red/Layer 257 copy.png",
           "src/assets/Witch Hero/Red/Layer 257.png",
-          "src/assets/Witch Hero/Red/Layer 258 copy.png",
+          "src/assets/Witch Hero/Red/Layer 257.png",
           "src/assets/Witch Hero/Red/Layer 258.png",
-          "src/assets/Witch Hero/Red/Layer 259 copy.png",
+          "src/assets/Witch Hero/Red/Layer 258.png",
+          "src/assets/Witch Hero/Red/Layer 259.png",
           "src/assets/Witch Hero/Red/Layer 259.png",
           "src/assets/Witch Hero/Red/Layer 260.png",
           "src/assets/Witch Hero/Red/Layer 261.png",
           "src/assets/Witch Hero/Red/Layer 262.png",
-          "src/assets/Witch Hero/Red/Layer 263 copy.png",
+          "src/assets/Witch Hero/Red/Layer 263.png",
           "src/assets/Witch Hero/Red/Layer 263.png"
         ]
       },
@@ -43,10 +43,10 @@
       "enemy5": "src/assets/enemy5.png"
     },
     "bosses": {
-      "robot": "src/assets/Boss and Creeps/Boss/Robot/robot_front-(1).png",
-      "boss_tank": "src/assets/Boss and Creeps/Boss/boss_tank/down (1).png",
-      "golzilla": "src/assets/Boss and Creeps/Boss/golzilla/golzilla_small_front (1).png",
-      "soldier": "src/assets/Boss and Creeps/Boss/soldier/soldier (1).png",
+      "robot": "src/assets/Boss and Creeps/Boss/Robot/robot_front.png",
+      "boss_tank": "src/assets/Boss and Creeps/Boss/boss_tank/down.png",
+      "golzilla": "src/assets/Boss and Creeps/Boss/golzilla/golzilla_small_front.png",
+      "soldier": "src/assets/Boss and Creeps/Boss/soldier/soldier.png",
       "boss5": "src/assets/boss5.png"
     },
     "powerups": {

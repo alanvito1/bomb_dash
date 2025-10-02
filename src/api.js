@@ -176,6 +176,26 @@ class ApiClient {
         });
     }
 
+    // --- Métodos de Status do Jogo ---
+
+    /**
+     * Busca o status atual do PvP e o tempo para a próxima mudança.
+     * @returns {Promise<object>} Ex: { pvpEnabled: true, nextChangeIn: 3600 }
+     */
+    async getPvpStatus() {
+        // Este endpoint não deve exigir autenticação para que todos possam ver o status
+        return this.fetch('/game/pvp-status', {}, false);
+    }
+
+    /**
+     * Busca a lista de buffs globais ativos.
+     * @returns {Promise<Array<object>>} Ex: [{ id: 'sunday_bonus', name: 'XP em Dobro', duration: 86400 }]
+     */
+    async getGlobalBuffs() {
+        // Este endpoint também deve ser público
+        return this.fetch('/game/global-buffs', {}, false);
+    }
+
     async savePlayerStats(stats) {
         return this.fetch('/user/stats', {
             method: 'POST',
