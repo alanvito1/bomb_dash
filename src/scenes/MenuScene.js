@@ -150,8 +150,8 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.play(this, 'click');
         pvpLobby.style.display = 'none';
         this.game.canvas.style.display = 'block';
-        // This button now leads to the Character Selection screen before the game.
-        this.scene.start('CharacterSelectionScene');
+        // Pass a parameter to indicate the game mode
+        this.scene.start('CharacterSelectionScene', { gameMode: 'ranked' });
       });
 
       document.getElementById('wager-arena-button').addEventListener('click', () => {

@@ -5,5 +5,6 @@
     "levelUpCost": 100,
     "monsterScaleFactor": 1.2,
     "pvpWinXp": 50,
-    "monsterXp": 10
+    "monsterXp": 10,
+    "matchmakingLevelRange": 5
 }
