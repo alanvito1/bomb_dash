@@ -178,7 +178,9 @@ export default class GameScene extends Phaser.Scene {
     if (this.gamePaused || this.transitioning) return;
     this.gamePaused = true;
     this.player?.setActive(false);
-    this.bombTimer?.paused = true;
+    if (this.bombTimer) {
+      this.bombTimer.paused = true;
+    }
     this.gameStatusTimer?.destroy(); // Para o timer de atualização do status
 
     SoundManager.stopAll(this);

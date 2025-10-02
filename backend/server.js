@@ -27,6 +27,7 @@ function validateEnvVariables() {
 }
 
 // Validar as variáveis de ambiente na inicialização
+validateEnvVariables();
 const jwt = require('jsonwebtoken');
 const { SiweMessage } = require('siwe');
 const { randomBytes } = require('crypto');
@@ -491,10 +492,6 @@ async function startServer() {
     console.log("=============================================");
 
     try {
-        // 0. Validar as variáveis de ambiente
-        validateEnvVariables();
-        console.log("[OK] Variáveis de ambiente validadas.");
-
         // 1. Inicializar o Banco de Dados
         await db.initDb();
         console.log("[OK] Conexão com o banco de dados estabelecida com sucesso.");
