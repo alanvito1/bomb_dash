@@ -1,4 +1,5 @@
 const { ethers } = require('ethers');
+const db = require('./database.js'); // Import the database module
 
 // The proxy address for the Bombcrypto NFT contract (BHERO)
 const NFT_CONTRACT_ADDRESS = "0x30cc0553f6fa1faf6d7847891b9b36eb559dc618";
@@ -59,9 +60,47 @@ async function getNftsForPlayer(playerAddress) {
     }
 }
 
+// --- Mock Hero Functionality for MVP ---
+
+const MOCK_HERO_STATS = {
+    damage: 5,
+    speed: 220,
+    hp: 500,
+    maxHp: 500,
+    extraLives: 1,
+    fireRate: 500,
+    bombSize: 1.2,
+    multiShot: 1,
+    coins: 10000
+};
+
+/**
+ * Assigns a default "mock" hero to a wallet address for testing purposes.
+ * If the user exists, it updates their stats. If not, it creates a new user.
+ * @param {string} walletAddress The wallet address to assign the mock hero to.
+ * @returns {Promise<{userId: number, status: string}>} The result of the operation.
+ */
+async function assignMockHero(walletAddress) {
+    console.log(`Attempting to assign mock hero to wallet: ${walletAddress}`);
+
+    let user = await db.findUserByAddress(walletAddress);
+
+    if (user) {
+        console.log(`User found (ID: ${user.id}). Updating stats to mock hero stats.`);
+        await db.updatePlayerStats(user.id, MOCK_HERO_STATS);
+        return { userId: user.id, status: 'updated' };
+    } else {
+        console.log(`No user found for address. Creating a new user with mock hero stats.`);
+        const newUserResult = await db.createUserByAddress(walletAddress, MOCK_HERO_STATS);
+        return { userId: newUserResult.userId, status: 'created' };
+    }
+}
+
+
 module.exports = {
     getNftsForPlayer,
     decodeHeroDetails,
+    assignMockHero, // Export the new function
     NFT_ABI,
     _nftContractForTest: nftContract, // Export for testing purposes
 };

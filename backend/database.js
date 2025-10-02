@@ -311,13 +311,19 @@ async function getUserByAddress(address) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
         const querySQL = `
-            SELECT u.id, u.wallet_address, u.level, u.xp, ps.coins
+            SELECT
+                u.id, u.wallet_address, u.level, u.xp, u.hp,
+                ps.damage, ps.speed, ps.extraLives, ps.fireRate, ps.bombSize, ps.multiShot, ps.coins
             FROM users u
-            JOIN player_stats ps ON u.id = ps.user_id
+            LEFT JOIN player_stats ps ON u.id = ps.user_id
             WHERE u.wallet_address = ?;
         `;
         db.get(querySQL, [address], (err, row) => {
             if (err) return reject(err);
+            // Add maxHp for consistency, assuming it's the same as hp from db
+            if (row) {
+                row.maxHp = row.hp;
+            }
             resolve(row);
         });
     });

@@ -82,10 +82,10 @@ Com o arquivo `.env` configurado e sua carteira com `tBNB`, você pode implantar
 Execute o seguinte comando na raiz do projeto:
 
 ```bash
-npx hardhat run scripts/deploy.ts --network bscTestnet
+npx hardhat run scripts/deploy.js --network bscTestnet
 ```
 
-Após a execução, o script irá imprimir os endereços dos contratos implantados. **Copie esses endereços e cole-os nas variáveis correspondentes no seu arquivo `.env`**.
+Após a execução, o script irá imprimir os endereços dos contratos implantados e **atualizará automaticamente o seu arquivo `.env`** com todos os endereços necessários. Não é necessário copiar e colar manualmente.
 
 ## 4. Executando o Servidor Backend
 

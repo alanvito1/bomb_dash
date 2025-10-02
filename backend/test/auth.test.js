@@ -63,7 +63,7 @@ describe('Auth and NFT Selection Flow', () => {
 
         const user = await db.findUserByAddress(wallet.address);
         const stats = await db.getPlayerStats(user.id);
-        expect(stats.damage).to.equal(1); // Default damage
+        expect(stats.damage).to.equal(5); // Now expects damage from MOCK_HERO_STATS
     });
 
     it('should create a user with the strongest NFT stats if NFTs are found', async () => {

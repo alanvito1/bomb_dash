@@ -11,13 +11,14 @@ O objetivo final é criar um jogo com longevidade de décadas, atraindo a liquid
 Do ponto de vista do jogador, a experiência será a seguinte:
 
 - **Login Moderno:** Em vez de um PIN, o jogador se conectará ao jogo de forma segura usando sua carteira digital (MetaMask).
-- **Seus Heróis, Suas Batalhas:** Os personagens do jogo serão os NFTs do Bombcrypto que o jogador já possui em sua carteira. O jogo os reconhecerá automaticamente, junto com seus stats base.
+- **Seus Heróis, Suas Batalhas:** Os personagens do jogo serão os NFTs do Bombcrypto que o jogador já possui em sua carteira. Para garantir que novos jogadores possam entrar na ação imediatamente, **aqueles sem um NFT receberão um herói padrão** para usar no jogo.
+- **Inventário de Heróis:** O jogador poderá visualizar seus heróis e estatísticas em uma tela de "Inventário", que substitui a antiga tela de perfil.
 - **Arena Competitiva (PVP):** O jogador poderá usar seus heróis para competir em três modos principais:
   - **Partidas 1v1:** Um modo rápido onde dois jogadores pagam uma taxa de entrada (ex: 10 BCOIN cada) e o vencedor leva o prêmio total, menos uma pequena taxa.
   - **Torneios de 4 Jogadores:** Competições rápidas em formato de mata-mata.
   - **Torneios de 8 Jogadores:** Eventos maiores com prêmios mais significativos para os melhores colocados.
 - **Modo Solo Recompensado:** O modo de jogo clássico (single-player) continuará existindo, mas com uma grande novidade: jogar bem renderá frações de BCOIN como recompensa, extraídas de uma pool comunitária.
-- **Evolução e Estratégia:** Os jogadores poderão usar BCOIN para comprar upgrades permanentes nos stats de seus heróis NFT, tornando-os mais fortes para as batalhas.
+- **Evolução e Estratégia:** O sistema de upgrades está funcional. Os jogadores podem usar BCOIN para comprar melhorias permanentes nos stats de seus heróis, com as transações sendo aprovadas on-chain para maior segurança.
 
 ## 3. O Coração do Sistema: A Arquitetura e a Economia
 
@@ -56,13 +57,14 @@ The ultimate goal is to create a game with decades-long longevity, attracting th
 From the player's point of view, the experience will be as follows:
 
 - **Modern Login:** Instead of a PIN, the player will securely connect to the game using their digital wallet (MetaMask).
-- **Your Heroes, Your Battles:** The game characters will be the Bombcrypto NFTs that the player already owns in their wallet. The game will automatically recognize them, along with their base stats.
+- **Your Heroes, Your Battles:** The game characters will be the Bombcrypto NFTs that the player already owns in their wallet. To ensure new players can jump into the action immediately, **those without an NFT will receive a default hero** to use in the game.
+- **Hero Inventory:** Players can view their heroes and stats on a "Hero Inventory" screen, which replaces the old profile screen.
 - **Competitive Arena (PVP):** The player can use their heroes to compete in three main modes:
   - **1v1 Matches:** A quick mode where two players pay an entry fee (e.g., 10 BCOIN each), and the winner takes the total prize, minus a small fee.
   - **4-Player Tournaments:** Fast-paced single-elimination competitions.
   - **8-Player Tournaments:** Larger events with more significant prizes for the top-placed players.
 - **Rewarded Solo Mode:** The classic single-player mode will continue to exist, but with a major new feature: playing well will earn fractions of BCOIN as rewards, drawn from a community pool.
-- **Evolution and Strategy:** Players can use BCOIN to purchase permanent stat upgrades for their NFT heroes, making them stronger for battles.
+- **Evolution and Strategy:** The upgrade system is now functional. Players can use BCOIN to purchase permanent stat improvements for their heroes, with transactions being approved on-chain for enhanced security.
 
 ## 3. The Heart of the System: Architecture and Economy
 

@@ -10,16 +10,6 @@ import PowerupLogic from '../modules/PowerupLogic.js';
 import { createUIButtons } from '../modules/UIMenuButtons.js';
 import SoundManager from '../utils/sound.js';
 
-// Helper functions for localStorage
-function getPlayerStatsFromLocalStorage() {
-  const stats = localStorage.getItem('playerStats');
-  return stats ? JSON.parse(stats) : null;
-}
-
-function savePlayerStatsToLocalStorage(stats) {
-  localStorage.setItem('playerStats', JSON.stringify(stats));
-}
-
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
@@ -48,7 +38,6 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.json('assetManifest', 'src/config/asset-manifest.json');
-    // Assets para os ícones de PvP e buffs serão criados programaticamente no HUD
   }
 
   create() {
@@ -85,11 +74,9 @@ export default class GameScene extends Phaser.Scene {
     this.gamePaused = false;
 
     // Combina os stats do jogador
-    const localStats = getPlayerStatsFromLocalStorage();
     const selectedCharacterStats = this.registry.get('selectedCharacterStats');
     this.playerStats = {
       ...this.DEFAULT_STATS,
-      ...(localStats || {}),
       ...(selectedCharacterStats || {}),
     };
     const loggedInUser = this.registry.get('loggedInUser');
@@ -188,10 +175,8 @@ export default class GameScene extends Phaser.Scene {
     this.hud.addChatMessage('GAME OVER', '#ff0000');
 
     this.coinsEarned = Math.floor(this.score / 10);
-    // Lógica de salvar score e stats (sem alterações)
-    // ... (código existente omitido por brevidade)
 
-    this.scene.start('GameOverScene', { /* ... dados ... */ });
+    this.scene.start('GameOverScene', { score: this.score, level: this.level, coins: this.coinsEarned });
   }
 
   update() {

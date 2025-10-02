@@ -46,17 +46,7 @@ export default class RankingScene extends Phaser.Scene {
         loadingText.destroy();
 
         if (rankingData && rankingData.length > 0) {
-            let yPos = centerY - 180;
-            rankingData.forEach((player, index) => {
-                const rankText = LanguageManager.get(this, 'ranking_entry', { rank: index + 1, username: player.username, score: player.score });
-                this.add.text(centerX, yPos, rankText, {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '14px',
-                    fill: '#ffffff',
-                    align: 'center'
-                }).setOrigin(0.5);
-                yPos += 30;
-            });
+                this.createRankingTable(centerX, centerY - 180, rankingData);
         } else if (rankingData && rankingData.length === 0) {
             this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_empty'), {
                 fontFamily: '"Press Start 2P"',
@@ -82,5 +72,38 @@ export default class RankingScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
     }
+  }
+
+  createRankingTable(x, startY, rankingData) {
+    const headerStyle = { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#FFD700' };
+    const rowStyle = { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ffffff' };
+    const columnWidths = { rank: 80, player: 200, score: 100 };
+    const rankX = x - 150;
+    const playerX = x - 50;
+    const scoreX = x + 150;
+
+    // Add Headers
+    this.add.text(rankX, startY, 'Rank', headerStyle).setOrigin(0.5);
+    this.add.text(playerX, startY, 'Player', headerStyle).setOrigin(0.5);
+    this.add.text(scoreX, startY, 'Score', headerStyle).setOrigin(0.5);
+
+    // Add Player Rows
+    let yPos = startY + 40;
+    rankingData.forEach((player, index) => {
+        const rank = (index + 1).toString();
+        const playerName = this.truncateAddress(player.username);
+        const score = player.score.toString();
+
+        this.add.text(rankX, yPos, rank, rowStyle).setOrigin(0.5);
+        this.add.text(playerX, yPos, playerName, rowStyle).setOrigin(0.5);
+        this.add.text(scoreX, yPos, score, rowStyle).setOrigin(0.5);
+
+        yPos += 30;
+    });
+  }
+
+  truncateAddress(address) {
+      if (address.length <= 10) return address;
+      return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   }
 }

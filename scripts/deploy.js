@@ -95,6 +95,16 @@ async function main() {
     const perpetualRewardPoolAddress = await perpetualRewardPool.getAddress();
     console.log("PerpetualRewardPool deployed to:", perpetualRewardPoolAddress);
 
+    // 4.5. Deploy WagerArena
+    const WagerArena = await ethers.getContractFactory("WagerArena");
+    const wagerArena = await WagerArena.deploy(
+        bcoinAddress,
+        oracle.address
+    );
+    await wagerArena.waitForDeployment();
+    const wagerArenaAddress = await wagerArena.getAddress();
+    console.log("WagerArena deployed to:", wagerArenaAddress);
+
     // 5. Configure Contracts
     console.log("\nConfiguring contract interactions...");
     // Set the solo reward pool address in the tournament controller
@@ -122,6 +132,7 @@ async function main() {
         bcoinTokenAddress: bcoinAddress,
         tournamentControllerAddress: tournamentControllerAddress,
         perpetualRewardPoolAddress: perpetualRewardPoolAddress,
+        wagerArenaAddress: wagerArenaAddress,
         oracleAddress: oracle.address,
         teamWalletAddress: teamWallet.address,
     };
@@ -151,6 +162,7 @@ async function main() {
     // Adjust contract names if they differ in your artifacts
     saveAbi("TournamentController");
     saveAbi("PerpetualRewardPool");
+    saveAbi("WagerArena");
     // Use a fully qualified name to resolve the ambiguity for the IBEP20 interface
     saveAbi("contracts/PerpetualRewardPool.sol:IBEP20");
 
@@ -159,9 +171,9 @@ async function main() {
     const envUpdates = {
         TOURNAMENT_CONTROLLER_ADDRESS: tournamentControllerAddress,
         PERPETUAL_REWARD_POOL_ADDRESS: perpetualRewardPoolAddress,
+        WAGER_ARENA_ADDRESS: wagerArenaAddress,
         BCOIN_TESTNET_ADDRESS: bcoinAddress,
         ORACLE_WALLET_ADDRESS: oracle.address,
-        // WAGER_ARENA_ADDRESS is not deployed in this script, so we leave it untouched.
     };
     updateEnvFile(envUpdates);
 

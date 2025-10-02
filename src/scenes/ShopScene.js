@@ -1,29 +1,13 @@
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
+import { ethers } from 'ethers';
 
-async function saveUpgradesToLocalStorageAndServer(sceneContext, stats) {
-  // Always save to localStorage as a backup
-  localStorage.setItem('playerStats', JSON.stringify(stats));
-  console.log('[ShopScene] Stats saved to localStorage.');
-
-  try {
-    const result = await api.savePlayerStats(stats);
-    if (result.success) {
-      console.log('[ShopScene] Stats successfully saved to server.');
-      // Optional: Update registry with the confirmed state from server if needed
-      const loggedInUser = sceneContext.registry.get('loggedInUser');
-      if (loggedInUser) {
-          const updatedUser = { ...loggedInUser, ...stats };
-          sceneContext.registry.set('loggedInUser', updatedUser);
-      }
-    } else {
-      console.warn('[ShopScene] Failed to save stats to server:', result.message);
-    }
-  } catch (error) {
-     console.error('[ShopScene] Error saving stats to server:', error);
-  }
-}
+const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; // From .env
+const SPENDER_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // TournamentController address
+const BCOIN_ABI = [
+    "function approve(address spender, uint256 amount) public returns (bool)"
+];
 
 export default class ShopScene extends Phaser.Scene {
   constructor() {
@@ -107,22 +91,41 @@ export default class ShopScene extends Phaser.Scene {
 
       button.on('pointerdown', async () => {
         const cost = btn.cost();
-        if (this.playerStats.coins >= cost) {
-          btn.effect();
-          this.playerStats.coins -= cost;
-          await saveUpgradesToLocalStorageAndServer(this, this.playerStats);
-          SoundManager.play(this, 'upgrade');
-          this.refreshUI(); // Refresh UI instead of restarting scene
-        } else {
-          SoundManager.play(this, 'error');
-          this.tweens.add({
-            targets: button,
-            x: centerX - 5,
-            duration: 50,
-            yoyo: true,
-            repeat: 2,
-            onComplete: () => button.setX(centerX)
-          });
+        if (this.playerStats.coins < cost) {
+            SoundManager.play(this, 'error');
+            this.tweens.add({ targets: button, x: centerX - 5, duration: 50, yoyo: true, repeat: 2, onComplete: () => button.setX(centerX) });
+            return;
+        }
+
+        try {
+            SoundManager.play(this, 'click');
+
+            // 1. Connect to wallet and contract
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
+
+            // 2. Request approval for the transaction
+            const costInWei = ethers.parseUnits(cost.toString(), 18);
+            const tx = await bcoinContract.approve(SPENDER_ADDRESS, costInWei);
+
+            // Optional: Show a "waiting for confirmation" message
+            button.setText('Confirming...');
+            await tx.wait(); // Wait for the transaction to be mined
+
+            // 3. On success, update stats and save to backend
+            btn.effect();
+            this.playerStats.coins -= cost;
+            await api.savePlayerStats(this.playerStats);
+
+            SoundManager.play(this, 'upgrade');
+            this.refreshUI();
+
+        } catch (error) {
+            console.error('Upgrade failed:', error);
+            SoundManager.play(this, 'error');
+            // Optional: show an error message to the user
+            this.refreshUI(); // Refresh to restore button text
         }
       });
       return { button, labelFunc: btn.label };
@@ -165,15 +168,12 @@ export default class ShopScene extends Phaser.Scene {
       fireRate: 600, bombSize: 1, multiShot: 0, coins: 0
     };
 
-    const localStats = JSON.parse(localStorage.getItem('playerStats')) || {};
     const userFromServer = this.registry.get('loggedInUser') || {};
 
-    // Combine stats: start with defaults, layer locally saved progress,
-    // then overwrite with authoritative data from the server (especially coins).
+    // The server is now the single source of truth for player stats.
     const finalStats = {
       ...defaultStats,
-      ...localStats,
-      ...userFromServer // Server data (like coins) takes precedence
+      ...userFromServer
     };
 
     return finalStats;
