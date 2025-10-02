@@ -160,14 +160,21 @@ class ApiClient {
         return this.fetch('/auth/me');
     }
 
-    async getOwnedNfts() {
-        return this.fetch('/user/nfts');
+    async getHeroes() {
+        return this.fetch('/heroes');
     }
 
-    async levelUp() {
-        return this.fetch('/user/level-up', {
+    async levelUpHero(heroId) {
+        return this.fetch(`/heroes/${heroId}/level-up`, {
             method: 'POST'
         });
+    }
+
+    // This is a placeholder for a future feature
+    async levelUpAccount() {
+        // In a real implementation, this would call a dedicated backend endpoint
+        // For now, we can simulate a successful response.
+        return Promise.resolve({ success: true, message: 'Account leveled up!' });
     }
 
     // --- Métodos de Admin ---

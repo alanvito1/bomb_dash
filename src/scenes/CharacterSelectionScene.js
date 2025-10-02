@@ -35,40 +35,38 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     // Botão de voltar
     this.createBackButton(centerX, this.scale.height - 50);
 
-    this.fetchAndDisplayNfts(loadingText);
+    this.fetchAndDisplayHeroes(loadingText);
   }
 
-  async fetchAndDisplayNfts(loadingText) {
+  async fetchAndDisplayHeroes(loadingText) {
     try {
-      const response = await api.getOwnedNfts();
-      if (response.success && response.nfts.length > 0) {
+      const response = await api.getHeroes();
+      if (response.success && response.heroes.length > 0) {
         loadingText.destroy();
-        this.displayNfts(response.nfts);
-      } else if (response.success && response.nfts.length === 0) {
-        loadingText.setText('Nenhum herói encontrado.\nJogue para conseguir um!');
+        this.displayHeroes(response.heroes);
+      } else if (response.success && response.heroes.length === 0) {
+        // This case should ideally not happen with mock heroes, but good to have
+        loadingText.setText('Nenhum herói encontrado.\nContacte o suporte.');
       } else {
         loadingText.setText(`Erro: ${response.message}`);
       }
     } catch (error) {
-      console.error('Falha ao buscar NFTs:', error);
+      console.error('Falha ao buscar heróis:', error);
       loadingText.setText('Erro ao conectar ao servidor.');
     }
   }
 
-  displayNfts(nfts) {
+  displayHeroes(heroes) {
     const centerX = this.cameras.main.centerX;
     const startY = 120;
     const cardSpacingY = 110;
     const cardWidth = 300;
     const cardHeight = 100;
 
-    nfts.forEach((nft, index) => {
+    heroes.forEach((hero, index) => {
       const cardY = startY + (index * cardSpacingY);
-
-      // Cria um container para o card do herói
       const card = this.add.container(centerX, cardY);
 
-      // Fundo do card
       const background = this.add.graphics();
       background.fillStyle(0x000000, 0.7);
       background.fillRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10);
@@ -76,16 +74,17 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       background.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10);
       card.add(background);
 
-      // Adiciona o nome/ID do herói
-      const heroIdText = this.add.text(-cardWidth / 2 + 15, -cardHeight / 2 + 15, `Herói ID: ${nft.id}`, {
+      // Display hero type and level
+      const heroTypeText = hero.hero_type === 'nft' ? `NFT Herói (Lvl ${hero.level})` : `Mock Herói (Lvl ${hero.level})`;
+      const heroIdText = this.add.text(-cardWidth / 2 + 15, -cardHeight / 2 + 15, heroTypeText, {
         fontSize: '16px',
         fill: '#FFD700',
         fontFamily: 'monospace'
       });
       card.add(heroIdText);
 
-      // Adiciona as estatísticas
-      const statsText = `Poder: ${nft.bombPower} | Velocidade: ${nft.speed} | Raridade: ${nft.rarity}`;
+      // Display hero stats
+      const statsText = `Dano: ${hero.damage} | Vel: ${hero.speed} | HP: ${hero.hp}`;
       const heroStatsText = this.add.text(-cardWidth / 2 + 15, -cardHeight / 2 + 45, statsText, {
         fontSize: '14px',
         fill: '#ffffff',
@@ -93,30 +92,22 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       });
       card.add(heroStatsText);
 
-      // Torna o card interativo
       card.setSize(cardWidth, cardHeight);
       card.setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
-          this.selectCharacter(nft);
+          this.selectCharacter(hero);
         })
         .on('pointerover', () => background.lineStyle(3, 0xFFD700, 1).strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10))
         .on('pointerout', () => background.lineStyle(2, 0x00ffff, 1).strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 10));
     });
   }
 
-  selectCharacter(nft) {
-    console.log('Personagem selecionado:', nft);
+  selectCharacter(heroData) {
+    console.log('Personagem selecionado:', heroData);
 
-    // Mapeia os stats do NFT para os stats do jogador no jogo
-    const playerStats = {
-        damage: nft.bombPower,
-        speed: nft.speed * 10, // Ajuste de escala, se necessário
-        // Outros stats podem ser definidos aqui com base na raridade, etc.
-    };
-
-    // Armazena os stats do personagem selecionado no registro para a GameScene usar
-    this.registry.set('selectedCharacterStats', playerStats);
+    // Armazena todos os dados do herói selecionado no registro para a GameScene usar
+    this.registry.set('selectedHero', heroData);
 
     // Inicia a GameScene
     this.scene.start('GameScene');

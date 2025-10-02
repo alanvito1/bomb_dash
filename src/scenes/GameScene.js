@@ -73,17 +73,27 @@ export default class GameScene extends Phaser.Scene {
     this.baseBossHp = 100;
     this.gamePaused = false;
 
-    // Combina os stats do jogador
-    const selectedCharacterStats = this.registry.get('selectedCharacterStats');
-    this.playerStats = {
-      ...this.DEFAULT_STATS,
-      ...(selectedCharacterStats || {}),
-    };
+    // Load the selected hero's stats from the registry
+    const selectedHero = this.registry.get('selectedHero');
+    if (!selectedHero) {
+        // Fallback in case the scene is started directly without a hero (e.g., for development)
+        console.warn('[GameScene] No hero selected, using default stats.');
+        this.playerStats = { ...this.DEFAULT_STATS };
+    } else {
+        // Use the selected hero's stats directly for the game session
+        this.playerStats = { ...selectedHero };
+    }
+
+    // Get the account-level coins from the logged-in user
     const loggedInUser = this.registry.get('loggedInUser');
     if (loggedInUser && typeof loggedInUser.coins === 'number') {
-      this.playerStats.coins = loggedInUser.coins;
+        this.playerStats.coins = loggedInUser.coins;
+    } else if (!this.playerStats.coins) {
+        this.playerStats.coins = 0; // Ensure coins is a number
     }
-    this.registry.remove('selectedCharacterStats');
+
+    // Clean up the registry for the next game
+    this.registry.remove('selectedHero');
 
     // Setup do cenário
     this.bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg1').setOrigin(0.5).setDisplaySize(480, 800);
