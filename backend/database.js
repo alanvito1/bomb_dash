@@ -174,7 +174,32 @@ async function initDb() {
                                     db.close(); db = null; return reject(err);
                                 }
                                 console.log("Matchmaking_queue table initialized or already exists.");
-                                resolve(db);
+
+                                const createAltarTableSQL = `
+                                    CREATE TABLE IF NOT EXISTS altar_status (
+                                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                                        current_donations INTEGER DEFAULT 0,
+                                        donation_goal INTEGER DEFAULT 10000,
+                                        active_buff_type TEXT,
+                                        buff_expires_at DATETIME
+                                    );
+                                `;
+                                db.run(createAltarTableSQL, (err) => {
+                                    if (err) {
+                                        console.error('Error creating altar_status table', err.message);
+                                        db.close(); db = null; return reject(err);
+                                    }
+                                    console.log("Altar_status table initialized or already exists.");
+
+                                    db.run("INSERT OR IGNORE INTO altar_status (id) VALUES (1)", (err) => {
+                                        if (err) {
+                                            console.error('Error seeding altar_status table', err.message);
+                                            db.close(); db = null; return reject(err);
+                                        }
+                                        console.log("Altar_status table seeded.");
+                                        resolve(db);
+                                    });
+                                });
                             });
                         });
                     });
@@ -623,6 +648,54 @@ async function getMatchmakingQueueUser(userId) {
     });
 }
 
+async function getAltarStatus() {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT * FROM altar_status WHERE id = 1;";
+        db.get(sql, [], (err, row) => {
+            if (err) return reject(err);
+            resolve(row);
+        });
+    });
+}
+
+async function updateAltarStatus(statusData) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const fields = Object.keys(statusData);
+        const values = Object.values(statusData);
+
+        if (fields.length === 0) {
+            return resolve({ success: true, message: "No fields to update." });
+        }
+
+        const setClause = fields.map(field => `${field} = ?`).join(', ');
+        const sql = `UPDATE altar_status SET ${setClause} WHERE id = 1;`;
+
+        db.run(sql, values, function(err) {
+            if (err) {
+                console.error(`Error updating altar_status:`, err.message);
+                return reject(err);
+            }
+            resolve({ success: true, changes: this.changes });
+        });
+    });
+}
+
+async function addDonationToAltar(amount) {
+    if (!db) await initDb();
+    return new Promise((resolve, reject) => {
+        const sql = "UPDATE altar_status SET current_donations = current_donations + ? WHERE id = 1;";
+        db.run(sql, [amount], function(err) {
+            if (err) {
+                console.error(`Error adding donation to altar:`, err.message);
+                return reject(err);
+            }
+            resolve({ success: true, changes: this.changes });
+        });
+    });
+}
+
 module.exports = {
     initDb,
     createUserByAddress,
@@ -650,7 +723,11 @@ module.exports = {
     // Matchmaking
     addToMatchmakingQueue,
     removeFromMatchmakingQueue,
-    getMatchmakingQueueUser
+    getMatchmakingQueueUser,
+    // Altar of Buffs
+    getAltarStatus,
+    updateAltarStatus,
+    addDonationToAltar
 };
 
 async function getTop10Ranking() {

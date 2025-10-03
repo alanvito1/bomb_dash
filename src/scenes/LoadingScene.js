@@ -84,28 +84,43 @@ export default class LoadingScene extends Phaser.Scene {
         }
     });
 
-    this.load.on('complete', async () => {
+    this.load.on('complete', () => {
         console.log('✅ All assets finished loading. Transitioning to Create method...');
         loadingText.setText('Initializing...');
 
-        await LanguageManager.init(this);
-        loadingText.setText(LanguageManager.get(this, 'complete'));
+        // Use the loaded WebFont script to load the custom font
+        WebFont.load({
+            google: {
+                families: ['Press Start 2P']
+            },
+            active: async () => {
+                // This callback ensures the font is loaded before we proceed
+                console.log('✅ Custom font "Press Start 2P" loaded.');
+                await LanguageManager.init(this);
+                loadingText.setText(LanguageManager.get(this, 'complete'));
 
-        console.log('🔄 Checking for existing user session...');
-        try {
-            const loginStatus = await api.checkLoginStatus();
-            if (loginStatus.success) {
-                console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
-                this.registry.set('loggedInUser', loginStatus.user);
-                this.scene.start('MenuScene');
-            } else {
-                 throw new Error(loginStatus.message || "Login status check was not successful.");
+                console.log('🔄 Checking for existing user session...');
+                try {
+                    const loginStatus = await api.checkLoginStatus();
+                    if (loginStatus.success) {
+                        console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
+                        this.registry.set('loggedInUser', loginStatus.user);
+                        this.scene.start('MenuScene');
+                    } else {
+                         throw new Error(loginStatus.message || "Login status check was not successful.");
+                    }
+                } catch (error) {
+                    console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
+                    this.registry.remove('loggedInUser');
+                    this.scene.start('AuthChoiceScene');
+                }
+            },
+            inactive: () => {
+                // Fallback if the font fails to load
+                console.error('🔥 Failed to load custom font. Proceeding with default fonts.');
+                this.scene.start('AuthChoiceScene');
             }
-        } catch (error) {
-            console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
-            this.registry.remove('loggedInUser');
-            this.scene.start('AuthChoiceScene');
-        }
+        });
     });
     console.log('✅ LoadingScene: Preload has completed setup!');
   }

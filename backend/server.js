@@ -167,6 +167,90 @@ app.get('/api/heroes', verifyToken, async (req, res) => {
     }
 });
 
+// Helper object to manage upgrade logic and costs
+const heroUpgrades = {
+    damage: {
+        cost: (stat) => 50 + (stat.damage - 1) * 20,
+        effect: (stat) => ({ damage: stat.damage + 1 }),
+    },
+    speed: {
+        cost: (stat) => 40 + ((stat.speed - 200) / 10) * 15,
+        effect: (stat) => ({ speed: stat.speed + 10 }),
+    },
+    extraLives: {
+        cost: (stat) => 30 + stat.extraLives * 30,
+        effect: (stat) => ({ extraLives: stat.extraLives + 1 }),
+    },
+    fireRate: {
+        cost: (stat) => 60 + ((600 - stat.fireRate) / 50) * 25,
+        effect: (stat) => ({ fireRate: Math.max(100, stat.fireRate - 50) }),
+    },
+    bombSize: {
+        cost: (stat) => 500 + (stat.bombSize - 1) * 100,
+        effect: (stat) => ({ bombSize: Math.min(3, stat.bombSize + 1) }),
+    },
+    multiShot: {
+        cost: (stat) => 500 + stat.multiShot * 200,
+        effect: (stat) => ({ multiShot: Math.min(5, stat.multiShot + 1) }),
+    }
+};
+
+
+app.post('/api/heroes/:heroId/purchase-upgrade', verifyToken, async (req, res) => {
+    const { heroId } = req.params;
+    const { upgradeType, cost } = req.body; // cost is sent from client
+
+    if (!upgradeType || !heroUpgrades[upgradeType]) {
+        return res.status(400).json({ success: false, message: "Invalid upgrade type." });
+    }
+
+    try {
+        // 1. Get the hero and verify ownership
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const hero = heroes.find(h => h.id.toString() === heroId);
+
+        if (!hero) {
+            return res.status(404).json({ success: false, message: "Hero not found or you don't own it." });
+        }
+
+        // 2. Calculate the authoritative cost on the backend
+        const expectedCost = heroUpgrades[upgradeType].cost(hero);
+        if (cost !== expectedCost) {
+            return res.status(400).json({
+                success: false,
+                message: `Cost mismatch. Client sent ${cost}, but server expected ${expectedCost}.`
+            });
+        }
+
+        // 3. Process the on-chain payment via the Oracle
+        // The client must have already called `approve` on the BCOIN contract
+        await oracle.processHeroUpgrade(req.user.address, expectedCost);
+
+        // 4. If payment is successful, apply the stat upgrade
+        const newStats = heroUpgrades[upgradeType].effect(hero);
+        await db.updateHeroStats(heroId, newStats);
+
+        // 5. Fetch the fully updated hero data to return to the client
+        const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
+        const updatedHero = updatedHeroes.find(h => h.id.toString() === heroId);
+
+        res.json({
+            success: true,
+            message: `Hero ${upgradeType} upgraded successfully!`,
+            hero: updatedHero
+        });
+
+    } catch (error) {
+        console.error(`Error purchasing upgrade ${upgradeType} for hero ${heroId}:`, error);
+        // Check for specific error messages from the oracle/blockchain
+        if (error.message.includes("transfer failed") || error.message.includes("insufficient allowance")) {
+            return res.status(402).json({ success: false, message: "Blockchain transaction failed. Check BCOIN balance and approval." });
+        }
+        res.status(500).json({ success: false, message: 'Internal server error during upgrade purchase.' });
+    }
+});
+
+
 app.post('/api/heroes/:heroId/level-up', verifyToken, async (req, res) => {
     const { heroId } = req.params;
     const LEVEL_UP_COST = 1; // The cost in BCOIN to level up a hero
@@ -499,6 +583,54 @@ app.get('/api/game/settings', async (req, res) => {
 
 
 // =================================================================
+// ROTAS DO ALTAR DE BUFFS
+// =================================================================
+
+app.get('/api/altar/status', async (req, res) => {
+    try {
+        const status = await db.getAltarStatus();
+        res.json({ success: true, status });
+    } catch (error) {
+        console.error("Error fetching altar status:", error);
+        res.status(500).json({ success: false, message: 'Failed to fetch altar status.' });
+    }
+});
+
+app.post('/api/altar/donate', verifyToken, async (req, res) => {
+    const { amount, txHash } = req.body;
+
+    if (!amount || amount <= 0 || !txHash) {
+        return res.status(400).json({ success: false, message: "Invalid request. Amount and txHash are required." });
+    }
+
+    try {
+        // 1. Verify the transaction on the blockchain using the Oracle
+        await oracle.verifyAltarDonation(txHash, req.user.address, amount);
+
+        // 2. If verification is successful, update the database
+        await db.addDonationToAltar(amount);
+
+        // 3. Fetch the latest status to return to the client
+        const newStatus = await db.getAltarStatus();
+
+        res.json({
+            success: true,
+            message: `Successfully verified donation of ${amount} BCOIN! Thank you!`,
+            altarStatus: newStatus
+        });
+
+    } catch (error) {
+        console.error(`Error verifying donation from ${req.user.address} with txHash ${txHash}:`, error);
+        // Provide specific feedback if verification fails
+        if (error.message.includes("mismatch") || error.message.includes("not found")) {
+            return res.status(400).json({ success: false, message: `Transaction verification failed: ${error.message}` });
+        }
+        res.status(500).json({ success: false, message: 'Internal server error during donation verification.' });
+    }
+});
+
+
+// =================================================================
 // ROTAS DE MATCHMAKING
 // =================================================================
 
@@ -537,6 +669,46 @@ app.get('/api/matchmaking/status', verifyToken, async (req, res) => {
 });
 
 
+// =================================================================
+// LÓGICA DO ALTAR DE BUFFS (CRON JOB)
+// =================================================================
+
+const BUFFS = [
+    { type: 'XP_BOOST', description: '+10% XP for 24 hours', duration_hours: 24 },
+    { type: 'RARE_ITEM_DROP', description: '+5% chance to find rare items for 12 hours', duration_hours: 12 },
+    { type: 'COIN_BONANZA', description: '+15% BCOIN from matches for 6 hours', duration_hours: 6 }
+];
+
+async function checkAltarAndActivateBuff() {
+    try {
+        const status = await db.getAltarStatus();
+
+        // Check if a buff is already active or if the goal hasn't been met
+        if (status.active_buff_type || status.current_donations < status.donation_goal) {
+            return;
+        }
+
+        console.log(`[ALTAR] Donation goal reached! Activating a new global buff.`);
+
+        // Select a random buff
+        const buff = BUFFS[Math.floor(Math.random() * BUFFS.length)];
+        const expirationTime = new Date(Date.now() + buff.duration_hours * 60 * 60 * 1000);
+
+        // Update the database
+        await db.updateAltarStatus({
+            current_donations: 0, // Reset donations
+            active_buff_type: buff.type,
+            buff_expires_at: expirationTime.toISOString()
+        });
+
+        console.log(`[ALTAR] Activated Buff: ${buff.description}. Expires at ${expirationTime.toISOString()}`);
+
+    } catch (error) {
+        console.error("[ALTAR CRON] Error checking or activating altar buff:", error);
+    }
+}
+
+
 async function startServer() {
     console.log("=============================================");
     console.log("     INICIALIZANDO O SERVIDOR DO JOGO      ");
@@ -567,6 +739,10 @@ async function startServer() {
         // 4. Iniciar o processador da fila de Matchmaking
         setInterval(matchmaking.processQueue, 5000); // Processa a cada 5 segundos
         console.log("[OK] Processador da fila de matchmaking iniciado.");
+
+        // 4.5 Iniciar o Cron Job do Altar de Buffs
+        setInterval(checkAltarAndActivateBuff, 60000); // Roda a cada minuto
+        console.log("[OK] Cron job do Altar de Buffs iniciado.");
 
         // 5. Iniciar o Servidor Express
         app.listen(PORT, () => {

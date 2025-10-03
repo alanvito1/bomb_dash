@@ -66,7 +66,9 @@ contract TournamentController {
     event TournamentStarted(uint256 indexed tournamentId);
     event PrizeDistributed(address[] winners, uint256 totalPrize);
     event LevelUpFeePaid(address indexed player, uint256 fee);
+    event UpgradeFeePaid(address indexed player, uint256 fee);
     event LevelUpCostChanged(uint256 newCost);
+    event AltarDonationReceived(address indexed donor, uint256 amount);
 
     // Modifiers
     modifier onlyOwner() {
@@ -258,6 +260,52 @@ contract TournamentController {
         }
 
         emit LevelUpFeePaid(player, currentFee);
+    }
+
+    /**
+     * @dev Called by the Oracle to execute a variable payment for a player's stat upgrade.
+     * The player must have previously approved the contract to spend the specified cost.
+     * @param player The address of the player who is upgrading.
+     * @param cost The cost of the upgrade in wei.
+     */
+    function payUpgradeFee(address player, uint256 cost) external onlyOracle {
+        require(soloRewardPoolAddress != address(0), "Reward pool address not set");
+        require(cost > 0, "Upgrade cost must be positive");
+
+        IBEP20 token = IBEP20(bcoinTokenAddress);
+
+        // Transfer the fee from the player to this contract.
+        require(token.transferFrom(player, address(this), cost), "Upgrade fee transfer failed");
+
+        // Distribute the fee 50/50 between the team and the reward pool
+        uint256 teamShare = cost / 2;
+        uint256 poolShare = cost - teamShare;
+
+        if (teamShare > 0) {
+            token.transfer(teamWallet, teamShare);
+        }
+        if (poolShare > 0) {
+            token.transfer(soloRewardPoolAddress, poolShare);
+        }
+
+        emit UpgradeFeePaid(player, cost);
+    }
+
+    /**
+     * @dev Allows a player to donate BCOIN to the community altar.
+     * The player must have approved this contract to spend the specified amount.
+     * The donated amount is transferred directly to the team wallet as a BCOIN sink.
+     * @param amount The amount of BCOIN to donate in wei.
+     */
+    function donateToAltar(uint256 amount) external {
+        require(amount > 0, "Donation amount must be positive");
+
+        IBEP20 token = IBEP20(bcoinTokenAddress);
+
+        // Transfer the donation from the player directly to the team wallet.
+        require(token.transferFrom(msg.sender, teamWallet, amount), "Altar donation transfer failed");
+
+        emit AltarDonationReceived(msg.sender, amount);
     }
 
     /**

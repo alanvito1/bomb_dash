@@ -8,11 +8,14 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     this.gameMode = 'solo'; // Default game mode
     this.pollingTimer = null;
     this.countdown = 30;
+    this.selectedHero = null; // To track the selected hero
+    this.selectionIndicator = null; // Visual feedback for selection
   }
 
   init(data) {
     this.gameMode = data.gameMode || 'solo';
     this.countdown = 30; // Reset countdown on init
+    this.selectedHero = null;
   }
 
   create() {
@@ -38,8 +41,58 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBackButton(centerX, this.scale.height - 50);
+    this.createActionButtons(centerX, centerY);
 
     this.fetchAndDisplayHeroes(loadingText);
+  }
+
+  createActionButtons(centerX, centerY) {
+    // Button to start the selected game mode
+    this.playButton = this.add.text(centerX - 100, centerY + 250, 'Start Game', {
+        fontSize: '20px', fill: '#90EE90', fontFamily: '"Press Start 2P"',
+        stroke: '#000', strokeThickness: 4
+    })
+    .setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    // Button to go to the shop
+    this.shopButton = this.add.text(centerX + 100, centerY + 250, 'Upgrades', {
+        fontSize: '20px', fill: '#00BFFF', fontFamily: '"Press Start 2P"',
+        stroke: '#000', strokeThickness: 4
+    })
+    .setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+
+    this.playButton.on('pointerdown', () => {
+        if (this.selectedHero) {
+            SoundManager.play(this, 'click');
+            this.startGameWithSelectedHero();
+        } else {
+            SoundManager.play(this, 'error');
+        }
+    });
+
+    this.shopButton.on('pointerdown', () => {
+        if (this.selectedHero) {
+            SoundManager.play(this, 'click');
+            // SIF-23: Pass the selected hero data to the ShopScene
+            this.scene.start('ShopScene', { hero: this.selectedHero });
+        } else {
+            SoundManager.play(this, 'error');
+        }
+    });
+
+    // Initially disable buttons until a hero is selected
+    this.disableActionButtons();
+  }
+
+  disableActionButtons() {
+      this.playButton.setAlpha(0.5);
+      this.shopButton.setAlpha(0.5);
+  }
+
+  enableActionButtons() {
+      this.playButton.setAlpha(1);
+      this.shopButton.setAlpha(1);
   }
 
   async fetchAndDisplayHeroes(loadingText) {
@@ -96,19 +149,36 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       card.setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
-          this.selectHero(hero);
+          this.selectHero(hero, cardX); // Pass card position for indicator
         })
         .on('pointerover', () => background.lineStyle(3, 0xFFD700, 1).strokeRoundedRect(-75, -100, 150, 200, 15))
         .on('pointerout', () => background.lineStyle(2, 0x00ffff, 1).strokeRoundedRect(-75, -100, 150, 200, 15));
     });
+
+    // Create a selection indicator (e.g., an arrow or a highlight)
+    this.selectionIndicator = this.add.graphics();
+    this.selectionIndicator.fillStyle(0xFFD700, 1);
+    this.selectionIndicator.fillTriangle(0, 0, -15, -20, 15, -20);
+    this.selectionIndicator.setPosition(startX, startY + 125);
+    this.selectionIndicator.setVisible(false); // Initially hidden
   }
 
-  selectHero(heroData) {
-    console.log('Selected Hero:', heroData, 'Game Mode:', this.gameMode);
-    this.registry.set('selectedHero', heroData);
+  selectHero(heroData, cardX) {
+    this.selectedHero = heroData;
+    this.registry.set('selectedHero', heroData); // Also keep in registry for other scenes
 
+    // Move and show the indicator
+    this.selectionIndicator.setVisible(true);
+    this.selectionIndicator.x = cardX;
+
+    // Enable the action buttons
+    this.enableActionButtons();
+  }
+
+  startGameWithSelectedHero() {
+    console.log('Starting game with Hero:', this.selectedHero, 'Game Mode:', this.gameMode);
     if (this.gameMode === 'ranked') {
-      this.startMatchmaking(heroData);
+      this.startMatchmaking(this.selectedHero);
     } else {
       // Default behavior: start a solo game
       this.scene.start('GameScene', { gameMode: 'solo' });
