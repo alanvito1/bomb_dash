@@ -27,8 +27,22 @@ export default class SoundManager {
       console.error('[SoundManager] Cena inválida para tocar som:', key);
       return;
     }
-    // Simple sfx play, assuming they are small and decode fast.
-    scene.sound.play(key, config);
+    // A chamada direta a scene.sound.play(key) pode causar race conditions
+    // se o áudio não estiver decodificado. Usamos um padrão mais robusto.
+    const sfx = scene.sound.add(key, config);
+
+    const playAction = () => {
+      if (sfx) {
+        sfx.play();
+      }
+    };
+
+    // Verifica se o áudio está decodificado. Se não, espera pelo evento 'decoded'.
+    if (sfx.isDecoded) {
+      playAction();
+    } else {
+      sfx.once('decoded', playAction);
+    }
   }
 
   /**

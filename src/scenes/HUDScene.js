@@ -64,22 +64,22 @@ export default class HUDScene extends Phaser.Scene {
 
     createHUD() {
         // Health Bar
-        this.add.text(10, 10, 'HP', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ff0000' });
+        this.add.text(10, 10, LanguageManager.get(this, 'hud_hp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ff0000' });
         this.healthBar = this.add.graphics();
         this.updateHealth({ health: this.playerHealth, maxHealth: this.playerMaxHealth }); // Initial draw
 
         // Account XP Bar
-        this.add.text(10, 30, 'ACC XP', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
+        this.add.text(10, 30, LanguageManager.get(this, 'hud_acc_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
         this.accountXpBar = this.add.graphics();
         this.updateXP({ accountXP: this.accountXP, accountXPForNextLevel: this.accountXPForNextLevel }); // Initial draw
 
         // Hero XP Bar
-        this.add.text(10, 50, 'HERO XP', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#0000ff' });
+        this.add.text(10, 50, LanguageManager.get(this, 'hud_hero_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#0000ff' });
         this.heroXpBar = this.add.graphics();
         this.updateXP({ heroXP: this.heroXP, heroXPForNextLevel: this.heroXPForNextLevel }); // Initial draw
 
         // BCOIN Balance
-        this.bcoinText = this.add.text(this.scale.width - 10, 10, 'BCOIN: ...', {
+        this.bcoinText = this.add.text(this.scale.width - 10, 10, LanguageManager.get(this, 'hud_bcoin_loading'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             fill: '#ffd700',
@@ -138,12 +138,12 @@ export default class HUDScene extends Phaser.Scene {
 
     updateBCoin({ balance }) {
         this.bcoinBalance = balance;
-        this.bcoinText.setText(`BCOIN: ${this.bcoinBalance}`);
+        this.bcoinText.setText(LanguageManager.get(this, 'menu_bcoin_balance', { balance: this.bcoinBalance }));
     }
 
     async updateBcoinBalance() {
         if (!window.ethereum) {
-            this.bcoinText.setText('BCOIN: MetaMask Not Found');
+            this.bcoinText.setText(LanguageManager.get(this, 'hud_bcoin_no_wallet'));
             return;
         }
         try {
@@ -151,11 +151,11 @@ export default class HUDScene extends Phaser.Scene {
             const signer = await provider.getSigner();
             const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
             const balance = await bcoinContract.balanceOf(await signer.getAddress());
-            const balanceFormatted = ethers.formatUnits(balance, 18);
-            this.bcoinText.setText(`BCOIN: ${parseFloat(balanceFormatted).toFixed(2)}`);
+            const balanceFormatted = parseFloat(ethers.formatUnits(balance, 18)).toFixed(2);
+            this.bcoinText.setText(LanguageManager.get(this, 'menu_bcoin_balance', { balance: balanceFormatted }));
         } catch (error) {
             console.error("HUD: Failed to fetch BCOIN balance:", error);
-            this.bcoinText.setText('BCOIN: Error');
+            this.bcoinText.setText(LanguageManager.get(this, 'hud_bcoin_error'));
         }
     }
 
@@ -181,7 +181,11 @@ export default class HUDScene extends Phaser.Scene {
                 const hours = Math.floor(remaining / (1000 * 60 * 60));
                 const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
                 const buffName = status.active_buff_type.replace('_', ' ');
-                this.buffText.setText(`BUFF: ${buffName}\n${hours}h ${minutes}m left`);
+
+                const line1 = LanguageManager.get(this, 'hud_buff', { buff: buffName });
+                const line2 = LanguageManager.get(this, 'hud_buff_time_left', { hours, minutes });
+
+                this.buffText.setText(`${line1}\n${line2}`);
             } else {
                 this.buffText.setText(''); // Buff expired
             }

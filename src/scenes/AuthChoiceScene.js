@@ -1,6 +1,7 @@
 // src/scenes/AuthChoiceScene.js
 
 import api from '../api.js';
+import LanguageManager from '../utils/LanguageManager.js';
 
 export default class AuthChoiceScene extends Phaser.Scene {
     constructor() {
@@ -14,7 +15,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         console.log('--- AuthChoiceScene: CREATE METHOD (adding button UI) ---');
 
         this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x1a1a1a).setOrigin(0);
-        this.add.text(this.cameras.main.centerX, this.cameras.main.height * 0.2, 'Bomb Dash Web3', {
+        this.add.text(this.cameras.main.centerX, this.cameras.main.height * 0.2, LanguageManager.get(this, 'auth_title'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '32px',
             color: '#ffffff',
@@ -22,7 +23,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // --- "Connect Wallet" Button ---
-        const connectButton = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'Web3 Login', {
+        const connectButton = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, LanguageManager.get(this, 'auth_web3_login'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '20px',
             color: '#ffffff',

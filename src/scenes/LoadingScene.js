@@ -16,8 +16,8 @@ export default class LoadingScene extends Phaser.Scene {
     // --- Display Loading UI ---
     const textStyle = { fontFamily: 'monospace', fontSize: '20px', fill: '#00ffff' };
     const titleStyle = { ...textStyle, fontSize: '28px', fill: '#FFD700'};
-    this.add.text(centerX, centerY - 50, '💣 Bomb Dash', titleStyle).setOrigin(0.5);
-    const loadingText = this.add.text(centerX, centerY + 10, 'Loading assets...', textStyle).setOrigin(0.5);
+    const titleText = this.add.text(centerX, centerY - 50, '💣 Bomb Dash 💥', titleStyle).setOrigin(0.5);
+    const loadingText = this.add.text(centerX, centerY + 10, 'Loading...', textStyle).setOrigin(0.5);
 
     const progressBox = this.add.graphics();
     progressBox.fillStyle(0x222222, 0.8);
@@ -86,7 +86,6 @@ export default class LoadingScene extends Phaser.Scene {
 
     this.load.on('complete', () => {
         console.log('✅ All assets finished loading. Transitioning to Create method...');
-        loadingText.setText('Initializing...');
 
         // Use the loaded WebFont script to load the custom font
         WebFont.load({
@@ -94,10 +93,13 @@ export default class LoadingScene extends Phaser.Scene {
                 families: ['Press Start 2P']
             },
             active: async () => {
-                // This callback ensures the font is loaded before we proceed
+                // This callback ensures the font is loaded and i18n is ready
                 console.log('✅ Custom font "Press Start 2P" loaded.');
                 await LanguageManager.init(this);
-                loadingText.setText(LanguageManager.get(this, 'complete'));
+
+                // Now that LanguageManager is ready, update the UI text
+                titleText.setText(LanguageManager.get(this, 'game_title'));
+                loadingText.setText(LanguageManager.get(this, 'loading_initializing'));
 
                 console.log('🔄 Checking for existing user session...');
                 try {

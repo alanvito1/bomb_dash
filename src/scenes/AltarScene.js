@@ -26,32 +26,31 @@ export default class AltarScene extends Phaser.Scene {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
-        // --- UI Elements ---
-        this.add.text(centerX, 80, 'Altar of Global Buffs', {
-            fontSize: '28px', fill: '#FFD700', fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        // Background and Data Window
+        this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
+        this.add.graphics().fillStyle(0x000000, 0.7).fillRect(30, 30, this.scale.width - 60, this.scale.height - 60);
 
-        this.statusText = this.add.text(centerX, 140, 'Fetching status...', {
-            fontSize: '16px', fill: '#cccccc', fontFamily: 'monospace', align: 'center', wordWrap: { width: 450 }
-        }).setOrigin(0.5);
+        // Standard Font Styles
+        const titleStyle = { fontSize: '24px', fill: '#FFD700', fontFamily: '"Press Start 2P"', stroke: '#000', strokeThickness: 4 };
+        const textStyle = { fontSize: '14px', fill: '#ffffff', fontFamily: '"Press Start 2P"', align: 'center', wordWrap: { width: this.scale.width - 100 } };
+        const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
+
+        // --- UI Elements ---
+        this.add.text(centerX, 80, LanguageManager.get(this, 'altar_title'), titleStyle).setOrigin(0.5);
+
+        this.statusText = this.add.text(centerX, 150, LanguageManager.get(this, 'altar_fetching_status'), textStyle).setOrigin(0.5);
 
         // --- Donation Input ---
-        this.add.text(centerX, centerY, 'Amount to Donate:', {
-            fontSize: '18px', fill: '#ffffff', fontFamily: 'monospace'
-        }).setOrigin(0.5, 1);
+        this.add.text(centerX, centerY - 20, LanguageManager.get(this, 'altar_donate_prompt'), textStyle).setOrigin(0.5);
 
         this.donationInput = this.add.dom(centerX, centerY + 20).createFromHTML(`
-            <input type="number" id="donation-amount" style="width: 200px; padding: 10px; font-size: 16px; text-align: center;" value="10">
+            <input type="number" id="donation-amount" style="width: 200px; padding: 10px; font-size: 16px; text-align: center; background-color: #1a1a1a; color: #00ffff; border: 2px solid #00ffff;" value="10">
         `).setOrigin(0.5);
 
-        const donateButton = this.add.text(centerX, centerY + 80, 'Donate BCOIN', {
-            fontSize: '20px', fill: '#000000', fontFamily: 'monospace', backgroundColor: '#FFD700', padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const donateButton = this.add.text(centerX, centerY + 80, LanguageManager.get(this, 'altar_donate_button'), { ...buttonStyle, fill: '#FFD700' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         // --- Back Button ---
-        const backButton = this.add.text(centerX, this.scale.height - 50, '< Back to Menu', {
-            fontSize: '18px', fill: '#00ffff', fontFamily: 'monospace'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const backButton = this.add.text(centerX, this.scale.height - 80, LanguageManager.get(this, 'back_to_menu'), buttonStyle).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         // --- Event Listeners ---
         donateButton.on('pointerdown', () => this.handleDonation());
@@ -59,6 +58,14 @@ export default class AltarScene extends Phaser.Scene {
             SoundManager.play(this, 'click');
             this.scene.start('MenuScene');
         });
+
+        // Hover Effects
+        [donateButton, backButton].forEach(btn => {
+            const originalColor = btn.style.color;
+            btn.on('pointerover', () => btn.setStyle({ fill: '#ffffff' }));
+            btn.on('pointerout', () => btn.setStyle({ fill: originalColor }));
+        });
+
 
         this.fetchAltarStatus();
     }
@@ -69,23 +76,23 @@ export default class AltarScene extends Phaser.Scene {
             if (response.success) {
                 this.updateStatusText(response.status);
             } else {
-                this.statusText.setText('Error: Could not fetch altar status.');
+                this.statusText.setText(LanguageManager.get(this, 'altar_error_fetch'));
             }
         } catch (error) {
             console.error('Failed to fetch altar status:', error);
-            this.statusText.setText('Error: Connection failed.');
+            this.statusText.setText(LanguageManager.get(this, 'altar_error_connection'));
         }
     }
 
     updateStatusText(status) {
         const { current_donations, donation_goal, active_buff_type, buff_expires_at } = status;
-        let text = `Community Goal: ${current_donations} / ${donation_goal} BCOIN\n\n`;
+        let text = LanguageManager.get(this, 'altar_status_goal', { donated: current_donations, goal: donation_goal });
 
         if (active_buff_type) {
             const expires = new Date(buff_expires_at).toLocaleString();
-            text += `Active Buff: ${active_buff_type}\nExpires: ${expires}`;
+            text += LanguageManager.get(this, 'altar_status_buff', { buff: active_buff_type, expires: expires });
         } else {
-            text += "No active global buff. Donate to activate one!";
+            text += LanguageManager.get(this, 'altar_status_no_buff');
         }
         this.statusText.setText(text);
     }
@@ -95,32 +102,32 @@ export default class AltarScene extends Phaser.Scene {
         const amount = parseInt(amountElement.value, 10);
 
         if (isNaN(amount) || amount <= 0) {
-            this.showToast("Please enter a valid amount.");
+            this.showToast(LanguageManager.get(this, 'altar_error_invalid_amount'));
             return;
         }
 
         SoundManager.play(this, 'click');
-        this.showToast(`Starting donation of ${amount} BCOIN...`);
+        this.showToast(LanguageManager.get(this, 'altar_info_starting', { amount }));
 
         try {
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
 
             // 1. Approve the contract to spend BCOIN
-            this.showToast('Step 1/3: Approving transaction...');
+            this.showToast(LanguageManager.get(this, 'altar_info_step1'));
             const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
             const amountInWei = ethers.parseUnits(amount.toString(), 18);
             const approveTx = await bcoinContract.approve(SPENDER_ADDRESS, amountInWei);
             await approveTx.wait();
 
             // 2. Call the donation function on the smart contract
-            this.showToast('Step 2/3: Sending donation...');
+            this.showToast(LanguageManager.get(this, 'altar_info_step2'));
             const altarContract = new ethers.Contract(SPENDER_ADDRESS, ALTAR_ABI, signer);
             const donateTx = await altarContract.donateToAltar(amountInWei);
             const receipt = await donateTx.wait();
 
             // 3. Send the transaction hash to the backend for verification
-            this.showToast('Step 3/3: Verifying with server...');
+            this.showToast(LanguageManager.get(this, 'altar_info_step3'));
             const txHash = receipt.hash;
             const response = await api.fetch('/altar/donate', {
                 method: 'POST',
@@ -129,7 +136,7 @@ export default class AltarScene extends Phaser.Scene {
 
             if (response.success) {
                 SoundManager.play(this, 'upgrade');
-                this.showToast("Donation successful! Thank you!");
+                this.showToast(LanguageManager.get(this, 'altar_success_donation'));
                 this.updateStatusText(response.altarStatus);
             } else {
                 throw new Error(response.message || "Server verification failed.");
@@ -138,7 +145,7 @@ export default class AltarScene extends Phaser.Scene {
         } catch (error) {
             console.error("Donation failed:", error);
             SoundManager.play(this, 'error');
-            this.showToast(`Error: ${error.message}`);
+            this.showToast(LanguageManager.get(this, 'altar_error_connection') + `: ${error.message}`);
         }
     }
 
