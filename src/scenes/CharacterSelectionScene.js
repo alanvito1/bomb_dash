@@ -1,4 +1,5 @@
 import api from '../api.js';
+import nftService from '../web3/nft-service.js'; // Import the new NFT service
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 
@@ -83,19 +84,45 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   }
 
   async fetchAndDisplayHeroes(loadingText) {
+    // 1. Attempt to fetch NFT heroes first
+    loadingText.setText(LanguageManager.get('char_select_loading_nfts'));
+
     try {
-      const response = await api.getHeroes();
-      if (response.success && response.heroes.length > 0) {
-        this.heroes = response.heroes;
+        const nftResponse = await nftService.getOwnedNfts();
+
+        if (nftResponse.success && nftResponse.heroes.length > 0) {
+            // NFTs found, display them
+            this.heroes = nftResponse.heroes;
+            loadingText.destroy();
+            this.displayHeroes(nftResponse.heroes);
+            return; // Stop here, no need to fetch mock heroes
+        } else if (!nftResponse.success) {
+            // An error occurred, but we can still try the fallback
+            console.warn('NFT Service Error:', nftResponse.message);
+            // We will proceed to the fallback, but we could show a temporary warning here if desired.
+        }
+        // If no NFTs are found (success: true, heroes: []), we proceed to the fallback.
+
+    } catch (error) {
+        console.error('A critical error occurred while fetching NFTs:', error);
+        // Fall through to fetching mock heroes as a last resort
+    }
+
+    // 2. Fallback to fetching mock heroes from the API
+    loadingText.setText(LanguageManager.get('char_select_loading_mock'));
+    try {
+      const apiResponse = await api.getHeroes();
+      if (apiResponse.success && apiResponse.heroes.length > 0) {
+        this.heroes = apiResponse.heroes;
         loadingText.destroy();
-        this.displayHeroes(response.heroes);
-      } else if (response.success && response.heroes.length === 0) {
+        this.displayHeroes(apiResponse.heroes);
+      } else if (apiResponse.success && apiResponse.heroes.length === 0) {
         loadingText.setText(LanguageManager.get('char_select_no_heroes'));
       } else {
-        loadingText.setText(LanguageManager.get('char_select_error', { message: response.message }));
+        loadingText.setText(LanguageManager.get('char_select_error', { message: apiResponse.message }));
       }
     } catch (error) {
-      console.error('Failed to fetch heroes:', error);
+      console.error('Failed to fetch mock heroes:', error);
       loadingText.setText(LanguageManager.get('char_select_error_connection'));
     }
   }
@@ -127,6 +154,12 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       const levelText = this.add.text(0, 95, `Lvl: ${hero.level}`, { fontSize: '12px', fill: '#cccccc', fontFamily: '"Press Start 2P"', align: 'center' }).setOrigin(0.5);
       card.add(levelText);
 
+      // Add a small indicator for NFT heroes
+      if (hero.isNFT) {
+          const nftIndicator = this.add.text(0, 115, 'NFT', { fontSize: '10px', fill: '#00ffff', fontFamily: '"Press Start 2P"', align: 'center' }).setOrigin(0.5);
+          card.add(nftIndicator);
+      }
+
       card.setSize(170, 240);
       card.setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.selectHero(hero, card, index))
@@ -157,6 +190,8 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   }
 
   startGameWithSelectedHero() {
+    // For NFT heroes, we might not need to pass the full object if the backend can re-fetch details
+    // But for now, we pass the whole object for consistency with mock heroes.
     console.log('Starting game with Hero:', this.selectedHero, 'Game Mode:', this.gameMode);
     this.scene.start('GameScene', { gameMode: this.gameMode || 'solo' });
   }
