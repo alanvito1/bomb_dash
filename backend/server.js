@@ -108,6 +108,7 @@ app.post('/api/auth/verify', async (req, res) => {
 
         let user = await db.findUserByAddress(address);
         if (!user) {
+            // This block handles the first login for a new user.
             console.log(`First login for ${address}. Creating user and assigning heroes...`);
             // 1. Create the user record first.
             const newUserResult = await db.createUserByAddress(address);
@@ -361,7 +362,7 @@ app.post('/api/admin/player/:id', verifyAdmin, async (req, res) => {
     }
 });
 
-// Rota de Debug para atribuir um herói mock a uma carteira
+// Rota de Debug para atribuir um herói mock a uma carteira (para fins de teste)
 app.post('/api/debug/assign-mock-hero', verifyAdmin, async (req, res) => {
     const { walletAddress } = req.body;
     if (!walletAddress) {
