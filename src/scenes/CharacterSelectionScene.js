@@ -32,9 +32,9 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     const textStyle = { fontSize: '16px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };
     const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
-    this.add.text(centerX, 70, LanguageManager.get(this, 'char_select_title'), titleStyle).setOrigin(0.5);
+    this.add.text(centerX, 70, LanguageManager.get('char_select_title'), titleStyle).setOrigin(0.5);
 
-    const loadingText = this.add.text(centerX, centerY, LanguageManager.get(this, 'char_select_loading'), textStyle).setOrigin(0.5);
+    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
 
     this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
     this.createActionButtons(centerX, this.scale.height - 120, buttonStyle);
@@ -43,10 +43,10 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   }
 
   createActionButtons(x, y, style) {
-    this.playButton = this.add.text(x, y, LanguageManager.get(this, 'char_select_start_game'), { ...style, fill: '#90EE90' })
+    this.playButton = this.add.text(x, y, LanguageManager.get('char_select_start_game'), { ...style, fill: '#90EE90' })
         .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    this.shopButton = this.add.text(x, y + 50, LanguageManager.get(this, 'char_select_upgrades'), style)
+    this.shopButton = this.add.text(x, y + 50, LanguageManager.get('char_select_upgrades'), style)
         .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     this.playButton.on('pointerdown', () => {
@@ -90,13 +90,13 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         loadingText.destroy();
         this.displayHeroes(response.heroes);
       } else if (response.success && response.heroes.length === 0) {
-        loadingText.setText(LanguageManager.get(this, 'char_select_no_heroes'));
+        loadingText.setText(LanguageManager.get('char_select_no_heroes'));
       } else {
-        loadingText.setText(LanguageManager.get(this, 'char_select_error', { message: response.message }));
+        loadingText.setText(LanguageManager.get('char_select_error', { message: response.message }));
       }
     } catch (error) {
       console.error('Failed to fetch heroes:', error);
-      loadingText.setText(LanguageManager.get(this, 'char_select_error_connection'));
+      loadingText.setText(LanguageManager.get('char_select_error_connection'));
     }
   }
 
@@ -162,7 +162,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   }
 
   createBackButton(x, y, style) {
-    const backBtn = this.add.text(x, y, LanguageManager.get(this, 'back_button'), style)
+    const backBtn = this.add.text(x, y, LanguageManager.get('back_button'), style)
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
 

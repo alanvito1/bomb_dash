@@ -18,7 +18,7 @@ export default class StartScene extends Phaser.Scene {
       .setDisplaySize(this.scale.width, this.scale.height);
 
     // 🕹️ Texto de introdução
-    const pressText = this.add.text(centerX, centerY, LanguageManager.get(this, 'press_any_key'), {
+    const pressText = this.add.text(centerX, centerY, LanguageManager.get('press_any_key'), {
       fontSize: '20px',
       fill: '#00ffff',
       fontFamily: 'monospace',

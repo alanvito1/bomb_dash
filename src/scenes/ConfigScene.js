@@ -10,7 +10,7 @@ export default class ConfigScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    this.add.text(centerX, 80, LanguageManager.get(this, 'config_title'), {
+    this.add.text(centerX, 80, LanguageManager.get('config_title'), {
       fontSize: '28px',
       fill: '#ffffff',
       fontFamily: 'monospace'
@@ -20,7 +20,7 @@ export default class ConfigScene extends Phaser.Scene {
     let sfxEnabled = this.registry.get('sfxEnabled') ?? true;
     let volume = this.registry.get('volume') ?? 0.5;
 
-    const musicLabel = () => LanguageManager.get(this, musicEnabled ? 'config_music_on' : 'config_music_off');
+    const musicLabel = () => LanguageManager.get(musicEnabled ? 'config_music_on' : 'config_music_off');
     const musicText = this.add.text(centerX, 150, musicLabel(), {
       fontSize: '20px',
       fill: '#ffff00',
@@ -41,7 +41,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    const sfxLabel = () => LanguageManager.get(this, sfxEnabled ? 'config_sfx_on' : 'config_sfx_off');
+    const sfxLabel = () => LanguageManager.get(sfxEnabled ? 'config_sfx_on' : 'config_sfx_off');
     const sfxText = this.add.text(centerX, 210, sfxLabel(), {
       fontSize: '20px',
       fill: '#00ffff',
@@ -57,7 +57,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    const volumeLabel = () => LanguageManager.get(this, 'config_volume', { volume: Math.round(volume * 100) });
+    const volumeLabel = () => LanguageManager.get('config_volume', { volume: Math.round(volume * 100) });
     const volumeText = this.add.text(centerX, 270, volumeLabel(), {
       fontSize: '20px',
       fill: '#00ff88',
@@ -76,7 +76,7 @@ export default class ConfigScene extends Phaser.Scene {
       SoundManager.play(this, 'click');
     });
 
-    this.add.text(centerX, 350, LanguageManager.get(this, 'config_reset_data'), {
+    this.add.text(centerX, 350, LanguageManager.get('config_reset_data'), {
       fontSize: '20px',
       fill: '#ff5555',
       fontFamily: 'monospace'
@@ -85,13 +85,13 @@ export default class ConfigScene extends Phaser.Scene {
       .setInteractive()
       .on('pointerdown', () => {
         SoundManager.play(this, 'click');
-        if (confirm(LanguageManager.get(this, 'config_reset_confirm'))) {
+        if (confirm(LanguageManager.get('config_reset_confirm'))) {
           localStorage.clear();
           this.scene.start('MenuScene');
         }
       });
 
-    this.add.text(centerX, 420, LanguageManager.get(this, 'config_back'), {
+    this.add.text(centerX, 420, LanguageManager.get('config_back'), {
       fontSize: '20px',
       fill: '#00ffff',
       fontFamily: 'monospace'

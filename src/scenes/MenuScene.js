@@ -75,7 +75,7 @@ export default class MenuScene extends Phaser.Scene {
 
   createMenuContent(centerX, centerY, useFallback = false) {
     // 🎮 Título do jogo
-    this.add.text(centerX, 100, LanguageManager.get(this, 'game_title'), {
+    this.add.text(centerX, 100, LanguageManager.get('game_title'), {
       fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
       fontSize: '20px',
       fill: '#FFD700',
@@ -94,11 +94,11 @@ export default class MenuScene extends Phaser.Scene {
       fill: '#FFD700',
       align: 'right'
     };
-    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, LanguageManager.get(this, 'hud_bcoin_loading'), textStyle).setOrigin(1, 0);
+    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, LanguageManager.get('hud_bcoin_loading'), textStyle).setOrigin(1, 0);
 
     try {
       if (!window.ethereum) {
-        this.bcoinBalanceText.setText(LanguageManager.get(this, 'hud_bcoin_no_wallet'));
+        this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_no_wallet'));
         return;
       }
 
@@ -113,23 +113,23 @@ export default class MenuScene extends Phaser.Scene {
       // Format the balance to 8 decimal places.
       const formattedBalance = parseFloat(ethers.formatUnits(balance, 18)).toFixed(8);
 
-      this.bcoinBalanceText.setText(LanguageManager.get(this, 'menu_bcoin_balance', { balance: formattedBalance }));
+      this.bcoinBalanceText.setText(LanguageManager.get('menu_bcoin_balance', { balance: formattedBalance }));
 
     } catch (error) {
       console.error('Failed to fetch BCOIN balance:', error);
-      this.bcoinBalanceText.setText(LanguageManager.get(this, 'hud_bcoin_error'));
+      this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_error'));
     }
   }
 
   createMenu(centerX, centerY, useFallback = false) {
     const menuItems = [
-      { key: 'menu_solo', label: LanguageManager.get(this, 'menu_solo'), scene: 'CharacterSelectionScene' },
-      { key: 'menu_pvp', label: LanguageManager.get(this, 'menu_pvp'), action: 'showPvpLobby' },
-      { key: 'menu_altar', label: LanguageManager.get(this, 'menu_altar'), scene: 'AltarScene' },
-      { key: 'menu_shop', label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene' },
-      { key: 'menu_profile', label: LanguageManager.get(this, 'profile_title'), scene: 'ProfileScene' },
-      { key: 'menu_ranking', label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene' },
-      { key: 'menu_logout', label: LanguageManager.get(this, 'menu_logout'), action: 'logout', color: '#FF6347' }
+      { key: 'menu_solo', label: LanguageManager.get('menu_solo'), scene: 'CharacterSelectionScene' },
+      { key: 'menu_pvp', label: LanguageManager.get('menu_pvp'), action: 'showPvpLobby' },
+      { key: 'menu_altar', label: LanguageManager.get('menu_altar'), scene: 'AltarScene' },
+      { key: 'menu_shop', label: LanguageManager.get('menu_shop'), scene: 'ShopScene' },
+      { key: 'menu_profile', label: LanguageManager.get('profile_title'), scene: 'ProfileScene' },
+      { key: 'menu_ranking', label: LanguageManager.get('menu_ranking'), scene: 'RankingScene' },
+      { key: 'menu_logout', label: LanguageManager.get('menu_logout'), action: 'logout', color: '#FF6347' }
     ];
 
     const buttonStartY = centerY - 120;
@@ -200,7 +200,7 @@ export default class MenuScene extends Phaser.Scene {
     const wagerArena = document.getElementById('wager-arena-container');
     const messageEl = document.getElementById('wager-arena-message');
     wagerArena.style.display = 'flex';
-    messageEl.textContent = LanguageManager.get(this, 'wager_arena_welcome');
+    messageEl.textContent = LanguageManager.get('wager_arena_welcome');
     messageEl.style.color = '#ffffff';
 
     // Adiciona listeners uma única vez
@@ -211,7 +211,7 @@ export default class MenuScene extends Phaser.Scene {
           SoundManager.play(this, 'click');
           const tierId = button.dataset.tierId;
 
-          messageEl.textContent = LanguageManager.get(this, 'wager_arena_checking');
+          messageEl.textContent = LanguageManager.get('wager_arena_checking');
           messageEl.style.color = '#ffff00'; // Amarelo para processamento
 
           try {
@@ -220,12 +220,12 @@ export default class MenuScene extends Phaser.Scene {
             if (response.success) {
               this.showWagerConfirmation(response.tier);
             } else {
-              messageEl.textContent = response.message || LanguageManager.get(this, 'wager_arena_fail');
+              messageEl.textContent = response.message || LanguageManager.get('wager_arena_fail');
               messageEl.style.color = '#ff0000'; // Vermelho para erro
             }
           } catch (error) {
             console.error('Erro ao verificar aposta:', error);
-            messageEl.textContent = error.message || LanguageManager.get(this, 'wager_arena_error');
+            messageEl.textContent = error.message || LanguageManager.get('wager_arena_error');
             messageEl.style.color = '#ff0000';
           }
         });
@@ -247,7 +247,7 @@ export default class MenuScene extends Phaser.Scene {
     const messageEl = document.getElementById('wager-confirm-message');
     const wagerArenaMsg = document.getElementById('wager-arena-message');
 
-    messageEl.innerHTML = LanguageManager.get(this, 'wager_confirm_message', { bcoin: tier.bcoin_cost, xp: tier.xp_cost });
+    messageEl.innerHTML = LanguageManager.get('wager_confirm_message', { bcoin: tier.bcoin_cost, xp: tier.xp_cost });
     confirmDialog.style.display = 'flex';
 
     const confirmButton = document.getElementById('wager-confirm-button');
@@ -260,13 +260,13 @@ export default class MenuScene extends Phaser.Scene {
     newConfirmButton.addEventListener('click', async () => {
         SoundManager.play(this, 'click');
         confirmDialog.style.display = 'none';
-        wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_wallet_prompt');
+        wagerArenaMsg.textContent = LanguageManager.get('wager_wallet_prompt');
         wagerArenaMsg.style.color = '#ffff00'; // Amarelo
 
         try {
             // 1. Conectar à carteira e ao contrato
             if (typeof window.ethereum === 'undefined') {
-                throw new Error(LanguageManager.get(this, 'metamask_not_installed'));
+                throw new Error(LanguageManager.get('metamask_not_installed'));
             }
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
@@ -275,13 +275,13 @@ export default class MenuScene extends Phaser.Scene {
             const wagerArenaContract = new ethers.Contract(WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI, signer);
 
             // 2. Chamar a função do contrato
-            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_sending');
+            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_sending');
             const tx = await wagerArenaContract.enterWagerQueue(tier.id);
 
-            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_confirming');
+            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_confirming');
             await tx.wait(); // Espera a transação ser minerada
 
-            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_success', { tierName: tier.name });
+            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_success', { tierName: tier.name });
             wagerArenaMsg.style.color = '#00ff00'; // Verde
 
             // Aqui, o jogo entraria em um estado de "espera", escutando por um evento do backend/websocket
@@ -289,7 +289,7 @@ export default class MenuScene extends Phaser.Scene {
 
         } catch (error) {
             console.error('Falha na transação da aposta:', error);
-            wagerArenaMsg.textContent = LanguageManager.get(this, 'wager_tx_fail', { errorMessage: error.message.substring(0, 50) });
+            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_fail', { errorMessage: error.message.substring(0, 50) });
             wagerArenaMsg.style.color = '#ff0000'; // Vermelho
         }
     }, { once: true });
