@@ -1,5 +1,27 @@
 // main.js
 
+import * as Sentry from "@sentry/browser";
+
+// Initialize Sentry for error reporting and session replay
+Sentry.init({
+  dsn: "https://examplePublicKey@o0.ingest.sentry.io/0", // Placeholder DSN
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      // Mask all text content to protect user privacy
+      maskAllText: true,
+      // Block all media to reduce replay size
+      blockAllMedia: true,
+    }),
+  ],
+  // Performance Monitoring
+  tracesSampleRate: 1.0, // Capture 100% of the transactions
+  // Session Replay
+  replaysSessionSampleRate: 1.0, // This sets the sample rate at 100%. You may want to change it in production
+  replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, sample the session when an error occurs.
+});
+
+
 // 🎬 Importação das cenas principais do jogo
 import LoadingScene from './src/scenes/LoadingScene.js';
 import StartScene from './src/scenes/StartScene.js';
@@ -32,17 +54,10 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false, // Will be enabled dynamically by the preBoot callback if DEBUG_MODE is true.
+      // Definitive Fix: Set debug mode directly and safely based on the global constant.
+      // This removes the unreliable preBoot callback that was causing the crash.
+      debug: window.DEBUG_MODE,
       gravity: { y: 0 }
-    }
-  },
-  callbacks: {
-    preBoot: (game) => {
-        if (window.DEBUG_MODE) {
-            console.log('[DEBUG] Debug mode activated. Enabling verbose logging and physics visualization.');
-            game.setDebug(true, true);
-            game.physics.config.debug = true;
-        }
     }
   },
   dom: {

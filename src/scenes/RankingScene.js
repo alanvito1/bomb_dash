@@ -21,10 +21,10 @@ export default class RankingScene extends Phaser.Scene {
     const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
     // --- UI Elements ---
-    this.add.text(centerX, 70, LanguageManager.get(this, 'ranking_title'), titleStyle).setOrigin(0.5);
+    this.add.text(centerX, 70, LanguageManager.get('ranking_title'), titleStyle).setOrigin(0.5);
     this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
 
-    const loadingText = this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_loading'), textStyle).setOrigin(0.5);
+    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('ranking_loading'), textStyle).setOrigin(0.5);
 
     try {
         const rankingData = await api.getRanking();
@@ -33,19 +33,19 @@ export default class RankingScene extends Phaser.Scene {
         if (rankingData && rankingData.length > 0) {
             this.createRankingTable(centerX, 130, rankingData);
         } else if (rankingData && rankingData.length === 0) {
-            this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_empty'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
+            this.add.text(centerX, centerY, LanguageManager.get('ranking_empty'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
         } else {
-            this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_failed'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
+            this.add.text(centerX, centerY, LanguageManager.get('ranking_failed'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
         }
     } catch (error) {
         loadingText.destroy();
         console.error("Error fetching ranking for scene:", error);
-        this.add.text(centerX, centerY, LanguageManager.get(this, 'ranking_error'), { ...textStyle, fill: '#ff0000' }).setOrigin(0.5);
+        this.add.text(centerX, centerY, LanguageManager.get('ranking_error'), { ...textStyle, fill: '#ff0000' }).setOrigin(0.5);
     }
   }
 
   createBackButton(x, y, style) {
-    const backButton = this.add.text(x, y, LanguageManager.get(this, 'shop_back_to_menu'), style)
+    const backButton = this.add.text(x, y, LanguageManager.get('shop_back_to_menu'), style)
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
 
@@ -68,9 +68,9 @@ export default class RankingScene extends Phaser.Scene {
     const scoreX = x + 140;
 
     // Add Headers
-    this.add.text(rankX, startY, LanguageManager.get(this, 'ranking_header_rank'), headerStyle).setOrigin(0.5);
-    this.add.text(playerX, startY, LanguageManager.get(this, 'ranking_header_player'), headerStyle).setOrigin(0.5);
-    this.add.text(scoreX, startY, LanguageManager.get(this, 'ranking_header_score'), headerStyle).setOrigin(0.5);
+    this.add.text(rankX, startY, LanguageManager.get('ranking_header_rank'), headerStyle).setOrigin(0.5);
+    this.add.text(playerX, startY, LanguageManager.get('ranking_header_player'), headerStyle).setOrigin(0.5);
+    this.add.text(scoreX, startY, LanguageManager.get('ranking_header_score'), headerStyle).setOrigin(0.5);
 
     // Add a separator line
     this.add.graphics().fillStyle(0x00ffff, 0.5).fillRect(x - 180, startY + 25, 360, 2);

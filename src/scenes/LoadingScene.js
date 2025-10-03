@@ -98,8 +98,8 @@ export default class LoadingScene extends Phaser.Scene {
                 await LanguageManager.init(this);
 
                 // Now that LanguageManager is ready, update the UI text
-                titleText.setText(LanguageManager.get(this, 'game_title'));
-                loadingText.setText(LanguageManager.get(this, 'loading_initializing'));
+                titleText.setText(LanguageManager.get('game_title'));
+                loadingText.setText(LanguageManager.get('loading_initializing'));
 
                 console.log('🔄 Checking for existing user session...');
                 try {

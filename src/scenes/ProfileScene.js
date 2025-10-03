@@ -27,7 +27,7 @@ export default class ProfileScene extends Phaser.Scene {
     const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
     // --- UI Elements ---
-    this.add.text(centerX, 70, LanguageManager.get(this, 'profile_title'), titleStyle).setOrigin(0.5);
+    this.add.text(centerX, 70, LanguageManager.get('profile_title'), titleStyle).setOrigin(0.5);
     this.displayHeroCard(centerX, centerY - 50, textStyle);
     this.createLevelUpButton(centerX, this.scale.height - 150, buttonStyle);
     this.createBackButton(centerX, this.scale.height - 80, buttonStyle);
@@ -77,11 +77,11 @@ export default class ProfileScene extends Phaser.Scene {
 
   updateStatDisplays(stats) {
       const { level = 1, hp = 100, maxHp = 100, damage = 1, speed = 200, fireRate = 600, xp = 0 } = stats;
-      this.levelText.setText(LanguageManager.get(this, 'profile_stat_level', { level }));
-      this.hpText.setText(LanguageManager.get(this, 'profile_stat_hp', { hp, maxHp }));
-      this.damageText.setText(LanguageManager.get(this, 'profile_stat_damage', { damage }));
-      this.speedText.setText(LanguageManager.get(this, 'profile_stat_speed', { speed }));
-      this.fireRateText.setText(LanguageManager.get(this, 'profile_stat_fire_rate', { fireRate }));
+      this.levelText.setText(LanguageManager.get('profile_stat_level', { level }));
+      this.hpText.setText(LanguageManager.get('profile_stat_hp', { hp, maxHp }));
+      this.damageText.setText(LanguageManager.get('profile_stat_damage', { damage }));
+      this.speedText.setText(LanguageManager.get('profile_stat_speed', { speed }));
+      this.fireRateText.setText(LanguageManager.get('profile_stat_fire_rate', { fireRate }));
 
       if (this.levelUpButton) {
         const xpForNextLevel = getExperienceForLevel(level + 1);
@@ -94,7 +94,7 @@ export default class ProfileScene extends Phaser.Scene {
   }
 
   createLevelUpButton(x, y, style) {
-    this.levelUpButton = this.add.text(x, y, LanguageManager.get(this, 'profile_level_up_button', { cost: 1 }), { ...style, fill: '#888888' })
+    this.levelUpButton = this.add.text(x, y, LanguageManager.get('profile_level_up_button', { cost: 1 }), { ...style, fill: '#888888' })
         .setOrigin(0.5)
         .disableInteractive();
 
@@ -106,27 +106,27 @@ export default class ProfileScene extends Phaser.Scene {
 
         try {
             SoundManager.play(this, 'click');
-            this.messageText.setText(LanguageManager.get(this, 'profile_wallet_connecting')).setStyle({ fill: '#ffff00' });
+            this.messageText.setText(LanguageManager.get('profile_wallet_connecting')).setStyle({ fill: '#ffff00' });
 
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
 
-            this.messageText.setText(LanguageManager.get(this, 'profile_wallet_approve_fee', { cost: 1 }));
+            this.messageText.setText(LanguageManager.get('profile_wallet_approve_fee', { cost: 1 }));
             const feeInWei = ethers.parseUnits('1', 18);
             const tx = await bcoinContract.approve(SPENDER_ADDRESS, feeInWei);
 
-            this.levelUpButton.disableInteractive().setText(LanguageManager.get(this, 'profile_level_up_confirming'));
+            this.levelUpButton.disableInteractive().setText(LanguageManager.get('profile_level_up_confirming'));
             await tx.wait();
 
-            this.messageText.setText(LanguageManager.get(this, 'profile_level_up_processing'));
+            this.messageText.setText(LanguageManager.get('profile_level_up_processing'));
             const result = await api.levelUp();
 
             if (result.success) {
                 this.messageText.setStyle({ fill: '#00ff00' }).setText(result.message);
                 await this.refreshStats();
             } else {
-                throw new Error(result.message || LanguageManager.get(this, 'profile_level_up_error_server'));
+                throw new Error(result.message || LanguageManager.get('profile_level_up_error_server'));
             }
         } catch (error) {
             this.messageText.setStyle({ fill: '#ff0000' }).setText(error.message.substring(0, 50));
@@ -145,7 +145,7 @@ export default class ProfileScene extends Phaser.Scene {
   }
 
   createBackButton(x, y, style) {
-    const backBtn = this.add.text(x, y, LanguageManager.get(this, 'back_to_menu'), style)
+    const backBtn = this.add.text(x, y, LanguageManager.get('back_to_menu'), style)
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
 

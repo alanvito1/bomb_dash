@@ -54,14 +54,12 @@ class LanguageManager {
 
     /**
      * Gets a translated string for the given key and replaces placeholders.
-     * @param {Phaser.Scene} scene - The scene from which this function is called.
+     * This method is now static and does not require a scene context.
      * @param {string} key - The key of the translation string.
      * @param {object} [params={}] - An object with key-value pairs for placeholder replacement.
      * @returns {string} The translated and formatted string, or the key itself if not found.
      */
-    static get(scene, key, params = {}) {
-        // Fix: Directly use the static translations property instead of relying on the scene registry,
-        // which was proving inconsistent across scene reloads and navigations.
+    static get(key, params = {}) {
         const translations = this.translations;
         let text = translations ? translations[key] : null;
 

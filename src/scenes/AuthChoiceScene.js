@@ -15,7 +15,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         console.log('--- AuthChoiceScene: CREATE METHOD (adding button UI) ---');
 
         this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x1a1a1a).setOrigin(0);
-        this.add.text(this.cameras.main.centerX, this.cameras.main.height * 0.2, LanguageManager.get(this, 'auth_title'), {
+        this.add.text(this.cameras.main.centerX, this.cameras.main.height * 0.2, LanguageManager.get('auth_title'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '32px',
             color: '#ffffff',
@@ -23,7 +23,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // --- "Connect Wallet" Button ---
-        const connectButton = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, LanguageManager.get(this, 'auth_web3_login'), {
+        const connectButton = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, LanguageManager.get('auth_web3_login'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '20px',
             color: '#ffffff',
@@ -50,7 +50,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         connectButton.on('pointerdown', async () => {
             // 1. Disable button and show status
             connectButton.disableInteractive();
-            connectButton.setText(LanguageManager.get(this, 'auth_connecting'));
+            connectButton.setText(LanguageManager.get('auth_connecting'));
             statusText.setText(''); // Clear previous errors
 
             try {
@@ -59,7 +59,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
                 console.log('Web3 Login successful:', loginResult);
 
                 // 3. On success, show confirmation and transition
-                statusText.setText(LanguageManager.get(this, 'auth_success'));
+                statusText.setText(LanguageManager.get('auth_success'));
                 this.time.delayedCall(1000, () => {
                     if (window.DEBUG_MODE) {
                         console.log('[DEBUG] Login successful. Starting transition to MenuScene...');
@@ -70,8 +70,8 @@ export default class AuthChoiceScene extends Phaser.Scene {
             } catch (error) {
                 // 4. On failure, show error and re-enable button
                 console.error('Web3 Login failed:', error);
-                statusText.setText(error.message || LanguageManager.get(this, 'auth_error'));
-                connectButton.setText(LanguageManager.get(this, 'auth_web3_login'));
+                statusText.setText(error.message || LanguageManager.get('auth_error'));
+                connectButton.setText(LanguageManager.get('auth_web3_login'));
                 connectButton.setInteractive({ useHandCursor: true });
             }
         });

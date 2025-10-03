@@ -62,47 +62,55 @@ class ApiClient {
     // --- Métodos de Autenticação ---
 
     async web3Login() {
-        if (!window.ethereum) {
-            throw new Error('MetaMask not detected. Please install the extension.');
-        }
+        if (!window.ethereum) throw new Error('MetaMask not detected.');
 
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
+            const chainId = (await provider.getNetwork()).chainId;
 
-        // 1. Fetch nonce from the backend (public call)
-        const { nonce } = await this.fetch('/auth/nonce', {}, false);
-        if (!nonce) {
-            throw new Error('Failed to retrieve nonce from the server.');
-        }
+            // 1. Fetch nonce from the backend
+            const { nonce } = await this.fetch('/auth/nonce', {}, false);
 
-        // 2. Create SIWE message on the client side
-        const message = new SiweMessage({
-            domain: window.location.host,
-            address,
-            statement: 'Sign in with Ethereum to Bomb Dash.',
-            uri: window.location.origin,
-            version: '1',
-            chainId: await provider.getNetwork().then(network => network.chainId),
-            nonce: nonce,
-        });
+            // 2. AGGRESSIVE NONCE VALIDATION
+            if (!nonce || typeof nonce !== 'string' || nonce.length < 8) {
+                throw new Error(`Invalid nonce received from server: ${nonce}`);
+            }
 
-        const signature = await signer.signMessage(message.prepareMessage());
+            // 3. Create the SIWE message with all recommended security fields
+            const siweMessage = new SiweMessage({
+                domain: window.location.host,
+                address,
+                statement: 'Sign in to Bomb Dash Web3 to continue.',
+                uri: window.location.origin,
+                version: '1',
+                chainId: Number(chainId),
+                nonce: nonce,
+                issuedAt: new Date().toISOString(),
+                expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // Signature is valid for 5 minutes
+            });
 
-        // 3. Send message and signature to the backend for verification (public call)
-        const verifyData = await this.fetch('/auth/verify', {
-            method: 'POST',
-            body: JSON.stringify({ message, signature }, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value
-            ),
-        }, false);
+            const messageToSign = siweMessage.prepareMessage();
+            const signature = await signer.signMessage(messageToSign);
 
-        if (verifyData.success && verifyData.token) {
-            this.setJwtToken(verifyData.token);
-            console.log('Login successful, JWT token stored.');
-            return verifyData;
-        } else {
-            throw new Error(verifyData.message || 'Signature verification failed.');
+            // Send the ORIGINAL message object and the signature to the backend
+            const verifyData = await this.fetch('/auth/verify', {
+                method: 'POST',
+                body: JSON.stringify({ message: siweMessage, signature }),
+            }, false);
+
+            if (verifyData.success && verifyData.token) {
+                this.setJwtToken(verifyData.token);
+                console.log('SIWE Login successful!');
+                return verifyData;
+            } else {
+                throw new Error(verifyData.message || 'SIWE server-side verification failed.');
+            }
+
+        } catch (error) {
+            console.error('Authentication failed:', error);
+            throw error;
         }
     }
 

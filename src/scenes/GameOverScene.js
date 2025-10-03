@@ -45,7 +45,7 @@ export default class GameOverScene extends Phaser.Scene {
     WebFont.load({
         google: { families: ['Press Start 2P'] },
         active: () => {
-            this.add.text(centerX, centerY - 200, LanguageManager.get(this, 'game_over_title'), {
+            this.add.text(centerX, centerY - 200, LanguageManager.get('game_over_title'), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '32px',
                 fill: '#ff0000',
@@ -54,14 +54,14 @@ export default class GameOverScene extends Phaser.Scene {
                 align: 'center'
             }).setOrigin(0.5);
 
-            this.add.text(centerX, centerY - 100, LanguageManager.get(this, 'game_over_your_score', { score: originalScore }), {
+            this.add.text(centerX, centerY - 100, LanguageManager.get('game_over_your_score', { score: originalScore }), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
                 fill: '#ffffff',
                 align: 'center'
             }).setOrigin(0.5);
 
-            this.add.text(centerX, centerY - 50, LanguageManager.get(this, 'game_over_coins_earned', { coins: coinsEarned }), {
+            this.add.text(centerX, centerY - 50, LanguageManager.get('game_over_coins_earned', { coins: coinsEarned }), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '16px',
                 fill: '#FFD700',
@@ -70,25 +70,25 @@ export default class GameOverScene extends Phaser.Scene {
 
             let scoreMessage = '';
             if (cheatDetected) {
-                scoreMessage = LanguageManager.get(this, 'game_over_cheat_detected');
+                scoreMessage = LanguageManager.get('game_over_cheat_detected');
             } else {
                 const loggedInUser = this.registry.get('loggedInUser');
                 if (finalScore > 0) {
                      if (loggedInUser && finalScore === loggedInUser.max_score) {
-                        scoreMessage = LanguageManager.get(this, 'game_over_new_high_score');
+                        scoreMessage = LanguageManager.get('game_over_new_high_score');
                      } else if (loggedInUser && originalScore > loggedInUser.max_score && finalScore < originalScore) {
-                        scoreMessage = LanguageManager.get(this, 'game_over_score_adjusted');
+                        scoreMessage = LanguageManager.get('game_over_score_adjusted');
                      } else if (loggedInUser && finalScore < loggedInUser.max_score) {
-                        scoreMessage = LanguageManager.get(this, 'game_over_nice_try');
+                        scoreMessage = LanguageManager.get('game_over_nice_try');
                      } else if (!loggedInUser) {
-                        scoreMessage = LanguageManager.get(this, 'game_over_login_to_save');
+                        scoreMessage = LanguageManager.get('game_over_login_to_save');
                      } else {
-                        scoreMessage = LanguageManager.get(this, 'game_over_score_processed');
+                        scoreMessage = LanguageManager.get('game_over_score_processed');
                      }
                 } else if (!cheatDetected && originalScore > 0) {
-                    scoreMessage = LanguageManager.get(this, 'game_over_score_processed');
+                    scoreMessage = LanguageManager.get('game_over_score_processed');
                 } else {
-                    scoreMessage = LanguageManager.get(this, 'game_over_better_luck');
+                    scoreMessage = LanguageManager.get('game_over_better_luck');
                 }
             }
             this.add.text(centerX, centerY, scoreMessage, {
@@ -99,7 +99,7 @@ export default class GameOverScene extends Phaser.Scene {
                 wordWrap: {width: this.scale.width * 0.8}
             }).setOrigin(0.5);
 
-            this.add.text(centerX, centerY + 100, LanguageManager.get(this, 'game_over_return_to_menu'), {
+            this.add.text(centerX, centerY + 100, LanguageManager.get('game_over_return_to_menu'), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
                 fill: '#00ffff',
@@ -111,7 +111,7 @@ export default class GameOverScene extends Phaser.Scene {
                 this.scene.start('MenuScene');
             });
 
-            const rankingButton = this.add.text(centerX, centerY + 150, LanguageManager.get(this, 'game_over_view_ranking'), {
+            const rankingButton = this.add.text(centerX, centerY + 150, LanguageManager.get('game_over_view_ranking'), {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
                 fill: '#00ffff',

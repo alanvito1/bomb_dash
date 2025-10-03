@@ -41,6 +41,9 @@
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
+    "@sentry/browser": "^10.17.0",
+    "@sentry/replay": "^7.116.0",
+    "@sentry/tracing": "^7.120.4",
     "ethers": "^6.15.0",
     "siwe": "^3.0.0"
   }
