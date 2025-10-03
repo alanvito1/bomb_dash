@@ -101,6 +101,7 @@ export default class MenuScene extends Phaser.Scene {
     const menuItems = [
       { label: 'SOLO', scene: 'CharacterSelectionScene' },
       { label: 'PVP', action: 'showPvpLobby' },
+      { label: 'ALTAR', scene: 'AltarScene' },
       { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene' },
       { label: 'PROFILE', scene: 'ProfileScene' },
       { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene' },

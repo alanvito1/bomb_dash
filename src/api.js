@@ -141,6 +141,13 @@ class ApiClient {
         return this.fetch('/heroes');
     }
 
+    async purchaseHeroUpgrade(heroId, upgradeType, cost) {
+        return this.fetch(`/heroes/${heroId}/purchase-upgrade`, {
+            method: 'POST',
+            body: JSON.stringify({ upgradeType, cost }),
+        });
+    }
+
     async enterWagerMatch(tierId) {
         return this.fetch('/pvp/wager/enter', {
             method: 'POST',
