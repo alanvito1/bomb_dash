@@ -88,6 +88,7 @@ async function initDb() {
                         fireRate INTEGER DEFAULT 600,
                         bombSize REAL DEFAULT 1.0,
                         multiShot INTEGER DEFAULT 0,
+                        asset_key TEXT,
                         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                         UNIQUE(user_id, nft_id)
@@ -574,15 +575,15 @@ async function createHeroForUser(userId, heroData) {
         const {
             hero_type, nft_id = null, level = 1, xp = 0, hp = 100, maxHp = 100,
             damage = 1, speed = 200, extraLives = 1, fireRate = 600,
-            bombSize = 1.0, multiShot = 0
+            bombSize = 1.0, multiShot = 0, asset_key = null
         } = heroData;
 
-        const sql = `INSERT INTO heroes (user_id, hero_type, nft_id, level, xp, hp, maxHp, damage, speed, extraLives, fireRate, bombSize, multiShot)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+        const sql = `INSERT INTO heroes (user_id, hero_type, nft_id, level, xp, hp, maxHp, damage, speed, extraLives, fireRate, bombSize, multiShot, asset_key)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
 
         db.run(sql, [
             userId, hero_type, nft_id, level, xp, hp, maxHp, damage, speed,
-            extraLives, fireRate, bombSize, multiShot
+            extraLives, fireRate, bombSize, multiShot, asset_key
         ], function(err) {
             if (err) {
                 console.error(`Error creating hero for user ${userId}:`, err.message);
