@@ -16,7 +16,7 @@ export default class PauseScene extends Phaser.Scene {
             .fillRect(0, 0, this.scale.width, this.scale.height);
 
         // Pause Title
-        this.add.text(centerX, centerY - 100, 'PAUSED', {
+        this.add.text(centerX, centerY - 100, LanguageManager.get(this, 'pause_title'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '32px',
             fill: '#FFD700',
@@ -26,9 +26,9 @@ export default class PauseScene extends Phaser.Scene {
 
         // Menu Buttons
         const menuItems = [
-            { label: 'Continue', action: 'resume' },
-            { label: 'Settings', action: 'settings' },
-            { label: 'Exit Match', action: 'exit' }
+            { label: LanguageManager.get(this, 'pause_continue'), action: 'resume' },
+            { label: LanguageManager.get(this, 'pause_settings'), action: 'settings' },
+            { label: LanguageManager.get(this, 'pause_exit'), action: 'exit' }
         ];
 
         const buttonSpacing = 60;

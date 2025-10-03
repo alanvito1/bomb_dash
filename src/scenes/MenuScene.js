@@ -70,11 +70,11 @@ export default class MenuScene extends Phaser.Scene {
       fill: '#FFD700',
       align: 'right'
     };
-    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, 'BCOIN: ...', textStyle).setOrigin(1, 0);
+    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, LanguageManager.get(this, 'hud_bcoin_loading'), textStyle).setOrigin(1, 0);
 
     try {
       if (!window.ethereum) {
-        this.bcoinBalanceText.setText('BCOIN: Wallet not found');
+        this.bcoinBalanceText.setText(LanguageManager.get(this, 'hud_bcoin_no_wallet'));
         return;
       }
 
@@ -89,23 +89,23 @@ export default class MenuScene extends Phaser.Scene {
       // Format the balance to 8 decimal places.
       const formattedBalance = parseFloat(ethers.formatUnits(balance, 18)).toFixed(8);
 
-      this.bcoinBalanceText.setText(`BCOIN: ${formattedBalance}`);
+      this.bcoinBalanceText.setText(LanguageManager.get(this, 'menu_bcoin_balance', { balance: formattedBalance }));
 
     } catch (error) {
       console.error('Failed to fetch BCOIN balance:', error);
-      this.bcoinBalanceText.setText('BCOIN: Error');
+      this.bcoinBalanceText.setText(LanguageManager.get(this, 'hud_bcoin_error'));
     }
   }
 
   createMenu(centerX, centerY, useFallback = false) {
     const menuItems = [
-      { label: 'SOLO', scene: 'CharacterSelectionScene' },
-      { label: 'PVP', action: 'showPvpLobby' },
-      { label: 'ALTAR', scene: 'AltarScene' },
-      { label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene' },
-      { label: 'PROFILE', scene: 'ProfileScene' },
-      { label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene' },
-      { label: LanguageManager.get(this, 'menu_logout'), action: 'logout', color: '#FF6347' }
+      { key: 'menu_solo', label: LanguageManager.get(this, 'menu_solo'), scene: 'CharacterSelectionScene' },
+      { key: 'menu_pvp', label: LanguageManager.get(this, 'menu_pvp'), action: 'showPvpLobby' },
+      { key: 'menu_altar', label: LanguageManager.get(this, 'menu_altar'), scene: 'AltarScene' },
+      { key: 'menu_shop', label: LanguageManager.get(this, 'menu_shop'), scene: 'ShopScene' },
+      { key: 'menu_profile', label: LanguageManager.get(this, 'profile_title'), scene: 'ProfileScene' },
+      { key: 'menu_ranking', label: LanguageManager.get(this, 'menu_ranking'), scene: 'RankingScene' },
+      { key: 'menu_logout', label: LanguageManager.get(this, 'menu_logout'), action: 'logout', color: '#FF6347' }
     ];
 
     const buttonStartY = centerY - 120;
@@ -119,8 +119,9 @@ export default class MenuScene extends Phaser.Scene {
         backgroundColor: '#000000cc',
         padding: { x: 15, y: 10 },
         align: 'center'
-      })
-        .setOrigin(0.5)
+      });
+      button.setName(item.key); // Assign a stable name for automation
+      button.setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');

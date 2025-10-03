@@ -71,6 +71,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // 🚀 Criação da instância do jogo
   const game = new Phaser.Game(config);
+  window.game = game; // Expose for testing and automation
 
   // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
   window.onerror = function (msg, url, lineNo, columnNo, error) {

@@ -22,6 +22,7 @@ class LanguageManager {
      */
     static async loadLanguage(scene, lang) {
         this.currentLanguage = lang;
+        window.i18nReady = false; // Set flag to false during load
         try {
             const response = await fetch(`src/locales/${lang}.json`);
             if (!response.ok) {
@@ -31,6 +32,7 @@ class LanguageManager {
 
             scene.registry.set('translations', this.translations);
             console.log(`[i18n] Language file for '${lang}' loaded successfully.`);
+            window.i18nReady = true; // Signal that translations are ready
         } catch (error) {
             console.error(`[i18n] Could not load language file for '${lang}'. Defaulting to English.`, error);
             if (lang !== 'en') {
@@ -58,7 +60,9 @@ class LanguageManager {
      * @returns {string} The translated and formatted string, or the key itself if not found.
      */
     static get(scene, key, params = {}) {
-        const translations = scene.registry.get('translations');
+        // Fix: Directly use the static translations property instead of relying on the scene registry,
+        // which was proving inconsistent across scene reloads and navigations.
+        const translations = this.translations;
         let text = translations ? translations[key] : null;
 
         if (text) {

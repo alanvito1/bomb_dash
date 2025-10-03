@@ -104,7 +104,7 @@ export default class EnemySpawner {
     // 2.4: Game Balancing - Reduce initial difficulty
     let currentMaxEnemies = this.maxEnemiesBase;
     if (level === 1) {
-      currentMaxEnemies = 5; // Set a new base for level 1
+      currentMaxEnemies = 4; // Further reduced for smoother onboarding (was 5)
     }
 
     if (this.scene.enemySpawnMultiplierActive) {
