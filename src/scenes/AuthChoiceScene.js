@@ -61,6 +61,9 @@ export default class AuthChoiceScene extends Phaser.Scene {
                 // 3. On success, show confirmation and transition
                 statusText.setText(LanguageManager.get(this, 'auth_success'));
                 this.time.delayedCall(1000, () => {
+                    if (window.DEBUG_MODE) {
+                        console.log('[DEBUG] Login successful. Starting transition to MenuScene...');
+                    }
                     this.scene.start('MenuScene');
                 });
 

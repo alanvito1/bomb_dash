@@ -17,6 +17,12 @@ import PauseScene from './src/scenes/PauseScene.js';
 import PopupScene from './src/scenes/PopupScene.js';
 import AltarScene from './src/scenes/AltarScene.js';
 
+// --- Hardcoded Debug Mode ---
+// This constant provides a simple, reliable way to toggle debug features
+// without relying on the broken Vite environment variable system.
+window.DEBUG_MODE = true;
+// --------------------------
+
 // ⚙️ Configurações gerais do Phaser
 const config = {
   type: Phaser.AUTO,
@@ -26,8 +32,17 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,
+      debug: false, // Will be enabled dynamically by the preBoot callback if DEBUG_MODE is true.
       gravity: { y: 0 }
+    }
+  },
+  callbacks: {
+    preBoot: (game) => {
+        if (window.DEBUG_MODE) {
+            console.log('[DEBUG] Debug mode activated. Enabling verbose logging and physics visualization.');
+            game.setDebug(true, true);
+            game.physics.config.debug = true;
+        }
     }
   },
   dom: {
