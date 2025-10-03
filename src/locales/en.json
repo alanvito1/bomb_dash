@@ -88,6 +88,8 @@
     "hud_hero_xp": "HERO XP",
     "char_select_title": "Select Your Hero",
     "char_select_loading": "Loading Heroes...",
+    "char_select_loading_nfts": "Searching for NFT heroes...",
+    "char_select_loading_mock": "Loading default heroes...",
     "char_select_start_game": "Start Game",
     "char_select_upgrades": "Upgrades",
     "back_button": "< Back",

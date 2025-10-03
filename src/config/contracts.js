@@ -1,0 +1,44 @@
+// This file contains the configuration for the smart contracts used in the application.
+
+// BSC Testnet Chain ID
+export const BOMB_CRYPTO_CHAIN_ID = 97;
+
+// Bombcrypto Hero NFT Contract
+export const BOMB_CRYPTO_NFT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Replace with the actual address
+export const BOMB_CRYPTO_NFT_ABI = [
+  // A minimal ABI for the functionality required:
+  // 1. Check balance: balanceOf(address)
+  // 2. Get token ID: tokenOfOwnerByIndex(address, index)
+  // 3. Get hero stats: getHeroStats(tokenId) - This is a placeholder, the actual function name might be different.
+
+  {
+    "constant": true,
+    "inputs": [{ "name": "owner", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      { "name": "owner", "type": "address" },
+      { "name": "index", "type": "uint256" }
+    ],
+    "name": "tokenOfOwnerByIndex",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [{ "name": "tokenId", "type": "uint256" }],
+    "name": "getHeroStats", // Placeholder: Replace with the actual function name from the contract
+    "outputs": [
+      { "name": "damage", "type": "uint8" },
+      { "name": "health", "type": "uint8" },
+      { "name": "speed", "type": "uint8" },
+      { "name": "stamina", "type": "uint8" },
+      { "name": "bomb_skin", "type": "string" }
+    ],
+    "type": "function"
+  }
+];
