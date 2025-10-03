@@ -23,7 +23,27 @@ export default class MenuScene extends Phaser.Scene {
     this.bcoinBalanceText = null;
   }
 
+  init(data) {
+    if (window.DEBUG_MODE) {
+        console.log('[DEBUG] MenuScene: init() called.', data);
+    }
+  }
+
+  preload() {
+    if (window.DEBUG_MODE) {
+        console.log('[DEBUG] MenuScene: preload() started...');
+    }
+    // Nothing to preload for this specific scene, but the hook is here.
+    if (window.DEBUG_MODE) {
+        console.log('[DEBUG] MenuScene: preload() finished.');
+    }
+  }
+
   create() {
+    if (window.DEBUG_MODE) {
+        debugger; // This will pause the browser
+        console.log('[DEBUG] MenuScene: create() started...');
+    }
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
@@ -41,6 +61,10 @@ export default class MenuScene extends Phaser.Scene {
 
     this.playMenuMusic();
     this.displayBcoinBalance();
+
+    if (window.DEBUG_MODE) {
+        console.log('[DEBUG] MenuScene: create() finished.');
+    }
   }
 
   createBackground(centerX, centerY) {
