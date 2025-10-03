@@ -86,8 +86,8 @@ describe('Mock Hero Assignment System', () => {
         expect(user.heroes).to.be.an('array').with.lengthOf(2); // Assuming 2 mock heroes (Ninja, Witch)
 
         // 5. Check the properties of the assigned heroes
-        const ninja = user.heroes.find(h => h.asset_key === 'ninja_hero');
-        const witch = user.heroes.find(h => h.asset_key === 'witch_hero');
+        const ninja = user.heroes.find(h => h.sprite_name === 'ninja_hero');
+        const witch = user.heroes.find(h => h.sprite_name === 'witch_hero');
         expect(ninja).to.exist;
         expect(witch).to.exist;
         expect(ninja.hero_type).to.equal('mock');
@@ -128,7 +128,7 @@ describe('Mock Hero Assignment System', () => {
         it('[S-3] POST /api/debug/assign-mock-hero should assign mock heroes to a new wallet address', async () => {
             const res = await request(app)
                 .post('/api/debug/assign-mock-hero')
-                .set('x-admin-secret', 'supersecret') // Use the default admin secret for tests
+                .set('x-admin-secret', process.env.ADMIN_SECRET || 'test-admin-secret') // Use the env admin secret for tests
                 .send({ walletAddress: debugWallet.address });
 
             expect(res.statusCode).to.equal(200);
@@ -150,7 +150,7 @@ describe('Mock Hero Assignment System', () => {
 
             const res = await request(app)
                 .post('/api/debug/assign-mock-hero')
-                .set('x-admin-secret', 'supersecret')
+                .set('x-admin-secret', process.env.ADMIN_SECRET || 'test-admin-secret')
                 .send({ walletAddress: existingWallet.address });
 
             expect(res.statusCode).to.equal(200);

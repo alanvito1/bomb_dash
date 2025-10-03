@@ -88,7 +88,7 @@ async function initDb() {
                         fireRate INTEGER DEFAULT 600,
                         bombSize REAL DEFAULT 1.0,
                         multiShot INTEGER DEFAULT 0,
-                        asset_key TEXT,
+                        sprite_name TEXT,
                         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                         UNIQUE(user_id, nft_id)
@@ -575,15 +575,15 @@ async function createHeroForUser(userId, heroData) {
         const {
             hero_type, nft_id = null, level = 1, xp = 0, hp = 100, maxHp = 100,
             damage = 1, speed = 200, extraLives = 1, fireRate = 600,
-            bombSize = 1.0, multiShot = 0, asset_key = null
+            bombSize = 1.0, multiShot = 0, sprite_name = null
         } = heroData;
 
-        const sql = `INSERT INTO heroes (user_id, hero_type, nft_id, level, xp, hp, maxHp, damage, speed, extraLives, fireRate, bombSize, multiShot, asset_key)
+        const sql = `INSERT INTO heroes (user_id, hero_type, nft_id, level, xp, hp, maxHp, damage, speed, extraLives, fireRate, bombSize, multiShot, sprite_name)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
 
         db.run(sql, [
             userId, hero_type, nft_id, level, xp, hp, maxHp, damage, speed,
-            extraLives, fireRate, bombSize, multiShot, asset_key
+            extraLives, fireRate, bombSize, multiShot, sprite_name
         ], function(err) {
             if (err) {
                 console.error(`Error creating hero for user ${userId}:`, err.message);
@@ -597,10 +597,42 @@ async function createHeroForUser(userId, heroData) {
 async function getHeroesByUserId(userId) {
     if (!db) await initDb();
     return new Promise((resolve, reject) => {
-        const sql = "SELECT * FROM heroes WHERE user_id = ?;";
+        // Select all columns, as the schema is now consistent with frontend expectations
+        const sql = `
+            SELECT
+                id,
+                user_id,
+                hero_type,
+                nft_id,
+                level,
+                xp,
+                hp,
+                maxHp,
+                damage,
+                speed,
+                extraLives,
+                fireRate,
+                bombSize,
+                multiShot,
+                sprite_name,
+                last_updated
+            FROM heroes
+            WHERE user_id = ?;
+        `;
         db.all(sql, [userId], (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
+            if (err) {
+                console.error(`Error fetching heroes with aliased sprite_name for user ${userId}:`, err.message);
+                return reject(err);
+            }
+            // Add a name property to mock heroes for display consistency
+            const heroes = rows.map(hero => {
+                if (hero.hero_type === 'mock' && !hero.name) {
+                    // Capitalize the first letter of the sprite_name for a cleaner display name
+                    hero.name = hero.sprite_name.charAt(0).toUpperCase() + hero.sprite_name.slice(1);
+                }
+                return hero;
+            });
+            resolve(heroes);
         });
     });
 }

@@ -49,9 +49,19 @@ export default class LoadingScene extends Phaser.Scene {
                     const assetData = category[assetKey];
                     // Handle sprite animations (objects with a 'frames' array)
                     if (typeof assetData === 'object' && assetData !== null && Array.isArray(assetData.frames)) {
-                        console.log(`[AssetLoader] Enqueuing animation frames for '${assetKey}'...`);
+                        console.log(`[AssetLoader] Enqueuing assets for hero '${assetKey}'...`);
+
+                        // 1. Load the static preview image (the first frame) for UI scenes.
+                        // This uses the naming convention the backend provides (e.g., 'ninja_hero').
+                        const previewKey = `${assetKey}_hero`;
+                        const previewFramePath = assetData.frames[0];
+                        if (previewFramePath) {
+                            this.load.image(previewKey, previewFramePath);
+                            console.log(`[AssetLoader]  - Loading preview image with key '${previewKey}'.`);
+                        }
+
+                        // 2. Load all individual frames for the animation in the game.
                         assetData.frames.forEach((framePath, index) => {
-                            // Generate a unique key for each frame to avoid conflicts
                             const frameKey = `${assetKey}_frame_${index}`;
                             this.load.image(frameKey, framePath);
                         });

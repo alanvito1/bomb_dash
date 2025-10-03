@@ -73,7 +73,7 @@ const MOCK_HEROES = [
         fireRate: 450,
         bombSize: 1.1,
         // Visual identifier for the frontend
-        asset_key: 'ninja_hero',
+        sprite_name: 'ninja_hero',
     },
     {
         // Witch Mock
@@ -84,7 +84,7 @@ const MOCK_HEROES = [
         maxHp: 400,
         fireRate: 550,
         bombSize: 1.3,
-        asset_key: 'witch_hero',
+        sprite_name: 'witch_hero',
     }
 ];
 
