@@ -42,6 +42,35 @@ export default class AuthChoiceScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        // NOTE: Event handler logic is deliberately omitted for this test.
+        // AGGRESSIVE DEBUGGING - STEP 3:
+        // The UI renders correctly. Now, let's re-add the event handler logic.
+        // This is the complete, correct implementation.
+        console.log('--- AuthChoiceScene: CREATE METHOD (re-adding event handlers) ---');
+
+        connectButton.on('pointerdown', async () => {
+            // 1. Disable button and show status
+            connectButton.disableInteractive();
+            connectButton.setText(LanguageManager.get(this, 'auth_connecting'));
+            statusText.setText(''); // Clear previous errors
+
+            try {
+                // 2. Perform the Web3 login flow
+                const loginResult = await api.web3Login();
+                console.log('Web3 Login successful:', loginResult);
+
+                // 3. On success, show confirmation and transition
+                statusText.setText(LanguageManager.get(this, 'auth_success'));
+                this.time.delayedCall(1000, () => {
+                    this.scene.start('MenuScene');
+                });
+
+            } catch (error) {
+                // 4. On failure, show error and re-enable button
+                console.error('Web3 Login failed:', error);
+                statusText.setText(error.message || LanguageManager.get(this, 'auth_error'));
+                connectButton.setText(LanguageManager.get(this, 'auth_web3_login'));
+                connectButton.setInteractive({ useHandCursor: true });
+            }
+        });
     }
 }
