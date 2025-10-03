@@ -40,6 +40,38 @@ async function initDb() {
                 }
                 console.log("Users table (Web3) initialized or already exists.");
 
+                // Migration: Add account_level and account_xp if they don't exist
+                db.all("PRAGMA table_info(users)", (err, columns) => {
+                    if (err) {
+                        console.error('Error getting users table info during migration', err.message);
+                        // We don't reject here, as the table might be new and this could fail spuriously.
+                        // The ALTER might fail later, which is fine.
+                    } else {
+                        const hasAccountLevel = columns.some(col => col.name === 'account_level');
+                        const hasAccountXp = columns.some(col => col.name === 'account_xp');
+
+                        if (!hasAccountLevel) {
+                            db.run("ALTER TABLE users ADD COLUMN account_level INTEGER DEFAULT 1", (alterErr) => {
+                                if (alterErr) {
+                                    console.error('Migration Error: Failed to add account_level column.', alterErr.message);
+                                } else {
+                                    console.log("Migration Success: Added account_level column to users table.");
+                                }
+                            });
+                        }
+
+                        if (!hasAccountXp) {
+                            db.run("ALTER TABLE users ADD COLUMN account_xp INTEGER DEFAULT 0", (alterErr) => {
+                                if (alterErr) {
+                                    console.error('Migration Error: Failed to add account_xp column.', alterErr.message);
+                                } else {
+                                    console.log("Migration Success: Added account_xp column to users table.");
+                                }
+                            });
+                        }
+                    }
+                });
+
                 const createHeroesTableSQL = `
                     CREATE TABLE IF NOT EXISTS heroes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,

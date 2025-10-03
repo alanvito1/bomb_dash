@@ -404,21 +404,29 @@ app.post('/api/game/checkpoint', verifyToken, async (req, res) => {
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
+        // 1. Fetch user account data
         const user = await db.getUserByAddress(req.user.address);
         if (!user) {
             return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
         }
-        // Also fetch the user's checkpoint
+
+        // 2. Fetch user's heroes
+        const heroes = await db.getHeroesByUserId(user.id);
+
+        // 3. Fetch user's checkpoint
         const checkpoint = await db.getPlayerCheckpoint(user.id);
 
+        // 4. Combine all data into a single response object
         res.json({
             success: true,
             user: {
+                id: user.id,
                 address: user.wallet_address,
                 account_level: user.account_level,
                 account_xp: user.account_xp,
                 coins: user.coins,
-                highest_wave_reached: checkpoint
+                highest_wave_reached: checkpoint,
+                heroes: heroes // Include the list of heroes
             }
         });
     } catch (error) {
