@@ -22,10 +22,10 @@ export default class CharacterSelectionScene extends Phaser.Scene {
 
   create() {
     const centerX = this.cameras.main.centerX;
-    const centerY = this.cameras.main.centerY;
+    this.centerY = this.cameras.main.centerY;
 
     // --- Visual Polish: Background and Data Window ---
-    this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
+    this.add.image(centerX, this.centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
     this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 40);
 
     // --- Visual Polish: Standard Font Styles ---
@@ -35,7 +35,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
 
     this.add.text(centerX, 70, LanguageManager.get('char_select_title'), titleStyle).setOrigin(0.5);
 
-    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
+    const loadingText = this.add.text(centerX, this.centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
 
     this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
     this.createActionButtons(centerX, this.scale.height - 120, buttonStyle);
@@ -129,7 +129,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
 
   displayHeroes(heroes) {
     const centerX = this.cameras.main.centerX;
-    const startY = centerY - 50;
+    const startY = this.centerY - 50;
     const cardSpacingX = 200;
     const numHeroes = heroes.length;
     const startX = centerX - ((numHeroes - 1) * cardSpacingX) / 2;

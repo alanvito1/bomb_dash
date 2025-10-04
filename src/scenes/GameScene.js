@@ -53,23 +53,31 @@ export default class GameScene extends Phaser.Scene {
     this.gamePaused = false;
     this.score = 0;
 
-    const loggedInUser = this.registry.get('loggedInUser') || {};
+    let userAccountData = {};
+    try {
+        const response = await api.fetch('/auth/me', {}, true); // Fetch latest user data
+        if (response.success && response.user) {
+            userAccountData = response.user;
+        } else {
+            throw new Error(response.message || 'Failed to fetch user data.');
+        }
+    } catch (error) {
+        console.error('[GameScene] Could not load player data, returning to menu.', error);
+        this.scene.start('MenuScene', { error: 'Could not load player data.' });
+        return; // Stop scene execution
+    }
+
     const selectedHero = this.registry.get('selectedHero') || {};
 
     this.playerStats = {
       ...this.DEFAULT_STATS,
-      hp: selectedHero.hp || this.DEFAULT_STATS.hp,
-      maxHp: selectedHero.maxHp || this.DEFAULT_STATS.maxHp,
-      damage: selectedHero.damage || this.DEFAULT_STATS.damage,
-      speed: selectedHero.speed || this.DEFAULT_STATS.speed,
-      fireRate: selectedHero.fireRate || this.DEFAULT_STATS.fireRate,
-      bombSize: selectedHero.bombSize || this.DEFAULT_STATS.bombSize,
-      multiShot: selectedHero.multiShot || this.DEFAULT_STATS.multiShot,
+      ...selectedHero, // Apply selected hero stats over defaults
       hero_xp: selectedHero.xp || 0,
-      hero_xp_for_next_level: selectedHero.xp_for_next_level || 100,
-      account_xp: loggedInUser.account_xp || 0,
-      account_xp_for_next_level: loggedInUser.account_xp_for_next_level || 100,
-      bcoin: loggedInUser.bcoin || 0,
+      hero_xp_for_next_level: 100, // Hero level up logic is not in scope, use placeholder
+      // Apply fresh account data from API
+      account_level: userAccountData.account_level,
+      account_xp: userAccountData.account_xp,
+      bcoin: userAccountData.coins,
     };
     this.registry.remove('selectedHero');
 
@@ -78,7 +86,8 @@ export default class GameScene extends Phaser.Scene {
     this.time.delayedCall(100, () => {
       this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
       this.events.emit('update-xp', {
-        accountXP: this.playerStats.account_xp, accountXPForNextLevel: this.playerStats.account_xp_for_next_level,
+        accountLevel: this.playerStats.account_level,
+        accountXP: this.playerStats.account_xp,
         heroXP: this.playerStats.hero_xp, heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
       });
       this.events.emit('update-bcoin', { balance: this.playerStats.bcoin });
