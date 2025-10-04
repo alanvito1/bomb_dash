@@ -39,6 +39,7 @@ class LanguageManager {
                 await this.loadLanguage(scene, 'en'); // Fallback to English
             } else {
                 this.translations = {}; // Avoid infinite loops on English failure
+                window.i18nReady = true; // Signal completion even on failure to avoid hangs
             }
         }
     }
