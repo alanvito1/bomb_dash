@@ -54,12 +54,6 @@ describe('Backend Services', function() {
             testUserId = user.userId;
         });
 
-        // After tests, close the DB connection
-        after(function() {
-            db.closeDb();
-            delete process.env.DB_PATH; // Clean up env var
-        });
-
         it('should return 0 for a player with no checkpoint', async function() {
             const checkpoint = await db.getPlayerCheckpoint(testUserId);
             assert.strictEqual(checkpoint, 0);
