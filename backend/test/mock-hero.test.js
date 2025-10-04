@@ -23,11 +23,6 @@ describe('Mock Hero Assignment System', () => {
         wallet = ethers.Wallet.createRandom();
     });
 
-    after(async () => {
-        // Close the database connection after all tests
-        db.closeDb();
-    });
-
     // Helper function to get a valid SIWE message and signature
     async function getSignedMessage(nonce) {
         const msg = {
