@@ -660,6 +660,69 @@ async function updateHeroStats(heroId, stats) {
     });
 }
 
+async function addXpToHero(heroId, xpAmount) {
+    if (!db) await initDb();
+    const run = (sql, params) => new Promise((resolve, reject) => db.run(sql, params, function(err) { err ? reject(err) : resolve(this); }));
+    const get = (sql, params) => new Promise((resolve, reject) => db.get(sql, params, (err, row) => { err ? reject(err) : resolve(row); }));
+
+    try {
+        await run("BEGIN TRANSACTION;");
+
+        // 1. Get the hero's current state
+        const hero = await get("SELECT * FROM heroes WHERE id = ?", [heroId]);
+        if (!hero) {
+            throw new Error(`Hero with ID ${heroId} not found.`);
+        }
+
+        // 2. Get the global XP multiplier
+        const multiplierRow = await get("SELECT value FROM game_settings WHERE key = ?", ['xp_multiplier']);
+        const multiplier = parseFloat(multiplierRow ? multiplierRow.value : '1.0');
+
+        // 3. Calculate new XP and level
+        let newXp = hero.xp + xpAmount;
+        let newLevel = hero.level;
+        let newMaxHp = hero.maxHp;
+
+        // Loop to handle multiple level-ups from a large XP gain
+        while (true) {
+            const xpForNextLevel = getExperienceForLevel(newLevel + 1, multiplier);
+            if (newXp >= xpForNextLevel) {
+                newLevel++;
+                newMaxHp += 10; // Increase Max HP by 10 for each level up
+            } else {
+                break; // Not enough XP for the next level
+            }
+        }
+
+        // 4. Update the hero's stats in the database
+        const newStats = {
+            xp: newXp,
+            level: newLevel,
+            maxHp: newMaxHp,
+            hp: newMaxHp // Refill HP to the new max on level up
+        };
+
+        const fields = Object.keys(newStats);
+        const values = Object.values(newStats);
+        const setClause = fields.map(field => `${field} = ?`).join(', ');
+        const sql = `UPDATE heroes SET ${setClause}, last_updated = CURRENT_TIMESTAMP WHERE id = ?;`;
+
+        await run(sql, [...values, heroId]);
+
+        // 5. Commit the transaction
+        await run("COMMIT;");
+
+        // 6. Return the updated hero data
+        const updatedHero = await get("SELECT * FROM heroes WHERE id = ?", [heroId]);
+        return { success: true, hero: updatedHero };
+
+    } catch (error) {
+        await run("ROLLBACK;").catch(rbError => console.error("Failed to rollback transaction:", rbError));
+        console.error(`Error in addXpToHero for hero ${heroId}:`, error.message);
+        throw error;
+    }
+}
+
 
 async function addToMatchmakingQueue(userId, heroId) {
     if (!db) await initDb();
@@ -785,6 +848,7 @@ module.exports = {
     createHeroForUser,
     getHeroesByUserId,
     updateHeroStats,
+    addXpToHero,
     // Matchmaking
     addToMatchmakingQueue,
     removeFromMatchmakingQueue,

@@ -16,15 +16,16 @@ export default class HUDScene extends Phaser.Scene {
         this.playerHealth = 100;
         this.playerMaxHealth = 100;
         this.accountXP = 0;
-        this.accountXPForNextLevel = 100;
+        this.accountLevel = 1;
         this.heroXP = 0;
-        this.heroXPForNextLevel = 100;
+        this.heroLevel = 1;
 
         // UI Elements
         this.healthBar = null;
         this.accountXpBar = null;
-        this.accountLevelText = null; // To display the account level number
+        this.accountLevelText = null;
         this.heroXpBar = null;
+        this.heroLevelText = null; // To display the hero's level
         this.bcoinText = null;
         this.buffText = null;
         this.balanceRefreshTimer = null;
@@ -43,6 +44,22 @@ export default class HUDScene extends Phaser.Scene {
         this.game.events.on('bcoin-balance-changed', this.updateBcoinBalance, this);
 
         this.createHUD();
+
+        // Fetch initial data from registry to populate HUD immediately
+        const selectedHero = this.registry.get('selectedHero');
+        const userData = this.registry.get('user');
+
+        const initialXPData = {};
+        if (selectedHero) {
+            initialXPData.heroXP = selectedHero.xp;
+            initialXPData.heroLevel = selectedHero.level;
+        }
+        if (userData) {
+            initialXPData.accountXP = userData.account_xp;
+            initialXPData.accountLevel = userData.account_level;
+        }
+        this.updateXP(initialXPData);
+
         this.updateBcoinBalance(); // Initial fetch
         this.fetchAltarStatus(); // Initial fetch for altar status
 
@@ -62,25 +79,28 @@ export default class HUDScene extends Phaser.Scene {
         if (this.balanceRefreshTimer) this.balanceRefreshTimer.remove();
         if (this.altarStatusTimer) this.altarStatusTimer.remove();
         this.game.events.off('bcoin-balance-changed', this.updateBcoinBalance, this);
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene) {
+             gameScene.events.off('update-health', this.updateHealth, this);
+             gameScene.events.off('update-xp', this.updateXP, this);
+        }
     }
 
     createHUD() {
         // Health Bar
         this.add.text(10, 10, LanguageManager.get('hud_hp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ff0000' });
         this.healthBar = this.add.graphics();
-        this.updateHealth({ health: this.playerHealth, maxHealth: this.playerMaxHealth }); // Initial draw
+        this.updateHealth({ health: this.playerHealth, maxHealth: this.playerMaxHealth });
 
         // Account XP Bar
         this.add.text(10, 30, LanguageManager.get('hud_acc_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
         this.accountXpBar = this.add.graphics();
-        // Create the text object for the account level
-        this.accountLevelText = this.add.text(310, 30, 'Lvl 1', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
-        this.updateXP({ accountXP: this.accountXP, accountXPForNextLevel: this.accountXPForNextLevel, accountLevel: 1 }); // Initial draw
+        this.accountLevelText = this.add.text(310, 30, `Lvl ${this.accountLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
 
         // Hero XP Bar
-        this.add.text(10, 50, LanguageManager.get('hud_hero_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#0000ff' });
+        this.add.text(10, 50, LanguageManager.get('hud_hero_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
         this.heroXpBar = this.add.graphics();
-        this.updateXP({ heroXP: this.heroXP, heroXPForNextLevel: this.heroXPForNextLevel }); // Initial draw
+        this.heroLevelText = this.add.text(310, 50, `Lvl ${this.heroLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
 
         // BCOIN Balance
         this.bcoinText = this.add.text(this.scale.width - 10, 10, LanguageManager.get('hud_bcoin_loading'), {
@@ -104,7 +124,7 @@ export default class HUDScene extends Phaser.Scene {
         this.playerMaxHealth = maxHealth;
 
         this.healthBar.clear();
-        this.healthBar.fillStyle(0x808080); // Background
+        this.healthBar.fillStyle(0x333333); // Background
         this.healthBar.fillRect(100, 12, 200, 12);
 
         const healthPercentage = Math.max(0, this.playerHealth / this.playerMaxHealth);
@@ -116,35 +136,38 @@ export default class HUDScene extends Phaser.Scene {
         // Handle Account Level and XP
         if (data.accountXP !== undefined && data.accountLevel !== undefined) {
             this.accountXP = data.accountXP;
-            this.accountLevelText.setText(`Lvl ${data.accountLevel}`); // Update the level text
+            this.accountLevel = data.accountLevel;
+            this.accountLevelText.setText(`Lvl ${data.accountLevel}`);
 
-            // Correctly calculate the XP bar progress for the current level
             const xpForCurrentLevel = getExperienceForLevel(data.accountLevel);
             const xpForNextLevel = getExperienceForLevel(data.accountLevel + 1);
-
             const xpEarnedInCurrentLevel = this.accountXP - xpForCurrentLevel;
             const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
-
-            const accXpPercentage = xpNeededForLevelUp > 0 ? (xpEarnedInCurrentLevel / xpNeededForLevelUp) : 0;
+            const accXpPercentage = xpNeededForLevelUp > 0 ? Phaser.Math.Clamp(xpEarnedInCurrentLevel / xpNeededForLevelUp, 0, 1) : 0;
 
             this.accountXpBar.clear();
-            this.accountXpBar.fillStyle(0x808080);
+            this.accountXpBar.fillStyle(0x333333);
             this.accountXpBar.fillRect(100, 32, 200, 12);
-
             this.accountXpBar.fillStyle(0x00ff00);
-            this.accountXpBar.fillRect(100, 32, 200 * Math.max(0, Math.min(1, accXpPercentage)), 12);
+            this.accountXpBar.fillRect(100, 32, 200 * accXpPercentage, 12);
         }
 
-        if (data.heroXP !== undefined) {
+        // Handle Hero Level and XP
+        if (data.heroXP !== undefined && data.heroLevel !== undefined) {
             this.heroXP = data.heroXP;
-            this.heroXPForNextLevel = data.heroXPForNextLevel;
+            this.heroLevel = data.heroLevel;
+            this.heroLevelText.setText(`Lvl ${this.heroLevel}`);
+
+            const xpForCurrentLevel = getExperienceForLevel(this.heroLevel);
+            const xpForNextLevel = getExperienceForLevel(this.heroLevel + 1);
+            const xpEarnedInCurrentLevel = this.heroXP - xpForCurrentLevel;
+            const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
+            const heroXpPercentage = xpNeededForLevelUp > 0 ? Phaser.Math.Clamp(xpEarnedInCurrentLevel / xpNeededForLevelUp, 0, 1) : 0;
 
             this.heroXpBar.clear();
-            this.heroXpBar.fillStyle(0x808080);
+            this.heroXpBar.fillStyle(0x333333);
             this.heroXpBar.fillRect(100, 52, 200, 12);
-
-            const heroXpPercentage = this.heroXPForNextLevel > 0 ? (this.heroXP / this.heroXPForNextLevel) : 0;
-            this.heroXpBar.fillStyle(0x0000ff);
+            this.heroXpBar.fillStyle(0x00ffff);
             this.heroXpBar.fillRect(100, 52, 200 * heroXpPercentage, 12);
         }
     }

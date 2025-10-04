@@ -252,53 +252,108 @@ app.post('/api/heroes/:heroId/purchase-upgrade', verifyToken, async (req, res) =
 });
 
 
+const { getExperienceForLevel } = require('./rpg');
+
 app.post('/api/heroes/:heroId/level-up', verifyToken, async (req, res) => {
     const { heroId } = req.params;
-    const LEVEL_UP_COST = 1; // The cost in BCOIN to level up a hero
+    const { txHash } = req.body;
+    const LEVEL_UP_BCOIN_FEE = 1;
+
+    if (!txHash) {
+        return res.status(400).json({ success: false, message: "Transaction hash (txHash) is required." });
+    }
 
     try {
-        const user = await db.getUserByAddress(req.user.address);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+        // 1. Fetch hero and verify ownership
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const hero = heroes.find(h => h.id.toString() === heroId);
+
+        if (!hero) {
+            return res.status(404).json({ success: false, message: "Hero not found or you don't own it." });
         }
 
-        if (user.coins < LEVEL_UP_COST) {
+        // 2. Check if the hero has enough XP to level up
+        const xpForNextLevel = getExperienceForLevel(hero.level + 1);
+        if (hero.xp < xpForNextLevel) {
             return res.status(403).json({
                 success: false,
-                message: `Insufficient BCOIN. You need ${LEVEL_UP_COST} to level up a hero.`
+                message: `Insufficient XP to level up. Needs ${xpForNextLevel}, has ${hero.xp}.`
             });
         }
 
-        // This is a simplified level-up logic. A real implementation would
-        // check the hero's current XP against an XP curve.
-        // To increment in SQL, we cannot pass a string. We must construct the query carefully.
-        // For simplicity in this step, we'll fetch the hero, increment, and then save.
-        const heroes = await db.getHeroesByUserId(user.id);
-        const heroToLevelUp = heroes.find(h => h.id.toString() === heroId);
+        // 3. Verify the on-chain transaction via the Oracle
+        await oracle.verifyLevelUpTransaction(txHash, req.user.address, LEVEL_UP_BCOIN_FEE);
 
-        if (!heroToLevelUp) {
-            return res.status(404).json({ success: false, message: "Hero not found for this user." });
-        }
-
-        const newHeroStats = {
-            level: heroToLevelUp.level + 1
+        // 4. If verification is successful, apply the level-up logic
+        const newStats = {
+            level: hero.level + 1,
+            hp: hero.maxHp + 10, // Refill HP to the new max
+            maxHp: hero.maxHp + 10, // Increase max HP
+            // Note: We do not subtract the XP here. The frontend will display progress
+            // towards the *next* level based on the total accumulated XP.
+            // The getExperienceForLevel function calculates total XP needed, not incremental.
         };
-        await db.updateHeroStats(heroId, newHeroStats);
 
-        const newCoinBalance = user.coins - LEVEL_UP_COST;
-        await db.updateUserStats(user.id, { coins: newCoinBalance });
+        await db.updateHeroStats(heroId, newStats);
+
+        // 5. Fetch the fully updated hero data to return
+        const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
+        const updatedHero = updatedHeroes.find(h => h.id.toString() === heroId);
 
         res.json({
             success: true,
             message: 'Hero leveled up successfully!',
-            newCoinBalance: newCoinBalance
+            hero: updatedHero
         });
 
     } catch (error) {
         console.error(`Error leveling up hero ${heroId} for user ${req.user.userId}:`, error);
+        if (error.message.includes("mismatch") || error.message.includes("not found")) {
+            return res.status(400).json({ success: false, message: `Transaction verification failed: ${error.message}` });
+        }
         res.status(500).json({ success: false, message: 'Internal server error during hero level-up.' });
     }
 });
+
+// =================================================================
+// ROTAS DE JOGO
+// =================================================================
+
+app.post('/api/matches/complete', verifyToken, async (req, res) => {
+    const { heroId, xpGained } = req.body;
+
+    if (!heroId || typeof xpGained === 'undefined' || xpGained < 0) {
+        return res.status(400).json({ success: false, message: 'Request must include a valid heroId and a non-negative xpGained.' });
+    }
+
+    try {
+        // First, verify that the hero belongs to the authenticated user.
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const heroExists = heroes.some(h => h.id === heroId);
+
+        if (!heroExists) {
+            return res.status(403).json({ success: false, message: 'The specified hero does not belong to the authenticated user.' });
+        }
+
+        // If ownership is confirmed, add the XP.
+        const result = await db.addXpToHero(heroId, xpGained);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                message: `Successfully awarded ${xpGained} XP to hero ${heroId}.`,
+                hero: result.hero
+            });
+        } else {
+            // This case might be redundant due to the error handling below, but it's good practice.
+            res.status(500).json({ success: false, message: 'An unexpected error occurred while awarding XP.' });
+        }
+    } catch (error) {
+        console.error(`Error completing match for hero ${heroId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error while completing match.' });
+    }
+});
+
 
 // Middleware de verificação de administrador (simples)
 function verifyAdmin(req, res, next) {

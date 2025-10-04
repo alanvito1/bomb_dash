@@ -1,5 +1,7 @@
 import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
+import { TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI } from './config/contracts.js';
+
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
@@ -154,6 +156,50 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify({ upgradeType, cost }),
         });
+    }
+
+    async levelUpHero(heroId) {
+        if (!window.ethereum) throw new Error('MetaMask not detected.');
+
+        try {
+            // 1. Connect to the wallet and get the signer
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const playerAddress = await signer.getAddress();
+
+            // 2. Create a contract instance
+            const contract = new ethers.Contract(TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, signer);
+
+            // 3. Call the smart contract function to pay the fee.
+            // The contract itself handles the BCOIN transfer logic (approve/transferFrom).
+            // This function call will prompt the user in MetaMask.
+            console.log(`Sending level up transaction for hero ${heroId}...`);
+            const tx = await contract.payLevelUpFee(playerAddress, {
+                 // Setting a manual gas limit can help prevent "out of gas" errors.
+                 // This value might need adjustment based on network conditions.
+                gasLimit: 300000
+            });
+
+            // 4. Wait for the transaction to be mined
+            console.log(`Transaction sent! Waiting for confirmation... Hash: ${tx.hash}`);
+            const receipt = await tx.wait();
+            console.log('Transaction confirmed!', receipt);
+
+            if (receipt.status !== 1) {
+                throw new Error("The on-chain transaction failed.");
+            }
+
+            // 5. Send the transaction hash to the backend for verification
+            return this.fetch(`/heroes/${heroId}/level-up`, {
+                method: 'POST',
+                body: JSON.stringify({ txHash: tx.hash }),
+            });
+
+        } catch (error) {
+            console.error('Hero level-up process failed:', error);
+            // Re-throw the error with a user-friendly message
+            throw new Error(error.reason || error.message || 'An unknown error occurred during the level-up process.');
+        }
     }
 
     async enterWagerMatch(tierId) {

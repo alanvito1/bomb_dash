@@ -3,6 +3,21 @@
 // BSC Testnet Chain ID
 export const BOMB_CRYPTO_CHAIN_ID = 97;
 
+// Tournament Controller Contract
+export const TOURNAMENT_CONTROLLER_ADDRESS = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
+export const TOURNAMENT_CONTROLLER_ABI = [
+    "function reportMatchResult(uint256 matchId, address winner)",
+    "function reportTournamentResult(uint256 tournamentId, address[] calldata winners)",
+    "function payLevelUpFee(address player)",
+    "function payUpgradeFee(address player, uint256 cost)",
+    "function donateToAltar(uint256 amount)",
+    "function setBcoinLevelUpCost(uint256 newCost)",
+    "function levelUpCost() view returns (uint256)",
+    "event TournamentStarted(uint256 indexed tournamentId)",
+    "event AltarDonationReceived(address indexed donor, uint256 amount)",
+    "event HeroLeveledUp(address indexed player, uint256 feePaid)"
+];
+
 // Bombcrypto Hero NFT Contract
 export const BOMB_CRYPTO_NFT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Replace with the actual address
 export const BOMB_CRYPTO_NFT_ABI = [
