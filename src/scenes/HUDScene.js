@@ -1,6 +1,7 @@
 import LanguageManager from '../utils/LanguageManager.js';
 import { ethers } from 'ethers';
 import api from '../api.js';
+import { getExperienceForLevel } from '../utils/rpg.js';
 
 // Constants for BCOIN contract interaction
 const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
@@ -22,6 +23,7 @@ export default class HUDScene extends Phaser.Scene {
         // UI Elements
         this.healthBar = null;
         this.accountXpBar = null;
+        this.accountLevelText = null; // To display the account level number
         this.heroXpBar = null;
         this.bcoinText = null;
         this.buffText = null;
@@ -71,7 +73,9 @@ export default class HUDScene extends Phaser.Scene {
         // Account XP Bar
         this.add.text(10, 30, LanguageManager.get('hud_acc_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
         this.accountXpBar = this.add.graphics();
-        this.updateXP({ accountXP: this.accountXP, accountXPForNextLevel: this.accountXPForNextLevel }); // Initial draw
+        // Create the text object for the account level
+        this.accountLevelText = this.add.text(310, 30, 'Lvl 1', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
+        this.updateXP({ accountXP: this.accountXP, accountXPForNextLevel: this.accountXPForNextLevel, accountLevel: 1 }); // Initial draw
 
         // Hero XP Bar
         this.add.text(10, 50, LanguageManager.get('hud_hero_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#0000ff' });
@@ -109,17 +113,26 @@ export default class HUDScene extends Phaser.Scene {
     }
 
     updateXP(data) {
-        if (data.accountXP !== undefined) {
+        // Handle Account Level and XP
+        if (data.accountXP !== undefined && data.accountLevel !== undefined) {
             this.accountXP = data.accountXP;
-            this.accountXPForNextLevel = data.accountXPForNextLevel;
+            this.accountLevelText.setText(`Lvl ${data.accountLevel}`); // Update the level text
+
+            // Correctly calculate the XP bar progress for the current level
+            const xpForCurrentLevel = getExperienceForLevel(data.accountLevel);
+            const xpForNextLevel = getExperienceForLevel(data.accountLevel + 1);
+
+            const xpEarnedInCurrentLevel = this.accountXP - xpForCurrentLevel;
+            const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
+
+            const accXpPercentage = xpNeededForLevelUp > 0 ? (xpEarnedInCurrentLevel / xpNeededForLevelUp) : 0;
 
             this.accountXpBar.clear();
             this.accountXpBar.fillStyle(0x808080);
             this.accountXpBar.fillRect(100, 32, 200, 12);
 
-            const accXpPercentage = this.accountXPForNextLevel > 0 ? (this.accountXP / this.accountXPForNextLevel) : 0;
             this.accountXpBar.fillStyle(0x00ff00);
-            this.accountXpBar.fillRect(100, 32, 200 * accXpPercentage, 12);
+            this.accountXpBar.fillRect(100, 32, 200 * Math.max(0, Math.min(1, accXpPercentage)), 12);
         }
 
         if (data.heroXP !== undefined) {

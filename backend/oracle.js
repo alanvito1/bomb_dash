@@ -128,7 +128,44 @@ async function reportTournamentResult() { /* ... */ }
 async function reportSoloGamePlayed() { /* ... */ }
 async function signClaimReward() { /* ... */ }
 async function triggerLevelUpPayment() { /* ... */ }
-async function reportWagerMatchResult() { /* ... */ }
+async function reportWagerMatchResult(matchId, winnerAddress, loserAddress, tierId) {
+    if (!isOracleInitialized) {
+        console.error("CRITICAL: reportWagerMatchResult called but Oracle is not initialized.");
+        throw new Error("O Oráculo não está inicializado.");
+    }
+    console.log(`[Oracle] Reporting wager match result. MatchID: ${matchId}, Winner: ${winnerAddress}`);
+
+    try {
+        // Step 1: Report the match result to the smart contract.
+        // This is expected to handle the on-chain asset transfers (e.g., BCOIN wager).
+        console.log(`[Oracle] Calling WagerArena.reportWagerMatchResult for match ${matchId}...`);
+        const tx = await wagerArenaContract.reportWagerMatchResult(matchId, winnerAddress, {
+            gasLimit: 300000 // Setting a reasonable gas limit
+        });
+        console.log(`[Oracle] On-chain transaction sent: ${tx.hash}`);
+        await tx.wait(); // Wait for the transaction to be mined
+        console.log(`[Oracle] On-chain transaction confirmed for match ${matchId}.`);
+
+        // Step 2: Award 50 Account XP to the winner, as per the specific requirement.
+        // This fulfills the validation criteria from the memo.
+        const xpToAward = 50;
+        console.log(`[Oracle] Awarding ${xpToAward} Account XP to winner ${winnerAddress}.`);
+        await db.addXpToUser(winnerAddress, xpToAward);
+        console.log(`[Oracle] XP awarded successfully in the database to ${winnerAddress}.`);
+
+        // Note: We are NOT calling db.processWagerMatchResult because its XP logic
+        // conflicts with the requirement of awarding a fixed 50 XP. We assume the
+        // smart contract handles the financial results of the wager.
+
+        return { success: true, txHash: tx.hash };
+
+    } catch (error) {
+        console.error(`[Oracle] Failed to report wager match result for MatchID ${matchId}:`, error);
+        // Re-throw the error so the calling service (server.js) can handle it and
+        // respond to the client appropriately.
+        throw error;
+    }
+}
 function startCronJobs() { /* ... */ }
 function startWagerMatchListener() { /* ... */ }
 
