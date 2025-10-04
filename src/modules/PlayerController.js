@@ -22,10 +22,14 @@ export default class PlayerController {
   }
 
   create() {
+    const playerStats = this.scene.playerStats;
+    // Dynamically set the texture based on the selected hero
+    const textureKey = playerStats.sprite_name ? `${playerStats.sprite_name.toLowerCase()}_hero` : 'player_default';
+
     this.player = this.scene.physics.add.sprite(
       this.scene.scale.width / 2,
       this.scene.scale.height * 0.85,
-      'player'
+      textureKey
     );
     this.player.setDisplaySize(40, 40).setCollideWorldBounds(true);
     return this.player;

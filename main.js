@@ -40,6 +40,7 @@ import HUDScene from './src/scenes/HUDScene.js';
 import PauseScene from './src/scenes/PauseScene.js';
 import PopupScene from './src/scenes/PopupScene.js';
 import AltarScene from './src/scenes/AltarScene.js';
+import PvpScene from './src/scenes/PvpScene.js';
 
 // --- Hardcoded Debug Mode ---
 // This constant provides a simple, reliable way to toggle debug features
@@ -81,7 +82,8 @@ const config = {
     HUDScene,
     PauseScene,
     PopupScene,
-    AltarScene
+    AltarScene,
+    PvpScene
   ],
   render: {
     antialias: false,

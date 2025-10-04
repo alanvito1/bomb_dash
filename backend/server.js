@@ -38,6 +38,7 @@ const tournamentService = require('./tournament_service.js');
 const admin = require('./admin.js'); // Importar o módulo admin
 const gameState = require('./game_state.js'); // Importar o módulo de estado do jogo
 const matchmaking = require('./matchmaking.js'); // Importar o módulo de matchmaking
+const pvpService = require('./pvp_service.js'); // Importar o novo serviço de PvP
 
 const app = express();
 
@@ -364,6 +365,17 @@ function verifyAdmin(req, res, next) {
         next();
     } else {
         res.status(403).json({ success: false, message: 'Acesso negado. Requer privilégios de administrador.' });
+    }
+}
+
+// Middleware para verificar se a requisição vem de uma fonte confiável (o Oráculo/backend)
+function verifyOracle(req, res, next) {
+    const oracleSecret = req.headers['x-oracle-secret'];
+    // Em um ambiente de produção real, use um segredo mais robusto e não o mesmo do admin.
+    if (oracleSecret && oracleSecret === (process.env.ADMIN_SECRET || 'supersecret')) {
+        next();
+    } else {
+        res.status(403).json({ success: false, message: 'Acesso negado. Requisição inválida do Oráculo.' });
     }
 }
 
@@ -734,6 +746,47 @@ app.get('/api/matchmaking/status', verifyToken, async (req, res) => {
 
 
 // =================================================================
+// ROTAS DE PVP RANQUEADO (V2)
+// =================================================================
+
+app.post('/api/pvp/ranked/enter', verifyToken, async (req, res) => {
+    const { heroId, txHash } = req.body;
+    if (!heroId || !txHash) {
+        return res.status(400).json({ success: false, message: 'heroId e txHash são obrigatórios.' });
+    }
+
+    try {
+        const result = await pvpService.enterRankedQueue(req.user.userId, heroId, req.user.address, txHash);
+        res.json(result);
+    } catch (error) {
+        console.error(`Erro ao entrar na fila ranqueada para o usuário ${req.user.userId}:`, error);
+        // Personalizar mensagens de erro para o cliente
+        if (error.message.includes("não corresponde")) {
+            return res.status(400).json({ success: false, message: `Falha na verificação da transação: ${error.message}` });
+        }
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao entrar na fila.' });
+    }
+});
+
+// Esta rota seria chamada pelo nosso próprio sistema (ex: o processo de matchmaking)
+// para reportar o vencedor e distribuir as recompensas.
+app.post('/api/pvp/ranked/report', verifyOracle, async (req, res) => {
+    const { matchId, winnerAddress } = req.body;
+    if (!matchId || !winnerAddress) {
+        return res.status(400).json({ success: false, message: 'matchId e winnerAddress são obrigatórios.' });
+    }
+
+    try {
+        const result = await pvpService.reportRankedMatch(matchId, winnerAddress);
+        res.json(result);
+    } catch (error) {
+        console.error(`Erro ao reportar resultado da partida ranqueada ${matchId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao reportar o resultado.' });
+    }
+});
+
+
+// =================================================================
 // LÓGICA DO ALTAR DE BUFFS (CRON JOB)
 // =================================================================
 
@@ -784,17 +837,7 @@ async function startServer() {
         console.log("[OK] Conexão com o banco de dados estabelecida com sucesso.");
 
         // 2. Inicializar o Oráculo
-        const oracleInitialized = await oracle.initOracle();
-        if (oracleInitialized) {
-            console.log("[OK] Oráculo da blockchain inicializado.");
-            console.log(` - Wallet do Oráculo: ${process.env.ORACLE_WALLET_ADDRESS}`); // Supondo que você tenha a wallet
-            console.log(" - Contratos Utilizados:");
-            console.log(`   - TournamentController: ${process.env.TOURNAMENT_CONTROLLER_ADDRESS}`);
-            console.log(`   - PerpetualRewardPool: ${process.env.PERPETUAL_REWARD_POOL_ADDRESS}`);
-            console.log(`   - WagerArena: ${process.env.WAGER_ARENA_ADDRESS}`);
-        } else {
-            console.warn("[AVISO] Oráculo da blockchain não foi inicializado. Verifique as variáveis de ambiente.");
-        }
+        await oracle.initOracle();
 
         // 3. Iniciar Cron Jobs
         await gameState.startPvpCycleCron();
