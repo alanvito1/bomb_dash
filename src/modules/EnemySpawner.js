@@ -6,10 +6,14 @@ const MAX_ENEMIES_BASE = 11;
 const SPAWN_DELAY_BASE = 800;
 
 export default class EnemySpawner {
-  constructor(scene) {
+  constructor(scene, accountLevel = 1) {
     this.scene = scene;
     this.spawnInterval = SPAWN_DELAY_BASE;
     this.maxEnemiesBase = MAX_ENEMIES_BASE;
+    this.accountLevel = accountLevel;
+    this.difficultyMultiplier = 1 + (this.accountLevel - 1) * 0.07;
+
+    console.log(`[EnemySpawner] Initialized for Account Level: ${this.accountLevel}. Difficulty Multiplier: ${this.difficultyMultiplier.toFixed(2)}`);
 
     const manifest = this.scene.cache.json.get('assetManifest');
     if (manifest && manifest.assets) {
@@ -140,6 +144,13 @@ export default class EnemySpawner {
 
     let baseSpeed = (100 + level * 2) * 0.7;
     let enemyHp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+
+    // Apply account-level difficulty scaling
+    baseSpeed *= this.difficultyMultiplier;
+    enemyHp = Math.ceil(enemyHp * this.difficultyMultiplier);
+
+    console.log(`[EnemySpawner] Wave ${level}, Account ${this.accountLevel}: BaseHP=${(this.scene.baseEnemyHp || 1)}, BaseSpeed=${(100 + level * 2) * 0.7}, Multiplier=${this.difficultyMultiplier.toFixed(2)}, FinalHP=${enemyHp}, FinalSpeed=${baseSpeed.toFixed(2)}`);
+
 
     // 2.4: Game Balancing - Reduce initial speed
     if (level === 1) {

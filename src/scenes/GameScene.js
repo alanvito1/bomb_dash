@@ -131,7 +131,7 @@ export default class GameScene extends Phaser.Scene {
     this.powerupLogic = new PowerupLogic(this);
     this.collisionHandler = new CollisionHandler(this, this.events, this.powerupLogic);
     this.collisionHandler.register();
-    this.enemySpawner = new EnemySpawner(this, this.gameSettings.monsterScaleFactor);
+    this.enemySpawner = new EnemySpawner(this, this.playerStats.account_level);
 
     this.bombTimer = this.time.addEvent({
       delay: this.playerStats.fireRate,

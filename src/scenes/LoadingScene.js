@@ -10,13 +10,22 @@ export default class LoadingScene extends Phaser.Scene {
 
   preload() {
     console.log('🔄 LoadingScene: Preload is starting...');
+    // --- E2E Test Reliability Fix ---
+    // Initialize LanguageManager immediately to prevent test timeouts.
+    // The i18nReady flag will be set as soon as the JSON is fetched,
+    // decoupling it from the potentially slow WebFont download.
+    // We call this without `await` because `preload` is not designed for blocking async operations.
+    // The test script will poll the `window.i18nReady` flag to wait for completion.
+    LanguageManager.init(this);
+    // -----------------------------
+
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
     // --- Display Loading UI ---
     const textStyle = { fontFamily: 'monospace', fontSize: '20px', fill: '#00ffff' };
     const titleStyle = { ...textStyle, fontSize: '28px', fill: '#FFD700'};
-    const titleText = this.add.text(centerX, centerY - 50, '💣 Bomb Dash 💥', titleStyle).setOrigin(0.5);
+    const titleText = this.add.text(centerX, centerY - 50, 'Bomb Dash', titleStyle).setOrigin(0.5); // Use placeholder
     const loadingText = this.add.text(centerX, centerY + 10, 'Loading...', textStyle).setOrigin(0.5);
 
     const progressBox = this.add.graphics();
@@ -98,39 +107,38 @@ export default class LoadingScene extends Phaser.Scene {
         console.log('✅ All assets finished loading. Transitioning to Create method...');
 
         // Use the loaded WebFont script to load the custom font
-        WebFont.load({
-            google: {
-                families: ['Press Start 2P']
-            },
-            active: async () => {
-                // This callback ensures the font is loaded and i18n is ready
-                console.log('✅ Custom font "Press Start 2P" loaded.');
-                await LanguageManager.init(this);
+        const checkSessionAndProceed = async () => {
+            // Update text with the now-loaded translations.
+            // This will use the custom font if it loaded, or a fallback if it didn't.
+            titleText.setText(LanguageManager.get('game_title'));
+            loadingText.setText(LanguageManager.get('loading_initializing'));
 
-                // Now that LanguageManager is ready, update the UI text
-                titleText.setText(LanguageManager.get('game_title'));
-                loadingText.setText(LanguageManager.get('loading_initializing'));
-
-                console.log('🔄 Checking for existing user session...');
-                try {
-                    const loginStatus = await api.checkLoginStatus();
-                    if (loginStatus.success) {
-                        console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
-                        this.registry.set('loggedInUser', loginStatus.user);
-                        this.scene.start('MenuScene');
-                    } else {
-                         throw new Error(loginStatus.message || "Login status check was not successful.");
-                    }
-                } catch (error) {
-                    console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
-                    this.registry.remove('loggedInUser');
-                    this.scene.start('AuthChoiceScene');
+            console.log('🔄 Checking for existing user session...');
+            try {
+                const loginStatus = await api.checkLoginStatus();
+                if (loginStatus.success) {
+                    console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
+                    this.registry.set('loggedInUser', loginStatus.user);
+                    this.scene.start('MenuScene');
+                } else {
+                    throw new Error(loginStatus.message || "Login status check was not successful.");
                 }
+            } catch (error) {
+                console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
+                this.registry.remove('loggedInUser');
+                this.scene.start('AuthChoiceScene');
+            }
+        };
+
+        WebFont.load({
+            google: { families: ['Press Start 2P'] },
+            active: () => {
+                console.log('✅ Custom font "Press Start 2P" loaded.');
+                checkSessionAndProceed();
             },
             inactive: () => {
-                // Fallback if the font fails to load
                 console.error('🔥 Failed to load custom font. Proceeding with default fonts.');
-                this.scene.start('AuthChoiceScene');
+                checkSessionAndProceed(); // Ensure game proceeds even if font fails
             }
         });
     });
