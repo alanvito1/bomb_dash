@@ -18,7 +18,8 @@ const TOURNAMENT_CONTROLLER_ABI = [
     "function setBcoinLevelUpCost(uint256 newCost)",
     "function levelUpCost() view returns (uint256)",
     "event TournamentStarted(uint256 indexed tournamentId)",
-    "event AltarDonationReceived(address indexed donor, uint256 amount)"
+    "event AltarDonationReceived(address indexed donor, uint256 amount)",
+    "event HeroLeveledUp(address indexed player, uint256 feePaid)"
 ];
 const PERPETUAL_REWARD_POOL_ABI = [
     "function reportSoloGamePlayed(uint256 gameCount)",
@@ -121,6 +122,57 @@ async function verifyAltarDonation(txHash, expectedDonor, expectedAmount) {
     return true;
 }
 
+/**
+ * Verifies a player's level-up transaction on the blockchain.
+ * @param {string} txHash The hash of the level-up transaction.
+ * @param {string} expectedPlayer The wallet address of the user who should have leveled up.
+ * @param {number} expectedFee The amount of BCOIN (not wei) that should have been paid.
+ * @returns {Promise<boolean>} True if the transaction is valid, otherwise throws an error.
+ */
+async function verifyLevelUpTransaction(txHash, expectedPlayer, expectedFee) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    const tx = await provider.getTransaction(txHash);
+    if (!tx) throw new Error("Transaction not found.");
+
+    // Wait for the transaction to be mined
+    const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) {
+        throw new Error("Transaction failed or was reverted.");
+    }
+
+    // Decode the event from the transaction logs
+    const levelUpEvent = receipt.logs
+        .map(log => {
+            try {
+                // The interface needs to be connected to the contract address to decode logs correctly
+                const contractInterface = new ethers.Interface(TOURNAMENT_CONTROLLER_ABI);
+                return contractInterface.parseLog(log);
+            } catch (e) {
+                return null;
+            }
+        })
+        .find(decodedLog => decodedLog && decodedLog.name === 'HeroLeveledUp');
+
+    if (!levelUpEvent) {
+        throw new Error("HeroLeveledUp event not found in transaction logs.");
+    }
+
+    const { player, feePaid } = levelUpEvent.args;
+    const expectedFeeInWei = ethers.parseUnits(expectedFee.toString(), 18);
+
+    // Validate the event data against expected values
+    if (player.toLowerCase() !== expectedPlayer.toLowerCase()) {
+        throw new Error(`Player mismatch. Expected ${expectedPlayer}, but event shows ${player}.`);
+    }
+    if (feePaid !== expectedFeeInWei) {
+        throw new Error(`Fee mismatch. Expected ${expectedFeeInWei}, but event shows ${feePaid}.`);
+    }
+
+    console.log(`Level-up transaction ${txHash} verified successfully for ${player}.`);
+    return true;
+}
+
 
 // Placeholder for other functions
 async function reportMatchResult() { /* ... */ }
@@ -191,5 +243,6 @@ module.exports = {
     triggerLevelUpPayment,
     reportWagerMatchResult,
     processHeroUpgrade,
-    verifyAltarDonation // Export new verification function
+    verifyAltarDonation,
+    verifyLevelUpTransaction // Export new verification function
 };
