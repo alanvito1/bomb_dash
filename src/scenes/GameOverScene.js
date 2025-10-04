@@ -41,6 +41,7 @@ export default class GameOverScene extends Phaser.Scene {
     const finalScore = data.finalScore;
     const coinsEarned = data.coinsEarned || 0;
     const cheatDetected = data.cheatDetected || false;
+    const customMessage = data.customMessage;
 
     WebFont.load({
         google: { families: ['Press Start 2P'] },
@@ -68,36 +69,48 @@ export default class GameOverScene extends Phaser.Scene {
                 align: 'center'
             }).setOrigin(0.5);
 
-            let scoreMessage = '';
-            if (cheatDetected) {
-                scoreMessage = LanguageManager.get('game_over_cheat_detected');
+            // Prioritize custom message (from PvP), otherwise use standard PvE logic
+            if (customMessage) {
+                this.add.text(centerX, centerY, customMessage, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '12px',
+                    fill: '#00ff00',
+                    align: 'center',
+                    wordWrap: { width: this.scale.width * 0.8 }
+                }).setOrigin(0.5);
             } else {
-                const loggedInUser = this.registry.get('loggedInUser');
-                if (finalScore > 0) {
-                     if (loggedInUser && finalScore === loggedInUser.max_score) {
-                        scoreMessage = LanguageManager.get('game_over_new_high_score');
-                     } else if (loggedInUser && originalScore > loggedInUser.max_score && finalScore < originalScore) {
-                        scoreMessage = LanguageManager.get('game_over_score_adjusted');
-                     } else if (loggedInUser && finalScore < loggedInUser.max_score) {
-                        scoreMessage = LanguageManager.get('game_over_nice_try');
-                     } else if (!loggedInUser) {
-                        scoreMessage = LanguageManager.get('game_over_login_to_save');
-                     } else {
-                        scoreMessage = LanguageManager.get('game_over_score_processed');
-                     }
-                } else if (!cheatDetected && originalScore > 0) {
-                    scoreMessage = LanguageManager.get('game_over_score_processed');
+                let scoreMessage = '';
+                if (cheatDetected) {
+                    scoreMessage = LanguageManager.get('game_over_cheat_detected');
                 } else {
-                    scoreMessage = LanguageManager.get('game_over_better_luck');
+                    const loggedInUser = this.registry.get('loggedInUser');
+                    if (finalScore > 0) {
+                         if (loggedInUser && finalScore === loggedInUser.max_score) {
+                            scoreMessage = LanguageManager.get('game_over_new_high_score');
+                         } else if (loggedInUser && originalScore > loggedInUser.max_score && finalScore < originalScore) {
+                            scoreMessage = LanguageManager.get('game_over_score_adjusted');
+                         } else if (loggedInUser && finalScore < loggedInUser.max_score) {
+                            scoreMessage = LanguageManager.get('game_over_nice_try');
+                         } else if (!loggedInUser) {
+                            scoreMessage = LanguageManager.get('game_over_login_to_save');
+                         } else {
+                            scoreMessage = LanguageManager.get('game_over_score_processed');
+                         }
+                    } else if (!cheatDetected && originalScore > 0) {
+                        scoreMessage = LanguageManager.get('game_over_score_processed');
+                    } else {
+                        scoreMessage = LanguageManager.get('game_over_better_luck');
+                    }
                 }
+                this.add.text(centerX, centerY, scoreMessage, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '12px',
+                    fill: cheatDetected ? '#ff6347' : '#00ff00',
+                    align: 'center',
+                    wordWrap: {width: this.scale.width * 0.8}
+                }).setOrigin(0.5);
             }
-            this.add.text(centerX, centerY, scoreMessage, {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '12px',
-                fill: cheatDetected ? '#ff6347' : '#00ff00',
-                align: 'center',
-                wordWrap: {width: this.scale.width * 0.8}
-            }).setOrigin(0.5);
+
 
             this.add.text(centerX, centerY + 100, LanguageManager.get('game_over_return_to_menu'), {
                 fontFamily: '"Press Start 2P"',

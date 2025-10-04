@@ -17,6 +17,7 @@ export default class GameScene extends Phaser.Scene {
     this.currentTarget = null;
     this.gameMode = 'solo';
     this.opponent = null;
+    this.matchId = null;
 
     this.DEFAULT_STATS = {
       hp: 300, maxHp: 300, mana: 100, maxMana: 100, damage: 1, speed: 200,
@@ -29,7 +30,8 @@ export default class GameScene extends Phaser.Scene {
   init(data) {
     this.gameMode = data.gameMode || 'solo';
     this.opponent = data.opponent || null;
-    console.log(`[GameScene] Initialized with mode: ${this.gameMode}`);
+    this.matchId = data.matchId || null;
+    console.log(`[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}`);
   }
 
   preload() {
@@ -37,8 +39,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.load.on('complete', () => this.initializeScene());
-    this.load.start();
+    // This is the correct lifecycle location for scene initialization.
+    // The previous use of load.on('complete') here was incorrect and
+    // likely caused the scene to hang silently.
+    this.initializeScene();
   }
 
   async initializeScene() {
@@ -75,6 +79,7 @@ export default class GameScene extends Phaser.Scene {
       hero_xp: selectedHero.xp || 0,
       hero_xp_for_next_level: 100, // Hero level up logic is not in scope, use placeholder
       // Apply fresh account data from API
+      address: userAccountData.address,
       account_level: userAccountData.account_level,
       account_xp: userAccountData.account_xp,
       bcoin: userAccountData.coins,
@@ -152,7 +157,9 @@ export default class GameScene extends Phaser.Scene {
     this.level = 'PvP';
     this.waveStarted = true;
 
-    this.opponentPlayer = this.physics.add.sprite(this.scale.width / 2, 100, this.opponent.hero.sprite_name || 'player')
+    // Construct the correct sprite key (e.g., 'witch_hero') from the opponent data
+    const opponentSpriteKey = this.opponent.hero.sprite_name ? `${this.opponent.hero.sprite_name.toLowerCase()}_hero` : 'player_default';
+    this.opponentPlayer = this.physics.add.sprite(this.scale.width / 2, 100, opponentSpriteKey)
       .setCollideWorldBounds(true).setImmovable(true);
     this.opponentPlayer.setTint(0xff8080);
     this.opponentPlayer.body.setSize(this.opponentPlayer.width * 0.8, this.opponentPlayer.height * 0.8);
@@ -195,6 +202,11 @@ export default class GameScene extends Phaser.Scene {
   fireBomb(firer, bombGroup, velocityY, isOpponent = false) {
     if (this.gamePaused || !firer || !firer.active) return;
     const stats = isOpponent ? this.opponent.hero : this.playerStats;
+    // Defensive check: Ensure stats object exists before accessing properties
+    if (!stats) {
+        console.error("Attempted to fire a bomb for a firer with no stats.", { isOpponent });
+        return;
+    }
     const count = 1 + (stats.multiShot ?? 0);
     const spacing = 15;
     const startX = firer.x - (spacing * (count - 1)) / 2;
@@ -221,6 +233,52 @@ export default class GameScene extends Phaser.Scene {
     this.bg.setTexture(`bg${Math.min(this.stage, 5)}`);
     SoundManager.playWorldMusic(this, this.stage);
     SoundManager.play(this, 'wave_start');
+  }
+
+  async endMatch(result) {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.gamePaused = true;
+    this.physics.pause();
+    if (this.bombTimer) {
+      this.bombTimer.paused = true;
+    }
+    SoundManager.stopAll(this);
+
+    if (result.winner === 'player') {
+        const winnerAddress = this.playerStats.address;
+        try {
+            const response = await window.api.post('/pvp/ranked/report', {
+                matchId: this.matchId,
+                winnerAddress: winnerAddress
+            });
+
+            if (response.success) {
+                SoundManager.play(this, 'gameover'); // Use victory sound later
+                this.scene.stop('HUDScene');
+                this.scene.start('GameOverScene', {
+                    score: 1000, // Placeholder for PvP
+                    coinsEarned: response.rewards ? response.rewards.bcoin || 0 : 0,
+                    finalScore: 1000,
+                    customMessage: response.message
+                });
+            } else {
+                throw new Error(response.message || "Failed to report match result.");
+            }
+        } catch (error) {
+            console.error("Error reporting match result:", error);
+            this.scene.stop('HUDScene');
+            this.scene.start('MenuScene', { error: 'Failed to report match result.' });
+        }
+    } else {
+        // Handle player loss
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene', {
+            score: 0,
+            coinsEarned: 0,
+            customMessage: "Você foi derrotado!"
+        });
+    }
   }
 
   async handleGameOver() {

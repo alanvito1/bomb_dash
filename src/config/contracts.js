@@ -1,5 +1,8 @@
 // This file contains the configuration for the smart contracts used in the application.
 
+// BCOIN Testnet Address
+export const BCOIN_TESTNET_ADDRESS = '0xb8B71994A25F816d5b3232f24Ce5ea0135cf3106';
+
 // BSC Testnet Chain ID
 export const BOMB_CRYPTO_CHAIN_ID = 97;
 
@@ -13,9 +16,13 @@ export const TOURNAMENT_CONTROLLER_ABI = [
     "function donateToAltar(uint256 amount)",
     "function setBcoinLevelUpCost(uint256 newCost)",
     "function levelUpCost() view returns (uint256)",
+    "function createRankedMatch(address player1, address player2, uint256 tier, uint256 entryFee)",
+    "function enterRankedMatch(uint256 tier, uint256 entryFee)",
     "event TournamentStarted(uint256 indexed tournamentId)",
     "event AltarDonationReceived(address indexed donor, uint256 amount)",
-    "event HeroLeveledUp(address indexed player, uint256 feePaid)"
+    "event HeroLeveledUp(address indexed player, uint256 feePaid)",
+    "event PlayerEnteredRankedQueue(address indexed player, uint256 indexed tier, uint256 entryFee)",
+    "event MatchCreated(uint256 indexed matchId, address[] players, uint256 entryFee, uint256 tier)"
 ];
 
 // Bombcrypto Hero NFT Contract

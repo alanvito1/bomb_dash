@@ -1,6 +1,7 @@
 // src/scenes/MenuScene.js
 import { backgroundImages } from '../config/background.js';
 import SoundManager from '../utils/sound.js';
+import { CST } from '/src/CST.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import { ethers } from 'ethers'; // Required for Wager Arena contract interaction
@@ -21,12 +22,16 @@ export default class MenuScene extends Phaser.Scene {
   constructor() {
     super('MenuScene');
     this.bcoinBalanceText = null;
+    this.userData = null;
+    this.web3 = null;
   }
 
   init(data) {
     if (window.DEBUG_MODE) {
         console.log('[DEBUG] MenuScene: init() called.', data);
     }
+    this.userData = data.userData;
+    this.web3 = data.web3;
   }
 
   preload() {
@@ -124,7 +129,7 @@ export default class MenuScene extends Phaser.Scene {
   createMenu(centerX, centerY, useFallback = false) {
     const menuItems = [
       { key: 'menu_solo', label: LanguageManager.get('menu_solo'), scene: 'CharacterSelectionScene' },
-      { key: 'menu_pvp', label: LanguageManager.get('menu_pvp'), action: 'showPvpLobby' },
+      { key: 'menu_pvp_ranked', label: "PvP Ranqueado", scene: CST.SCENES.PVP },
       { key: 'menu_altar', label: LanguageManager.get('menu_altar'), scene: 'AltarScene' },
       { key: 'menu_shop', label: LanguageManager.get('menu_shop'), scene: 'ShopScene' },
       { key: 'menu_profile', label: LanguageManager.get('profile_title'), scene: 'ProfileScene' },
@@ -149,157 +154,17 @@ export default class MenuScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           SoundManager.play(this, 'click');
-
-          if (item.action === 'showPvpLobby') {
-            this.showPvpLobby();
-          } else if (item.action === 'logout') {
+          if (item.action === 'logout') {
             api.logout();
             this.registry.remove('loggedInUser');
             this.scene.start('AuthChoiceScene');
           } else if (item.scene) {
-            this.scene.start(item.scene);
+            this.scene.start(item.scene, { userData: this.userData, web3: this.web3 });
           }
         })
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
         .on('pointerout', () => button.setStyle({ fill: item.color || '#00ffff' }));
     });
-  }
-
-  showPvpLobby() {
-    this.game.canvas.style.display = 'none'; // Esconde o canvas do jogo
-    const pvpLobby = document.getElementById('pvp-lobby-container');
-    pvpLobby.style.display = 'flex';
-
-    // Adiciona listeners uma única vez
-    if (!pvpLobby.dataset.listenersAdded) {
-      document.getElementById('ranked-mode-button').addEventListener('click', () => {
-        SoundManager.play(this, 'click');
-        pvpLobby.style.display = 'none';
-        this.game.canvas.style.display = 'block';
-        // Pass a parameter to indicate the game mode
-        this.scene.start('CharacterSelectionScene', { gameMode: 'ranked' });
-      });
-
-      document.getElementById('wager-arena-button').addEventListener('click', () => {
-        SoundManager.play(this, 'click');
-        pvpLobby.style.display = 'none';
-        this.showWagerArena(); // Mostra a UI da arena
-      });
-
-      document.getElementById('pvp-lobby-back-button').addEventListener('click', () => {
-        SoundManager.play(this, 'click');
-        pvpLobby.style.display = 'none';
-        this.game.canvas.style.display = 'block'; // Mostra o canvas novamente
-      });
-
-      pvpLobby.dataset.listenersAdded = 'true';
-    }
-  }
-
-  showWagerArena() {
-    const wagerArena = document.getElementById('wager-arena-container');
-    const messageEl = document.getElementById('wager-arena-message');
-    wagerArena.style.display = 'flex';
-    messageEl.textContent = LanguageManager.get('wager_arena_welcome');
-    messageEl.style.color = '#ffffff';
-
-    // Adiciona listeners uma única vez
-    if (!wagerArena.dataset.listenersAdded) {
-      // Listener para os botões de tier
-      document.querySelectorAll('.wager-tier-button').forEach(button => {
-        button.addEventListener('click', async () => {
-          SoundManager.play(this, 'click');
-          const tierId = button.dataset.tierId;
-
-          messageEl.textContent = LanguageManager.get('wager_arena_checking');
-          messageEl.style.color = '#ffff00'; // Amarelo para processamento
-
-          try {
-            // 1.1: Use the new centralized API client. No need to pass the token.
-            const response = await api.enterWagerMatch(tierId);
-            if (response.success) {
-              this.showWagerConfirmation(response.tier);
-            } else {
-              messageEl.textContent = response.message || LanguageManager.get('wager_arena_fail');
-              messageEl.style.color = '#ff0000'; // Vermelho para erro
-            }
-          } catch (error) {
-            console.error('Erro ao verificar aposta:', error);
-            messageEl.textContent = error.message || LanguageManager.get('wager_arena_error');
-            messageEl.style.color = '#ff0000';
-          }
-        });
-      });
-
-      // Listener para o botão de voltar
-      document.getElementById('wager-arena-back-button').addEventListener('click', () => {
-        SoundManager.play(this, 'click');
-        wagerArena.style.display = 'none';
-        this.showPvpLobby(); // Volta para o lobby pvp
-      });
-
-      wagerArena.dataset.listenersAdded = 'true';
-    }
-  }
-
-  async showWagerConfirmation(tier) {
-    const confirmDialog = document.getElementById('wager-confirm-dialog');
-    const messageEl = document.getElementById('wager-confirm-message');
-    const wagerArenaMsg = document.getElementById('wager-arena-message');
-
-    messageEl.innerHTML = LanguageManager.get('wager_confirm_message', { bcoin: tier.bcoin_cost, xp: tier.xp_cost });
-    confirmDialog.style.display = 'flex';
-
-    const confirmButton = document.getElementById('wager-confirm-button');
-    const cancelButton = document.getElementById('wager-cancel-button');
-
-    // Usamos .cloneNode e .replaceWith para remover listeners antigos
-    const newConfirmButton = confirmButton.cloneNode(true);
-    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
-
-    newConfirmButton.addEventListener('click', async () => {
-        SoundManager.play(this, 'click');
-        confirmDialog.style.display = 'none';
-        wagerArenaMsg.textContent = LanguageManager.get('wager_wallet_prompt');
-        wagerArenaMsg.style.color = '#ffff00'; // Amarelo
-
-        try {
-            // 1. Conectar à carteira e ao contrato
-            if (typeof window.ethereum === 'undefined') {
-                throw new Error(LanguageManager.get('metamask_not_installed'));
-            }
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            // Usa as constantes definidas no topo do arquivo
-            const wagerArenaContract = new ethers.Contract(WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI, signer);
-
-            // 2. Chamar a função do contrato
-            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_sending');
-            const tx = await wagerArenaContract.enterWagerQueue(tier.id);
-
-            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_confirming');
-            await tx.wait(); // Espera a transação ser minerada
-
-            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_success', { tierName: tier.name });
-            wagerArenaMsg.style.color = '#00ff00'; // Verde
-
-            // Aqui, o jogo entraria em um estado de "espera", escutando por um evento do backend/websocket
-            // que informaria quando a partida foi encontrada.
-
-        } catch (error) {
-            console.error('Falha na transação da aposta:', error);
-            wagerArenaMsg.textContent = LanguageManager.get('wager_tx_fail', { errorMessage: error.message.substring(0, 50) });
-            wagerArenaMsg.style.color = '#ff0000'; // Vermelho
-        }
-    }, { once: true });
-
-    const newCancelButton = cancelButton.cloneNode(true);
-    cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
-    newCancelButton.addEventListener('click', () => {
-        SoundManager.play(this, 'click');
-        confirmDialog.style.display = 'none';
-    }, { once: true });
   }
 
   playMenuMusic() {
