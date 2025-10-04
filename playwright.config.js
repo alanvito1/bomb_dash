@@ -31,6 +31,24 @@ module.exports = defineConfig({
     trace: 'on-first-retry',
   },
 
+  // Run local dev server before starting the tests
+  webServer: [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'npm run start:backend',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  ],
+
   // Configure projects for major browsers
   projects: [
     {
