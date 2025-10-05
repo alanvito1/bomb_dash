@@ -83,6 +83,7 @@ const MatchmakingQueue = sequelize.define('MatchmakingQueue', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true },
     hero_id: { type: DataTypes.INTEGER, allowNull: false },
+    tier: { type: DataTypes.STRING, allowNull: false, defaultValue: 'default' },
     entry_time: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     status: { type: DataTypes.STRING, allowNull: false, defaultValue: 'searching' }
 }, { tableName: 'matchmaking_queue', timestamps: false });
@@ -403,14 +404,15 @@ async function addXpToHero(heroId, xpAmount) {
     });
 }
 
-async function addToMatchmakingQueue(userId, heroId) {
+async function addToMatchmakingQueue(userId, heroId, tier) {
     const [queueEntry, created] = await MatchmakingQueue.findOrCreate({
         where: { user_id: userId },
-        defaults: { hero_id: heroId, status: 'searching', entry_time: new Date() }
+        defaults: { hero_id: heroId, tier: tier, status: 'searching', entry_time: new Date() }
     });
 
     if (!created) {
         queueEntry.hero_id = heroId;
+        queueEntry.tier = tier;
         queueEntry.status = 'searching';
         queueEntry.entry_time = new Date();
         await queueEntry.save();
@@ -454,6 +456,27 @@ async function getTop10Ranking() {
     });
 }
 
+async function grantRewards(userId, bcoinReward, accountXpReward) {
+    return sequelize.transaction(async (t) => {
+        const user = await User.findByPk(userId, { transaction: t });
+        if (!user) {
+            throw new Error(`User with ID ${userId} not found for granting rewards.`);
+        }
+
+        user.coins += bcoinReward;
+        user.account_xp += accountXpReward;
+
+        // Recalculate account level based on new XP
+        const newLevel = getLevelFromExperience(user.account_xp); // Assuming base multiplier
+        if (newLevel > user.account_level) {
+            user.account_level = newLevel;
+        }
+
+        await user.save({ transaction: t });
+        return { success: true, user: user.toJSON() };
+    });
+}
+
 module.exports = {
     initDb,
     closeDb,
@@ -485,6 +508,7 @@ module.exports = {
     getAltarStatus,
     updateAltarStatus,
     addDonationToAltar,
+    grantRewards,
     // Export models and sequelize instance for testing or advanced usage
     sequelize,
     User,
