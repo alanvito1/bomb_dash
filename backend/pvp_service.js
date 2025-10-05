@@ -172,6 +172,52 @@ async function reportWagerMatch(matchId, winnerAddress, loserAddress, winnerHero
 }
 
 
+/**
+ * Processes the result of a match against a bot, granting appropriate rewards.
+ * @param {number} userId - The ID of the winning user.
+ * @param {number} heroId - The ID of the hero used in the match.
+ * @param {string} tier - The tier string (e.g., "ranked", "wager_2").
+ * @returns {Promise<object>} The result of the operation.
+ */
+async function reportBotMatch(userId, heroId, tier) {
+    const [mode, tierId] = tier.split('_');
+
+    if (mode === 'ranked') {
+        // Grant standard ranked rewards for beating a bot
+        const { bcoin, heroXp, accountXp } = calculateRewards(15, 50, 20); // Standard base rewards
+
+        await db.addXpToHero(heroId, heroXp);
+        await db.grantRewards(userId, bcoin, accountXp);
+
+        return {
+            success: true,
+            message: `Victory against Bot! You earned ${bcoin} BCOIN, ${heroXp} Hero XP, and ${accountXp} Account XP.`
+        };
+
+    } else if (mode === 'wager') {
+        const wagerTier = await db.getWagerTier(parseInt(tierId, 10));
+        if (!wagerTier) {
+            throw new Error(`Wager tier ${tierId} not found for bot match report.`);
+        }
+
+        // Refund the entry fee (off-chain)
+        const entryFee = wagerTier.bcoin_cost;
+        await db.grantRewards(userId, entryFee, 0); // Grant BCOIN, no account XP
+
+        // Grant a reduced, fixed amount of Hero XP (25% of wager)
+        const reducedHeroXp = Math.floor(wagerTier.xp_cost * 0.25);
+        await db.addXpToHero(heroId, reducedHeroXp);
+
+        return {
+            success: true,
+            message: `Wager against Bot cancelled. Your ${entryFee} BCOIN entry fee has been refunded, and you earned a bonus of ${reducedHeroXp} Hero XP.`
+        };
+    }
+
+    throw new Error(`Invalid mode "${mode}" specified for bot match report.`);
+}
+
+
 module.exports = {
     isSunday,
     calculateRewards,
@@ -179,5 +225,6 @@ module.exports = {
     reportRankedMatch,
     enterWagerQueue,
     reportWagerMatch,
+    reportBotMatch,
     PVP_ENTRY_FEE,
 };

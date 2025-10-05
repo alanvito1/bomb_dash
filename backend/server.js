@@ -706,6 +706,21 @@ app.post('/api/pvp/wager/report', verifyOracle, async (req, res) => {
     }
 });
 
+app.post('/api/pvp/bot-match/report', verifyToken, async (req, res) => {
+    const { heroId, tier } = req.body;
+    if (!heroId || !tier) {
+        return res.status(400).json({ success: false, message: 'heroId and tier are required.' });
+    }
+
+    try {
+        const result = await pvpService.reportBotMatch(req.user.userId, heroId, tier);
+        res.json(result);
+    } catch (error) {
+        console.error(`Error reporting bot match result for user ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error while reporting bot match result.' });
+    }
+});
+
 
 // =================================================================
 // ROTAS DO ALTAR DE BUFFS
