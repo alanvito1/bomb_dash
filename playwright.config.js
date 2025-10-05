@@ -41,7 +41,7 @@ module.exports = defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'npm run start:backend',
+      command: 'npm run start:backend:test',
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',
