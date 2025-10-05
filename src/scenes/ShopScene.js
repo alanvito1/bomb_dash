@@ -1,23 +1,15 @@
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
-import { ethers } from 'ethers';
-
-// These should ideally be loaded from a config file or environment variables
-const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-const SPENDER_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // TournamentController address
-
-const BCOIN_ABI = [
-    "function approve(address spender, uint256 amount) public returns (bool)",
-    "function allowance(address owner, address spender) view returns (uint256)",
-    "function balanceOf(address account) view returns (uint256)"
-];
+import bcoinService from '../web3/bcoin-service.js';
+import { TOURNAMENT_CONTROLLER_ADDRESS } from '../config/contracts.js';
+import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 export default class ShopScene extends Phaser.Scene {
     constructor() {
         super('ShopScene');
         this.hero = null;
-        this.bcoinBalance = ethers.toBigInt(0);
+        this.bcoinBalance = '0.00';
     }
 
     init(data) {
@@ -45,13 +37,20 @@ export default class ShopScene extends Phaser.Scene {
         this.add.text(centerX, 60, LanguageManager.get('shop_title'), titleStyle).setOrigin(0.5);
 
         this.coinsText = this.add.text(centerX, 100, LanguageManager.get('shop_coins', { coins: '...' }), { ...textStyle, fill: '#FFD700' }).setOrigin(0.5);
-        this.updateBcoinBalance();
+
+        // Use the service to get the initial balance and listen for updates
+        this.updateBcoinBalanceDisplay();
+        GameEventEmitter.on('bcoin-balance-update', this.handleBalanceUpdate, this);
 
         this.createStatDisplays(centerX, 140, statStyle);
         this.createUpgradeButtons(centerX, 300, buttonStyle);
         this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
 
         this.refreshUI();
+    }
+
+    shutdown() {
+        GameEventEmitter.off('bcoin-balance-update', this.handleBalanceUpdate, this);
     }
 
     createStatDisplays(x, y, style) {
@@ -82,9 +81,8 @@ export default class ShopScene extends Phaser.Scene {
 
             button.on('pointerdown', async () => {
                 const currentCost = btnConfig.cost(this.hero);
-                const costInWei = ethers.parseUnits(currentCost.toString(), 18);
 
-                if (this.bcoinBalance < costInWei) {
+                if (parseFloat(this.bcoinBalance) < currentCost) {
                     SoundManager.play(this, 'error');
                     this.showToast(LanguageManager.get('shop_insufficient_bcoin'));
                     this.tweens.add({ targets: button, x: x - 5, duration: 50, yoyo: true, repeat: 2 });
@@ -95,12 +93,8 @@ export default class ShopScene extends Phaser.Scene {
                     SoundManager.play(this, 'click');
                     button.setText(LanguageManager.get('shop_approving')).disableInteractive();
 
-                    const provider = new ethers.BrowserProvider(window.ethereum);
-                    const signer = await provider.getSigner();
-                    const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
-
-                    const approveTx = await bcoinContract.approve(SPENDER_ADDRESS, costInWei);
-                    await approveTx.wait();
+                    // Use the service to handle approval
+                    await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, currentCost);
 
                     button.setText(LanguageManager.get('shop_processing'));
                     const result = await api.purchaseHeroUpgrade(this.hero.id, btnConfig.type, currentCost);
@@ -109,7 +103,10 @@ export default class ShopScene extends Phaser.Scene {
                         SoundManager.play(this, 'upgrade');
                         this.showToast(LanguageManager.get('shop_upgrade_success'), true);
                         this.hero = result.hero;
-                        await this.updateBcoinBalance();
+
+                        // Emit event to trigger a global balance update
+                        GameEventEmitter.emit('bcoin-balance-changed');
+
                         this.refreshUI();
                     } else {
                         throw new Error(result.message);
@@ -118,7 +115,7 @@ export default class ShopScene extends Phaser.Scene {
                     console.error('Upgrade failed:', error);
                     SoundManager.play(this, 'error');
                     this.showToast(error.message || LanguageManager.get('shop_upgrade_failed'));
-                    this.refreshUI();
+                    this.refreshUI(); // Also refresh UI on failure to re-enable button
                 }
             });
 
@@ -145,18 +142,19 @@ export default class ShopScene extends Phaser.Scene {
         backButton.on('pointerout', () => backButton.setStyle({ fill: '#00ffff' }));
     }
 
-    async updateBcoinBalance() {
-        try {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
-            this.bcoinBalance = await bcoinContract.balanceOf(await signer.getAddress());
-            const balanceFormatted = ethers.formatUnits(this.bcoinBalance, 18);
-            this.coinsText.setText(LanguageManager.get('shop_coins', { coins: parseFloat(balanceFormatted).toFixed(2) }));
-        } catch (error) {
-            console.error("Failed to fetch BCOIN balance:", error);
+    handleBalanceUpdate({ balance, error }) {
+        if (error) {
             this.coinsText.setText(LanguageManager.get('shop_coins', { coins: 'Error' }));
+            return;
         }
+        this.bcoinBalance = balance;
+        const balanceFormatted = parseFloat(balance).toFixed(2);
+        this.coinsText.setText(LanguageManager.get('shop_coins', { coins: balanceFormatted }));
+    }
+
+    async updateBcoinBalanceDisplay() {
+        const { balance, error } = await bcoinService.getBalance();
+        this.handleBalanceUpdate({ balance, error });
     }
 
     refreshUI() {

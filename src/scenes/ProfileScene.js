@@ -1,12 +1,10 @@
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
-import { ethers } from 'ethers';
 import { getExperienceForLevel } from '../utils/rpg.js';
-
-const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-const SPENDER_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const BCOIN_ABI = ["function approve(address spender, uint256 amount) public returns (bool)"];
+import bcoinService from '../web3/bcoin-service.js';
+import { TOURNAMENT_CONTROLLER_ADDRESS } from '../config/contracts.js';
+import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 export default class ProfileScene extends Phaser.Scene {
   constructor() {
@@ -108,30 +106,30 @@ export default class ProfileScene extends Phaser.Scene {
             SoundManager.play(this, 'click');
             this.messageText.setText(LanguageManager.get('profile_wallet_connecting')).setStyle({ fill: '#ffff00' });
 
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
+            const levelUpCost = 1; // Hardcoded cost for leveling up
+            this.messageText.setText(LanguageManager.get('profile_wallet_approve_fee', { cost: levelUpCost }));
 
-            this.messageText.setText(LanguageManager.get('profile_wallet_approve_fee', { cost: 1 }));
-            const feeInWei = ethers.parseUnits('1', 18);
-            const tx = await bcoinContract.approve(SPENDER_ADDRESS, feeInWei);
+            // Use the service to handle the approval flow
+            await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, levelUpCost);
 
             this.levelUpButton.disableInteractive().setText(LanguageManager.get('profile_level_up_confirming'));
-            await tx.wait();
-
             this.messageText.setText(LanguageManager.get('profile_level_up_processing'));
+
             const result = await api.levelUp();
 
             if (result.success) {
                 this.messageText.setStyle({ fill: '#00ff00' }).setText(result.message);
                 await this.refreshStats();
+
+                // Notify the system that the balance has likely changed
+                GameEventEmitter.emit('bcoin-balance-changed');
             } else {
                 throw new Error(result.message || LanguageManager.get('profile_level_up_error_server'));
             }
         } catch (error) {
             this.messageText.setStyle({ fill: '#ff0000' }).setText(error.message.substring(0, 50));
             console.error('Level up failed:', error);
-            this.time.delayedCall(3000, () => this.refreshStats());
+            this.time.delayedCall(3000, () => this.refreshStats()); // Re-enable button after a delay
         }
     });
 
