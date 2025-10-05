@@ -211,19 +211,21 @@ export default class PvpScene extends Phaser.Scene {
         return card;
     }
 
-     selectHeroForWager(card) {
-        if (this.selectedHeroCard) {
-            const oldBg = this.selectedHeroCard.getData('bg');
-            oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-250, -40, 500, 80);
-        }
-
-        this.selectedHeroCard = card;
-        this.selectedHero = card.getData('hero');
-
-        card.getData('bg').lineStyle(2, 0x00FFFF).strokeRect(-250, -40, 500, 80);
-
-        this.showEnterWagerButton();
-    }
+    // THIS BLOCK WAS THE CAUSE OF THE CRASH
+    // It appears to be a malformed, duplicated function.
+    // selectHeroForWager(card) {
+    //    if (this.selectedHeroCard) {
+    //        const oldBg = this.selectedHeroCard.getData('bg');
+    //        oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-250, -40, 500, 80);
+    //    }
+    //
+    //    this.selectedHeroCard = card;
+    //    this.selectedHero = card.getData('hero');
+    //
+    //    card.getData('bg').lineStyle(2, 0x00FFFF).strokeRect(-250, -40, 500, 80);
+    //
+    //    this.showEnterWagerButton();
+    // }
 
     showEnterWagerButton() {
         if (this.enterWagerButton) this.enterWagerButton.destroy();
