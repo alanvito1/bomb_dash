@@ -198,61 +198,6 @@ const heroUpgrades = {
 };
 
 
-app.post('/api/heroes/:heroId/purchase-upgrade', verifyToken, async (req, res) => {
-    const { heroId } = req.params;
-    const { upgradeType, cost } = req.body; // cost is sent from client
-
-    if (!upgradeType || !heroUpgrades[upgradeType]) {
-        return res.status(400).json({ success: false, message: "Invalid upgrade type." });
-    }
-
-    try {
-        // 1. Get the hero and verify ownership
-        const heroes = await db.getHeroesByUserId(req.user.userId);
-        const hero = heroes.find(h => h.id.toString() === heroId);
-
-        if (!hero) {
-            return res.status(404).json({ success: false, message: "Hero not found or you don't own it." });
-        }
-
-        // 2. Calculate the authoritative cost on the backend
-        const expectedCost = heroUpgrades[upgradeType].cost(hero);
-        if (cost !== expectedCost) {
-            return res.status(400).json({
-                success: false,
-                message: `Cost mismatch. Client sent ${cost}, but server expected ${expectedCost}.`
-            });
-        }
-
-        // 3. Process the on-chain payment via the Oracle
-        // The client must have already called `approve` on the BCOIN contract
-        await oracle.processHeroUpgrade(req.user.address, expectedCost);
-
-        // 4. If payment is successful, apply the stat upgrade
-        const newStats = heroUpgrades[upgradeType].effect(hero);
-        await db.updateHeroStats(heroId, newStats);
-
-        // 5. Fetch the fully updated hero data to return to the client
-        const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
-        const updatedHero = updatedHeroes.find(h => h.id.toString() === heroId);
-
-        res.json({
-            success: true,
-            message: `Hero ${upgradeType} upgraded successfully!`,
-            hero: updatedHero
-        });
-
-    } catch (error) {
-        console.error(`Error purchasing upgrade ${upgradeType} for hero ${heroId}:`, error);
-        // Check for specific error messages from the oracle/blockchain
-        if (error.message.includes("transfer failed") || error.message.includes("insufficient allowance")) {
-            return res.status(402).json({ success: false, message: "Blockchain transaction failed. Check BCOIN balance and approval." });
-        }
-        res.status(500).json({ success: false, message: 'Internal server error during upgrade purchase.' });
-    }
-});
-
-
 const { getExperienceForLevel } = require('./rpg');
 
 app.post('/api/heroes/:heroId/level-up', verifyToken, async (req, res) => {
@@ -391,6 +336,55 @@ app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
     } catch (error) {
         console.error("Erro em /api/admin/settings:", error);
         res.status(500).json({ success: false, message: 'Erro ao buscar as configurações do jogo.' });
+    }
+});
+
+app.post('/api/user/stats', verifyToken, async (req, res) => {
+    const { heroId, upgradeType, txHash } = req.body;
+
+    if (!heroId || !upgradeType || !txHash) {
+        return res.status(400).json({ success: false, message: "heroId, upgradeType, and txHash are required." });
+    }
+
+    if (!heroUpgrades[upgradeType]) {
+        return res.status(400).json({ success: false, message: "Invalid upgrade type provided." });
+    }
+
+    try {
+        // 1. Fetch the hero to verify ownership and get current stats
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const hero = heroes.find(h => h.id.toString() === heroId.toString());
+
+        if (!hero) {
+            return res.status(404).json({ success: false, message: "Hero not found or you don't own it." });
+        }
+
+        // 2. Calculate the expected cost based on the hero's current stats (server-side)
+        const expectedCost = heroUpgrades[upgradeType].cost(hero);
+
+        // 3. Verify the on-chain transaction using the Oracle
+        await oracle.verifyUpgradeTransaction(txHash, req.user.address, expectedCost);
+
+        // 4. If verification is successful, apply the stat upgrade
+        const newStats = heroUpgrades[upgradeType].effect(hero);
+        await db.updateHeroStats(heroId, newStats);
+
+        // 5. Fetch the fully updated hero data to return to the client
+        const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
+        const updatedHero = updatedHeroes.find(h => h.id.toString() === heroId.toString());
+
+        res.json({
+            success: true,
+            message: `Hero ${upgradeType} upgraded successfully!`,
+            hero: updatedHero
+        });
+
+    } catch (error) {
+        console.error(`Error processing upgrade for hero ${heroId} with tx ${txHash}:`, error);
+        if (error.message.includes("mismatch") || error.message.includes("not found") || error.message.includes("failed")) {
+            return res.status(400).json({ success: false, message: `Transaction verification failed: ${error.message}` });
+        }
+        res.status(500).json({ success: false, message: 'Internal server error during hero upgrade.' });
     }
 });
 

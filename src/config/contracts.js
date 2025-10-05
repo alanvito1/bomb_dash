@@ -36,6 +36,7 @@ export const TOURNAMENT_CONTROLLER_ABI = [
     "event TournamentStarted(uint256 indexed tournamentId)",
     "event AltarDonationReceived(address indexed donor, uint256 amount)",
     "event HeroLeveledUp(address indexed player, uint256 feePaid)",
+    "event HeroUpgradePaid(address indexed player, uint256 costPaid)",
     "event PlayerEnteredRankedQueue(address indexed player, uint256 indexed tier, uint256 entryFee)",
     "event MatchCreated(uint256 indexed matchId, address[] players, uint256 entryFee, uint256 tier)"
 ];

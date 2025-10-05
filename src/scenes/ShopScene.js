@@ -2,6 +2,7 @@ import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
+import tournamentService from '../web3/tournament-service.js';
 import { TOURNAMENT_CONTROLLER_ADDRESS } from '../config/contracts.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 
@@ -91,31 +92,41 @@ export default class ShopScene extends Phaser.Scene {
 
                 try {
                     SoundManager.play(this, 'click');
-                    button.setText(LanguageManager.get('shop_approving')).disableInteractive();
+                    button.setText(LanguageManager.get('shop_approving', {}, 'Approving...')).disableInteractive();
 
-                    // Use the service to handle approval
-                    await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, currentCost);
+                    // Step 1: Approve BCOIN spending
+                    const approveTx = await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, currentCost);
+                    if (approveTx) {
+                        button.setText(LanguageManager.get('shop_waiting_approval', {}, 'Confirming...'));
+                        await approveTx.wait();
+                    }
 
-                    button.setText(LanguageManager.get('shop_processing'));
-                    const result = await api.purchaseHeroUpgrade(this.hero.id, btnConfig.type, currentCost);
+                    // Step 2: Pay the upgrade fee to the contract
+                    button.setText(LanguageManager.get('shop_paying', {}, 'Paying...'));
+                    const payTx = await tournamentService.payUpgradeFee(currentCost);
+
+                    // Step 3: Wait for the payment transaction to be mined
+                    button.setText(LanguageManager.get('shop_verifying', {}, 'Verifying...'));
+                    await payTx.wait();
+
+                    // Step 4: Notify backend to verify and persist the upgrade
+                    const result = await api.updateUserStats(this.hero.id, btnConfig.type, payTx.hash);
 
                     if (result.success) {
                         SoundManager.play(this, 'upgrade');
                         this.showToast(LanguageManager.get('shop_upgrade_success'), true);
                         this.hero = result.hero;
 
-                        // Emit event to trigger a global balance update
                         GameEventEmitter.emit('bcoin-balance-changed');
-
                         this.refreshUI();
                     } else {
-                        throw new Error(result.message);
+                        throw new Error(result.message || LanguageManager.get('shop_verification_failed', {}, 'Backend verification failed.'));
                     }
                 } catch (error) {
-                    console.error('Upgrade failed:', error);
-                    SoundManager.play(this, 'error');
-                    this.showToast(error.message || LanguageManager.get('shop_upgrade_failed'));
-                    this.refreshUI(); // Also refresh UI on failure to re-enable button
+                    console.error('Upgrade process failed:', error);
+                    const reason = error.reason || error.data?.message || error.message;
+                    this.showToast(reason || LanguageManager.get('shop_upgrade_failed'));
+                    this.refreshUI(); // Refresh UI to re-enable the button
                 }
             });
 
