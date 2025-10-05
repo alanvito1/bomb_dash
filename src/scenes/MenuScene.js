@@ -9,12 +9,17 @@ import { ethers } from 'ethers'; // Required for Wager Arena contract interactio
 // --- Contract Configuration ---
 const WAGER_ARENA_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"; // From .env
 const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; // From .env
+const PERPETUAL_REWARD_POOL_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // From .env
+
 const BCOIN_ABI = [
     "function balanceOf(address owner) view returns (uint256)",
 ];
 const WAGER_ARENA_ABI = [
     "function enterWagerQueue(uint256 _tierId)",
     "event WagerMatchCreated(uint256 indexed matchId, uint256 indexed tierId, address player1, address player2, uint256 totalWager)"
+];
+const PERPETUAL_REWARD_POOL_ABI = [
+    "function claimReward(address player, uint256 gamesPlayed, uint256 nonce, bytes calldata signature)"
 ];
 // ------------------------------------
 
@@ -130,6 +135,7 @@ export default class MenuScene extends Phaser.Scene {
     const menuItems = [
       { key: 'menu_solo', label: LanguageManager.get('menu_solo'), scene: 'CharacterSelectionScene' },
       { key: 'menu_pvp_ranked', label: "PvP Ranqueado", scene: CST.SCENES.PVP },
+      { key: 'menu_claim_solo', label: LanguageManager.get('menu_claim_solo'), action: 'claim_solo', color: '#FFD700' },
       { key: 'menu_altar', label: LanguageManager.get('menu_altar'), scene: 'AltarScene' },
       { key: 'menu_shop', label: LanguageManager.get('menu_shop'), scene: 'ShopScene' },
       { key: 'menu_profile', label: LanguageManager.get('profile_title'), scene: 'ProfileScene' },
@@ -137,13 +143,13 @@ export default class MenuScene extends Phaser.Scene {
       { key: 'menu_logout', label: LanguageManager.get('menu_logout'), action: 'logout', color: '#FF6347' }
     ];
 
-    const buttonStartY = centerY - 120;
-    const buttonSpacing = 55;
+    const buttonStartY = centerY - 150;
+    const buttonSpacing = 50;
 
     menuItems.forEach((item, i) => {
       const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
         fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
-        fontSize: '16px',
+        fontSize: '14px', // Smaller font to fit everything
         fill: item.color || '#00ffff',
         backgroundColor: '#000000cc',
         padding: { x: 15, y: 10 },
@@ -158,6 +164,8 @@ export default class MenuScene extends Phaser.Scene {
             api.logout();
             this.registry.remove('loggedInUser');
             this.scene.start('AuthChoiceScene');
+          } else if (item.action === 'claim_solo') {
+            this.claimSoloRewards();
           } else if (item.scene) {
             this.scene.start(item.scene, { userData: this.userData, web3: this.web3 });
           }
@@ -165,6 +173,50 @@ export default class MenuScene extends Phaser.Scene {
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
         .on('pointerout', () => button.setStyle({ fill: item.color || '#00ffff' }));
     });
+  }
+
+  async claimSoloRewards() {
+    // Launch the popup and pause the current scene
+    this.scene.launch('PopupScene', {
+        originScene: this.scene.key,
+        title: 'Recompensas',
+        message: 'Processando sua reivindicação...'
+    });
+    this.scene.pause();
+
+    // Get the running popup scene instance to update it later
+    const popupScene = this.scene.get('PopupScene');
+
+    try {
+      const { success, message, signature, gamesPlayed, nonce } = await api.getSoloRewardClaimSignature();
+      if (!success) throw new Error(message || "Falha ao obter assinatura do servidor.");
+
+      if (!window.ethereum) throw new Error("Carteira MetaMask não detectada.");
+
+      popupScene.updateContent("Abra sua carteira para aprovar...");
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const playerAddress = await signer.getAddress();
+      const rewardPoolContract = new ethers.Contract(PERPETUAL_REWARD_POOL_ADDRESS, PERPETUAL_REWARD_POOL_ABI, signer);
+
+      const tx = await rewardPoolContract.claimReward(playerAddress, gamesPlayed, nonce, signature, { gasLimit: 300000 });
+
+      popupScene.updateContent("Transação enviada! Aguardando confirmação...");
+
+      const receipt = await tx.wait();
+      if (receipt.status !== 1) throw new Error("A transação na blockchain falhou.");
+
+      popupScene.updateContent("Recompensas reivindicadas com sucesso!", [{ label: 'OK', callback: () => popupScene.close() }]);
+      setTimeout(() => this.displayBcoinBalance(), 1000);
+
+    } catch (error) {
+      console.error('Falha ao reivindicar recompensas solo:', error);
+      const errorMessage = error.reason || error.message || "Ocorreu um erro desconhecido.";
+      if (popupScene && popupScene.scene.isActive()) {
+        popupScene.updateContent(`Erro: ${errorMessage}`, [{ label: 'Fechar', callback: () => popupScene.close() }]);
+      }
+    }
   }
 
   playMenuMusic() {

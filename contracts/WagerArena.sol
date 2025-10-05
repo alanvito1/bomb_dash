@@ -22,6 +22,8 @@ contract WagerArena {
     address public owner;
     address public oracle;
     address public immutable bcoinTokenAddress;
+    address public teamWallet;
+    address public soloRewardPoolAddress;
 
     uint256 public matchCounter;
     uint256 public constant MAX_TIERS = 10; // Maximum number of wager tiers
@@ -88,6 +90,22 @@ contract WagerArena {
     function setOracle(address _newOracle) external onlyOwner {
         require(_newOracle != address(0), "WagerArena: Cannot set oracle to zero address");
         oracle = _newOracle;
+    }
+
+    /**
+     * @dev Sets the team wallet address for commission distribution.
+     */
+    function setTeamWallet(address _teamWallet) external onlyOwner {
+        require(_teamWallet != address(0), "WagerArena: Cannot set team wallet to zero address");
+        teamWallet = _teamWallet;
+    }
+
+    /**
+     * @dev Sets the solo reward pool address for commission distribution.
+     */
+    function setSoloRewardPool(address _poolAddress) external onlyOwner {
+        require(_poolAddress != address(0), "WagerArena: Cannot set reward pool to zero address");
+        soloRewardPoolAddress = _poolAddress;
     }
 
     /**
@@ -162,6 +180,8 @@ contract WagerArena {
         WagerMatch storage matchToUpdate = activeMatches[_matchId];
         require(matchToUpdate.isActive, "WagerArena: Match is not active");
         require(_winner != address(0), "WagerArena: Winner address cannot be zero");
+        require(teamWallet != address(0), "WagerArena: Team wallet not set");
+        require(soloRewardPoolAddress != address(0), "WagerArena: Reward pool not set");
 
         // Verify the winner was a participant
         bool winnerIsParticipant = (matchToUpdate.player1 == _winner || matchToUpdate.player2 == _winner);
@@ -170,10 +190,24 @@ contract WagerArena {
         matchToUpdate.winner = _winner;
         matchToUpdate.isActive = false;
 
-        uint256 prizeAmount = matchToUpdate.wagerAmount;
+        uint256 totalPot = matchToUpdate.wagerAmount;
 
-        // Transfer the entire pot to the winner
+        // Calculate and distribute commission
+        uint256 totalFee = (totalPot * 10) / 100; // 10% commission
+        uint256 teamCommission = totalFee / 2;
+        uint256 poolCommission = totalFee - teamCommission;
+        uint256 prizeAmount = totalPot - totalFee;
+
         IBEP20 token = IBEP20(bcoinTokenAddress);
+
+        if (teamCommission > 0) {
+            token.transfer(teamWallet, teamCommission);
+        }
+        if (poolCommission > 0) {
+            token.transfer(soloRewardPoolAddress, poolCommission);
+        }
+
+        // Transfer the remaining prize to the winner
         require(token.transfer(_winner, prizeAmount), "WagerArena: Prize transfer failed");
 
         emit WagerMatchResultReported(_matchId, _winner, prizeAmount);

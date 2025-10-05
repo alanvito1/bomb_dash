@@ -25,10 +25,13 @@ contract PerpetualRewardPool {
     uint256 public gamesPlayedThisCycle;
     uint256 public rewardPerGameThisCycle;
 
+    // Mappings
+    mapping(address => uint256) public userNonces; // Nonce for replay protection
+
     // Events
     event NewCycleStarted(uint256 timestamp, uint256 rewardPerGame);
     event SoloGamesReported(uint256 count);
-    event RewardClaimed(address indexed player, uint256 amount);
+    event RewardClaimed(address indexed player, uint256 amount, uint256 nonce);
 
     modifier onlyOracle() {
         require(msg.sender == oracle, "Caller is not the oracle");
@@ -78,32 +81,36 @@ contract PerpetualRewardPool {
 
     /**
      * @dev Allows a player to claim their reward for solo games played.
-     * The claim is validated with a signature from the oracle.
+     * The claim is validated with a signature from the oracle that includes a nonce.
      */
-    function claimReward(address player, uint256 gamesPlayed, bytes calldata signature) external {
+    function claimReward(address player, uint256 gamesPlayed, uint256 nonce, bytes calldata signature) external {
         require(gamesPlayed > 0, "No games to claim");
         require(rewardPerGameThisCycle > 0, "No rewards available this cycle");
+        require(nonce == userNonces[player], "Invalid nonce");
 
         // 1. Verify the signature
-        bytes32 messageHash = _getClaimHash(player, gamesPlayed);
+        bytes32 messageHash = _getClaimHash(player, gamesPlayed, nonce);
         address signer = _recoverSigner(messageHash, signature);
         require(signer == oracle, "Invalid signature");
 
-        // 2. Calculate and transfer the reward
+        // 2. Increment nonce to prevent replay attacks
+        userNonces[player]++;
+
+        // 3. Calculate and transfer the reward
         uint256 rewardAmount = gamesPlayed * rewardPerGameThisCycle;
         IBEP20 token = IBEP20(bcoinTokenAddress);
         require(token.balanceOf(address(this)) >= rewardAmount, "Insufficient funds in pool");
 
         require(token.transfer(player, rewardAmount), "Reward transfer failed");
 
-        emit RewardClaimed(player, rewardAmount);
+        emit RewardClaimed(player, rewardAmount, nonce);
     }
 
     /**
-     * @dev Creates a hash for the claim message. This should be identical to the hash created by the backend.
+     * @dev Creates a hash for the claim message, including a nonce. This should be identical to the hash created by the backend.
      */
-    function _getClaimHash(address player, uint256 gamesPlayed) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked(player, gamesPlayed, address(this)));
+    function _getClaimHash(address player, uint256 gamesPlayed, uint256 nonce) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(address(this), player, gamesPlayed, nonce));
     }
 
     /**
