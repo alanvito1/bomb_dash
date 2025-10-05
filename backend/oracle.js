@@ -5,6 +5,13 @@ const db = require('./database');
 const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY;
 const BSC_RPC_URL = process.env.TESTNET_RPC_URL;
 const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
+const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
+
+const PERPETUAL_REWARD_POOL_ABI = [
+    "function startNewCycle()",
+    "function reportSoloGamePlayed(uint256 gameCount)",
+    "function userNonces(address player) view returns (uint256)"
+];
 
 // ABI atualizada para incluir as novas funções e eventos do PvP Ranqueado
 const TOURNAMENT_CONTROLLER_ABI = [
@@ -23,10 +30,11 @@ const TOURNAMENT_CONTROLLER_ABI = [
 let provider;
 let oracleWallet;
 let tournamentControllerContract;
+let perpetualRewardPoolContract;
 let isOracleInitialized = false;
 
 async function initOracle() {
-    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS) {
+    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS) {
         console.warn("Variáveis de ambiente essenciais do Oráculo não estão configuradas. O serviço do Oráculo está desativado.");
         isOracleInitialized = false;
         return false;
@@ -35,8 +43,9 @@ async function initOracle() {
         provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
         oracleWallet = new ethers.Wallet(ORACLE_PRIVATE_KEY, provider);
         tournamentControllerContract = new ethers.Contract(TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, oracleWallet);
+        perpetualRewardPoolContract = new ethers.Contract(PERPETUAL_REWARD_POOL_ADDRESS, PERPETUAL_REWARD_POOL_ABI, oracleWallet);
         isOracleInitialized = true;
-        console.log("[OK] Oráculo da blockchain inicializado para PvP.");
+        console.log("[OK] Oráculo da blockchain inicializado para PvP e Recompensas.");
         return true;
     } catch (error) {
         console.error("Falha ao inicializar o Oráculo:", error.message);
@@ -201,11 +210,55 @@ async function verifyUpgradeTransaction(txHash, expectedPlayer, expectedCost) {
 }
 
 
+async function startNewRewardCycle() {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+    console.log("[Oracle] Chamando startNewCycle no contrato PerpetualRewardPool...");
+    const tx = await perpetualRewardPoolContract.startNewCycle({ gasLimit: 150000 });
+    await tx.wait();
+    console.log(`[Oracle] Novo ciclo de recompensas iniciado com sucesso. Tx: ${tx.hash}`);
+    return { success: true, txHash: tx.hash };
+}
+
+async function reportSoloGames(gameCount) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+    // The contract function is named `reportSoloGamePlayed` but we send a batch count.
+    console.log(`[Oracle] Reportando ${gameCount} jogos solo para o contrato...`);
+    const tx = await perpetualRewardPoolContract.reportSoloGamePlayed(gameCount, { gasLimit: 100000 });
+    await tx.wait();
+    console.log(`[Oracle] Contagem de jogos solo reportada com sucesso. Tx: ${tx.hash}`);
+    return { success: true, txHash: tx.hash };
+}
+
+async function signSoloRewardClaim(playerAddress, gamesPlayed) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    // 1. Get the player's current nonce from the contract
+    const nonce = await perpetualRewardPoolContract.userNonces(playerAddress);
+
+    // 2. Create the message hash, ensuring it matches the contract's hashing logic
+    // keccak256(abi.encodePacked(address(this), player, gamesPlayed, nonce))
+    const messageHash = ethers.solidityPackedKeccak256(
+        ["address", "address", "uint256", "uint256"],
+        [PERPETUAL_REWARD_POOL_ADDRESS, playerAddress, gamesPlayed, nonce]
+    );
+
+    // 3. Sign the hash (Ethers automatically prefixes it with "\x19Ethereum Signed Message:\n32")
+    const signature = await oracleWallet.signMessage(ethers.getBytes(messageHash));
+
+    console.log(`[Oracle] Assinatura de claim gerada para ${playerAddress} para ${gamesPlayed} jogos com nonce ${nonce}.`);
+
+    return { signature, nonce: Number(nonce) };
+}
+
+
 module.exports = {
     initOracle,
     createRankedMatch,
     reportRankedMatchResult,
     verifyPvpEntryFee,
     verifyLevelUpTransaction,
-    verifyUpgradeTransaction
+    verifyUpgradeTransaction,
+    startNewRewardCycle,
+    reportSoloGames,
+    signSoloRewardClaim
 };

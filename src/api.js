@@ -305,6 +305,28 @@ class ApiClient {
     async getMatchmakingStatus() {
         return this.fetch('/matchmaking/status');
     }
+
+    // --- Solo Reward Methods ---
+
+    /**
+     * Notifies the backend that a solo game has been completed by the user.
+     * @returns {Promise<any>} The response from the backend.
+     */
+    async logSoloGameCompleted() {
+        return this.fetch('/solo/game-completed', {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Requests a signature from the backend to claim accumulated solo rewards.
+     * @returns {Promise<{signature: string, gamesPlayed: number, nonce: number}>} The signature and associated data.
+     */
+    async getSoloRewardClaimSignature() {
+        return this.fetch('/solo/claim-reward', {
+            method: 'POST'
+        });
+    }
 }
 
 // Exporta uma instância única do cliente

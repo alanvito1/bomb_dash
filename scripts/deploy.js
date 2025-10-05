@@ -112,6 +112,14 @@ async function main() {
     await tx1.wait();
     console.log(`- Set solo reward pool address in TournamentController.`);
 
+    // Configure WagerArena
+    const wagerTx1 = await wagerArena.setTeamWallet(teamWallet.address);
+    await wagerTx1.wait();
+    console.log(`- Set team wallet address in WagerArena.`);
+    const wagerTx2 = await wagerArena.setSoloRewardPool(perpetualRewardPoolAddress);
+    await wagerTx2.wait();
+    console.log(`- Set solo reward pool address in WagerArena.`);
+
     // 6. Fund the Reward Pool
     console.log("\nFunding the perpetual reward pool...");
     const initialPoolFunding = ethers.parseUnits("100000", 18); // 100,000 BCOIN

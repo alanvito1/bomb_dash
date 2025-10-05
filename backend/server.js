@@ -39,6 +39,7 @@ const admin = require('./admin.js'); // Importar o módulo admin
 const gameState = require('./game_state.js'); // Importar o módulo de estado do jogo
 const matchmaking = require('./matchmaking.js'); // Importar o módulo de matchmaking
 const pvpService = require('./pvp_service.js'); // Importar o novo serviço de PvP
+const soloRewardService = require('./solo_reward_service.js'); // Importar o serviço de recompensa solo
 
 const app = express();
 
@@ -651,6 +652,53 @@ app.get('/api/game/settings', async (req, res) => {
     }
 });
 
+// =================================================================
+// ROTAS DE RECOMPENSA SOLO (SOLO REWARD)
+// =================================================================
+
+app.post('/api/solo/game-completed', verifyToken, async (req, res) => {
+    try {
+        await db.logSoloGame(req.user.userId);
+        res.json({ success: true, message: 'Partida solo registrada.' });
+    } catch (error) {
+        console.error(`Erro ao registrar partida solo para o usuário ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao registrar a partida.' });
+    }
+});
+
+app.post('/api/solo/claim-reward', verifyToken, async (req, res) => {
+    try {
+        const cycleStartTime = soloRewardService.getLastCycleStartTime();
+        if (!cycleStartTime) {
+            return res.status(503).json({ success: false, message: 'O sistema de recompensas ainda está inicializando. Tente novamente em um minuto.' });
+        }
+
+        const gamesPlayed = await db.getUnclaimedGamesForUser(req.user.userId, cycleStartTime);
+
+        if (gamesPlayed <= 0) {
+            return res.status(400).json({ success: false, message: 'Você não tem recompensas de partidas solo para reivindicar neste ciclo.' });
+        }
+
+        // Generate the signature for the claim
+        const { signature, nonce } = await oracle.signSoloRewardClaim(req.user.address, gamesPlayed);
+
+        // Mark the games as claimed to prevent double-spending
+        await db.markGamesAsClaimed(req.user.userId, cycleStartTime);
+
+        res.json({
+            success: true,
+            message: 'Assinatura para reivindicação de recompensa gerada com sucesso!',
+            signature,
+            gamesPlayed,
+            nonce
+        });
+
+    } catch (error) {
+        console.error(`Erro ao processar reivindicação de recompensa para o usuário ${req.user.userId}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao processar a reivindicação.' });
+    }
+});
+
 
 // =================================================================
 // ROTAS DE PVP DE APOSTA (WAGER MODE)
@@ -908,6 +956,9 @@ async function startServer() {
         // 4.5 Iniciar o Cron Job do Altar de Buffs
         setInterval(checkAltarAndActivateBuff, 60000); // Roda a cada minuto
         console.log("[OK] Cron job do Altar de Buffs iniciado.");
+
+        // 4.6 Iniciar o Cron Job de Recompensas do Modo Solo
+        soloRewardService.startSoloRewardCycleCron();
 
         // 5. Iniciar o Servidor Express
         app.listen(PORT, () => {

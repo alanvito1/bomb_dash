@@ -99,6 +99,20 @@ const AltarStatus = sequelize.define('AltarStatus', {
     buff_expires_at: { type: DataTypes.DATE }
 }, { tableName: 'altar_status', timestamps: false });
 
+const SoloGameHistory = sequelize.define('SoloGameHistory', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    user_id: { type: DataTypes.INTEGER, allowNull: false },
+    timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    claimed: { type: DataTypes.BOOLEAN, defaultValue: false }
+}, {
+    tableName: 'solo_game_history',
+    timestamps: false,
+    indexes: [{ fields: ['user_id'] }, { fields: ['timestamp'] }]
+});
+
+SoloGameHistory.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+
+
 async function seedDatabase() {
     await WagerTier.bulkCreate([
         { id: 1, name: 'Bronze', bcoin_cost: 10, xp_cost: 20 },
@@ -477,6 +491,52 @@ async function grantRewards(userId, bcoinReward, accountXpReward) {
     });
 }
 
+async function logSoloGame(userId) {
+    await SoloGameHistory.create({ user_id: userId });
+    return { success: true };
+}
+
+async function countGamesInCycle(startTime) {
+    const count = await SoloGameHistory.count({
+        where: {
+            timestamp: {
+                [Op.gte]: startTime
+            }
+        }
+    });
+    return count;
+}
+
+async function getUnclaimedGamesForUser(userId, cycleStartTime) {
+    const count = await SoloGameHistory.count({
+        where: {
+            user_id: userId,
+            claimed: false,
+            timestamp: {
+                [Op.gte]: cycleStartTime
+            }
+        }
+    });
+    return count;
+}
+
+async function markGamesAsClaimed(userId, cycleStartTime) {
+    const [affectedRows] = await SoloGameHistory.update(
+        { claimed: true },
+        {
+            where: {
+                user_id: userId,
+                claimed: false,
+                timestamp: {
+                    [Op.gte]: cycleStartTime
+                }
+            }
+        }
+    );
+    return { success: true, count: affectedRows };
+}
+
+
 module.exports = {
     initDb,
     closeDb,
@@ -509,6 +569,10 @@ module.exports = {
     updateAltarStatus,
     addDonationToAltar,
     grantRewards,
+    logSoloGame,
+    countGamesInCycle,
+    getUnclaimedGamesForUser,
+    markGamesAsClaimed,
     // Export models and sequelize instance for testing or advanced usage
     sequelize,
     User,
