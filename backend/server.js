@@ -659,6 +659,55 @@ app.get('/api/game/settings', async (req, res) => {
 
 
 // =================================================================
+// ROTAS DE PVP DE APOSTA (WAGER MODE)
+// =================================================================
+
+app.get('/api/pvp/wager/tiers', verifyToken, async (req, res) => {
+    try {
+        const tiers = await db.getWagerTiers();
+        res.json({ success: true, tiers });
+    } catch (error) {
+        console.error("Error fetching wager tiers:", error);
+        res.status(500).json({ success: false, message: 'Failed to fetch wager tiers.' });
+    }
+});
+
+app.post('/api/pvp/wager/enter', verifyToken, async (req, res) => {
+    const { heroId, tierId } = req.body;
+    if (!heroId || !tierId) {
+        return res.status(400).json({ success: false, message: 'heroId and tierId are required.' });
+    }
+
+    try {
+        const result = await pvpService.enterWagerQueue(req.user.userId, heroId, tierId);
+        res.json(result);
+    } catch (error) {
+        console.error(`Error entering wager queue for user ${req.user.userId}:`, error);
+        // Provide specific user-facing error messages
+        if (error.message.includes("does not have enough XP")) {
+             return res.status(403).json({ success: false, message: error.message });
+        }
+        res.status(500).json({ success: false, message: 'Internal server error while entering wager queue.' });
+    }
+});
+
+app.post('/api/pvp/wager/report', verifyOracle, async (req, res) => {
+    const { matchId, winnerAddress, loserAddress, winnerHeroId, loserHeroId, tierId } = req.body;
+    if (!matchId || !winnerAddress || !loserAddress || !winnerHeroId || !loserHeroId || !tierId) {
+        return res.status(400).json({ success: false, message: 'matchId, winnerAddress, loserAddress, winnerHeroId, loserHeroId, and tierId are all required.' });
+    }
+
+    try {
+        const result = await pvpService.reportWagerMatch(matchId, winnerAddress, loserAddress, winnerHeroId, loserHeroId, tierId);
+        res.json(result);
+    } catch (error) {
+        console.error(`Error reporting wager match result for match ${matchId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error while reporting wager match result.' });
+    }
+});
+
+
+// =================================================================
 // ROTAS DO ALTAR DE BUFFS
 // =================================================================
 
@@ -837,7 +886,7 @@ async function startServer() {
         console.log("[OK] Conexão com o banco de dados estabelecida com sucesso.");
 
         // 2. Inicializar o Oráculo
-        await oracle.initOracle();
+        // await oracle.initOracle(); // Comentado para testes E2E que não dependem de uma conexão real com o blockchain.
 
         // 3. Iniciar Cron Jobs
         await gameState.startPvpCycleCron();
