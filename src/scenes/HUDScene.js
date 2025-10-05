@@ -1,11 +1,8 @@
 import LanguageManager from '../utils/LanguageManager.js';
-import { ethers } from 'ethers';
 import api from '../api.js';
 import { getExperienceForLevel } from '../utils/rpg.js';
-
-// Constants for BCOIN contract interaction
-const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-const BCOIN_ABI = ["function balanceOf(address account) view returns (uint256)"];
+import bcoinService from '../web3/bcoin-service.js';
+import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 
 export default class HUDScene extends Phaser.Scene {
@@ -40,8 +37,8 @@ export default class HUDScene extends Phaser.Scene {
             gameScene.events.on('update-xp', this.updateXP, this);
         }
 
-        // Listen for a global event to force-refresh the balance
-        this.game.events.on('bcoin-balance-changed', this.updateBcoinBalance, this);
+        // Listen for balance updates from the BcoinService
+        GameEventEmitter.on('bcoin-balance-update', this.handleBalanceUpdate, this);
 
         this.createHUD();
 
@@ -60,13 +57,9 @@ export default class HUDScene extends Phaser.Scene {
         }
         this.updateXP(initialXPData);
 
-        this.updateBcoinBalance(); // Initial fetch
-        this.fetchAltarStatus(); // Initial fetch for altar status
-
-        // Periodically refresh the BCOIN balance
-        this.balanceRefreshTimer = this.time.addEvent({
-            delay: 30000, callback: this.updateBcoinBalance, callbackScope: this, loop: true
-        });
+        // Request initial balance and altar status
+        bcoinService.updateBalance(); // Force update on HUD creation
+        this.fetchAltarStatus();
 
         // Periodically refresh the Altar status
         this.altarStatusTimer = this.time.addEvent({
@@ -76,9 +69,8 @@ export default class HUDScene extends Phaser.Scene {
 
     shutdown() {
         // Clean up timers and event listeners when the scene is shut down
-        if (this.balanceRefreshTimer) this.balanceRefreshTimer.remove();
+        GameEventEmitter.off('bcoin-balance-update', this.handleBalanceUpdate, this);
         if (this.altarStatusTimer) this.altarStatusTimer.remove();
-        this.game.events.off('bcoin-balance-changed', this.updateBcoinBalance, this);
         const gameScene = this.scene.get('GameScene');
         if (gameScene) {
              gameScene.events.off('update-health', this.updateHealth, this);
@@ -172,27 +164,14 @@ export default class HUDScene extends Phaser.Scene {
         }
     }
 
-    updateBCoin({ balance }) {
-        this.bcoinBalance = balance;
-        this.bcoinText.setText(LanguageManager.get('menu_bcoin_balance', { balance: this.bcoinBalance }));
-    }
-
-    async updateBcoinBalance() {
-        if (!window.ethereum) {
-            this.bcoinText.setText(LanguageManager.get('hud_bcoin_no_wallet'));
+    handleBalanceUpdate({ balance, error }) {
+        if (error) {
+            console.error(`[HUDScene] Received balance update error: ${error}`);
+            this.bcoinText.setText(LanguageManager.get('hud_bcoin_error'));
             return;
         }
-        try {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
-            const balance = await bcoinContract.balanceOf(await signer.getAddress());
-            const balanceFormatted = parseFloat(ethers.formatUnits(balance, 18)).toFixed(2);
-            this.bcoinText.setText(LanguageManager.get('menu_bcoin_balance', { balance: balanceFormatted }));
-        } catch (error) {
-            console.error("HUD: Failed to fetch BCOIN balance:", error);
-            this.bcoinText.setText(LanguageManager.get('hud_bcoin_error'));
-        }
+        const balanceFormatted = parseFloat(balance).toFixed(2);
+        this.bcoinText.setText(LanguageManager.get('menu_bcoin_balance', { balance: balanceFormatted }));
     }
 
     async fetchAltarStatus() {

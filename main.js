@@ -25,6 +25,8 @@ Sentry.init({
 // 🎬 Importação das cenas principais do jogo
 import api from './src/api.js';
 import nftService from './src/web3/nft-service.js';
+import bcoinService from './src/web3/bcoin-service.js';
+import GameEventEmitter from './src/utils/GameEventEmitter.js';
 import LoadingScene from './src/scenes/LoadingScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
@@ -108,6 +110,8 @@ window.addEventListener('DOMContentLoaded', () => {
   window.game = game; // Expose for testing and automation
   window.nftService = nftService; // Expose for mocking in tests
   window.api = api; // Expose API client for mocking in tests
+  window.bcoinService = bcoinService; // Expose for E2E testing
+  window.GameEventEmitter = GameEventEmitter; // Expose for E2E testing
 
   // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
   window.onerror = function (msg, url, lineNo, columnNo, error) {
