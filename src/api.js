@@ -152,10 +152,27 @@ class ApiClient {
     }
 
     async purchaseHeroUpgrade(heroId, upgradeType, cost) {
+        console.warn("`purchaseHeroUpgrade` is deprecated and will be removed. Use `updateUserStats` instead.");
         return this.fetch(`/heroes/${heroId}/purchase-upgrade`, {
             method: 'POST',
             body: JSON.stringify({ upgradeType, cost }),
         });
+    }
+
+    /**
+     * Notifies the backend to verify an on-chain upgrade transaction and update hero stats.
+     * @param {number|string} heroId - The ID of the hero that was upgraded.
+     * @param {string} upgradeType - The type of stat that was upgraded (e.g., 'damage').
+     * @param {string} txHash - The transaction hash of the on-chain payment.
+     * @returns {Promise<any>} The response from the backend.
+     */
+    async updateUserStats(heroId, upgradeType, txHash) {
+        const body = {
+            heroId: parseInt(heroId, 10),
+            upgradeType,
+            txHash
+        };
+        return this.fetch('/user/stats', 'POST', { body: JSON.stringify(body) }, true);
     }
 
     async levelUpHero(heroId) {

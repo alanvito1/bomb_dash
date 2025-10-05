@@ -52,7 +52,7 @@
     "shop_upgrade_damage": "[ +1 Damage - {cost} coins ]",
     "shop_upgrade_speed": "[ +10 Speed - {cost} coins ]",
     "shop_upgrade_extra_life": "[ +1 Extra Life - {cost} coins ]",
-    "shop_upgrade_fire_rate": "[ -50ms Fire Rate - {cost} coins ]",
+    "shop_upgrade_fireRate": "[ -50ms Fire Rate - {cost} coins ]",
     "shop_upgrade_bomb_size": "[ +1 Bomb Size - {cost} coins ]",
     "shop_upgrade_multi_shot": "[ +1 Multi-Shot - {cost} coins ]",
     "shop_back_to_menu": "[ BACK TO MENU ]",

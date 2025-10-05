@@ -10,12 +10,14 @@ const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
 const TOURNAMENT_CONTROLLER_ABI = [
     "function reportMatchResult(uint256 matchId, address winner)",
     "function payLevelUpFee(address player)",
+    "function payUpgradeFee(address player, uint256 cost)",
     "function createRankedMatch(address player1, address player2, uint256 tier, uint256 entryFee)",
     "function enterRankedMatch(uint256 tier, uint256 entryFee)",
     "event PlayerEnteredRankedQueue(address indexed player, uint256 indexed tier, uint256 entryFee)",
     "event MatchCreated(uint256 indexed matchId, address[] players, uint256 entryFee, uint256 tier)",
     "event AltarDonationReceived(address indexed donor, uint256 amount)",
-    "event HeroLeveledUp(address indexed player, uint256 feePaid)"
+    "event HeroLeveledUp(address indexed player, uint256 feePaid)",
+    "event HeroUpgradePaid(address indexed player, uint256 costPaid)"
 ];
 
 let provider;
@@ -156,11 +158,54 @@ async function verifyLevelUpTransaction(txHash, expectedPlayer, expectedFee) {
 }
 
 
+async function verifyUpgradeTransaction(txHash, expectedPlayer, expectedCost) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt || receipt.status !== 1) {
+        throw new Error("Transação de upgrade falhou ou não foi encontrada.");
+    }
+
+    // Find the HeroUpgradePaid event in the transaction logs
+    const upgradeEvent = receipt.logs
+        .map(log => {
+            try {
+                // Ensure the log is from the correct contract before parsing
+                if (log.address.toLowerCase() === TOURNAMENT_CONTROLLER_ADDRESS.toLowerCase()) {
+                    return tournamentControllerContract.interface.parseLog(log);
+                }
+                return null;
+            } catch (e) {
+                return null; // Ignore logs that are not from the target contract
+            }
+        })
+        .find(decodedLog => decodedLog && decodedLog.name === 'HeroUpgradePaid');
+
+    if (!upgradeEvent) {
+        throw new Error("Evento HeroUpgradePaid não encontrado na transação.");
+    }
+
+    const { player, costPaid } = upgradeEvent.args;
+    const expectedCostInWei = ethers.parseUnits(expectedCost.toString(), 18);
+
+    // Validate the event data
+    if (player.toLowerCase() !== expectedPlayer.toLowerCase()) {
+        throw new Error(`Endereço do jogador não corresponde. Esperado: ${expectedPlayer}, Recebido: ${player}`);
+    }
+    if (costPaid !== expectedCostInWei) {
+        throw new Error(`Custo do upgrade não corresponde. Esperado: ${expectedCostInWei}, Recebido: ${costPaid}`);
+    }
+
+    console.log(`[Oracle] Upgrade de ${expectedCost} BCOIN verificado para o jogador ${player}.`);
+    return true;
+}
+
+
 module.exports = {
     initOracle,
     createRankedMatch,
     reportRankedMatchResult,
     verifyPvpEntryFee,
     verifyLevelUpTransaction,
-    // Manter outras exportações se necessário
+    verifyUpgradeTransaction
 };
