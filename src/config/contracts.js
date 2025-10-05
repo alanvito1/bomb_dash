@@ -25,6 +25,13 @@ export const TOURNAMENT_CONTROLLER_ABI = [
     "event MatchCreated(uint256 indexed matchId, address[] players, uint256 entryFee, uint256 tier)"
 ];
 
+// Wager Arena Contract
+export const WAGER_ARENA_ADDRESS = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+export const WAGER_ARENA_ABI = [
+    "function enterWagerQueue(uint256 _tierId) external",
+    "event WagerMatchCreated(uint256 indexed matchId, uint256 indexed tierId, address player1, address player2, uint256 totalWager)"
+];
+
 // Bombcrypto Hero NFT Contract
 export const BOMB_CRYPTO_NFT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Replace with the actual address
 export const BOMB_CRYPTO_NFT_ABI = [

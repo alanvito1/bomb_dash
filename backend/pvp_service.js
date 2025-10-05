@@ -106,10 +106,78 @@ async function reportRankedMatch(matchId, winnerAddress) {
     return { success: true, message, onChainResult };
 }
 
+/**
+ * Handles a player's entry into the wager-based PvP queue.
+ * @param {number} userId - The ID of the user.
+ * @param {number} heroId - The ID of the hero selected for the wager.
+ * @param {number} tierId - The ID of the selected wager tier.
+ * @returns {Promise<object>} The result of the queueing operation.
+ */
+async function enterWagerQueue(userId, heroId, tierId) {
+    // 1. Fetch tier and hero details
+    const [tier, hero] = await Promise.all([
+        db.getWagerTier(tierId),
+        db.getHeroesByUserId(userId).then(heroes => heroes.find(h => h.id === heroId))
+    ]);
+
+    if (!tier) {
+        throw new Error("Wager tier not found.");
+    }
+    if (!hero) {
+        throw new Error("Hero not found or does not belong to the user.");
+    }
+
+    // 2. Validate that the hero has enough XP to cover the wager
+    // This is a "soft" check. The actual deduction happens upon loss.
+    if (hero.xp < tier.xp_cost) {
+        throw new Error(`Hero does not have enough XP. Requires ${tier.xp_cost}, but has ${hero.xp}.`);
+    }
+
+    // 3. Add player to the specific wager tier queue in the matchmaking service
+    // The matchmaking service will use the tierId to match players.
+    const queueResult = await matchmaking.joinQueue(userId, heroId, `wager_${tierId}`);
+
+    return { success: true, message: `Entered ${tier.name} wager queue!`, ...queueResult };
+}
+
+/**
+ * Processes the conclusion of a wager match, handling XP and on-chain rewards.
+ * @param {number} matchId - The ID of the match from the WagerArena contract.
+ * @param {string} winnerAddress - The wallet address of the winner.
+ * @param {string} loserAddress - The wallet address of the loser.
+ * @param {number} winnerHeroId - The ID of the winner's hero.
+ * @param {number} loserHeroId - The ID of the loser's hero.
+ * @param {number} tierId - The ID of the wager tier for this match.
+ * @returns {Promise<object>} The result of the operation.
+ */
+async function reportWagerMatch(matchId, winnerAddress, loserAddress, winnerHeroId, loserHeroId, tierId) {
+    // 1. Get Wager Tier details to determine the XP at stake
+    const tier = await db.getWagerTier(tierId);
+    if (!tier) {
+        throw new Error(`Wager tier ${tierId} not found.`);
+    }
+
+    // 2. Process off-chain Hero XP transfer and de-leveling via the database function
+    const offChainResult = await db.processHeroWagerResult(winnerHeroId, loserHeroId, tier.xp_cost);
+
+    // 3. Trigger the on-chain BCOIN transfer by calling the oracle
+    const onChainResult = await oracle.reportWagerMatchResult(matchId, winnerAddress);
+
+    return {
+        success: true,
+        message: "Wager match result reported successfully.",
+        offChainResult,
+        onChainResult
+    };
+}
+
+
 module.exports = {
     isSunday,
     calculateRewards,
     enterRankedQueue,
     reportRankedMatch,
+    enterWagerQueue,
+    reportWagerMatch,
     PVP_ENTRY_FEE,
 };

@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes, Op } = require('sequelize');
-const { getExperienceForLevel } = require('./rpg');
+const { getExperienceForLevel, getLevelFromExperience } = require('./rpg');
 
 // Use in-memory SQLite database for tests, otherwise use the file specified.
 const isTestEnv = process.env.NODE_ENV === 'test';
@@ -172,6 +172,10 @@ async function getWagerTier(tierId) {
     return WagerTier.findByPk(tierId);
 }
 
+async function getWagerTiers() {
+    return WagerTier.findAll({ order: [['id', 'ASC']] });
+}
+
 async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
     return sequelize.transaction(async (t) => {
         const winner = await User.findOne({ where: { wallet_address: winnerAddress }, transaction: t });
@@ -225,6 +229,53 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
         };
     });
 }
+
+/**
+ * Processes the result of a high-stakes PvP match, transferring Hero XP and handling de-leveling.
+ * @param {number} winnerHeroId - The ID of the winner's hero.
+ * @param {number} loserHeroId - The ID of the loser's hero.
+ * @param {number} xpWager - The amount of XP that was wagered.
+ * @returns {Promise<object>} The result of the operation, including updated stats for both heroes.
+ */
+async function processHeroWagerResult(winnerHeroId, loserHeroId, xpWager) {
+    return sequelize.transaction(async (t) => {
+        const [winnerHero, loserHero] = await Promise.all([
+            Hero.findByPk(winnerHeroId, { transaction: t }),
+            Hero.findByPk(loserHeroId, { transaction: t })
+        ]);
+
+        if (!winnerHero || !loserHero) {
+            throw new Error("Winner or loser hero not found for wager processing.");
+        }
+
+        const setting = await GameSetting.findOne({ where: { key: 'xp_multiplier' }, transaction: t });
+        const multiplier = parseFloat(setting ? setting.value : '1.0');
+
+        // 1. Update Winner's XP
+        winnerHero.xp += xpWager;
+        // Recalculate level in case of level up
+        const winnerNewLevel = getLevelFromExperience(winnerHero.xp, multiplier);
+        if (winnerNewLevel > winnerHero.level) {
+            winnerHero.level = winnerNewLevel;
+        }
+        await winnerHero.save({ transaction: t });
+
+        // 2. Update Loser's XP and handle De-Leveling
+        loserHero.xp = Math.max(0, loserHero.xp - xpWager);
+        const loserNewLevel = getLevelFromExperience(loserHero.xp, multiplier);
+        if (loserNewLevel < loserHero.level) {
+            loserHero.level = loserNewLevel;
+        }
+        await loserHero.save({ transaction: t });
+
+        return {
+            success: true,
+            winner: { heroId: winnerHeroId, newXp: winnerHero.xp, newLevel: winnerHero.level },
+            loser: { heroId: loserHeroId, newXp: loserHero.xp, newLevel: loserHero.level }
+        };
+    });
+}
+
 
 async function createWagerMatch(matchData) {
     const { matchId, tierId, player1, player2 } = matchData;
@@ -411,7 +462,9 @@ module.exports = {
     getUserByAddress,
     addXpToUser,
     getWagerTier,
+    getWagerTiers,
     processWagerMatchResult,
+    processHeroWagerResult,
     createWagerMatch,
     getWagerMatch,
     updateWagerMatch,
