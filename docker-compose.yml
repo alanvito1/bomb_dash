@@ -1,26 +1,20 @@
-version: '3.8'
-
+# The 'version' tag is obsolete in modern Docker Compose and has been removed.
 services:
-  backend:
+  # This single service builds the application environment and runs the E2E tests.
+  # The orchestration logic is now handled by the e2e-entrypoint.sh script,
+  # which is set as the ENTRYPOINT in the Dockerfile.
+  e2e-test:
     build:
       context: .
       dockerfile: Dockerfile
+
+    # Use the .env file from the project root to supply environment variables
+    # (secrets, RPC URLs, etc.) to the container during the test run.
+    env_file:
+      - .env
+
+    # Map the container ports to the host machine. This allows a developer
+    # to interact with the servers during a debug session if needed.
     ports:
-      - "3000:3000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - ranking_data:/app/data
-    environment:
-      - DB_PATH=/app/data/ranking.sqlite
-      - JWT_SECRET=your-very-strong-secret-key-for-web3-in-compose
-      # Add other necessary environment variables here
-    networks:
-      - bombdash-net
-
-volumes:
-  ranking_data:
-
-networks:
-  bombdash-net:
-    driver: bridge
+      - "5173:5173" # Vite Frontend
+      - "3000:3000" # Node.js Backend
