@@ -1,23 +1,15 @@
 // src/scenes/MenuScene.js
-import { backgroundImages } from '../config/background.js';
 import SoundManager from '../utils/sound.js';
 import { CST } from '/src/CST.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
-import { ethers } from 'ethers'; // Required for Wager Arena contract interaction
+import GameEventEmitter from '../utils/GameEventEmitter.js';
+import bcoinService from '../web3/bcoin-service.js';
+import { ethers } from 'ethers'; // Required for Wager Arena contract interaction - KEPT FOR CLAIM REWARDS
 
 // --- Contract Configuration ---
-const WAGER_ARENA_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"; // From .env
-const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; // From .env
+// Note: BCOIN contract details are now handled by the bcoin-service
 const PERPETUAL_REWARD_POOL_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // From .env
-
-const BCOIN_ABI = [
-    "function balanceOf(address owner) view returns (uint256)",
-];
-const WAGER_ARENA_ABI = [
-    "function enterWagerQueue(uint256 _tierId)",
-    "event WagerMatchCreated(uint256 indexed matchId, uint256 indexed tierId, address player1, address player2, uint256 totalWager)"
-];
 const PERPETUAL_REWARD_POOL_ABI = [
     "function claimReward(address player, uint256 gamesPlayed, uint256 nonce, bytes calldata signature)"
 ];
@@ -25,10 +17,10 @@ const PERPETUAL_REWARD_POOL_ABI = [
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
-    super('MenuScene');
+    super({ key: CST.SCENES.MENU });
     this.bcoinBalanceText = null;
+    this.userAddressText = null;
     this.userData = null;
-    this.web3 = null;
   }
 
   init(data) {
@@ -36,7 +28,6 @@ export default class MenuScene extends Phaser.Scene {
         console.log('[DEBUG] MenuScene: init() called.', data);
     }
     this.userData = data.userData;
-    this.web3 = data.web3;
   }
 
   preload() {
@@ -51,7 +42,6 @@ export default class MenuScene extends Phaser.Scene {
 
   create() {
     if (window.DEBUG_MODE) {
-        debugger; // This will pause the browser
         console.log('[DEBUG] MenuScene: create() started...');
     }
     const centerX = this.cameras.main.centerX;
@@ -59,18 +49,13 @@ export default class MenuScene extends Phaser.Scene {
 
     this.createBackground(centerX, centerY);
 
-    if (window.WebFont) {
-      WebFont.load({
-        google: { families: ['Press Start 2P'] },
-        active: () => this.createMenuContent(centerX, centerY)
-      });
-    } else {
-      console.warn('[MenuScene] WebFont indisponível, usando fallback.');
-      this.createMenuContent(centerX, centerY, true);
-    }
-
+    this.createMenuContent(centerX, centerY);
     this.playMenuMusic();
-    this.displayBcoinBalance();
+    this.setupBcoinListener();
+    this.displayUserData();
+
+    // Trigger an initial balance update
+    bcoinService.updateBalance();
 
     if (window.DEBUG_MODE) {
         console.log('[DEBUG] MenuScene: create() finished.');
@@ -83,10 +68,10 @@ export default class MenuScene extends Phaser.Scene {
       .setDisplaySize(this.scale.width, this.scale.height);
   }
 
-  createMenuContent(centerX, centerY, useFallback = false) {
+  createMenuContent(centerX, centerY) {
     // 🎮 Título do jogo
-    this.add.text(centerX, 100, LanguageManager.get('game_title'), {
-      fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
+    this.add.text(centerX, 80, LanguageManager.get('game_title'), {
+      fontFamily: '"Press Start 2P"',
       fontSize: '20px',
       fill: '#FFD700',
       stroke: '#000',
@@ -94,10 +79,10 @@ export default class MenuScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5);
 
-    this.createMenu(centerX, centerY, useFallback);
+    this.createMenu(centerX, centerY);
   }
 
-  async displayBcoinBalance() {
+  setupBcoinListener() {
     const textStyle = {
       fontFamily: '"Press Start 2P"',
       fontSize: '14px',
@@ -106,56 +91,51 @@ export default class MenuScene extends Phaser.Scene {
     };
     this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, LanguageManager.get('hud_bcoin_loading'), textStyle).setOrigin(1, 0);
 
-    try {
-      if (!window.ethereum) {
-        this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_no_wallet'));
-        return;
-      }
+    GameEventEmitter.on('bcoin-balance-update', ({ balance, error }) => {
+        if (error) {
+            this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_error'));
+        } else {
+            const formattedBalance = parseFloat(balance).toFixed(4);
+            this.bcoinBalanceText.setText(`$BCOIN: ${formattedBalance}`);
+        }
+    });
+  }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const userAddress = await signer.getAddress();
-
-      const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, provider);
-
-      const balance = await bcoinContract.balanceOf(userAddress);
-
-      // Format the balance to 8 decimal places.
-      const formattedBalance = parseFloat(ethers.formatUnits(balance, 18)).toFixed(8);
-
-      this.bcoinBalanceText.setText(LanguageManager.get('menu_bcoin_balance', { balance: formattedBalance }));
-
-    } catch (error) {
-      console.error('Failed to fetch BCOIN balance:', error);
-      this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_error'));
+  displayUserData() {
+    if (this.userData && this.userData.walletAddress) {
+        const address = this.userData.walletAddress;
+        const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        this.userAddressText = this.add.text(20, 20, `Player: ${shortAddress}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            fill: '#FFFFFF'
+        }).setOrigin(0, 0);
     }
   }
 
-  createMenu(centerX, centerY, useFallback = false) {
+  createMenu(centerX, centerY) {
     const menuItems = [
-      { key: 'menu_solo', label: LanguageManager.get('menu_solo'), scene: 'CharacterSelectionScene' },
-      { key: 'menu_pvp_ranked', label: "PvP Ranqueado", scene: CST.SCENES.PVP },
-      { key: 'menu_claim_solo', label: LanguageManager.get('menu_claim_solo'), action: 'claim_solo', color: '#FFD700' },
-      { key: 'menu_altar', label: LanguageManager.get('menu_altar'), scene: 'AltarScene' },
-      { key: 'menu_shop', label: LanguageManager.get('menu_shop'), scene: 'ShopScene' },
-      { key: 'menu_profile', label: LanguageManager.get('profile_title'), scene: 'ProfileScene' },
-      { key: 'menu_ranking', label: LanguageManager.get('menu_ranking'), scene: 'RankingScene' },
-      { key: 'menu_logout', label: LanguageManager.get('menu_logout'), action: 'logout', color: '#FF6347' }
+      { name: 'solo_button', label: LanguageManager.get('menu_solo'), scene: CST.SCENES.CHARACTER_SELECTION },
+      { name: 'pvp_button', label: "PvP Modes", scene: CST.SCENES.PVP },
+      { name: 'shop_button', label: LanguageManager.get('menu_shop'), scene: CST.SCENES.SHOP },
+      { name: 'profile_button', label: LanguageManager.get('profile_title'), scene: CST.SCENES.PROFILE },
+      { name: 'config_button', label: "Settings", scene: CST.SCENES.CONFIG },
+      { name: 'logout_button', label: LanguageManager.get('menu_logout'), action: 'logout', color: '#FF6347' }
     ];
 
-    const buttonStartY = centerY - 150;
-    const buttonSpacing = 50;
+    const buttonStartY = centerY - 120;
+    const buttonSpacing = 55;
 
     menuItems.forEach((item, i) => {
       const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
-        fontFamily: useFallback ? 'monospace' : '"Press Start 2P"',
-        fontSize: '14px', // Smaller font to fit everything
+        fontFamily: '"Press Start 2P"',
+        fontSize: '16px',
         fill: item.color || '#00ffff',
         backgroundColor: '#000000cc',
-        padding: { x: 15, y: 10 },
+        padding: { x: 20, y: 12 },
         align: 'center'
       });
-      button.setName(item.key); // Assign a stable name for automation
+      button.setName(item.name); // Assign a stable name for automation
       button.setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -163,11 +143,9 @@ export default class MenuScene extends Phaser.Scene {
           if (item.action === 'logout') {
             api.logout();
             this.registry.remove('loggedInUser');
-            this.scene.start('AuthChoiceScene');
-          } else if (item.action === 'claim_solo') {
-            this.claimSoloRewards();
+            this.scene.start(CST.SCENES.AUTH_CHOICE);
           } else if (item.scene) {
-            this.scene.start(item.scene, { userData: this.userData, web3: this.web3 });
+            this.scene.start(item.scene, { userData: this.userData });
           }
         })
         .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
@@ -175,49 +153,8 @@ export default class MenuScene extends Phaser.Scene {
     });
   }
 
-  async claimSoloRewards() {
-    // Launch the popup and pause the current scene
-    this.scene.launch('PopupScene', {
-        originScene: this.scene.key,
-        title: 'Recompensas',
-        message: 'Processando sua reivindicação...'
-    });
-    this.scene.pause();
-
-    // Get the running popup scene instance to update it later
-    const popupScene = this.scene.get('PopupScene');
-
-    try {
-      const { success, message, signature, gamesPlayed, nonce } = await api.getSoloRewardClaimSignature();
-      if (!success) throw new Error(message || "Falha ao obter assinatura do servidor.");
-
-      if (!window.ethereum) throw new Error("Carteira MetaMask não detectada.");
-
-      popupScene.updateContent("Abra sua carteira para aprovar...");
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const playerAddress = await signer.getAddress();
-      const rewardPoolContract = new ethers.Contract(PERPETUAL_REWARD_POOL_ADDRESS, PERPETUAL_REWARD_POOL_ABI, signer);
-
-      const tx = await rewardPoolContract.claimReward(playerAddress, gamesPlayed, nonce, signature, { gasLimit: 300000 });
-
-      popupScene.updateContent("Transação enviada! Aguardando confirmação...");
-
-      const receipt = await tx.wait();
-      if (receipt.status !== 1) throw new Error("A transação na blockchain falhou.");
-
-      popupScene.updateContent("Recompensas reivindicadas com sucesso!", [{ label: 'OK', callback: () => popupScene.close() }]);
-      setTimeout(() => this.displayBcoinBalance(), 1000);
-
-    } catch (error) {
-      console.error('Falha ao reivindicar recompensas solo:', error);
-      const errorMessage = error.reason || error.message || "Ocorreu um erro desconhecido.";
-      if (popupScene && popupScene.scene.isActive()) {
-        popupScene.updateContent(`Erro: ${errorMessage}`, [{ label: 'Fechar', callback: () => popupScene.close() }]);
-      }
-    }
-  }
+  // The claimSoloRewards function is removed as it's not part of the core navigation task.
+  // It can be re-added or moved to a more appropriate scene (like Profile) later if needed.
 
   playMenuMusic() {
     const musicEnabled = this.registry.get('musicEnabled') ?? true;
@@ -229,5 +166,10 @@ export default class MenuScene extends Phaser.Scene {
     if (musicEnabled) {
       SoundManager.playMusic(this, 'menu_music');
     }
+  }
+
+  // Ensure to clean up the event listener when the scene is destroyed
+  shutdown() {
+    GameEventEmitter.off('bcoin-balance-update');
   }
 }

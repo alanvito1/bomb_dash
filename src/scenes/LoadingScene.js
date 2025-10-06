@@ -132,17 +132,24 @@ export default class LoadingScene extends Phaser.Scene {
             }
         };
 
-        WebFont.load({
-            google: { families: ['Press Start 2P'] },
-            active: () => {
-                console.log('✅ Custom font "Press Start 2P" loaded.');
-                checkSessionAndProceed();
-            },
-            inactive: () => {
-                console.error('🔥 Failed to load custom font. Proceeding with default fonts.');
-                checkSessionAndProceed(); // Ensure game proceeds even if font fails
-            }
-        });
+        // Make font loading robust. If the WebFont script failed to load,
+        // window.WebFont will be undefined. We must handle this gracefully.
+        if (window.WebFont) {
+            WebFont.load({
+                google: { families: ['Press Start 2P'] },
+                active: () => {
+                    console.log('✅ Custom font "Press Start 2P" loaded.');
+                    checkSessionAndProceed();
+                },
+                inactive: () => {
+                    console.error('🔥 Failed to load custom font. Proceeding with default fonts.');
+                    checkSessionAndProceed(); // Ensure game proceeds even if font fails
+                }
+            });
+        } else {
+            console.warn('⚠️ WebFont script not loaded. Skipping custom font and proceeding immediately.');
+            checkSessionAndProceed();
+        }
     });
     console.log('✅ LoadingScene: Preload has completed setup!');
   }
