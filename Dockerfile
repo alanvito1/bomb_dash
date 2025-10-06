@@ -26,6 +26,9 @@ RUN npx playwright install --with-deps
 # Copy the entrypoint script that orchestrates the test run.
 COPY e2e-entrypoint.sh .
 
+# Make the entrypoint script executable.
+RUN chmod +x e2e-entrypoint.sh
+
 # The ENTRYPOINT is the main command that will be executed when the container starts.
 # It will run our custom script to start servers and run tests.
 ENTRYPOINT ["./e2e-entrypoint.sh"]
