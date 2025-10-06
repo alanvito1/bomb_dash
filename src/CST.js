@@ -1,17 +1,27 @@
 export const CST = {
     SCENES: {
-        TERMS: "TermsScene", // Cena de Termos de Uso
+        TERMS: "TermsScene",
         LOADING: "LoadingScene",
+        START: "StartScene",
+        AUTH_CHOICE: "AuthChoiceScene",
         MENU: "MenuScene",
         GAME: "GameScene",
-        PVP: "PvpScene",
+        SHOP: "ShopScene",
+        RANKING: "RankingScene",
+        GAME_OVER: "GameOverScene",
+        CONFIG: "ConfigScene",
+        PROFILE: "ProfileScene",
+        CHARACTER_SELECTION: "CharacterSelectionScene",
+        HUD: "HUDScene",
+        PAUSE: "PauseScene",
         NOTIFICATION: "NotificationScene",
+        ALTAR: "AltarScene",
+        PVP: "PvpScene",
     },
     ASSETS: {
-        BLACK_BG: "black_bg" // Chave para o asset de fundo preto
+        BLACK_BG: "black_bg"
     },
     CONTRACTS: {
-        // As ABIs e endereços serão importados de 'src/config/contracts.js'
-        // para manter a separação de interesses.
+        // ABIs and addresses will be imported from 'src/config/contracts.js'
     }
 };

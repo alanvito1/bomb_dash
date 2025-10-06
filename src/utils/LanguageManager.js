@@ -34,17 +34,24 @@ class LanguageManager {
             console.log(`[i18n] Language file for '${lang}' loaded successfully.`);
             window.i18nReady = true; // Signal that translations are ready
         } catch (error) {
-            console.error(`[i18n] Could not load language file for '${lang}'. Defaulting to English.`, error);
-            if (lang !== 'en') {
-                // Await the fallback, but don't do anything with the result.
-                // The recursive call will handle setting the translations and the flag.
-                await this.loadLanguage(scene, 'en');
-            } else {
-                // This is the base case for failure: English itself failed to load.
-                this.translations = {}; // Set empty translations
-                console.error('[i18n] Fallback to English also failed. Using empty translations.');
-                // CRITICAL: Signal that i18n is "ready" even on total failure
-                // to prevent the application from hanging indefinitely.
+            console.error(`[i18n] Could not load language file for '${lang}'. Trying fallback.`, error);
+            // If the initial fetch fails, always try to load English as a fallback.
+            try {
+                const response = await fetch(`src/locales/en.json`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                this.translations = await response.json();
+                scene.registry.set('translations', this.translations);
+                console.log(`[i18n] Fallback to 'en' loaded successfully.`);
+            } catch (fallbackError) {
+                // This is the ultimate failure case: even English didn't load.
+                console.error('[i18n] Fallback to English also failed. Using empty translations.', fallbackError);
+                this.translations = {}; // Set empty translations to prevent errors.
+                scene.registry.set('translations', this.translations);
+            } finally {
+                // CRITICAL: Always set the flag to true in the catch block path.
+                // This ensures the application does not hang, even if all language files fail to load.
                 window.i18nReady = true;
             }
         }

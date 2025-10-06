@@ -9,26 +9,31 @@ let lastCycleStartTime;
  * This should be called every 10 minutes.
  */
 async function processRewardCycle() {
-    // This function is wrapped in a try/catch in the setInterval call,
-    // so we can let errors bubble up to be logged there.
-    console.log('[SOLO REWARDS] Starting new reward cycle processing...');
+    // Wrap the entire logic in a try/catch to prevent any single failure
+    // from crashing the entire cron job/server.
+    try {
+        console.log('[SOLO REWARDS] Starting new reward cycle processing...');
 
-    // 1. Tell the contract to start a new cycle.
-    // This action uses the game count from the *previous* cycle (which we reported 10 mins ago)
-    // to calculate the reward amount for the cycle that is *now beginning*.
-    await oracle.startNewRewardCycle();
+        // 1. Tell the contract to start a new cycle.
+        await oracle.startNewRewardCycle();
 
-    // 2. Count all games played in the cycle that just ended.
-    const gamesInLastCycle = await db.countGamesInCycle(lastCycleStartTime);
-    console.log(`[SOLO REWARDS] Found ${gamesInLastCycle} solo games in the last cycle (since ${lastCycleStartTime.toISOString()}).`);
+        // 2. Count all games played in the cycle that just ended.
+        const gamesInLastCycle = await db.countGamesInCycle(lastCycleStartTime);
+        console.log(`[SOLO REWARDS] Found ${gamesInLastCycle} solo games in the last cycle (since ${lastCycleStartTime.toISOString()}).`);
 
-    // 3. Report this number to the contract. This count will be stored on-chain
-    // and used for the reward calculation in the *next* cycle (in 10 minutes).
-    await oracle.reportSoloGames(gamesInLastCycle);
+        // 3. Report this number to the contract.
+        await oracle.reportSoloGames(gamesInLastCycle);
 
-    // 4. Update the start time for the next run.
-    lastCycleStartTime = new Date();
-    console.log('[SOLO REWARDS] Reward cycle processing complete.');
+        // 4. Update the start time for the next run.
+        lastCycleStartTime = new Date();
+        console.log('[SOLO REWARDS] Reward cycle processing complete.');
+
+    } catch (error) {
+        // Log the error but do not re-throw it. This allows the server to continue
+        // running even if the oracle is offline or a blockchain transaction fails.
+        // The error will be logged for debugging, and the cron will try again in 10 mins.
+        console.error('[SOLO REWARDS] An error occurred during reward cycle processing:', error.message);
+    }
 }
 
 /**
