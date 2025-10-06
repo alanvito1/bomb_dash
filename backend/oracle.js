@@ -251,6 +251,35 @@ async function signSoloRewardClaim(playerAddress, gamesPlayed) {
 }
 
 
+/**
+ * Signs a hero withdrawal message, creating a signature that verifies the hero's progress.
+ * @param {number} tokenId The ID of the token being withdrawn.
+ * @param {number} level The hero's level.
+ * @param {number} xp The hero's experience points.
+ * @returns {Promise<string>} The signature.
+ */
+async function signHeroWithdrawal(tokenId, level, xp) {
+    if (!isOracleInitialized) {
+        throw new Error("O Oráculo não está inicializado.");
+    }
+
+    // 1. Create the message hash, ensuring it matches the contract's hashing logic:
+    // keccak256(abi.encodePacked(tokenId, level, xp))
+    const messageHash = ethers.solidityPackedKeccak256(
+        ["uint256", "uint256", "uint256"],
+        [tokenId, level, xp]
+    );
+
+    // 2. Sign the hash. Ethers wallet's signMessage will automatically prepend
+    // the "\x19Ethereum Signed Message:\n32" prefix.
+    const signature = await oracleWallet.signMessage(ethers.getBytes(messageHash));
+
+    console.log(`[Oracle] Assinatura de retirada gerada para Token ID: ${tokenId} com Nível: ${level}, XP: ${xp}.`);
+
+    return signature;
+}
+
+
 module.exports = {
     initOracle,
     createRankedMatch,
@@ -260,5 +289,6 @@ module.exports = {
     verifyUpgradeTransaction,
     startNewRewardCycle,
     reportSoloGames,
-    signSoloRewardClaim
+    signSoloRewardClaim,
+    signHeroWithdrawal
 };

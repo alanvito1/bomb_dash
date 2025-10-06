@@ -25,8 +25,10 @@ async function initStakingListener() {
 
         // Listen for the HeroDeposited event
         stakingContract.on('HeroDeposited', handleHeroDeposited);
+        // Listen for the HeroWithdrawn event
+        stakingContract.on('HeroWithdrawn', handleHeroWithdrawn);
 
-        console.log(`[StakingListener] Successfully listening for HeroDeposited events on contract ${HERO_STAKING_ADDRESS}`);
+        console.log(`[StakingListener] Successfully listening for HeroDeposited and HeroWithdrawn events on contract ${HERO_STAKING_ADDRESS}`);
 
     } catch (error) {
         console.error('[StakingListener] Failed to initialize:', error);
@@ -56,11 +58,35 @@ async function handleHeroDeposited(owner, nftContract, tokenId) {
 }
 
 /**
+ * Handles the HeroWithdrawn event from the smart contract.
+ * @param {string} owner - The address of the user who withdrew the hero.
+ * @param {ethers.BigNumber} tokenId - The ID of the withdrawn token.
+ * @param {ethers.BigNumber} level - The hero's level at withdrawal.
+ * @param {ethers.BigNumber} xp - The hero's xp at withdrawal.
+ */
+async function handleHeroWithdrawn(owner, tokenId, level, xp) {
+    const tokenIdNumber = Number(tokenId);
+    console.log(`[StakingListener] Event Captured: HeroWithdrawn. Owner: ${owner}, TokenID: ${tokenIdNumber}, Level: ${level}, XP: ${xp}`);
+
+    try {
+        const result = await db.updateHeroStatus(tokenIdNumber, 'in_wallet');
+        if (result.changes > 0) {
+            console.log(`[StakingListener] Successfully updated hero ${tokenIdNumber} status to 'in_wallet' in the database.`);
+        } else {
+            console.warn(`[StakingListener] A withdrawal event was received for NFT ID ${tokenIdNumber}, but no matching hero was found in the database.`);
+        }
+    } catch (error) {
+        console.error(`[StakingListener] Error updating database for withdrawn token ${tokenIdNumber}:`, error);
+    }
+}
+
+/**
  * Stops the listener.
  */
 function stopListener() {
     if (stakingContract) {
         stakingContract.off('HeroDeposited', handleHeroDeposited);
+        stakingContract.off('HeroWithdrawn', handleHeroWithdrawn);
         console.log('[StakingListener] Listener stopped.');
     }
 }
@@ -68,5 +94,6 @@ function stopListener() {
 module.exports = {
     initStakingListener,
     stopListener,
-    handleHeroDeposited // Export for testing purposes
+    handleHeroDeposited, // Export for testing purposes
+    handleHeroWithdrawn // Export for testing purposes
 };

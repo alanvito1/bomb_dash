@@ -36,10 +36,16 @@ class LanguageManager {
         } catch (error) {
             console.error(`[i18n] Could not load language file for '${lang}'. Defaulting to English.`, error);
             if (lang !== 'en') {
-                await this.loadLanguage(scene, 'en'); // Fallback to English
+                // Await the fallback, but don't do anything with the result.
+                // The recursive call will handle setting the translations and the flag.
+                await this.loadLanguage(scene, 'en');
             } else {
-                this.translations = {}; // Avoid infinite loops on English failure
-                window.i18nReady = true; // Signal completion even on failure to avoid hangs
+                // This is the base case for failure: English itself failed to load.
+                this.translations = {}; // Set empty translations
+                console.error('[i18n] Fallback to English also failed. Using empty translations.');
+                // CRITICAL: Signal that i18n is "ready" even on total failure
+                // to prevent the application from hanging indefinitely.
+                window.i18nReady = true;
             }
         }
     }
