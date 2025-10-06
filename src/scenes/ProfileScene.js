@@ -2,157 +2,189 @@ import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
 import { getExperienceForLevel } from '../utils/rpg.js';
-import bcoinService from '../web3/bcoin-service.js';
-import { TOURNAMENT_CONTROLLER_ADDRESS } from '../config/contracts.js';
-import GameEventEmitter from '../utils/GameEventEmitter.js';
+import stakingService from '../web3/staking-service.js';
+import { createHeroCard } from '../modules/HeroCard.js';
 
 export default class ProfileScene extends Phaser.Scene {
   constructor() {
     super('ProfileScene');
+    this.heroCards = [];
   }
 
   create() {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // --- Visual Polish: Background and Data Window ---
     this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
     this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 40);
 
-    // --- Visual Polish: Standard Font Styles ---
     const titleStyle = { fontSize: '24px', fill: '#FFD700', fontFamily: '"Press Start 2P"', stroke: '#000', strokeThickness: 4 };
-    const textStyle = { fontSize: '14px', fill: '#ffffff', fontFamily: '"Press Start 2P"', align: 'left', wordWrap: { width: this.scale.width - 200 } };
+    const textStyle = { fontSize: '16px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };
     const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
-    // --- UI Elements ---
-    this.add.text(centerX, 70, LanguageManager.get('profile_title'), titleStyle).setOrigin(0.5);
-    this.displayHeroCard(centerX, centerY - 50, textStyle);
-    this.createLevelUpButton(centerX, this.scale.height - 150, buttonStyle);
-    this.createBackButton(centerX, this.scale.height - 80, buttonStyle);
+    this.add.text(centerX, 70, LanguageManager.get('profile_title', 'INVENTORY'), titleStyle).setOrigin(0.5);
 
-    this.refreshStats();
+    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
+
+    this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
+
+    this.fetchAndDisplayHeroes(loadingText);
   }
 
-  displayHeroCard(x, y, style) {
-    const cardWidth = 340;
-    const cardHeight = 220;
-
-    const background = this.add.graphics();
-    background.fillStyle(0x000000, 0.7);
-    background.fillRoundedRect(x - cardWidth / 2, y - cardHeight / 2, cardWidth, cardHeight, 10);
-    background.lineStyle(2, 0x00ffff, 0.5);
-    background.strokeRoundedRect(x - cardWidth / 2, y - cardHeight / 2, cardWidth, cardHeight, 10);
-
-    const heroImage = this.add.sprite(x - cardWidth / 2 + 80, y, 'ninja_frame_0').setScale(3);
-
-    const statX = x + 20;
-    const statStartY = y - cardHeight / 2 + 40;
-    const statSpacing = 30;
-
-    this.levelText = this.add.text(statX, statStartY, '', style);
-    this.hpText = this.add.text(statX, statStartY + statSpacing, '', style);
-    this.damageText = this.add.text(statX, statStartY + statSpacing * 2, '', style);
-    this.speedText = this.add.text(statX, statStartY + statSpacing * 3, '', style);
-    this.fireRateText = this.add.text(statX, statStartY + statSpacing * 4, '', style);
-  }
-
-  async refreshStats() {
+  async fetchAndDisplayHeroes(loadingText) {
+    loadingText.setText(LanguageManager.get('char_select_loading'));
     try {
-        const response = await api.getCurrentUser();
-        if (response.success && response.user) {
-            this.registry.set('loggedInUser', response.user);
-            this.updateStatDisplays(response.user);
-        } else {
-            const user = this.registry.get('loggedInUser');
-            if (user) this.updateStatDisplays(user);
-        }
-    } catch (e) {
-        console.error("Failed to refresh stats from server:", e);
-        const user = this.registry.get('loggedInUser');
-        if (user) this.updateStatDisplays(user);
+      const apiResponse = await api.getHeroes();
+      if (apiResponse.success && apiResponse.heroes.length > 0) {
+        this.heroes = apiResponse.heroes;
+        if (loadingText.scene) loadingText.destroy();
+        this.displayHeroes(apiResponse.heroes);
+      } else if (apiResponse.success && apiResponse.heroes.length === 0) {
+        loadingText.setText(LanguageManager.get('char_select_no_heroes'));
+      } else {
+        loadingText.setText(LanguageManager.get('char_select_error', { message: apiResponse.message }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch heroes from backend:', error);
+      loadingText.setText(LanguageManager.get('char_select_error_connection'));
     }
   }
 
-  updateStatDisplays(stats) {
-      const { level = 1, hp = 100, maxHp = 100, damage = 1, speed = 200, fireRate = 600, xp = 0 } = stats;
-      this.levelText.setText(LanguageManager.get('profile_stat_level', { level }));
-      this.hpText.setText(LanguageManager.get('profile_stat_hp', { hp, maxHp }));
-      this.damageText.setText(LanguageManager.get('profile_stat_damage', { damage }));
-      this.speedText.setText(LanguageManager.get('profile_stat_speed', { speed }));
-      this.fireRateText.setText(LanguageManager.get('profile_stat_fire_rate', { fireRate }));
+  displayHeroes(heroes) {
+    const centerX = this.cameras.main.centerX;
+    const startY = 180;
+    const cardSpacingY = 400;
+    const cardSpacingX = 220;
+    const cardsPerRow = 2;
 
-      if (this.levelUpButton) {
-        const xpForNextLevel = getExperienceForLevel(level + 1);
-        if (xp >= xpForNextLevel) {
-            this.levelUpButton.setInteractive({ useHandCursor: true }).setStyle({ fill: '#00ff00' });
-        } else {
-            this.levelUpButton.disableInteractive().setStyle({ fill: '#888888' });
-        }
-      }
-  }
+    this.heroCards.forEach(card => card.destroy());
+    this.heroCards = [];
 
-  createLevelUpButton(x, y, style) {
-    this.levelUpButton = this.add.text(x, y, LanguageManager.get('profile_level_up_button', { cost: 1 }), { ...style, fill: '#888888' })
-        .setOrigin(0.5)
-        .disableInteractive();
+    heroes.forEach((hero, index) => {
+        const row = Math.floor(index / cardsPerRow);
+        const col = index % cardsPerRow;
 
-    this.messageText = this.add.text(x, y + 45, '', { ...style, fontSize: '12px', fill: '#ff0000' })
-        .setOrigin(0.5);
+        const cardX = centerX - (cardSpacingX / 2) + (col * cardSpacingX);
+        const cardY = startY + (row * cardSpacingY);
 
-    this.levelUpButton.on('pointerdown', async () => {
-        if (!this.levelUpButton.input.enabled) return;
-
-        try {
-            SoundManager.play(this, 'click');
-            this.messageText.setText(LanguageManager.get('profile_wallet_connecting')).setStyle({ fill: '#ffff00' });
-
-            const levelUpCost = 1; // Hardcoded cost for leveling up
-            this.messageText.setText(LanguageManager.get('profile_wallet_approve_fee', { cost: levelUpCost }));
-
-            // Use the service to handle the approval flow
-            await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, levelUpCost);
-
-            this.levelUpButton.disableInteractive().setText(LanguageManager.get('profile_level_up_confirming'));
-            this.messageText.setText(LanguageManager.get('profile_level_up_processing'));
-
-            const result = await api.levelUp();
-
-            if (result.success) {
-                this.messageText.setStyle({ fill: '#00ff00' }).setText(result.message);
-                await this.refreshStats();
-
-                // Notify the system that the balance has likely changed
-                GameEventEmitter.emit('bcoin-balance-changed');
-            } else {
-                throw new Error(result.message || LanguageManager.get('profile_level_up_error_server'));
-            }
-        } catch (error) {
-            this.messageText.setStyle({ fill: '#ff0000' }).setText(error.message.substring(0, 50));
-            console.error('Level up failed:', error);
-            this.time.delayedCall(3000, () => this.refreshStats()); // Re-enable button after a delay
-        }
-    });
-
-    // Hover effect for enabled state
-    this.levelUpButton.on('pointerover', () => {
-        if (this.levelUpButton.input.enabled) this.levelUpButton.setStyle({ fill: '#ffffff' });
-    });
-    this.levelUpButton.on('pointerout', () => {
-        if (this.levelUpButton.input.enabled) this.levelUpButton.setStyle({ fill: '#00ff00' });
+        const card = createHeroCard(this, hero, cardX, cardY);
+        card.setData('hero', hero); // Make hero data accessible
+        this.heroCards.push(card);
     });
   }
 
   createBackButton(x, y, style) {
-    const backBtn = this.add.text(x, y, LanguageManager.get('back_to_menu'), style)
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-
+    const backBtn = this.add.text(x, y, LanguageManager.get('back_button', 'BACK'), style)
+      .setOrigin(0.5).setInteractive({ useHandCursor: true });
     backBtn.on('pointerdown', () => {
-        SoundManager.play(this, 'click');
-        this.scene.start('MenuScene');
+      SoundManager.play(this, 'click');
+      this.scene.start('MenuScene');
     });
-
     backBtn.on('pointerover', () => backBtn.setStyle({ fill: '#ffffff' }));
     backBtn.on('pointerout', () => backBtn.setStyle({ fill: '#00ffff' }));
+  }
+
+  async handleDepositHero(hero, button) {
+    SoundManager.play(this, 'click');
+    button.setText('CONNECTING...').disableInteractive().setStyle({ fill: '#FFA500' });
+
+    try {
+        await stakingService.init();
+
+        const isApproved = await stakingService.isApproved();
+        if (!isApproved) {
+            button.setText('APPROVING...');
+            const approveTx = await stakingService.approve();
+            await approveTx.wait();
+            SoundManager.play(this, 'powerup');
+        }
+
+        button.setText('DEPOSITING...');
+        const depositTx = await stakingService.depositHero(hero.nft_id);
+        await depositTx.wait();
+        SoundManager.play(this, 'powerup');
+
+        this.scene.launch('PopupScene', {
+            title: 'Success!',
+            message: `${hero.name} has been staked and is ready for battle!`,
+            onClose: () => {
+                this.scene.restart();
+            }
+        });
+
+    } catch (error) {
+        SoundManager.play(this, 'error');
+        console.error('Hero deposit process failed:', error);
+        this.scene.launch('PopupScene', {
+            title: 'Deposit Failed',
+            message: error.reason || error.message || 'An unknown error occurred.'
+        });
+        this.fetchAndDisplayHeroes(this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '', {}));
+    }
+  }
+
+  async handleWithdrawHero(hero, button) {
+      SoundManager.play(this, 'click');
+      button.setText('PREPARING...').disableInteractive().setStyle({ fill: '#FFA500' });
+
+      try {
+          button.setText('GETTING SIG...');
+          const response = await api.initiateHeroWithdrawal(hero.id);
+          if (!response.success) {
+              throw new Error(response.message || 'Failed to get withdrawal signature.');
+          }
+          const { tokenId, level, xp, signature } = response;
+
+          button.setText('CONFIRM...');
+          const withdrawTx = await stakingService.withdrawHero(tokenId, level, xp, signature);
+          button.setText('WITHDRAWING...');
+          await withdrawTx.wait();
+          SoundManager.play(this, 'powerup');
+
+          this.scene.launch('PopupScene', {
+              title: 'Success!',
+              message: `${hero.name} has been withdrawn to your wallet.`,
+              onClose: () => {
+                  this.scene.restart();
+              }
+          });
+
+      } catch (error) {
+          SoundManager.play(this, 'error');
+          console.error('Hero withdraw process failed:', error);
+          this.scene.launch('PopupScene', {
+              title: 'Withdraw Failed',
+              message: error.reason || error.message || 'An unknown error occurred.'
+          });
+          this.fetchAndDisplayHeroes(this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '', {}));
+      }
+  }
+
+  async handleLevelUp(hero) {
+      SoundManager.play(this, 'click');
+      const cardData = this.heroCards.find(c => c.getData('hero').id === hero.id);
+      if (!cardData) return;
+      const levelUpButton = cardData.getData('levelUpButton');
+      if (!levelUpButton) return;
+
+      levelUpButton.setText('PROCESSING...').disableInteractive().setStyle({ fill: '#FFA500' });
+
+      try {
+          const response = await api.levelUpHero(hero.id);
+          if (response.success) {
+              SoundManager.play(this, 'powerup');
+              const heroIndex = this.heroes.findIndex(h => h.id === hero.id);
+              if (heroIndex !== -1) this.heroes[heroIndex] = response.hero;
+              this.displayHeroes(this.heroes);
+              this.scene.launch('PopupScene', { title: 'Success!', message: `${response.hero.name} is now Level ${response.hero.level}!` });
+          } else {
+              throw new Error(response.message || 'Level up failed on the server.');
+          }
+      } catch (error) {
+          SoundManager.play(this, 'error');
+          console.error('Level up process failed:', error);
+          this.scene.launch('PopupScene', { title: 'Level Up Failed', message: error.message || 'An unknown error occurred.' });
+          this.displayHeroes(this.heroes);
+      }
   }
 }
