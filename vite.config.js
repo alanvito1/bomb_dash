@@ -1,5 +1,5 @@
-// vite.config.js
-import { defineConfig } from 'vite';
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
@@ -23,5 +23,10 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis'
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom', // Use jsdom to simulate browser environment for tests
+    include: ['src/**/*.test.js'], // Only run tests in the src directory
+  },
 });
