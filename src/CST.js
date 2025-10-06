@@ -1,9 +1,10 @@
 export const CST = {
     SCENES: {
-        LOAD: "LoadingScene",
+        TERMS: "TermsScene", // Cena de Termos de Uso
+        LOADING: "LoadingScene",
         MENU: "MenuScene",
         GAME: "GameScene",
-        PVP: "PvpScene", // Adicionando a nova cena
+        PVP: "PvpScene",
     },
     ASSETS: {
         BLACK_BG: "black_bg" // Chave para o asset de fundo preto
