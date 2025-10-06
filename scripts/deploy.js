@@ -105,6 +105,21 @@ async function main() {
     const wagerArenaAddress = await wagerArena.getAddress();
     console.log("WagerArena deployed to:", wagerArenaAddress);
 
+    // 4.6. Deploy MockHeroNFT (for testing staking)
+    const MockHeroNFT = await ethers.getContractFactory("MockHeroNFT");
+    const mockHeroNFT = await MockHeroNFT.deploy();
+    await mockHeroNFT.waitForDeployment();
+    const mockHeroNFTAddress = await mockHeroNFT.getAddress();
+    console.log("MockHeroNFT deployed to:", mockHeroNFTAddress);
+
+    // 4.7. Deploy HeroStaking
+    const HeroStaking = await ethers.getContractFactory("HeroStaking");
+    const heroStaking = await HeroStaking.deploy(mockHeroNFTAddress); // Pass NFT address to constructor
+    await heroStaking.waitForDeployment();
+    const heroStakingAddress = await heroStaking.getAddress();
+    console.log("HeroStaking deployed to:", heroStakingAddress);
+
+
     // 5. Configure Contracts
     console.log("\nConfiguring contract interactions...");
     // Set the solo reward pool address in the tournament controller
@@ -141,6 +156,8 @@ async function main() {
         tournamentControllerAddress: tournamentControllerAddress,
         perpetualRewardPoolAddress: perpetualRewardPoolAddress,
         wagerArenaAddress: wagerArenaAddress,
+        heroStakingAddress: heroStakingAddress,
+        mockHeroNFTAddress: mockHeroNFTAddress,
         oracleAddress: oracle.address,
         teamWalletAddress: teamWallet.address,
     };
@@ -171,6 +188,8 @@ async function main() {
     saveAbi("TournamentController");
     saveAbi("PerpetualRewardPool");
     saveAbi("WagerArena");
+    saveAbi("HeroStaking");
+    saveAbi("MockHeroNFT"); // Add mock hero ABI for frontend tests
     // Use a fully qualified name to resolve the ambiguity for the IBEP20 interface
     saveAbi("contracts/PerpetualRewardPool.sol:IBEP20");
 
@@ -180,6 +199,8 @@ async function main() {
         TOURNAMENT_CONTROLLER_ADDRESS: tournamentControllerAddress,
         PERPETUAL_REWARD_POOL_ADDRESS: perpetualRewardPoolAddress,
         WAGER_ARENA_ADDRESS: wagerArenaAddress,
+        HERO_STAKING_ADDRESS: heroStakingAddress, // Add new staking address
+        MOCK_HERO_NFT_ADDRESS: mockHeroNFTAddress, // Add mock NFT address
         BCOIN_TESTNET_ADDRESS: bcoinAddress,
         ORACLE_WALLET_ADDRESS: oracle.address,
     };

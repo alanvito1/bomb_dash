@@ -25,6 +25,7 @@
   "devDependencies": {
     "axios": "^1.12.2",
     "chai": "^6.2.0",
+    "chai-as-promised": "^8.0.2",
     "mocha": "^11.7.4",
     "sinon": "^21.0.0",
     "supertest": "^7.1.4"

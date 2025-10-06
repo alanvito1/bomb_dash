@@ -43,6 +43,25 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "feePaid",
+        "type": "uint256"
+      }
+    ],
+    "name": "HeroLeveledUp",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "newCost",
@@ -91,6 +110,12 @@
         "internalType": "uint256",
         "name": "entryFee",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
       }
     ],
     "name": "MatchCreated",
@@ -125,13 +150,19 @@
         "type": "address"
       },
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
+      },
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "entryFee",
         "type": "uint256"
       }
     ],
-    "name": "PlayerEnteredQueue",
+    "name": "PlayerEnteredRankedQueue",
     "type": "event"
   },
   {
@@ -151,6 +182,25 @@
       }
     ],
     "name": "PlayerJoinedTournament",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlayerLeftRankedQueue",
     "type": "event"
   },
   {
@@ -251,9 +301,19 @@
   {
     "inputs": [
       {
-        "internalType": "uint8",
-        "name": "capacity",
-        "type": "uint8"
+        "internalType": "address",
+        "name": "player1",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "player2",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -261,7 +321,7 @@
         "type": "uint256"
       }
     ],
-    "name": "createTournament",
+    "name": "createRankedMatch",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -283,32 +343,25 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "entryFee",
         "type": "uint256"
       }
     ],
-    "name": "enterMatch1v1",
+    "name": "enterRankedMatch",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "entryFeeFor1v1",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
+    "inputs": [],
+    "name": "leaveRankedQueue",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -366,6 +419,11 @@
         "internalType": "bool",
         "name": "isActive",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tier",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -450,6 +508,49 @@
     "name": "payUpgradeFee",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "playerTier",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "rankedQueue",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
