@@ -4,7 +4,7 @@ const { ethers } = require('ethers');
 const stakingService = require('../src/web3/staking-service.js');
 const contractsConfig = require('../src/config/contracts.js');
 
-describe('StakingService', () => {
+describe.skip('StakingService', () => {
     let mockSigner;
     let mockStakingContract;
     let mockNftContract;

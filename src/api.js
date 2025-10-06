@@ -306,6 +306,19 @@ class ApiClient {
         return this.fetch('/matchmaking/status');
     }
 
+    /**
+     * Notifies the backend that a solo match has been completed, reporting score for XP.
+     * @param {number} heroId The ID of the hero used in the match.
+     * @param {number} xpGained The amount of XP (score) gained.
+     * @returns {Promise<any>} The response from the backend.
+     */
+    async completeMatch(heroId, xpGained) {
+        return this.fetch('/matches/complete', {
+            method: 'POST',
+            body: JSON.stringify({ heroId, xpGained }),
+        });
+    }
+
     // --- Solo Reward Methods ---
 
     /**
