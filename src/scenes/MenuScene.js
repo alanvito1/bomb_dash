@@ -144,6 +144,10 @@ export default class MenuScene extends Phaser.Scene {
             api.logout();
             this.registry.remove('loggedInUser');
             this.scene.start(CST.SCENES.AUTH_CHOICE);
+          } else if (item.scene === CST.SCENES.CONFIG) {
+            // Launch the config scene as an overlay
+            this.scene.pause();
+            this.scene.launch(item.scene);
           } else if (item.scene) {
             this.scene.start(item.scene, { userData: this.userData });
           }

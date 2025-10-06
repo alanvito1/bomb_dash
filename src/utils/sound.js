@@ -1,6 +1,60 @@
 // src/utils/sound.js
 
 export default class SoundManager {
+  static masterVolume = 1;
+  static musicVolume = 1;
+  static sfxVolume = 1;
+  static initialized = false;
+  static music = new Map(); // Armazena instâncias de música para controle de volume
+
+  static init(scene) {
+    if (this.initialized) {
+      return;
+    }
+    console.log('[SoundManager] Inicializando...');
+
+    // Carrega as configurações de volume do localStorage ou usa valores padrão
+    this.masterVolume = parseFloat(localStorage.getItem('masterVolume') ?? 1.0);
+    this.musicVolume = parseFloat(localStorage.getItem('musicVolume') ?? 1.0);
+    this.sfxVolume = parseFloat(localStorage.getItem('sfxVolume') ?? 1.0);
+
+    // Aplica o volume principal ao gerenciador de som global do Phaser
+    if (scene && scene.sound) {
+      scene.sound.volume = this.masterVolume;
+    }
+    this.initialized = true;
+
+    console.log(`[SoundManager] Volumes Carregados: Master=${this.masterVolume}, Music=${this.musicVolume}, SFX=${this.sfxVolume}`);
+  }
+
+  // Setters para os volumes
+  static setMasterVolume(scene, volume) {
+    this.masterVolume = Phaser.Math.Clamp(volume, 0, 1);
+    localStorage.setItem('masterVolume', this.masterVolume);
+    if (scene && scene.sound) {
+      scene.sound.volume = this.masterVolume; // Aplica globalmente
+    }
+    console.log(`[SoundManager] Master Volume set to ${this.masterVolume}`);
+  }
+
+  static setMusicVolume(volume) {
+    this.musicVolume = Phaser.Math.Clamp(volume, 0, 1);
+    localStorage.setItem('musicVolume', this.musicVolume);
+    // Atualiza o volume de todas as músicas que estão tocando
+    this.music.forEach(musicInstance => {
+      if (musicInstance.isPlaying) {
+        musicInstance.setVolume(this.musicVolume);
+      }
+    });
+    console.log(`[SoundManager] Music Volume set to ${this.musicVolume}`);
+  }
+
+  static setSfxVolume(volume) {
+    this.sfxVolume = Phaser.Math.Clamp(volume, 0, 1);
+    localStorage.setItem('sfxVolume', this.sfxVolume);
+    console.log(`[SoundManager] SFX Volume set to ${this.sfxVolume}`);
+  }
+
   static loadFromManifest(scene, manifest) {
     if (!scene || !scene.load || !manifest || !manifest.sounds) {
       console.error('[SoundManager] Cena, loader ou manifesto inválido para carregar sons');
@@ -8,18 +62,8 @@ export default class SoundManager {
     }
 
     const { music, sfx } = manifest.sounds;
-
-    // Carregar músicas
-    for (const key in music) {
-      const path = music[key];
-      scene.load.audio(key, path);
-    }
-
-    // Carregar efeitos sonoros
-    for (const key in sfx) {
-      const path = sfx[key];
-      scene.load.audio(key, path);
-    }
+    Object.keys(music).forEach(key => scene.load.audio(key, music[key]));
+    Object.keys(sfx).forEach(key => scene.load.audio(key, sfx[key]));
   }
 
   static play(scene, key, config = {}) {
@@ -27,17 +71,12 @@ export default class SoundManager {
       console.error('[SoundManager] Cena inválida para tocar som:', key);
       return;
     }
-    // A chamada direta a scene.sound.play(key) pode causar race conditions
-    // se o áudio não estiver decodificado. Usamos um padrão mais robusto.
-    const sfx = scene.sound.add(key, config);
+    // Aplica o volume de SFX ao som individual
+    const sfxConfig = { ...config, volume: this.sfxVolume };
+    const sfx = scene.sound.add(key, sfxConfig);
 
-    const playAction = () => {
-      if (sfx) {
-        sfx.play();
-      }
-    };
+    const playAction = () => sfx?.play();
 
-    // Verifica se o áudio está decodificado. Se não, espera pelo evento 'decoded'.
     if (sfx.isDecoded) {
       playAction();
     } else {
@@ -45,71 +84,55 @@ export default class SoundManager {
     }
   }
 
-  /**
-   * Toca uma música de forma robusta, lidando com a decodificação assíncrona.
-   * Garante que a música só toque quando estiver pronta.
-   * @param {Phaser.Scene} scene - A cena que está tocando a música.
-   * @param {string} key - A chave do recurso de áudio da música.
-   */
   static playMusic(scene, key) {
     if (!scene?.sound) {
       console.error('[SoundManager] Cena inválida para tocar música:', key);
       return;
     }
 
-    // Para qualquer música que esteja tocando atualmente para evitar sobreposição
-    if (scene.currentMusicKey && scene.currentMusicKey !== key) {
-      const oldMusic = scene.sound.get(scene.currentMusicKey);
-      if (oldMusic && oldMusic.isPlaying) {
-        oldMusic.stop();
-      }
-    }
-    // Se a música já for a mesma, não faz nada.
-    else if (scene.currentMusicKey === key && scene.sound.get(key)?.isPlaying) {
-      return;
+    this.stopAllMusic();
+
+    let musicInstance = this.music.get(key);
+    if (!musicInstance) {
+      musicInstance = scene.sound.add(key, { loop: true, volume: this.musicVolume });
+      this.music.set(key, musicInstance);
     }
 
-    let music = scene.sound.get(key);
-    if (!music) {
-      try {
-        music = scene.sound.add(key, { loop: true, volume: 0.5 });
-      } catch (e) {
-        console.error(`[SoundManager] Erro ao adicionar música ${key}:`, e);
-        return;
-      }
-    }
+    musicInstance.setVolume(this.musicVolume);
 
-    // Função para tocar a música, a ser chamada quando o áudio estiver pronto
     const play = () => {
-      if (music && !music.isPlaying) {
-        music.play();
-        scene.currentMusicKey = key; // Rastreia a música atual
+      if (musicInstance && !musicInstance.isPlaying) {
+        musicInstance.play();
         console.log(`[SoundManager] 🎵 Música ${key} iniciada.`);
       }
     };
 
-    // 1.2: Fix Audio Race Condition.
-    // Verifica se o áudio está decodificado. Se não, espera pelo evento 'decoded'.
-    if (music.isDecoded) {
+    if (musicInstance.isDecoded) {
       play();
     } else {
       console.log(`[SoundManager] Música ${key} não está decodificada. Aguardando...`);
-      music.once('decoded', play);
+      musicInstance.once('decoded', play);
     }
   }
 
   static stop(scene, key) {
-    if (!scene?.sound) return;
-
     const sound = scene.sound.get(key);
-    if (sound && sound.isPlaying) {
-      sound.stop();
-    }
+    if (sound?.isPlaying) sound.stop();
   }
 
   static stopAll(scene) {
-    if (!scene?.sound) return;
-    scene.sound.stopAll();
+    if (scene && scene.sound) {
+        scene.sound.stopAll();
+    }
+    this.music.clear();
+  }
+
+  static stopAllMusic() {
+    this.music.forEach(musicInstance => {
+      if (musicInstance.isPlaying) {
+        musicInstance.stop();
+      }
+    });
   }
 
   static playWorldMusic(scene, worldNumber) {
