@@ -37,6 +37,7 @@ const Hero = sequelize.define('Hero', {
     bombSize: { type: DataTypes.FLOAT, defaultValue: 1.0 },
     multiShot: { type: DataTypes.INTEGER, defaultValue: 0 },
     sprite_name: { type: DataTypes.STRING },
+    status: { type: DataTypes.STRING, defaultValue: 'in_wallet', allowNull: false, validate: { isIn: [['in_wallet', 'staked']] } },
     last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
     tableName: 'heroes',
@@ -374,6 +375,17 @@ async function getHeroesByUserId(userId) {
     });
 }
 
+async function updateHeroStatus(nftId, newStatus) {
+    const [affectedRows] = await Hero.update(
+        { status: newStatus },
+        { where: { nft_id: nftId, hero_type: 'nft' } } // Ensure we only update NFTs
+    );
+    if (affectedRows === 0) {
+        console.warn(`Attempted to update status for a non-existent hero with NFT ID: ${nftId}`);
+    }
+    return { success: true, changes: affectedRows };
+}
+
 async function updateHeroStats(heroId, stats) {
     const validFields = ['level', 'xp', 'hp', 'maxHp', 'damage', 'speed', 'extraLives', 'fireRate', 'bombSize', 'multiShot'];
     const updateData = {};
@@ -560,6 +572,7 @@ module.exports = {
     getTop10Ranking,
     createHeroForUser,
     getHeroesByUserId,
+    updateHeroStatus,
     updateHeroStats,
     addXpToHero,
     addToMatchmakingQueue,

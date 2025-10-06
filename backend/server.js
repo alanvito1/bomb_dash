@@ -40,6 +40,7 @@ const gameState = require('./game_state.js'); // Importar o módulo de estado do
 const matchmaking = require('./matchmaking.js'); // Importar o módulo de matchmaking
 const pvpService = require('./pvp_service.js'); // Importar o novo serviço de PvP
 const soloRewardService = require('./solo_reward_service.js'); // Importar o serviço de recompensa solo
+const stakingListener = require('./staking_listener.js'); // Importar o novo listener de staking
 
 const app = express();
 
@@ -162,10 +163,47 @@ app.post('/api/auth/verify', async (req, res) => {
 
 app.get('/api/heroes', verifyToken, async (req, res) => {
     try {
-        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const { userId, address } = req.user;
+
+        // 1. Sync with on-chain data
+        const onChainNfts = await nft.getNftsForPlayer(address);
+        if (onChainNfts && onChainNfts.length > 0) {
+            const dbNfts = await db.Hero.findAll({ where: { user_id: userId, hero_type: 'nft' } });
+            const dbNftIds = new Set(dbNfts.map(h => h.nft_id));
+
+            for (const nftData of onChainNfts) {
+                if (!dbNftIds.has(nftData.id)) {
+                    // This is a new NFT not yet in our DB, create it.
+                    console.log(`[Sync] Found new NFT (ID: ${nftData.id}) for user ${userId}. Adding to DB.`);
+                    const heroStats = {
+                        hero_type: 'nft',
+                        nft_id: nftData.id,
+                        level: nftData.level,
+                        damage: nftData.bombPower,
+                        speed: nftData.speed,
+                        hp: 100 + (nftData.level * 10), // Example stat calculation
+                        maxHp: 100 + (nftData.level * 10),
+                        sprite_name: 'witch_hero', // Default sprite for now
+                    };
+                    await db.createHeroForUser(userId, heroStats);
+                }
+                // Future improvement: Update stats for existing NFTs if they changed on-chain.
+            }
+        }
+
+        // 2. Get the definitive list from our DB (which is now synced)
+        let heroes = await db.getHeroesByUserId(userId);
+
+        // 3. Assign mocks ONLY if the user has NO heroes at all after the sync
+        if (heroes.length === 0) {
+             console.log(`[Sync] User ${userId} has no heroes. Assigning mocks.`);
+             await nft.assignMockHeroes(userId);
+             heroes = await db.getHeroesByUserId(userId); // Re-fetch after adding mocks
+        }
+
         res.json({ success: true, heroes });
     } catch (error) {
-        console.error(`Error fetching heroes for user ${req.user.userId}:`, error);
+        console.error(`Error fetching/syncing heroes for user ${req.user.userId}:`, error);
         res.status(500).json({ success: false, message: 'Failed to fetch heroes.' });
     }
 });
@@ -959,6 +997,10 @@ async function startServer() {
 
         // 4.6 Iniciar o Cron Job de Recompensas do Modo Solo
         soloRewardService.startSoloRewardCycleCron();
+
+        // 4.7 Iniciar o Listener de Staking de Heróis
+        await stakingListener.initStakingListener();
+        console.log("[OK] Listener de staking de heróis iniciado.");
 
         // 5. Iniciar o Servidor Express
         app.listen(PORT, () => {
