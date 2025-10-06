@@ -159,15 +159,17 @@ export default class CharacterSelectionScene extends Phaser.Scene {
                         .on('pointerout', () => depositButton.setStyle({ fill: '#00ffff' }));
                     card.add(depositButton);
                     card.setData('depositButton', depositButton);
-                } else {
-                    const levelUpButton = this.add.text(0, actionY, LanguageManager.get('level_up_button') || 'LEVEL UP', { fontSize: '16px', fontFamily: '"Press Start 2P"', align: 'center', padding: { x: 8, y: 4 }}).setOrigin(0.5);
-                    card.add(levelUpButton);
-                    if (hero.xp >= xpForNextLevel) {
-                        levelUpButton.setInteractive({ useHandCursor: true }).setStyle({ fill: '#90EE90', backgroundColor: '#003300' }).on('pointerdown', (p) => { p.stopPropagation(); this.handleLevelUp(hero); });
-                    } else {
-                        levelUpButton.setStyle({ fill: '#AAAAAA', backgroundColor: '#333333' });
-                    }
-                    card.setData('levelUpButton', levelUpButton);
+                } else { // status === 'staked'
+                    const withdrawButton = this.add.text(0, actionY + 10, 'Withdraw', { fontSize: '14px', fontFamily: '"Press Start 2P"', fill: '#FF6347', backgroundColor: '#330000', padding: { x: 8, y: 4 }}).setOrigin(0.5);
+                    withdrawButton.setInteractive({ useHandCursor: true })
+                        .on('pointerdown', (pointer) => {
+                            pointer.stopPropagation();
+                            this.handleWithdrawHero(hero, withdrawButton);
+                        })
+                        .on('pointerover', () => withdrawButton.setStyle({ fill: '#ffffff' }))
+                        .on('pointerout', () => withdrawButton.setStyle({ fill: '#FF6347' }));
+                    card.add(withdrawButton);
+                    card.setData('withdrawButton', withdrawButton);
                 }
             } else {
                 const levelUpButton = this.add.text(0, actionY, LanguageManager.get('level_up_button') || 'LEVEL UP', { fontSize: '16px', fontFamily: '"Press Start 2P"', align: 'center', padding: { x: 8, y: 4 }}).setOrigin(0.5);
@@ -239,6 +241,47 @@ export default class CharacterSelectionScene extends Phaser.Scene {
                 message: error.reason || error.message || 'An unknown error occurred.'
             });
             button.setText('Deposit to Play').setInteractive({ useHandCursor: true }).setStyle({ fill: '#00ffff' });
+        }
+    }
+
+    async handleWithdrawHero(hero, button) {
+        SoundManager.play(this, 'click');
+        button.setText('PREPARING...').disableInteractive().setStyle({ fill: '#FFA500' });
+
+        try {
+            // 1. Get signature from backend
+            button.setText('GETTING SIG...');
+            const response = await api.initiateHeroWithdrawal(hero.id);
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to get withdrawal signature.');
+            }
+            const { tokenId, level, xp, signature } = response;
+
+            // 2. Call staking service to execute on-chain transaction
+            button.setText('CONFIRM...');
+            const withdrawTx = await stakingService.withdrawHero(tokenId, level, xp, signature);
+            button.setText('WITHDRAWING...');
+            await withdrawTx.wait();
+            SoundManager.play(this, 'powerup');
+
+            // 3. Show success and refresh
+            this.scene.launch('PopupScene', {
+                title: 'Success!',
+                message: `${hero.name} has been withdrawn to your wallet.`,
+                onClose: () => {
+                    this.scene.restart(); // Easiest way to refresh hero list
+                }
+            });
+
+        } catch (error) {
+            SoundManager.play(this, 'error');
+            console.error('Hero withdraw process failed:', error);
+            this.scene.launch('PopupScene', {
+                title: 'Withdraw Failed',
+                message: error.reason || error.message || 'An unknown error occurred.'
+            });
+            // Reset button state
+            button.setText('Withdraw').setInteractive({ useHandCursor: true }).setStyle({ fill: '#FF6347' });
         }
     }
 

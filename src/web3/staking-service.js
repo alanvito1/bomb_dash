@@ -53,6 +53,13 @@ class StakingService {
         return tx;
     }
 
+    async withdrawHero(tokenId, level, xp, signature) {
+        await this.init();
+        console.log(`Withdrawing Hero NFT with ID: ${tokenId} using signature.`);
+        const tx = await this.stakingContract.withdrawHero(tokenId, level, xp, signature);
+        return tx;
+    }
+
     async isApproved() {
         await this.init();
         const ownerAddress = await this.signer.getAddress();

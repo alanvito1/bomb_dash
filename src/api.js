@@ -327,6 +327,19 @@ class ApiClient {
             method: 'POST'
         });
     }
+
+    // --- Hero Staking Methods ---
+
+    /**
+     * Requests a signature from the backend to authorize a hero withdrawal.
+     * @param {number|string} heroId - The ID of the hero to withdraw.
+     * @returns {Promise<{success: boolean, tokenId: number, level: number, xp: number, signature: string}>} The signature and hero progress data.
+     */
+    async initiateHeroWithdrawal(heroId) {
+        return this.fetch(`/heroes/${heroId}/initiate-withdrawal`, {
+            method: 'POST'
+        });
+    }
 }
 
 // Exporta uma instância única do cliente

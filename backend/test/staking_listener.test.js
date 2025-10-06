@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const db = require('../database');
-const { handleHeroDeposited } = require('../staking_listener');
+const { handleHeroDeposited, handleHeroWithdrawn } = require('../staking_listener');
 
 // Since staking_listener.js is designed to be initialized, we need to manually
 // call the internal handler function for unit testing. We are testing the handler's
@@ -96,5 +96,45 @@ describe('Staking Listener', () => {
 
         // Cleanup
         consoleErrorSpy.restore();
+    });
+
+    context('when handling HeroWithdrawn event', () => {
+        it('should call db.updateHeroStatus with status "in_wallet"', async () => {
+            // --- Arrange ---
+            const owner = '0x1234567890123456789012345678901234567890';
+            const tokenId = 789n;
+            const level = 10n;
+            const xp = 1000n;
+
+            updateHeroStatusStub.resolves({ success: true, changes: 1 });
+
+            // --- Act ---
+            await handleHeroWithdrawn(owner, tokenId, level, xp);
+
+            // --- Assert ---
+            expect(updateHeroStatusStub.calledOnce).to.be.true;
+            const expectedTokenId = Number(tokenId);
+            const expectedStatus = 'in_wallet';
+            expect(updateHeroStatusStub.calledWith(expectedTokenId, expectedStatus)).to.be.true;
+        });
+
+        it('should log a warning if the withdrawn hero is not found', async () => {
+            // --- Arrange ---
+             const owner = '0x1234567890123456789012345678901234567890';
+            const tokenId = 404n;
+            const level = 1n;
+            const xp = 0n;
+
+            updateHeroStatusStub.resolves({ success: true, changes: 0 });
+            const consoleWarnSpy = sinon.spy(console, 'warn');
+
+            // --- Act ---
+            await handleHeroWithdrawn(owner, tokenId, level, xp);
+
+            // --- Assert ---
+            expect(updateHeroStatusStub.calledOnce).to.be.true;
+            expect(consoleWarnSpy.calledWith(sinon.match(/A withdrawal event was received for NFT ID 404/))).to.be.true;
+            consoleWarnSpy.restore();
+        });
     });
 });

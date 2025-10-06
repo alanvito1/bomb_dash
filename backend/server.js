@@ -300,6 +300,45 @@ app.post('/api/heroes/:heroId/level-up', verifyToken, async (req, res) => {
     }
 });
 
+app.post('/api/heroes/:heroId/initiate-withdrawal', verifyToken, async (req, res) => {
+    const { heroId } = req.params;
+
+    try {
+        // 1. Fetch hero and verify ownership
+        const heroes = await db.getHeroesByUserId(req.user.userId);
+        const hero = heroes.find(h => h.id.toString() === heroId);
+
+        if (!hero) {
+            return res.status(404).json({ success: false, message: "Hero not found or you don't own it." });
+        }
+
+        // 2. Check if the hero is an NFT and is staked
+        if (hero.hero_type !== 'nft' || hero.status !== 'staked') {
+            return res.status(400).json({ success: false, message: "This hero cannot be withdrawn. It must be a staked NFT." });
+        }
+
+        // 3. Generate the signature using the Oracle
+        const signature = await oracle.signHeroWithdrawal(hero.nft_id, hero.level, hero.xp);
+
+        // 4. Return the necessary data to the frontend
+        res.json({
+            success: true,
+            message: 'Withdrawal signature generated successfully.',
+            tokenId: hero.nft_id,
+            level: hero.level,
+            xp: hero.xp,
+            signature: signature
+        });
+
+    } catch (error) {
+        console.error(`Error initiating withdrawal for hero ${heroId}:`, error);
+        if (error.message.includes("Oráculo não está inicializado")) {
+             return res.status(503).json({ success: false, message: "The Oracle service is currently unavailable. Please try again later." });
+        }
+        res.status(500).json({ success: false, message: 'Internal server error during withdrawal initiation.' });
+    }
+});
+
 // =================================================================
 // ROTAS DE JOGO
 // =================================================================
