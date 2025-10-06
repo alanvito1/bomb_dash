@@ -14,7 +14,6 @@ class BcoinService {
             this.contract = new ethers.Contract(BCOIN_TESTNET_ADDRESS, BCOIN_ABI, this.provider);
         }
 
-        // Listen for requests to update the balance
         GameEventEmitter.on('bcoin-balance-changed', this.updateBalance.bind(this));
     }
 
@@ -39,40 +38,47 @@ class BcoinService {
             const address = await signer.getAddress();
             const rawBalance = await this.contract.balanceOf(address);
             const decimals = await this.contract.decimals();
-
             this.balance = ethers.formatUnits(rawBalance, decimals);
             this.error = null;
-
         } catch (err) {
             console.error('[BcoinService] Error fetching balance:', err);
             this.error = 'RPC Error';
             this.balance = '--.--';
         }
-
-        // Notify all listeners (like HUDScene) about the updated balance
         GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
     }
 
-    async approve(spender, amount) {
-        if (!this.provider) {
-            throw new Error('Wallet not connected');
-        }
+    async _handleTransaction(transactionPromise, successMessage) {
         try {
-            const signer = await this.provider.getSigner();
-            const contractWithSigner = this.contract.connect(signer);
-            const decimals = await this.contract.decimals();
-            const amountInWei = ethers.parseUnits(amount.toString(), decimals);
-
-            const tx = await contractWithSigner.approve(spender, amountInWei);
-            await tx.wait(); // Wait for the transaction to be mined
-            return true;
+            const tx = await transactionPromise;
+            GameEventEmitter.emit('transaction:pending', tx.hash);
+            await tx.wait();
+            GameEventEmitter.emit('transaction:success', successMessage);
         } catch (error) {
-            console.error('[BcoinService] Approval failed:', error);
-            throw new Error('Approval failed');
+            console.error("Transaction failed:", error);
+            GameEventEmitter.emit('transaction:error', error);
+            throw error;
         }
+    }
+
+    async approve(spender, amount) {
+        if (!this.provider) throw new Error('Wallet not connected');
+        const signer = await this.provider.getSigner();
+        const contractWithSigner = this.contract.connect(signer);
+        const decimals = await this.contract.decimals();
+        const amountInWei = ethers.parseUnits(amount.toString(), decimals);
+
+        const txPromise = contractWithSigner.approve(spender, amountInWei);
+        await this._handleTransaction(txPromise, `Successfully approved ${amount} BCOIN.`);
+    }
+
+    async getAllowance(owner, spender) {
+        if (!this.contract) throw new Error("BCOIN contract not initialized.");
+        const allowanceInWei = await this.contract.allowance(owner, spender);
+        const decimals = await this.contract.decimals();
+        return parseFloat(ethers.formatUnits(allowanceInWei, decimals));
     }
 }
 
-// Export a singleton instance
 const bcoinService = new BcoinService();
 export default bcoinService;

@@ -1,5 +1,6 @@
-const { ethers } = require('ethers');
-const contracts = require('../config/contracts.js');
+import { ethers } from 'ethers';
+import contracts from '../config/contracts.js';
+import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 class StakingService {
     constructor() {
@@ -39,25 +40,44 @@ class StakingService {
         }
     }
 
+    /**
+     * A centralized handler for blockchain transactions.
+     * @param {Promise<ethers.TransactionResponse>} transactionPromise The promise returned by the contract method call.
+     * @param {string} successMessage The message to show on successful confirmation.
+     * @private
+     */
+    async _handleTransaction(transactionPromise, successMessage) {
+        try {
+            const tx = await transactionPromise;
+            GameEventEmitter.emit('transaction:pending', tx.hash);
+            await tx.wait(); // Wait for the transaction to be mined
+            GameEventEmitter.emit('transaction:success', successMessage);
+        } catch (error) {
+            console.error("Transaction failed:", error);
+            GameEventEmitter.emit('transaction:error', error);
+            throw error; // Re-throw so the UI can know the operation failed
+        }
+    }
+
     async approve() {
         await this.init();
         console.log(`Requesting approval for all NFTs to be managed by: ${contracts.heroStaking.address}`);
-        const tx = await this.nftContract.setApprovalForAll(contracts.heroStaking.address, true);
-        return tx;
+        const txPromise = this.nftContract.setApprovalForAll(contracts.heroStaking.address, true);
+        await this._handleTransaction(txPromise, "Approval successful. You can now stake your heroes.");
     }
 
     async depositHero(tokenId) {
         await this.init();
         console.log(`Depositing Hero NFT with ID: ${tokenId}`);
-        const tx = await this.stakingContract.depositHero(tokenId);
-        return tx;
+        const txPromise = this.stakingContract.depositHero(tokenId);
+        await this._handleTransaction(txPromise, "Hero staked successfully!");
     }
 
     async withdrawHero(tokenId, level, xp, signature) {
         await this.init();
         console.log(`Withdrawing Hero NFT with ID: ${tokenId} using signature.`);
-        const tx = await this.stakingContract.withdrawHero(tokenId, level, xp, signature);
-        return tx;
+        const txPromise = this.stakingContract.withdrawHero(tokenId, level, xp, signature);
+        await this._handleTransaction(txPromise, "Hero withdrawn successfully!");
     }
 
     async isApproved() {
@@ -69,4 +89,4 @@ class StakingService {
 
 // Export a singleton instance
 const stakingService = new StakingService();
-module.exports = stakingService;
+export default stakingService;
