@@ -283,12 +283,33 @@ export default class GameScene extends Phaser.Scene {
 
   async handleGameOver() {
     if (this.gamePaused || this.transitioning) return;
+    this.transitioning = true; // Use transitioning to prevent double calls
     this.gamePaused = true;
     this.player?.setActive(false);
     if (this.bombTimer) this.bombTimer.paused = true;
     SoundManager.stopAll(this);
     SoundManager.play(this, 'gameover');
+
+    const xpGained = this.score; // Assuming 1 score point = 1 XP
+    const heroId = this.playerStats.id;
     this.coinsEarned = Math.floor(this.score / 10);
+
+    // This is the critical fix: report the match result to the backend to award XP.
+    if (heroId && xpGained > 0) {
+        try {
+            console.log(`[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${xpGained}`);
+            // Use the new, correct method on the api client.
+            const response = await api.completeMatch(heroId, xpGained);
+            if (response.success) {
+                console.log('[GameScene] XP awarded successfully by the server.');
+            } else {
+                console.warn('[GameScene] Server failed to award XP:', response.message);
+            }
+        } catch (error) {
+            console.error('[GameScene] Error reporting match completion:', error);
+        }
+    }
+
     this.scene.stop('HUDScene');
     this.scene.start('GameOverScene', { score: this.score, level: this.level, coins: this.coinsEarned });
   }

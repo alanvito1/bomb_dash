@@ -359,19 +359,20 @@ app.post('/api/matches/complete', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: 'The specified hero does not belong to the authenticated user.' });
         }
 
-        // If ownership is confirmed, add the XP.
-        const result = await db.addXpToHero(heroId, xpGained);
+        // If ownership is confirmed, add XP to both the hero and the user's account.
+        await db.addXpToHero(heroId, xpGained);
+        await db.addXpToUser(req.user.address, xpGained);
 
-        if (result.success) {
-            res.json({
-                success: true,
-                message: `Successfully awarded ${xpGained} XP to hero ${heroId}.`,
-                hero: result.hero
-            });
-        } else {
-            // This case might be redundant due to the error handling below, but it's good practice.
-            res.status(500).json({ success: false, message: 'An unexpected error occurred while awarding XP.' });
-        }
+        // Fetch the updated hero to return the latest data
+        const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
+        const updatedHero = updatedHeroes.find(h => h.id === heroId);
+
+
+        res.json({
+            success: true,
+            message: `Successfully awarded ${xpGained} XP to hero ${heroId}.`,
+            hero: updatedHero
+        });
     } catch (error) {
         console.error(`Error completing match for hero ${heroId}:`, error);
         res.status(500).json({ success: false, message: 'Internal server error while completing match.' });

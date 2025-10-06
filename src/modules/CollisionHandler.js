@@ -57,6 +57,9 @@ export default class CollisionHandler {
       const xpGained = enemy.isBoss ? 50 : 10;
       const coinsGained = enemy.isBoss ? 5 : 1;
 
+      // This was the missing piece. The score was never being incremented.
+      this.scene.score += xpGained;
+
       const stats = this.scene.playerStats;
       stats.account_xp += xpGained;
       stats.hero_xp += xpGained;
