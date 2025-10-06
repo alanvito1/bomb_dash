@@ -27,6 +27,7 @@ import api from './src/api.js';
 import nftService from './src/web3/nft-service.js';
 import bcoinService from './src/web3/bcoin-service.js';
 import GameEventEmitter from './src/utils/GameEventEmitter.js';
+import TermsScene from './src/scenes/TermsScene.js';
 import LoadingScene from './src/scenes/LoadingScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
@@ -70,6 +71,7 @@ const config = {
     parent: 'phaser-dom-container' // Especifica o contêiner pai
   },
   scene: [
+    TermsScene,
     LoadingScene,
     StartScene,
     AuthChoiceScene,
