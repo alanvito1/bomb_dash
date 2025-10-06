@@ -41,7 +41,7 @@ import CharacterSelectionScene from './src/scenes/CharacterSelectionScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
 import HUDScene from './src/scenes/HUDScene.js';
 import PauseScene from './src/scenes/PauseScene.js';
-import PopupScene from './src/scenes/PopupScene.js';
+import NotificationScene from './src/scenes/NotificationScene.js';
 import AltarScene from './src/scenes/AltarScene.js';
 import PvpScene from './src/scenes/PvpScene.js';
 
@@ -85,7 +85,7 @@ const config = {
     CharacterSelectionScene,
     HUDScene,
     PauseScene,
-    PopupScene,
+    NotificationScene,
     AltarScene,
     PvpScene
   ],

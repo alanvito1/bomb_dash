@@ -1,7 +1,7 @@
 // src/scenes/LoadingScene.js
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
-
+import { CST } from '../CST.js';
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
     super('LoadingScene');
@@ -116,6 +116,7 @@ export default class LoadingScene extends Phaser.Scene {
             console.log('🔄 Checking for existing user session...');
             try {
                 const loginStatus = await api.checkLoginStatus();
+                this.scene.launch(CST.SCENES.NOTIFICATION);
                 if (loginStatus.success) {
                     console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
                     this.registry.set('loggedInUser', loginStatus.user);
@@ -126,6 +127,7 @@ export default class LoadingScene extends Phaser.Scene {
             } catch (error) {
                 console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
                 this.registry.remove('loggedInUser');
+                this.scene.launch(CST.SCENES.NOTIFICATION);
                 this.scene.start('AuthChoiceScene');
             }
         };

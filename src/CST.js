@@ -5,6 +5,7 @@ export const CST = {
         MENU: "MenuScene",
         GAME: "GameScene",
         PVP: "PvpScene",
+        NOTIFICATION: "NotificationScene",
     },
     ASSETS: {
         BLACK_BG: "black_bg" // Chave para o asset de fundo preto
