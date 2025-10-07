@@ -1,48 +1,52 @@
-import { ethers } from 'ethers';
 import contracts from '../config/contracts.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 
-class StakingService {
-    constructor() {
-        this.provider = null;
-        this.signer = null;
-        this.stakingContract = null;
-        this.nftContract = null;
+let ethersState = null;
+
+async function getEthersDependencies() {
+    if (ethersState) {
+        return ethersState;
     }
 
-    async init() {
-        if (typeof window.ethereum === 'undefined') {
-            throw new Error('MetaMask is not installed.');
-        }
-        if (this.stakingContract && this.signer) {
-            return; // Already initialized
-        }
+    const { ethers } = await import('ethers');
 
-        try {
-            this.provider = new ethers.BrowserProvider(window.ethereum);
-            this.signer = await this.provider.getSigner();
+    if (typeof window.ethereum === 'undefined') {
+        throw new Error('MetaMask is not installed.');
+    }
 
-            this.stakingContract = new ethers.Contract(
-                contracts.heroStaking.address,
-                contracts.heroStaking.abi,
-                this.signer
-            );
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
 
-            this.nftContract = new ethers.Contract(
-                contracts.mockHeroNFT.address,
-                contracts.mockHeroNFT.abi,
-                this.signer
-            );
+        const stakingContract = new ethers.Contract(
+            contracts.heroStaking.address,
+            contracts.heroStaking.abi,
+            signer
+        );
 
-        } catch (error) {
-            console.error("Failed to initialize StakingService:", error);
-            throw new Error("Could not connect to wallet or contracts. " + error.message);
-        }
+        const nftContract = new ethers.Contract(
+            contracts.mockHeroNFT.address,
+            contracts.mockHeroNFT.abi,
+            signer
+        );
+
+        ethersState = { ethers, provider, signer, stakingContract, nftContract };
+        return ethersState;
+
+    } catch (error) {
+        console.error("Failed to initialize StakingService dependencies:", error);
+        throw new Error("Could not connect to wallet or contracts. " + error.message);
+    }
+}
+
+class StakingService {
+    constructor() {
+        // Initialization is now on-demand via getEthersDependencies
     }
 
     /**
      * A centralized handler for blockchain transactions.
-     * @param {Promise<ethers.TransactionResponse>} transactionPromise The promise returned by the contract method call.
+     * @param {Promise} transactionPromise The promise returned by the contract method call.
      * @param {string} successMessage The message to show on successful confirmation.
      * @private
      */
@@ -60,30 +64,30 @@ class StakingService {
     }
 
     async approve() {
-        await this.init();
+        const { nftContract } = await getEthersDependencies();
         console.log(`Requesting approval for all NFTs to be managed by: ${contracts.heroStaking.address}`);
-        const txPromise = this.nftContract.setApprovalForAll(contracts.heroStaking.address, true);
+        const txPromise = nftContract.setApprovalForAll(contracts.heroStaking.address, true);
         await this._handleTransaction(txPromise, "Approval successful. You can now stake your heroes.");
     }
 
     async depositHero(tokenId) {
-        await this.init();
+        const { stakingContract } = await getEthersDependencies();
         console.log(`Depositing Hero NFT with ID: ${tokenId}`);
-        const txPromise = this.stakingContract.depositHero(tokenId);
+        const txPromise = stakingContract.depositHero(tokenId);
         await this._handleTransaction(txPromise, "Hero staked successfully!");
     }
 
     async withdrawHero(tokenId, level, xp, signature) {
-        await this.init();
+        const { stakingContract } = await getEthersDependencies();
         console.log(`Withdrawing Hero NFT with ID: ${tokenId} using signature.`);
-        const txPromise = this.stakingContract.withdrawHero(tokenId, level, xp, signature);
+        const txPromise = stakingContract.withdrawHero(tokenId, level, xp, signature);
         await this._handleTransaction(txPromise, "Hero withdrawn successfully!");
     }
 
     async isApproved() {
-        await this.init();
-        const ownerAddress = await this.signer.getAddress();
-        return this.nftContract.isApprovedForAll(ownerAddress, contracts.heroStaking.address);
+        const { signer, nftContract } = await getEthersDependencies();
+        const ownerAddress = await signer.getAddress();
+        return nftContract.isApprovedForAll(ownerAddress, contracts.heroStaking.address);
     }
 }
 

@@ -1,8 +1,7 @@
-import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
-import contracts from './config/contracts.js';
+import * as contracts from './config/contracts.js';
 
-const { address: TOURNAMENT_CONTROLLER_ADDRESS, abi: TOURNAMENT_CONTROLLER_ABI } = contracts.tournamentController;
+const { address: TOURNAMENT_CONTROLLER_ADDRESS, abi: TOURNAMENT_CONTROLLER_ABI } = contracts.default.tournamentController;
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
@@ -68,6 +67,7 @@ class ApiClient {
         if (!window.ethereum) throw new Error('MetaMask not detected.');
 
         try {
+            const { ethers } = await import('ethers');
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const address = await signer.getAddress();
@@ -180,6 +180,7 @@ class ApiClient {
         if (!window.ethereum) throw new Error('MetaMask not detected.');
 
         try {
+            const { ethers } = await import('ethers');
             // 1. Connect to the wallet and get the signer
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();

@@ -4,7 +4,13 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   plugins: [
-    nodePolyfills()
+    nodePolyfills({
+      globals: {
+        Buffer: true,
+        process: true,
+      },
+      protocolImports: true,
+    })
   ],
   server: {
     port: 5173,

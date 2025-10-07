@@ -1,9 +1,5 @@
 import { CST } from '/src/CST.js';
-import {
-    TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI,
-    WAGER_ARENA_ADDRESS, WAGER_ARENA_ABI,
-    BCOIN_TESTNET_ADDRESS
-} from '/src/config/contracts.js';
+import contracts from '/src/config/contracts.js';
 
 // A simple ABI for BCOIN approve function
 const BCOIN_ABI = [
@@ -251,15 +247,15 @@ export default class PvpScene extends Phaser.Scene {
 
         try {
             // 1. Approve BCOIN transfer
-            const bcoinContract = new this.web3.eth.Contract(BCOIN_ABI, BCOIN_TESTNET_ADDRESS);
+            const bcoinContract = new this.web3.eth.Contract(contracts.bcoin.abi, contracts.bcoin.address);
             const wagerCost = this.web3.utils.toWei(this.selectedTier.bcoin_cost.toString(), 'ether');
 
             this.showPopup("Passo 1/2: Aprovando aposta em BCOIN...");
-            await bcoinContract.methods.approve(WAGER_ARENA_ADDRESS, wagerCost).send({ from: this.userData.address });
+            await bcoinContract.methods.approve(contracts.wagerArena.address, wagerCost).send({ from: this.userData.address });
 
             // 2. Enter the Wager Queue on the smart contract
             this.showPopup("Passo 2/2: Entrando na fila da Arena...");
-            const wagerContract = new this.web3.eth.Contract(WAGER_ARENA_ABI, WAGER_ARENA_ADDRESS);
+            const wagerContract = new this.web3.eth.Contract(contracts.wagerArena.abi, contracts.wagerArena.address);
             const receipt = await wagerContract.methods.enterWagerQueue(this.selectedTier.id).send({ from: this.userData.address });
 
             // 3. Notify our backend that the user has entered the queue with a specific hero
@@ -286,7 +282,7 @@ export default class PvpScene extends Phaser.Scene {
     }
 
     listenForWagerMatch() {
-        const wagerContract = new this.web3.eth.Contract(WAGER_ARENA_ABI, WAGER_ARENA_ADDRESS);
+        const wagerContract = new this.web3.eth.Contract(contracts.wagerArena.abi, contracts.wagerArena.address);
 
         // Listen for the event related to the tier the player joined
         this.eventListener = wagerContract.events.WagerMatchCreated({ filter: { tierId: this.selectedTier.id }})
@@ -395,15 +391,15 @@ export default class PvpScene extends Phaser.Scene {
         this.showPopup("Processando taxa de entrada... Por favor, aprove a transação na sua carteira.");
 
         try {
-            const bcoinContract = new this.web3.eth.Contract(BCOIN_ABI, BCOIN_TESTNET_ADDRESS);
+            const bcoinContract = new this.web3.eth.Contract(contracts.bcoin.abi, contracts.bcoin.address);
             const feeInWei = this.web3.utils.toWei(PVP_ENTRY_FEE.toString(), 'ether');
 
-            await bcoinContract.methods.approve(TOURNAMENT_CONTROLLER_ADDRESS, feeInWei)
+            await bcoinContract.methods.approve(contracts.tournamentController.address, feeInWei)
                 .send({ from: this.userData.address });
 
             this.showPopup("Aprovação bem-sucedida! Agora, confirme a transação para entrar na fila.");
 
-            const tournamentContract = new this.web3.eth.Contract(TOURNAMENT_CONTROLLER_ABI, TOURNAMENT_CONTROLLER_ADDRESS);
+            const tournamentContract = new this.web3.eth.Contract(contracts.tournamentController.abi, contracts.tournamentController.address);
             const tier = this.selectedHero.level;
 
             const receipt = await tournamentContract.methods.enterRankedMatch(tier, feeInWei)
