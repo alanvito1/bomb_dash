@@ -51,7 +51,7 @@ async function enterRankedQueue(userId, heroId, userAddress, txHash) {
     await oracle.verifyPvpEntryFee(txHash, userAddress, PVP_ENTRY_FEE);
 
     // 2. Obter o herói para determinar o tier
-    const hero = await db.getHeroById(heroId);
+    const hero = await db.Hero.findByPk(heroId);
     if (!hero || hero.user_id !== userId) {
         throw new Error("Herói não encontrado ou não pertence ao usuário.");
     }
