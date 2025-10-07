@@ -56,7 +56,21 @@ app.set('json replacer', (key, value) => {
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-web3';
 
-app.use(cors());
+// Configuração explícita do CORS para máxima compatibilidade
+const corsOptions = {
+  origin: 'http://localhost:5173', // Permite requisições SOMENTE desta origem
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos permitidos
+  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
+  credentials: true // Permite cookies (se aplicável)
+};
+
+app.use(cors(corsOptions));
+
+// Middleware para responder a requisições OPTIONS (preflight)
+// O navegador envia uma requisição OPTIONS antes de requisições "complexas" (como POST com JSON) para verificar a política de CORS.
+// Esta rota garante que essas requisições de verificação sejam bem-sucedidas.
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // Servir arquivos estáticos da raiz do projeto (para admin.html, etc.)

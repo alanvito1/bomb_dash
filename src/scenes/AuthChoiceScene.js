@@ -32,7 +32,8 @@ export default class AuthChoiceScene extends Phaser.Scene {
             align: 'center'
         })
         .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: true })
+        .setName('web3LoginButton'); // Nome estável para automação
 
         // --- Status Text ---
         const statusText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 80, '', {
