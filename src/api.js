@@ -1,7 +1,8 @@
 import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
-import { TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI } from './config/contracts.js';
+import contracts from './config/contracts.js';
 
+const { address: TOURNAMENT_CONTROLLER_ADDRESS, abi: TOURNAMENT_CONTROLLER_ABI } = contracts.tournamentController;
 
 const API_BASE_URL = 'http://localhost:3000/api';
 

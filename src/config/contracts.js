@@ -5,6 +5,7 @@ const addresses = require('../../backend/contracts/contract-addresses.json');
 const heroStakingAbi = require('../../backend/contracts/HeroStaking.json');
 const mockHeroNFTAbi = require('../../backend/contracts/MockHeroNFT.json');
 const bcoinAbi = require('../../backend/contracts/IBEP20.json');
+const tournamentControllerAbi = require('../../backend/contracts/TournamentController.json');
 
 const contracts = {
     heroStaking: {
@@ -18,6 +19,11 @@ const contracts = {
     bcoin: {
         address: addresses.bcoinTokenAddress,
         abi: bcoinAbi
+    },
+    tournamentController: {
+        address: addresses.tournamentControllerAddress,
+        // The .abi is important because the JSON file is a full Hardhat artifact
+        abi: tournamentControllerAbi.abi
     }
 };
 
