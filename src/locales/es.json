@@ -144,5 +144,9 @@
     "shop_approving": "Aprobando...",
     "shop_processing": "Procesando...",
     "shop_upgrade_success": "¡Mejora exitosa!",
-    "shop_upgrade_failed": "Fallo en la mejora."
+    "shop_upgrade_failed": "Fallo en la mejora.",
+    "terms.title": "Términos de Servicio",
+    "terms.text": "POR FAVOR, LEE ESTOS TÉRMINOS DE SERVICIO CUIDADOSAMENTE. AL ACCEDER O USAR ESTE JUEGO, ACEPTAS ESTAR OBLIGADO POR LOS TÉRMINOS Y CONDICIONES DESCRITOS AQUÍ Y TODOS LOS TÉRMINOS INCORPORADOS POR REFERENCIA. SI NO ESTÁS DE ACUERDO CON TODOS ESTOS TÉRMINOS, NO USES ESTE JUEGO.\n\n[AVISO: Este es un texto de ejemplo. No es legalmente vinculante. Consulta a un profesional legal para crear tus Términos de Servicio.]\n\n1. El Juego. Este juego se proporciona 'tal cual' sin garantías de ningún tipo. El uso del juego es bajo tu propio riesgo.\n2. Propiedad Intelectual. Todos los derechos sobre los activos del juego, el código y otros materiales son propiedad de sus respectivos creadores.\n3. Conducta del Usuario. Aceptas no utilizar el juego para ningún propósito que sea ilegal o esté prohibido por estos términos.\n4. Limitación de Responsabilidad. En ningún caso los desarrolladores del juego serán responsables de los daños directos o indirectos que surjan del uso o la incapacidad de usar el juego.\n5. Modificaciones de los Términos. Nos reservamos el derecho de cambiar o modificar estos términos en cualquier momento. Si realizamos cambios, te notificaremos, ya sea enviando una notificación por correo electrónico, proporcionando un aviso a través del juego o actualizando la fecha en la parte superior de estos términos. Tu uso continuado del juego confirmará tu aceptación de los términos revisados.",
+    "terms.button": "ACEPTAR Y CONTINUAR",
+    "terms.scroll_prompt": "Desplázate hasta el final para aceptar."
 }

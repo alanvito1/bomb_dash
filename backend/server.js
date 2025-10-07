@@ -56,15 +56,8 @@ app.set('json replacer', (key, value) => {
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-web3';
 
-// Configuração explícita do CORS para máxima compatibilidade
-const corsOptions = {
-  origin: 'http://localhost:5173', // Permite requisições SOMENTE desta origem
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
-  credentials: true // Permite cookies (se aplicável)
-};
-
-app.use(cors(corsOptions));
+// Configuração do CORS para permitir todas as origens (mais flexível para desenvolvimento)
+app.use(cors());
 
 app.use(express.json());
 
