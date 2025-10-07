@@ -3,7 +3,7 @@ import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import tournamentService from '../web3/tournament-service.js';
-import { TOURNAMENT_CONTROLLER_ADDRESS } from '../config/contracts.js';
+import contracts from '../config/contracts.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 export default class ShopScene extends Phaser.Scene {
@@ -95,7 +95,7 @@ export default class ShopScene extends Phaser.Scene {
                     button.setText(LanguageManager.get('shop_approving', {}, 'Approving...')).disableInteractive();
 
                     // Step 1: Approve BCOIN spending
-                    const approveTx = await bcoinService.approve(TOURNAMENT_CONTROLLER_ADDRESS, currentCost);
+                    const approveTx = await bcoinService.approve(contracts.tournamentController.address, currentCost);
                     if (approveTx) {
                         button.setText(LanguageManager.get('shop_waiting_approval', {}, 'Confirming...'));
                         await approveTx.wait();

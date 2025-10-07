@@ -1,5 +1,34 @@
-import { ethers } from 'ethers';
-import { BOMB_CRYPTO_CHAIN_ID, BOMB_CRYPTO_NFT_ADDRESS, BOMB_CRYPTO_NFT_ABI } from '../config/contracts.js';
+import contracts from '../config/contracts.js';
+
+let ethersState = null;
+
+async function getEthersDependencies() {
+    if (ethersState) {
+        return ethersState;
+    }
+
+    const { ethers } = await import('ethers');
+
+    if (!window.ethereum) {
+        throw new Error("MetaMask is not installed.");
+    }
+
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const network = await provider.getNetwork();
+
+        if (Number(network.chainId) !== contracts.BOMB_CRYPTO_CHAIN_ID) {
+            throw new Error(`Incorrect network. Please connect to BSC Testnet (ID: ${contracts.BOMB_CRYPTO_CHAIN_ID}).`);
+        }
+
+        const contract = new ethers.Contract(contracts.mockHeroNFT.address, contracts.mockHeroNFT.abi, provider);
+        ethersState = { ethers, provider, contract };
+        return ethersState;
+    } catch (error) {
+        console.error("Failed to initialize NftService dependencies:", error);
+        throw error; // Re-throw to be caught by the calling function
+    }
+}
 
 /**
  * A service for interacting with the Bombcrypto NFT smart contract.
@@ -7,42 +36,7 @@ import { BOMB_CRYPTO_CHAIN_ID, BOMB_CRYPTO_NFT_ADDRESS, BOMB_CRYPTO_NFT_ABI } fr
 class NftService {
 
   constructor() {
-    this.provider = null;
-    this.contract = null;
-  }
-
-  /**
-   * Initializes the provider and contract instance.
-   * @returns {Promise<boolean>} True if initialization is successful, false otherwise.
-   */
-  async initialize() {
-    if (!window.ethereum) {
-      console.warn("MetaMask is not installed.");
-      return false;
-    }
-
-    try {
-      this.provider = new ethers.BrowserProvider(window.ethereum);
-
-      const network = await this.provider.getNetwork();
-      if (Number(network.chainId) !== BOMB_CRYPTO_CHAIN_ID) {
-        console.warn(`Incorrect network. Please connect to BSC Testnet (ID: ${BOMB_CRYPTO_CHAIN_ID}).`);
-        // Optionally, you could add a request to switch networks here.
-        // await window.ethereum.request({
-        //   method: 'wallet_switchEthereumChain',
-        //   params: [{ chainId: ethers.utils.hexlify(BOMB_CRYPTO_CHAIN_ID) }],
-        // });
-        return false;
-      }
-
-      this.contract = new ethers.Contract(BOMB_CRYPTO_NFT_ADDRESS, BOMB_CRYPTO_NFT_ABI, this.provider);
-      return true;
-    } catch (error) {
-      console.error("Failed to initialize NftService:", error);
-      this.provider = null;
-      this.contract = null;
-      return false;
-    }
+    // Initialization is handled on demand by getEthersDependencies
   }
 
   /**
@@ -50,18 +44,12 @@ class NftService {
    * @returns {Promise<Array<object>>} A list of hero objects with their on-chain stats.
    */
   async getOwnedNfts() {
-    if (!this.provider || !this.contract) {
-      const initialized = await this.initialize();
-      if (!initialized) {
-        return { success: false, message: "Could not connect to the blockchain. Check your wallet and network.", heroes: [] };
-      }
-    }
-
     try {
-      const signer = await this.provider.getSigner();
+      const { provider, contract } = await getEthersDependencies();
+      const signer = await provider.getSigner();
       const ownerAddress = await signer.getAddress();
 
-      const balance = await this.contract.balanceOf(ownerAddress);
+      const balance = await contract.balanceOf(ownerAddress);
       const balanceNum = Number(balance);
 
       if (balanceNum === 0) {
@@ -70,8 +58,8 @@ class NftService {
 
       const heroes = [];
       for (let i = 0; i < balanceNum; i++) {
-        const tokenId = await this.contract.tokenOfOwnerByIndex(ownerAddress, i);
-        const stats = await this.contract.getHeroStats(tokenId);
+        const tokenId = await contract.tokenOfOwnerByIndex(ownerAddress, i);
+        const stats = await contract.getHeroStats(tokenId);
 
         // Map on-chain stats to the game's hero data structure
         const heroData = {
@@ -99,6 +87,10 @@ class NftService {
       let userMessage = "An error occurred while fetching your NFTs.";
       if (error.code === 'CALL_EXCEPTION') {
         userMessage = "Could not retrieve hero data. The contract might be unavailable or you are on the wrong network.";
+      } else if (error.message.includes("Incorrect network")) {
+        userMessage = error.message;
+      } else if (error.message.includes("MetaMask")) {
+        userMessage = "Could not connect to the blockchain. Check your wallet and network.";
       }
       return { success: false, message: userMessage, heroes: [] };
     }

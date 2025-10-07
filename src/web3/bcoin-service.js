@@ -1,19 +1,29 @@
-import { ethers } from 'ethers';
-import { BCOIN_TESTNET_ADDRESS, BCOIN_ABI } from '../config/contracts.js';
+import contracts from '../config/contracts.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
+
+let ethersInstance = null;
+
+async function getEthers() {
+    if (ethersInstance) {
+        return ethersInstance;
+    }
+
+    const { ethers } = await import('ethers');
+
+    if (!window.ethereum) {
+        throw new Error('No wallet detected');
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const contract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, provider);
+    ethersInstance = { ethers, provider, contract };
+    return ethersInstance;
+}
 
 class BcoinService {
     constructor() {
-        this.provider = null;
-        this.contract = null;
         this.balance = '0.00';
         this.error = null;
-
-        if (window.ethereum) {
-            this.provider = new ethers.BrowserProvider(window.ethereum);
-            this.contract = new ethers.Contract(BCOIN_TESTNET_ADDRESS, BCOIN_ABI, this.provider);
-        }
-
         GameEventEmitter.on('bcoin-balance-changed', this.updateBalance.bind(this));
     }
 
@@ -26,23 +36,17 @@ class BcoinService {
     }
 
     async updateBalance() {
-        if (!this.provider || !this.contract) {
-            this.error = 'No wallet connected';
-            this.balance = '--.--';
-            GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
-            return;
-        }
-
         try {
-            const signer = await this.provider.getSigner();
+            const { ethers, provider, contract } = await getEthers();
+            const signer = await provider.getSigner();
             const address = await signer.getAddress();
-            const rawBalance = await this.contract.balanceOf(address);
-            const decimals = await this.contract.decimals();
+            const rawBalance = await contract.balanceOf(address);
+            const decimals = await contract.decimals();
             this.balance = ethers.formatUnits(rawBalance, decimals);
             this.error = null;
         } catch (err) {
             console.error('[BcoinService] Error fetching balance:', err);
-            this.error = 'RPC Error';
+            this.error = (err.message === 'No wallet detected') ? 'No wallet connected' : 'RPC Error';
             this.balance = '--.--';
         }
         GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
@@ -62,10 +66,10 @@ class BcoinService {
     }
 
     async approve(spender, amount) {
-        if (!this.provider) throw new Error('Wallet not connected');
-        const signer = await this.provider.getSigner();
-        const contractWithSigner = this.contract.connect(signer);
-        const decimals = await this.contract.decimals();
+        const { ethers, provider, contract } = await getEthers();
+        const signer = await provider.getSigner();
+        const contractWithSigner = contract.connect(signer);
+        const decimals = await contract.decimals();
         const amountInWei = ethers.parseUnits(amount.toString(), decimals);
 
         const txPromise = contractWithSigner.approve(spender, amountInWei);
@@ -73,9 +77,9 @@ class BcoinService {
     }
 
     async getAllowance(owner, spender) {
-        if (!this.contract) throw new Error("BCOIN contract not initialized.");
-        const allowanceInWei = await this.contract.allowance(owner, spender);
-        const decimals = await this.contract.decimals();
+        const { ethers, contract } = await getEthers();
+        const allowanceInWei = await contract.allowance(owner, spender);
+        const decimals = await contract.decimals();
         return parseFloat(ethers.formatUnits(allowanceInWei, decimals));
     }
 }

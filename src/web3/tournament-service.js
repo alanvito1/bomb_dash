@@ -1,28 +1,41 @@
-import { ethers } from 'ethers';
-import { TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI } from '../config/contracts.js';
+import contracts from '../config/contracts.js';
 import bcoinService from './bcoin-service.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 
+let ethersState = null;
+
+async function getEthersDependencies() {
+    if (ethersState) {
+        return ethersState;
+    }
+
+    const { ethers } = await import('ethers');
+
+    if (!window.ethereum) {
+        throw new Error('No wallet detected');
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(contracts.tournamentController.address, contracts.tournamentController.abi, signer);
+
+    ethersState = { ethers, provider, signer, contract };
+    return ethersState;
+}
+
 class TournamentService {
     constructor() {
-        this.provider = null;
-        this.contract = null;
-        if (window.ethereum) {
-            this.provider = new ethers.BrowserProvider(window.ethereum);
-        }
+        // Initialization is now handled on-demand by getEthersDependencies
     }
 
     async getContract() {
-        if (!this.provider) {
-            throw new Error("Wallet not connected. Please install MetaMask.");
-        }
-        const signer = await this.provider.getSigner();
-        return new ethers.Contract(TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, signer);
+        const { contract } = await getEthersDependencies();
+        return contract;
     }
 
     /**
      * A centralized handler for blockchain transactions.
-     * @param {Promise<ethers.TransactionResponse>} transactionPromise The promise returned by the contract method call.
+     * @param {Promise} transactionPromise The promise returned by the contract method call.
      * @param {string} successMessage The message to show on successful confirmation.
      * @private
      */
@@ -45,12 +58,12 @@ class TournamentService {
      * @param {number|string} cost The cost of the upgrade in BCOIN (not wei).
      */
     async payUpgradeFee(cost) {
-        const contract = await this.getContract();
+        const { ethers, contract } = await getEthersDependencies();
         const signer = await contract.getSigner();
         const playerAddress = await signer.getAddress();
         const costInWei = ethers.parseUnits(cost.toString(), 18);
 
-        const allowance = await bcoinService.getAllowance(playerAddress, TOURNAMENT_CONTROLLER_ADDRESS);
+        const allowance = await bcoinService.getAllowance(playerAddress, contracts.tournamentController.address);
         if (allowance < cost) {
              throw new Error(`Insufficient BCOIN allowance. Required: ${cost}, You have approved: ${allowance}`);
         }
