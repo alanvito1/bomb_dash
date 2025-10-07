@@ -1,12 +1,12 @@
 // This file centralizes all smart contract addresses and ABIs for the frontend.
-// It is a hybrid CJS/ESM module to support both the Vite build process (ESM) and legacy test files (CJS).
+import addresses from '../../backend/contracts/contract-addresses.json';
+import heroStakingAbi from '../../backend/contracts/HeroStaking.json';
+import mockHeroNFTAbi from '../../backend/contracts/MockHeroNFT.json';
+import bcoinAbi from '../../backend/contracts/IBEP20.json';
+import tournamentControllerAbi from '../../backend/contracts/TournamentController.json';
+import wagerArenaAbi from '../../backend/contracts/WagerArena.json';
 
-const addresses = require('../../backend/contracts/contract-addresses.json');
-const heroStakingAbi = require('../../backend/contracts/HeroStaking.json');
-const mockHeroNFTAbi = require('../../backend/contracts/MockHeroNFT.json');
-const bcoinAbi = require('../../backend/contracts/IBEP20.json');
-const tournamentControllerAbi = require('../../backend/contracts/TournamentController.json');
-const wagerArenaAbi = require('../../backend/contracts/WagerArena.json');
+// Note: Vite can handle the .json imports automatically.
 
 const contracts = {
     wagerArena: {
@@ -15,15 +15,15 @@ const contracts = {
     },
     heroStaking: {
         address: addresses.heroStakingAddress,
-        abi: heroStakingAbi
+        abi: heroStakingAbi.abi // The ABI is nested in the JSON artifact
     },
     mockHeroNFT: {
         address: addresses.mockHeroNFTAddress,
-        abi: mockHeroNFTAbi
+        abi: mockHeroNFTAbi.abi // The ABI is nested in the JSON artifact
     },
     bcoin: {
         address: addresses.bcoinTokenAddress,
-        abi: bcoinAbi
+        abi: bcoinAbi.abi // The ABI is nested in the JSON artifact
     },
     tournamentController: {
         address: addresses.tournamentControllerAddress,
@@ -32,8 +32,19 @@ const contracts = {
     }
 };
 
-// For CommonJS environments (like old tests)
-module.exports = contracts;
+export const WAGER_ARENA_ABI = contracts.wagerArena.abi;
+export const WAGER_ARENA_ADDRESS = contracts.wagerArena.address;
 
-// For ES Module environments (like Vite)
+export const HERO_STAKING_ABI = contracts.heroStaking.abi;
+export const HERO_STAKING_ADDRESS = contracts.heroStaking.address;
+
+export const MOCK_HERO_NFT_ABI = contracts.mockHeroNFT.abi;
+export const MOCK_HERO_NFT_ADDRESS = contracts.mockHeroNFT.address;
+
+export const BCOIN_ABI = contracts.bcoin.abi;
+export const BCOIN_ADDRESS = contracts.bcoin.address;
+
+export const TOURNAMENT_CONTROLLER_ABI = contracts.tournamentController.abi;
+export const TOURNAMENT_CONTROLLER_ADDRESS = contracts.tournamentController.address;
+
 export default contracts;
