@@ -66,11 +66,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Middleware para responder a requisições OPTIONS (preflight)
-// O navegador envia uma requisição OPTIONS antes de requisições "complexas" (como POST com JSON) para verificar a política de CORS.
-// Esta rota garante que essas requisições de verificação sejam bem-sucedidas.
-app.options('*', cors(corsOptions));
-
 app.use(express.json());
 
 // Servir arquivos estáticos da raiz do projeto (para admin.html, etc.)
