@@ -71,8 +71,11 @@ const config = {
     parent: 'phaser-dom-container' // Especifica o contêiner pai
   },
   scene: [
-    TermsScene,
+    // CRITICAL FIX: LoadingScene must be the first scene. It handles all asset
+    // pre-loading, including the i18n language files, before any other
+    // scene is displayed. This prevents race conditions.
     LoadingScene,
+    TermsScene,
     StartScene,
     AuthChoiceScene,
     MenuScene,

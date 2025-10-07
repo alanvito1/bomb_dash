@@ -7,25 +7,9 @@ const BSC_RPC_URL = process.env.TESTNET_RPC_URL;
 const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
 const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
 
-const PERPETUAL_REWARD_POOL_ABI = [
-    "function startNewCycle()",
-    "function reportSoloGamePlayed(uint256 gameCount)",
-    "function userNonces(address player) view returns (uint256)"
-];
+const PERPETUAL_REWARD_POOL_ABI = require('./contracts/PerpetualRewardPool.json');
 
-// ABI atualizada para incluir as novas funções e eventos do PvP Ranqueado
-const TOURNAMENT_CONTROLLER_ABI = [
-    "function reportMatchResult(uint256 matchId, address winner)",
-    "function payLevelUpFee(address player)",
-    "function payUpgradeFee(address player, uint256 cost)",
-    "function createRankedMatch(address player1, address player2, uint256 tier, uint256 entryFee)",
-    "function enterRankedMatch(uint256 tier, uint256 entryFee)",
-    "event PlayerEnteredRankedQueue(address indexed player, uint256 indexed tier, uint256 entryFee)",
-    "event MatchCreated(uint256 indexed matchId, address[] players, uint256 entryFee, uint256 tier)",
-    "event AltarDonationReceived(address indexed donor, uint256 amount)",
-    "event HeroLeveledUp(address indexed player, uint256 feePaid)",
-    "event HeroUpgradePaid(address indexed player, uint256 costPaid)"
-];
+const TOURNAMENT_CONTROLLER_ABI = require('./contracts/TournamentController.json');
 
 let provider;
 let oracleWallet;
