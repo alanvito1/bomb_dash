@@ -91,10 +91,63 @@ async function getGame(page) {
     return await page.evaluate(() => window.game);
 }
 
+/**
+ * Waits for a specific Phaser scene to become active.
+ * @param {import('@playwright/test').Page} page - The Playwright page object.
+ * @param {string} sceneKey - The key of the scene to wait for.
+ * @param {number} [timeout=10000] - The maximum time to wait in milliseconds.
+ */
+async function waitForScene(page, sceneKey, timeout = 10000) {
+    await page.waitForFunction(
+        (key) => window.game?.scene.getScene(key)?.scene.isActive(),
+        sceneKey,
+        { timeout }
+    );
+}
+
+/**
+ * Finds a game object by its 'name' property within a specific scene and emits an event on it.
+ * @param {import('@playwright/test').Page} page - The Playwright page object.
+ * @param {string} sceneKey - The key of the scene containing the game object.
+ * @param {string} gameObjectName - The name of the game object to find.
+ * @param {string} eventName - The name of the event to emit (e.g., 'pointerdown').
+ */
+async function triggerGameObjectEvent(page, sceneKey, gameObjectName, eventName) {
+    await page.evaluate(
+        ({ sceneKey, gameObjectName, eventName }) => {
+            const scene = window.game.scene.getScene(sceneKey);
+            if (!scene) throw new Error(`Scene with key "${sceneKey}" not found.`);
+
+            // Search recursively in containers
+            const findInChildren = (children) => {
+                for (const child of children) {
+                    if (child.name === gameObjectName) {
+                        return child;
+                    }
+                    if (child.list) {
+                        const found = findInChildren(child.list);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const gameObject = findInChildren(scene.children.list);
+            if (!gameObject) throw new Error(`Game object with name "${gameObjectName}" not found in scene "${sceneKey}".`);
+
+            gameObject.emit(eventName);
+        },
+        { sceneKey, gameObjectName, eventName }
+    );
+}
+
+
 module.exports = {
     setupWallet,
     login,
     getGame,
+    waitForScene,
+    triggerGameObjectEvent,
     BCOIN_CONTRACT,
     TOURNAMENT_CONTROLLER_CONTRACT
 };
