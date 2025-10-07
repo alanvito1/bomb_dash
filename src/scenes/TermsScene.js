@@ -53,6 +53,7 @@ class TermsScene extends Phaser.Scene {
 
         const buttonY = 700;
         this.acceptButton = this.add.container(centerX, buttonY);
+        this.acceptButton.setName('acceptButton'); // Add a stable name for automation
         this.buttonBg = this.add.graphics().fillStyle(0x444444, 1).fillRoundedRect(-175, -25, 350, 50, 10);
         const buttonText = this.add.text(0, 0, LanguageManager.get('terms.button'), {
             fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FFFFFF'
@@ -88,20 +89,9 @@ class TermsScene extends Phaser.Scene {
         this.buttonBg.clear().fillStyle(0x00ff00, 1).fillRoundedRect(-175, -25, 350, 50, 10);
         this.acceptButton.setInteractive({ useHandCursor: true });
 
-        this.acceptButton.on('pointerdown', async () => {
-            this.errorText.setText('');
-            this.acceptButton.disableInteractive().setAlpha(0.5);
-
-            try {
-                console.log('Initiating Web3 Login...');
-                await api.web3Login();
-                console.log('Web3 Login successful. Transitioning to LoadingScene.');
-                this.scene.start(CST.SCENES.LOADING);
-            } catch (error) {
-                console.error('Web3 Login failed:', error);
-                this.errorText.setText('Login failed. Please try again.');
-                this.activateButton(); // Re-enable the button on failure
-            }
+        this.acceptButton.on('pointerdown', () => {
+            console.log('Terms accepted. Transitioning to AuthChoiceScene.');
+            this.scene.start(CST.SCENES.AUTH_CHOICE);
         });
 
         this.acceptButton.on('pointerover', () => this.buttonBg.clear().fillStyle(0x00dd00, 1).fillRoundedRect(-175, -25, 350, 50, 10));

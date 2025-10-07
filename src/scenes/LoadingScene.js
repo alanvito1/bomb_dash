@@ -128,7 +128,7 @@ export default class LoadingScene extends Phaser.Scene {
                 console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
                 this.registry.remove('loggedInUser');
                 this.scene.launch(CST.SCENES.NOTIFICATION);
-                this.scene.start('AuthChoiceScene');
+                this.scene.start('TermsScene');
             }
         };
 
