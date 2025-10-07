@@ -94,6 +94,7 @@
     "back_button": "< Volver",
     "auth_title": "Bomb Dash Web3",
     "auth_web3_login": "Login Web3",
+    "auth_connecting": "Conectando...",
     "altar_error_fetch": "Error: No se pudo obtener el estado del altar.",
     "altar_error_connection": "Error: Falló la conexión.",
     "altar_status_goal": "Meta de la Comunidad: {donated} / {goal} BCOIN\n\n",
