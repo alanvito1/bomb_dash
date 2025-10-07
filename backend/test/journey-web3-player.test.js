@@ -16,7 +16,12 @@ if (chaiHttp.default) {
 } else {
     chai.use(chaiHttp);
 }
-chai.use(chaiAsPromised);
+// Apply the same fix for chai-as-promised
+if (chaiAsPromised.default) {
+    chai.use(chaiAsPromised.default);
+} else {
+    chai.use(chaiAsPromised);
+}
 
 
 describe('Web3 Player Journey: Staking, Competition, and Progression', () => {

@@ -279,8 +279,12 @@ async function processHeroWagerResult(winnerHeroId, loserHeroId, xpWager) {
         // 2. Update Loser's XP and handle De-Leveling
         loserHero.xp = Math.max(0, loserHero.xp - xpWager);
         const loserNewLevel = getLevelFromExperience(loserHero.xp, multiplier);
+
         if (loserNewLevel < loserHero.level) {
             loserHero.level = loserNewLevel;
+            // On de-level, set XP to the maximum for the new level to ensure consistency.
+            const xpForNextLevel = getExperienceForLevel(loserNewLevel + 1, multiplier);
+            loserHero.xp = xpForNextLevel - 1;
         }
         await loserHero.save({ transaction: t });
 
