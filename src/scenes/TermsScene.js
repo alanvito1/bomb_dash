@@ -11,16 +11,21 @@ class TermsScene extends Phaser.Scene {
     }
 
     preload() {
-        LanguageManager.init(this);
+        // Preload should only be used for asset loading.
+        // Async initializations belong in create().
     }
 
-    create() {
-        const checkI18n = setInterval(() => {
-            if (window.i18nReady) {
-                clearInterval(checkI18n);
-                this.createUI();
-            }
-        }, 100);
+    async create() {
+        const loadingText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'Loading Terms...', {
+            fontFamily: 'monospace', fontSize: '20px', fill: '#ffffff'
+        }).setOrigin(0.5);
+
+        // Safely await the asynchronous language initialization.
+        await LanguageManager.init(this);
+
+        // Now that translations are ready, destroy the loading text and build the UI.
+        loadingText.destroy();
+        this.createUI();
     }
 
     createUI() {

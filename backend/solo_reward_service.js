@@ -12,6 +12,9 @@ async function processRewardCycle() {
     // Wrap the entire logic in a try/catch to prevent any single failure
     // from crashing the entire cron job/server.
     try {
+        // FIX: Ensure the oracle is initialized before proceeding. This is critical.
+        await oracle.initOracle();
+
         console.log('[SOLO REWARDS] Starting new reward cycle processing...');
 
         // 1. Tell the contract to start a new cycle.
