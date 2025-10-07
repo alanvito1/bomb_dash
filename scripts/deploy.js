@@ -114,7 +114,7 @@ async function main() {
 
     // 4.7. Deploy HeroStaking
     const HeroStaking = await ethers.getContractFactory("HeroStaking");
-    const heroStaking = await HeroStaking.deploy(mockHeroNFTAddress); // Pass NFT address to constructor
+    const heroStaking = await HeroStaking.deploy(mockHeroNFTAddress, oracle.address); // Pass NFT and Oracle addresses to constructor
     await heroStaking.waitForDeployment();
     const heroStakingAddress = await heroStaking.getAddress();
     console.log("HeroStaking deployed to:", heroStakingAddress);

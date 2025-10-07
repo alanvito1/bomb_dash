@@ -1,10 +1,10 @@
 {
-  "bcoinTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "tournamentControllerAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-  "perpetualRewardPoolAddress": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-  "wagerArenaAddress": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
-  "heroStakingAddress": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-  "mockHeroNFTAddress": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
-  "oracleAddress": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-  "teamWalletAddress": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+  "bcoinTokenAddress": "0x646027a337042515F861f8369dCd87b0380daa76",
+  "tournamentControllerAddress": "0xc67b1269aB6dA9860Bd61516ac971a28EC036E2E",
+  "perpetualRewardPoolAddress": "0xE4Dbc7522Af94800D07B424b2629F42A97EDEd8e",
+  "wagerArenaAddress": "0xa4da9d42Acc7942661311D0C9FF57095B48EbCb1",
+  "heroStakingAddress": "0xcB397A5fB325C157f237592Be3F863BfF34dDD26",
+  "mockHeroNFTAddress": "0x80A522ABd68aeaaC213f486670F65e9571273EE5",
+  "oracleAddress": "0x4a9e067d8324547E8B1Bd2aEEF1b8D2515424D9E",
+  "teamWalletAddress": "0x4a9e067d8324547E8B1Bd2aEEF1b8D2515424D9E"
 }
