@@ -149,6 +149,7 @@ export default class MenuScene extends Phaser.Scene {
             this.scene.pause();
             this.scene.launch(item.scene);
           } else if (item.scene) {
+            this.scene.stop(CST.SCENES.MENU);
             this.scene.start(item.scene, { userData: this.userData });
           }
         })
@@ -174,6 +175,11 @@ export default class MenuScene extends Phaser.Scene {
 
   // Ensure to clean up the event listener when the scene is destroyed
   shutdown() {
+    if (window.DEBUG_MODE) {
+        console.log('[DEBUG] MenuScene: shutdown() called.');
+    }
     GameEventEmitter.off('bcoin-balance-update');
+    // Destroy all children to prevent them from leaking into the next scene
+    this.children.removeAll(true);
   }
 }

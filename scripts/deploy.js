@@ -144,6 +144,22 @@ async function main() {
     console.log(`- Transferred ${ethers.formatUnits(initialPoolFunding, 18)} BCOIN to the reward pool.`);
     console.log(`- PerpetualRewardPool BCOIN balance: ${ethers.formatUnits(poolBalance, 18)}`);
 
+    // 6.5 Fund Test Wallet
+    if (process.env.PRIVATE_KEY) {
+        console.log("\nFunding the primary test wallet...");
+        const testWallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        const testWalletAddress = testWallet.address;
+        const amountToTransfer = ethers.parseUnits("10000", 18); // 10,000 BCOIN
+
+        const tx3 = await bcoin.transfer(testWalletAddress, amountToTransfer);
+        await tx3.wait();
+        const testWalletBalance = await bcoin.balanceOf(testWalletAddress);
+        console.log(`- Transferred ${ethers.formatUnits(amountToTransfer, 18)} BCOIN to test wallet ${testWalletAddress}.`);
+        console.log(`- Test wallet BCOIN balance: ${ethers.formatUnits(testWalletBalance, 18)}`);
+    } else {
+        console.log("\nSkipping test wallet funding: PRIVATE_KEY not found in .env file.");
+    }
+
     // 7. Save Artifacts for Backend
     console.log("\nSaving contract addresses and ABIs for the backend...");
     const backendDir = path.join(__dirname, '..', 'backend', 'contracts');

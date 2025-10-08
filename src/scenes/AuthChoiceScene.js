@@ -65,6 +65,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
                     if (window.DEBUG_MODE) {
                         console.log('[DEBUG] Login successful. Starting transition to MenuScene...');
                     }
+                    this.scene.stop('AuthChoiceScene');
                     this.scene.start('MenuScene');
                 });
 
@@ -76,5 +77,11 @@ export default class AuthChoiceScene extends Phaser.Scene {
                 connectButton.setInteractive({ useHandCursor: true });
             }
         });
+    }
+
+    shutdown() {
+        console.log('--- AuthChoiceScene: SHUTDOWN ---');
+        // Destroy all children created in this scene to prevent them from leaking into the next scene
+        this.children.removeAll(true);
     }
 }

@@ -1,9 +1,9 @@
 const { Sequelize, DataTypes, Op } = require('sequelize');
 const { getExperienceForLevel, getLevelFromExperience } = require('./rpg');
 
-// Use in-memory SQLite database for tests, otherwise use the file specified.
+// Use in-memory SQLite database for tests, otherwise use a dedicated file.
 const isTestEnv = process.env.NODE_ENV === 'test';
-const storage = isTestEnv ? ':memory:' : (process.env.DB_PATH || './ranking.sqlite');
+const storage = isTestEnv ? ':memory:' : (process.env.DB_PATH || './game.sqlite');
 
 const sequelize = new Sequelize({
   dialect: 'sqlite',
@@ -131,9 +131,39 @@ async function seedDatabase() {
     });
 }
 
+/**
+ * A simple migration function to ensure the database schema is up-to-date.
+ * This is crucial for avoiding "no such column" errors when new fields are added to models.
+ * @param {import('sequelize').QueryInterface} queryInterface
+ */
+async function runMigrations(queryInterface) {
+    const tables = await queryInterface.showAllTables();
+
+    if (tables.includes('heroes')) {
+        const tableInfo = await queryInterface.describeTable('heroes');
+        if (!tableInfo.status) {
+            console.log("MIGRATION: Adding 'status' column to heroes table.");
+            await queryInterface.addColumn('heroes', 'status', {
+                type: DataTypes.STRING,
+                defaultValue: 'in_wallet',
+                allowNull: false
+            });
+        }
+        if (!tableInfo.sprite_name) {
+            console.log("MIGRATION: Adding 'sprite_name' column to heroes table.");
+            await queryInterface.addColumn('heroes', 'sprite_name', {
+                type: DataTypes.STRING
+            });
+        }
+    }
+}
+
+
 async function initDb() {
-    // For in-memory db, `force: true` is fine as it's destroyed on process exit.
-    // For file-based db, we avoid `force: true` to not lose data.
+    // For test env, we can force sync. For prod, we run migrations first.
+    if (!isTestEnv) {
+        await runMigrations(sequelize.getQueryInterface());
+    }
     await sequelize.sync({ force: isTestEnv });
     await seedDatabase();
     console.log('Database & tables created!');
@@ -478,14 +508,6 @@ async function addDonationToAltar(amount) {
     return { success: false, changes: 0 };
 }
 
-async function getTop10Ranking() {
-    return User.findAll({
-        attributes: [['wallet_address', 'username'], ['max_score', 'score']],
-        order: [['max_score', 'DESC']],
-        limit: 10
-    });
-}
-
 async function grantRewards(userId, bcoinReward, accountXpReward) {
     return sequelize.transaction(async (t) => {
         const user = await User.findByPk(userId, { transaction: t });
@@ -573,7 +595,6 @@ module.exports = {
     updateGameSetting,
     getAllPlayers,
     updatePlayerStats,
-    getTop10Ranking,
     createHeroForUser,
     getHeroesByUserId,
     updateHeroStatus,
