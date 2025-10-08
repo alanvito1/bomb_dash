@@ -79,20 +79,24 @@ export default class HUDScene extends Phaser.Scene {
     }
 
     createHUD() {
+        const iconStyle = { x: 25, y: 20 };
+        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
+        const levelTextStyle = { x: barStyle.x + barStyle.width + 15, y: 18 };
+
         // Health Bar
-        this.add.text(10, 10, LanguageManager.get('hud_hp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ff0000' });
+        this.add.image(iconStyle.x, iconStyle.y, 'rapid_fire').setDisplaySize(24, 24); // Heart Icon Placeholder
         this.healthBar = this.add.graphics();
         this.updateHealth({ health: this.playerHealth, maxHealth: this.playerMaxHealth });
 
         // Account XP Bar
-        this.add.text(10, 30, LanguageManager.get('hud_acc_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
+        this.add.image(iconStyle.x, iconStyle.y + 25, 'multi_shot').setDisplaySize(24, 24); // Star Icon Placeholder
         this.accountXpBar = this.add.graphics();
-        this.accountLevelText = this.add.text(310, 30, `Lvl ${this.accountLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
+        this.accountLevelText = this.add.text(levelTextStyle.x, levelTextStyle.y + 25, `Lvl ${this.accountLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
 
         // Hero XP Bar
-        this.add.text(10, 50, LanguageManager.get('hud_hero_xp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
+        this.add.image(iconStyle.x, iconStyle.y + 50, 'power_bomb').setDisplaySize(24, 24); // Hero Icon Placeholder
         this.heroXpBar = this.add.graphics();
-        this.heroLevelText = this.add.text(310, 50, `Lvl ${this.heroLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
+        this.heroLevelText = this.add.text(levelTextStyle.x, levelTextStyle.y + 50, `Lvl ${this.heroLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
 
         // BCOIN Balance
         this.bcoinText = this.add.text(this.scale.width - 10, 10, LanguageManager.get('hud_bcoin_loading'), {
@@ -114,17 +118,19 @@ export default class HUDScene extends Phaser.Scene {
     updateHealth({ health, maxHealth }) {
         this.playerHealth = health;
         this.playerMaxHealth = maxHealth;
+        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
 
         this.healthBar.clear();
         this.healthBar.fillStyle(0x333333); // Background
-        this.healthBar.fillRect(100, 12, 200, 12);
+        this.healthBar.fillRect(barStyle.x, barStyle.y, barStyle.width, barStyle.height);
 
         const healthPercentage = Math.max(0, this.playerHealth / this.playerMaxHealth);
         this.healthBar.fillStyle(0xff0000); // Foreground
-        this.healthBar.fillRect(100, 12, 200 * healthPercentage, 12);
+        this.healthBar.fillRect(barStyle.x, barStyle.y, barStyle.width * healthPercentage, barStyle.height);
     }
 
     updateXP(data) {
+        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
         // Handle Account Level and XP
         if (data.accountXP !== undefined && data.accountLevel !== undefined) {
             this.accountXP = data.accountXP;
@@ -139,9 +145,9 @@ export default class HUDScene extends Phaser.Scene {
 
             this.accountXpBar.clear();
             this.accountXpBar.fillStyle(0x333333);
-            this.accountXpBar.fillRect(100, 32, 200, 12);
+            this.accountXpBar.fillRect(barStyle.x, barStyle.y + 25, barStyle.width, barStyle.height);
             this.accountXpBar.fillStyle(0x00ff00);
-            this.accountXpBar.fillRect(100, 32, 200 * accXpPercentage, 12);
+            this.accountXpBar.fillRect(barStyle.x, barStyle.y + 25, barStyle.width * accXpPercentage, barStyle.height);
         }
 
         // Handle Hero Level and XP
@@ -158,9 +164,9 @@ export default class HUDScene extends Phaser.Scene {
 
             this.heroXpBar.clear();
             this.heroXpBar.fillStyle(0x333333);
-            this.heroXpBar.fillRect(100, 52, 200, 12);
+            this.heroXpBar.fillRect(barStyle.x, barStyle.y + 50, barStyle.width, barStyle.height);
             this.heroXpBar.fillStyle(0x00ffff);
-            this.heroXpBar.fillRect(100, 52, 200 * heroXpPercentage, 12);
+            this.heroXpBar.fillRect(barStyle.x, barStyle.y + 50, barStyle.width * heroXpPercentage, barStyle.height);
         }
     }
 

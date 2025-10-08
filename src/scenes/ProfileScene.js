@@ -22,7 +22,7 @@ export default class ProfileScene extends Phaser.Scene {
     const textStyle = { fontSize: '16px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };
     const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
-    this.add.text(centerX, 70, LanguageManager.get('profile_title', 'INVENTORY'), titleStyle).setOrigin(0.5);
+    this.add.text(centerX, 70, LanguageManager.get('profile_title'), titleStyle).setOrigin(0.5);
 
     const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
 
@@ -74,7 +74,7 @@ export default class ProfileScene extends Phaser.Scene {
   }
 
   createBackButton(x, y, style) {
-    const backBtn = this.add.text(x, y, LanguageManager.get('back_button', 'BACK'), style)
+    const backBtn = this.add.text(x, y, LanguageManager.get('back_button'), style)
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
     backBtn.on('pointerdown', () => {
       SoundManager.play(this, 'click');

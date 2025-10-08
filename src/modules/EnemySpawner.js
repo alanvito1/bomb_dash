@@ -117,15 +117,18 @@ export default class EnemySpawner {
     }
     currentMaxEnemies = Math.max(1, currentMaxEnemies);
 
-    this._spawnEnemy(spriteKey, level);
+    // FIX: Set the total number of spawned enemies for the wave upfront
+    // This prevents a race condition where the wave advances prematurely if enemies are killed too quickly.
+    this.scene.enemiesSpawned = currentMaxEnemies;
 
-    if (currentMaxEnemies > 1) {
-      this.scene.time.addEvent({
-        delay: this.spawnInterval,
-        repeat: currentMaxEnemies - 1,
-        callback: () => this._spawnEnemy(spriteKey, level)
-      });
-    }
+    // Schedule the spawning of all enemies
+    this.scene.time.addEvent({
+      delay: this.spawnInterval,
+      repeat: currentMaxEnemies - 1,
+      callback: () => this._spawnEnemy(spriteKey, level)
+    });
+    // Spawn the first one immediately
+    this._spawnEnemy(spriteKey, level);
 
     SoundManager.play(this.scene, 'wave_start');
     console.log(`[ENEMY SPAWNER] Regular wave ${level} (world ${world}) - Spawning up to ${currentMaxEnemies} ${spriteKey} enemies with interval ${this.spawnInterval}ms`);
@@ -173,8 +176,6 @@ export default class EnemySpawner {
     enemy.setDisplaySize(32, 32);
     enemy.hp = enemyHp;
     enemy.isBoss = false;
-
-    this.scene.enemiesSpawned++;
   }
 
   spawnImmediateWave(count = 10, specificSpriteKey = null) {
