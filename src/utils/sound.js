@@ -85,34 +85,44 @@ export default class SoundManager {
   }
 
   static playMusic(scene, key) {
-    if (!scene?.sound) {
-      console.error('[SoundManager] Cena inválida para tocar música:', key);
-      return;
-    }
-
-    this.stopAllMusic();
-
-    let musicInstance = this.music.get(key);
-    if (!musicInstance) {
-      musicInstance = scene.sound.add(key, { loop: true, volume: this.musicVolume });
-      this.music.set(key, musicInstance);
-    }
-
-    musicInstance.setVolume(this.musicVolume);
-
-    const play = () => {
-      if (musicInstance && !musicInstance.isPlaying) {
-        musicInstance.play();
-        console.log(`[SoundManager] 🎵 Música ${key} iniciada.`);
+    return new Promise((resolve, reject) => {
+      if (!scene?.sound) {
+        const errorMsg = `[SoundManager] Invalid scene for playing music: ${key}`;
+        console.error(errorMsg);
+        return reject(new Error(errorMsg));
       }
-    };
 
-    if (musicInstance.isDecoded) {
-      play();
-    } else {
-      console.log(`[SoundManager] Música ${key} não está decodificada. Aguardando...`);
-      musicInstance.once('decoded', play);
-    }
+      if (!scene.sound.exists(key)) {
+        const errorMsg = `[SoundManager] Audio key "${key}" not found in cache.`;
+        console.error(errorMsg);
+        return reject(new Error(errorMsg));
+      }
+
+      this.stopAllMusic();
+
+      let musicInstance = this.music.get(key);
+      if (!musicInstance) {
+        musicInstance = scene.sound.add(key, { loop: true, volume: this.musicVolume });
+        this.music.set(key, musicInstance);
+      }
+
+      musicInstance.setVolume(this.musicVolume);
+
+      const play = () => {
+        if (musicInstance && !musicInstance.isPlaying) {
+          musicInstance.play();
+          console.log(`[SoundManager] 🎵 Music ${key} started.`);
+        }
+        resolve(musicInstance);
+      };
+
+      if (musicInstance.isDecoded) {
+        play();
+      } else {
+        console.log(`[SoundManager] Music ${key} is not decoded. Waiting...`);
+        musicInstance.once('decoded', play);
+      }
+    });
   }
 
   static stop(scene, key) {
@@ -135,9 +145,13 @@ export default class SoundManager {
     });
   }
 
-  static playWorldMusic(scene, worldNumber) {
+  static async playWorldMusic(scene, worldNumber) {
     if (!scene?.sound) return;
     const musicKey = `world${Math.min(worldNumber, 5)}_music`;
-    this.playMusic(scene, musicKey);
+    try {
+      await this.playMusic(scene, musicKey);
+    } catch (error) {
+      console.error(`[SoundManager] Could not play world music for world ${worldNumber}.`, error);
+    }
   }
 }

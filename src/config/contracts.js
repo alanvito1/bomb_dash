@@ -24,7 +24,7 @@ const contracts = {
     },
     bcoin: {
         address: addresses.bcoinTokenAddress,
-        abi: bcoinAbi
+        abi: bcoinAbi.abi
     },
     tournamentController: {
         address: addresses.tournamentControllerAddress,
