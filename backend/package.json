@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "DOTENV_CONFIG_PATH=../.env mocha --require dotenv/config 'test/**/*.test.js'"
+    "test": "NODE_ENV=test DOTENV_CONFIG_PATH=../.env mocha --require dotenv/config 'test/**/*.test.js'"
   },
   "keywords": [],
   "author": "",

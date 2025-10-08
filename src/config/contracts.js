@@ -11,24 +11,27 @@ import wagerArenaAbi from '../../backend/contracts/WagerArena.json';
 const contracts = {
     wagerArena: {
         address: addresses.wagerArenaAddress,
-        abi: wagerArenaAbi.abi
+        abi: wagerArenaAbi
     },
     heroStaking: {
         address: addresses.heroStakingAddress,
-        abi: heroStakingAbi.abi // The ABI is nested in the JSON artifact
+        abi: heroStakingAbi
     },
     mockHeroNFT: {
         address: addresses.mockHeroNFTAddress,
-        abi: mockHeroNFTAbi.abi // The ABI is nested in the JSON artifact
+        abi: mockHeroNFTAbi
     },
     bcoin: {
         address: addresses.bcoinTokenAddress,
-        abi: bcoinAbi.abi // The ABI is nested in the JSON artifact
+        abi: bcoinAbi
     },
     tournamentController: {
         address: addresses.tournamentControllerAddress,
-        // The .abi is important because the JSON file is a full Hardhat artifact
-        abi: tournamentControllerAbi.abi
+        abi: tournamentControllerAbi
+    },
+    perpetualRewardPool: {
+        address: addresses.perpetualRewardPoolAddress,
+        abi: require('../../backend/contracts/PerpetualRewardPool.json') // ABI is not exported by default, so we require it here
     }
 };
 

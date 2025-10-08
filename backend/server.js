@@ -43,6 +43,7 @@ const soloRewardService = require('./solo_reward_service.js'); // Importar o ser
 const stakingListener = require('./staking_listener.js'); // Importar o novo listener de staking
 
 const app = express();
+let isInitialized = false; // Flag to control server readiness
 
 // Defina um "replacer" global para o JSON.stringify que o Express usa
 // Isso converte BigInts para strings, evitando o erro "TypeError: Do not know how to serialize a BigInt".
@@ -58,8 +59,19 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-we
 
 // Configuração do CORS para permitir todas as origens (mais flexível para desenvolvimento)
 app.use(cors());
-
 app.use(express.json());
+
+// --- Middleware de Inicialização (APENAS PARA PRODUÇÃO/DESENVOLVIMENTO) ---
+// Em 'test', os testes gerenciam sua própria inicialização de banco de dados.
+if (process.env.NODE_ENV !== 'test') {
+    app.use((req, res, next) => {
+        if (isInitialized) {
+            return next();
+        }
+        // Se o servidor não estiver pronto, retorna um status 503.
+        res.status(503).json({ success: false, message: 'O servidor está inicializando, por favor, tente novamente em alguns instantes.' });
+    });
+}
 
 // Servir arquivos estáticos da raiz do projeto (para admin.html, etc.)
 app.use(express.static(path.join(__dirname, '..')));
@@ -528,53 +540,71 @@ app.post('/api/debug/assign-mock-hero', verifyAdmin, async (req, res) => {
 // Rota de Debug completa para preparar um jogador de teste com BCOINs e Heróis
 app.post('/api/debug/setup-test-player', verifyAdmin, async (req, res) => {
     const { walletAddress } = req.body;
+    console.log(`[+] DEBUG: Received setup request for ${walletAddress}`);
+
     if (!walletAddress) {
-        return res.status(400).json({ success: false, message: 'O endereço da carteira (walletAddress) é obrigatório.' });
+        return res.status(400).json({ success: false, message: 'walletAddress is required.' });
     }
 
     try {
-        // 1. Find or create the user
+        console.log('[+] DEBUG 1: Finding or creating user...');
         let user = await db.findUserByAddress(walletAddress);
         if (!user) {
-            const newUser = await db.createUserByAddress(walletAddress, 0); // Create with 0 coins initially
+            console.log('[+] DEBUG 1a: User not found, creating...');
+            const newUser = await db.createUserByAddress(walletAddress, 0);
             user = { id: newUser.userId, wallet_address: walletAddress };
+            console.log(`[+] DEBUG 1b: User created with ID ${user.id}`);
         } else {
-            user = await db.getUserByAddress(walletAddress); // Get full user object if they exist
+            console.log('[+] DEBUG 1a: User found, re-fetching full object...');
+            user = await db.getUserByAddress(walletAddress);
+             console.log(`[+] DEBUG 1b: Full user object fetched for ID ${user.id}`);
         }
 
-        // 2. Set BCOIN balance to 10,000
+        console.log(`[+] DEBUG 2: Setting BCOIN balance for user ${user.id}...`);
         await db.updatePlayerStats(user.id, { coins: 10000 });
+        console.log('[+] DEBUG 2a: BCOIN balance set.');
 
-        // 3. Assign mock heroes
+        console.log(`[+] DEBUG 3: Assigning mock heroes to user ${user.id}...`);
         await nft.assignMockHeroes(user.id);
+        console.log('[+] DEBUG 3a: Mock heroes assigned.');
 
-        // 4. Fetch the newly created heroes to find one to stake
+        console.log(`[+] DEBUG 4: Fetching heroes for user ${user.id} to find one to stake...`);
         const heroes = await db.getHeroesByUserId(user.id);
         const mockHeroToStake = heroes.find(h => h.hero_type === 'mock');
+        console.log(`[+] DEBUG 4a: Found hero to stake: ${mockHeroToStake ? mockHeroToStake.id : 'None'}`);
 
         if (mockHeroToStake) {
-            // 5. Update the hero's status to 'staked'
+            console.log(`[+] DEBUG 5: Staking hero ${mockHeroToStake.id}...`);
             await db.updateHeroStats(mockHeroToStake.id, { status: 'staked' });
-            console.log(`[Debug] Mock hero ${mockHeroToStake.id} for user ${user.id} has been set to 'staked'.`);
+            console.log(`[+] DEBUG 5a: Hero ${mockHeroToStake.id} staked.`);
         } else {
-            console.warn(`[Debug] Could not find a mock hero to stake for user ${user.id}.`);
+            console.warn(`[!] DEBUG: Could not find a mock hero to stake for user ${user.id}.`);
         }
 
-        // 6. Fetch the final state of the user to confirm all changes
+        console.log('[+] DEBUG 6: Fetching final user state...');
         const finalUser = await db.getUserByAddress(walletAddress);
         const finalHeroes = await db.getHeroesByUserId(user.id);
+        console.log('[+] DEBUG 6a: Final state fetched.');
 
-        res.json({
+        const responsePayload = {
             success: true,
-            message: `Jogador de teste ${walletAddress} configurado com sucesso.`,
-            player: {
-                ...finalUser.toJSON(),
-                heroes: finalHeroes
-            }
-        });
+            message: `Test player ${walletAddress} configured successfully.`,
+            player: { ...finalUser.toJSON(), heroes: finalHeroes }
+        };
+
+        console.log('[+] DEBUG 7: Sending final success response...');
+        res.json(responsePayload);
+        console.log('[+] DEBUG 7a: Final response sent.');
+
     } catch (error) {
-        console.error(`Erro ao configurar jogador de teste para ${walletAddress}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno ao configurar o jogador de teste.' });
+        console.error(`[!] DEBUG ENDPOINT CRITICAL ERROR for ${walletAddress}:`);
+        console.error(`[!] Message: ${error.message}`);
+        console.error(`[!] Stack: ${error.stack}`);
+        res.status(500).json({
+            success: false,
+            message: 'An internal error occurred.',
+            error: error.message
+        });
     }
 });
 
@@ -1006,7 +1036,11 @@ async function startServer() {
         await stakingListener.initStakingListener();
         console.log("[OK] Listener de staking de heróis iniciado.");
 
-        // 5. Iniciar o Servidor Express
+        // 5. Destravar o servidor para aceitar requisições
+        isInitialized = true;
+        console.log("[OK] Todos os serviços foram inicializados. O servidor está pronto para aceitar conexões.");
+
+        // 6. Iniciar o Servidor Express
         app.listen(PORT, () => {
             console.log("---------------------------------------------");
             console.log(`[OK] Servidor HTTP iniciado e escutando na porta ${PORT}.`);

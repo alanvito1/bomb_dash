@@ -49,11 +49,10 @@ class LanguageManager {
                 console.error('[i18n] Fallback to English also failed. Using empty translations.', fallbackError);
                 this.translations = {}; // Set empty translations to prevent errors.
                 scene.registry.set('translations', this.translations);
-            } finally {
-                // CRITICAL: Always set the flag to true in the catch block path.
-                // This ensures the application does not hang, even if all language files fail to load.
-                window.i18nReady = true;
             }
+            // CRITICAL: Always set the flag to true after the fallback attempt.
+            // This ensures the application does not hang, even if all language files fail to load.
+            window.i18nReady = true;
         }
     }
 

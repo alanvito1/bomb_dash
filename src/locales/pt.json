@@ -71,5 +71,18 @@
   "notification_ranked_confirmed": "Transação confirmada! Entrando na fila...",
   "notification_ranked_in_queue": "Você está na fila! Procurando oponente...",
   "notification_ranked_error": "Falha ao entrar na fila: {error}",
-  "notification_bot_starting": "Iniciando partida de treino..."
+  "notification_bot_starting": "Iniciando partida de treino...",
+  "hud_hp": "PV",
+  "hud_score": "PONTOS: {score}",
+  "char_select_stats_title": "ESTATÍSTICAS",
+  "char_select_stat_hp": "PV: {value}",
+  "char_select_stat_damage": "Dano: {value}",
+  "char_select_stat_speed": "Velocidade: {value}",
+  "menu_confirm": "Confirmar",
+  "menu_cancel": "Cancelar",
+  "hud_acc_xp": "EXP CONTA",
+  "hud_hero_xp": "EXP HERÓI",
+  "menu_bcoin_balance": "BCOIN: {balance}",
+  "hud_buff": "BUFF: {buff}",
+  "hud_buff_time_left": "restam {hours}h {minutes}m"
 }

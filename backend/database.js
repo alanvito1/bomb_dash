@@ -137,45 +137,42 @@ async function seedDatabase() {
  * @param {import('sequelize').QueryInterface} queryInterface
  */
 async function runMigrations(queryInterface) {
+    console.log("MIGRATION: Starting database schema check...");
     const tables = await queryInterface.showAllTables();
-    console.log("MIGRATION: Running database migrations...");
 
-    // --- Migrations for 'users' table ---
+    // --- Users Table Migration ---
     if (tables.includes('users')) {
         const userTableInfo = await queryInterface.describeTable('users');
-        const userColumnsToAdd = {
-            max_score: { type: DataTypes.INTEGER, defaultValue: 0 },
-            account_level: { type: DataTypes.INTEGER, defaultValue: 1 },
-            account_xp: { type: DataTypes.INTEGER, defaultValue: 0 },
-            coins: { type: DataTypes.INTEGER, defaultValue: 1000 },
-            last_score_timestamp: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
-        };
 
-        for (const [column, definition] of Object.entries(userColumnsToAdd)) {
-            if (!userTableInfo[column]) {
-                console.log(`MIGRATION: Adding column '${column}' to 'users' table.`);
-                await queryInterface.addColumn('users', column, definition);
-            }
+        if (!userTableInfo.coins) {
+            console.log("MIGRATION: 'coins' column not found in 'users' table. Adding it now...");
+            await queryInterface.addColumn('users', 'coins', {
+                type: DataTypes.INTEGER,
+                defaultValue: 1000
+            });
+            console.log("MIGRATION: 'coins' column added successfully.");
+        } else {
+            console.log("MIGRATION: 'coins' column already exists in 'users' table.");
         }
     }
 
-    // --- Migrations for 'heroes' table ---
+    // --- Heroes Table Migration ---
     if (tables.includes('heroes')) {
         const heroTableInfo = await queryInterface.describeTable('heroes');
-        const heroColumnsToAdd = {
-            status: { type: DataTypes.STRING, defaultValue: 'in_wallet', allowNull: false },
-            sprite_name: { type: DataTypes.STRING },
-            last_updated: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
-        };
 
-        for (const [column, definition] of Object.entries(heroColumnsToAdd)) {
-            if (!heroTableInfo[column]) {
-                console.log(`MIGRATION: Adding column '${column}' to 'heroes' table.`);
-                await queryInterface.addColumn('heroes', column, definition);
-            }
+        if (!heroTableInfo.sprite_name) {
+            console.log("MIGRATION: 'sprite_name' column not found in 'heroes' table. Adding it now...");
+            await queryInterface.addColumn('heroes', 'sprite_name', {
+                type: DataTypes.STRING,
+                allowNull: true
+            });
+            console.log("MIGRATION: 'sprite_name' column added successfully.");
+        } else {
+            console.log("MIGRATION: 'sprite_name' column already exists in 'heroes' table.");
         }
     }
-    console.log("MIGRATION: Database migrations complete.");
+
+    console.log("MIGRATION: Database schema check complete.");
 }
 
 

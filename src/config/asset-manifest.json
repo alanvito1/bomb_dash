@@ -79,6 +79,7 @@
   "sounds": {
     "music": {
       "menu_music": "src/assets/sounds/menu_music.mp3",
+      "world1_music": "src/assets/sounds/world1_music.mp3",
       "world1": "src/assets/sounds/world1_music.mp3",
       "world2": "src/assets/sounds/world2_music.mp3",
       "world3": "src/assets/sounds/world3_music.mp3",
