@@ -9,9 +9,31 @@ export default class ProfileScene extends Phaser.Scene {
   constructor() {
     super('ProfileScene');
     this.heroCards = [];
+    this.userData = null;
+  }
+
+  init(data) {
+      this.userData = data.userData;
   }
 
   create() {
+    // --- GUARD CLAUSE ---
+    if (!this.userData) {
+        console.error("[ProfileScene] CRITICAL: Scene loaded without user data. Returning to menu.");
+        this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'ERROR: Player data not found.\nReturning to menu.', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            color: '#ff0000',
+            align: 'center',
+            wordWrap: { width: this.scale.width - 40 }
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(3000, () => {
+            this.scene.start('MenuScene');
+        });
+        return; // Stop scene execution
+    }
+
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 

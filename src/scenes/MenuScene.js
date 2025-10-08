@@ -44,6 +44,11 @@ export default class MenuScene extends Phaser.Scene {
     if (window.DEBUG_MODE) {
         console.log('[DEBUG] MenuScene: create() started...');
     }
+
+    // Garante que os dados do usuário sejam carregados do registro global.
+    // Isso corrige o bug onde os dados não eram passados para a ProfileScene.
+    this.userData = this.registry.get('loggedInUser');
+
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 

@@ -129,7 +129,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createUIButtons(this, this.playerStats);
-    SoundManager.playWorldMusic(this, 1);
+    await SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
     this.events.on('resume', () => {
       this.gamePaused = false;
