@@ -1,10 +1,7 @@
-import { CST } from '/src/CST.js';
-import contracts from '/src/config/contracts.js';
-
-// A simple ABI for BCOIN approve function
-const BCOIN_ABI = [
-    "function approve(address spender, uint256 amount) public returns (bool)"
-];
+import { CST } from '../CST.js';
+import contracts from '../config/contracts.js';
+import LanguageManager from '../utils/LanguageManager.js';
+import api from '../api.js';
 
 const PVP_ENTRY_FEE = 10; // 10 BCOIN, must match backend
 
@@ -14,12 +11,13 @@ export default class PvpScene extends Phaser.Scene {
     }
 
     init(data) {
-        this.userData = data.userData;
-        this.web3 = data.web3;
+        // Use optional chaining to prevent crash if data is null/undefined
+        this.userData = data?.userData || this.registry.get('loggedInUser');
+        this.web3 = data?.web3;
     }
 
     create() {
-        this.add.image(0, 0, 'black_bg').setOrigin(0, 0).setDepth(0);
+        this.add.image(0, 0, 'menu_bg_vertical').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height);
 
         // --- Back Button ---
         const backButton = this.add.text(this.game.config.width - 100, 50, "Voltar", {
@@ -54,9 +52,9 @@ export default class PvpScene extends Phaser.Scene {
         this.mode = 'ranked'; // Default mode
         this.contentContainer = this.add.container(); // To hold mode-specific UI
 
-        this.rankedButton = this.createModeButton(200, 120, 'Ranqueado', 'ranked');
-        this.wagerButton = this.createModeButton(this.game.config.width / 2, 120, 'Aposta', 'wager');
-        this.botButton = this.createModeButton(this.game.config.width - 200, 120, 'Contra Bot', 'bot');
+        this.rankedButton = this.createModeButton(200, 120, LanguageManager.get('pvp_ranked'), 'ranked');
+        this.wagerButton = this.createModeButton(this.game.config.width / 2, 120, LanguageManager.get('pvp_wager'), 'wager');
+        this.botButton = this.createModeButton(this.game.config.width - 200, 120, LanguageManager.get('pvp_bot'), 'bot');
 
         this.updateModeUI();
     }

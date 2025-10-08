@@ -1,11 +1,9 @@
-# Histórico de Diretivas
+# Histórico de Diretivas - Protocolo Fênix
 
-## BDW3-FNX-DOCS-01: Criação da Documentação do Protocolo Fênix
-- **Data:** 08/10/2025
-- **Status:** Incorporada
-- **Resumo:** As tarefas desta diretiva foram absorvidas pela diretiva de estabilização total (BDW3-FNX-STABLE-ALL).
+Este documento rastreia todas as diretivas emitidas para o projeto Bomb Dash World, fornecendo um log histórico do desenvolvimento.
 
-## BDW3-FNX-STABLE-ALL: Diretiva de Estabilização Total e Preparação do Ambiente de Teste
-- **Data:** 08/10/2025
-- **Status:** Concluída
-- **Resumo:** Diretiva "omnibus" que consolidou a documentação, corrigiu bugs críticos de backend (migração de DB) e frontend (cenas resilientes, traduções), e preparou o ambiente para testes com um novo endpoint de debug e modo de jogo contra bots. A aplicação foi estabilizada e está pronta para validação.
+| ID da Diretiva             | Assunto                                     | Data de Emissão | Status      | Resumo do Resultado                                                                                             |
+| -------------------------- | ------------------------------------------- | --------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `BDW3-MVP-STABLE`          | Estabilização do MVP e Correção de Bugs     | 2025-09-20      | `Falhou`    | A tentativa de estabilização falhou, revelando problemas mais profundos na base de código e levando à Operação Caronte. |
+| `BDW3-CARONTE-STABLE-FINAL`| Diretiva de Estabilização Total (Operação Caronte) | 2025-10-08      | `Em Andamento` | Consolidação de 5 incidentes críticos em uma única diretiva para tornar o MVP 100% jogável.                   |
+|                            |                                             |                 |             |                                                                                                                 |

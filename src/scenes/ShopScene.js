@@ -14,10 +14,12 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     init(data) {
-        this.hero = data.hero || this.registry.get('selectedHero');
+        // Use optional chaining to prevent crash if data is null/undefined
+        this.hero = data?.hero || this.registry.get('selectedHero');
         if (!this.hero) {
             console.error("ShopScene started without a hero. Returning to menu.");
-            this.scene.start('MenuScene');
+            // Stop this scene and start the menu scene to prevent further errors
+            this.scene.stop('ShopScene').start('MenuScene');
         }
     }
 

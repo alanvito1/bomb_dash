@@ -71,5 +71,18 @@
   "notification_ranked_confirmed": "Transaction confirmed! Entering queue...",
   "notification_ranked_in_queue": "You are in the queue! Searching for an opponent...",
   "notification_ranked_error": "Failed to enter queue: {error}",
-  "notification_bot_starting": "Starting practice match..."
+  "notification_bot_starting": "Starting practice match...",
+  "hud_hp": "HP",
+  "hud_score": "SCORE: {score}",
+  "char_select_stats_title": "STATS",
+  "char_select_stat_hp": "HP: {value}",
+  "char_select_stat_damage": "Damage: {value}",
+  "char_select_stat_speed": "Speed: {value}",
+  "menu_confirm": "Confirm",
+  "menu_cancel": "Cancel",
+  "hud_acc_xp": "ACC XP",
+  "hud_hero_xp": "HERO XP",
+  "menu_bcoin_balance": "BCOIN: {balance}",
+  "hud_buff": "BUFF: {buff}",
+  "hud_buff_time_left": "{hours}h {minutes}m left"
 }
