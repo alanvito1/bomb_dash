@@ -5,6 +5,7 @@ import mockHeroNFTAbi from '../../backend/contracts/MockHeroNFT.json';
 import bcoinAbi from '../../backend/contracts/IBEP20.json';
 import tournamentControllerAbi from '../../backend/contracts/TournamentController.json';
 import wagerArenaAbi from '../../backend/contracts/WagerArena.json';
+import perpetualRewardPoolAbi from '../../backend/contracts/PerpetualRewardPool.json';
 
 // Note: Vite can handle the .json imports automatically.
 
@@ -31,7 +32,7 @@ const contracts = {
     },
     perpetualRewardPool: {
         address: addresses.perpetualRewardPoolAddress,
-        abi: require('../../backend/contracts/PerpetualRewardPool.json') // ABI is not exported by default, so we require it here
+        abi: perpetualRewardPoolAbi // Use the imported ABI directly
     }
 };
 
