@@ -6,86 +6,85 @@ async def main():
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
-        # Capture and print browser console logs for better debugging
         page.on("console", lambda msg: print(f"BROWSER LOG: {msg.text}"))
 
         try:
-            # Add a delay to ensure the dev servers are fully ready
             print("Waiting for servers to start...")
-            await asyncio.sleep(8)
+            await asyncio.sleep(10)
 
-            # Use 'load' to wait for all resources, and increase the overall timeout
             print("Navigating to the application...")
             await page.goto("http://localhost:5173", wait_until="load", timeout=60000)
 
-            # Wait for the game object and i18n to be available
             await page.wait_for_function("!!window.game && window.i18nReady === true", timeout=20000)
             print("Game and i18n are ready.")
 
-            # --- Navigate through the initial scenes ---
-            # 1. Wait for TermsScene to be fully constructed before interacting with it.
-            # We do this by waiting for the last element created in its UI: the scroll prompt text.
+            # --- Step 1: Verify TermsScene and Scroll ---
             print("Waiting for TermsScene to finish creating UI...")
+            # Wait for the textObject to be defined on the scene, which happens late in createUI()
             await page.wait_for_function("""() => {
                 const scene = window.game.scene.getScene('TermsScene');
-                if (!scene) return false;
-
-                // Recursively search for the scroll prompt text
-                const findText = (children) => {
-                    for (const child of children) {
-                        if (child.type === 'Text' && child.text.includes('Scroll to the end')) {
-                            return true;
-                        }
-                        if (child.list && findText(child.list)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                };
-                return findText(scene.children.list);
+                return scene && scene.textObject;
             }""", timeout=15000)
-            print("TermsScene UI is ready. Activating and clicking accept button...")
+            print("TermsScene UI is ready.")
 
-            # Now that we know the UI is built, we can safely activate and click the button.
+            # Programmatically scroll to the bottom to activate the button
             await page.evaluate("""() => {
                 const scene = window.game.scene.getScene('TermsScene');
-                scene.activateButton();
+                if (!scene.textObject) throw new Error('Terms text object not found.');
+
+                // Use the properties now attached to the scene instance
+                scene.textObject.y = -scene.maxScroll;
+
+                if (typeof scene.checkScrollAndActivate === 'function') {
+                    scene.checkScrollAndActivate();
+                } else {
+                    throw new Error('checkScrollAndActivate function not found.');
+                }
+            }""")
+            print("Scrolled to the bottom of the terms.")
+            await asyncio.sleep(1) # Wait for button activation
+            await page.screenshot(path="jules-scratch/verification/01_terms_scrolled_button_active.png")
+
+            # --- Step 2: Accept Terms and Transition to AuthChoiceScene ---
+            print("Clicking the activated accept button...")
+            await page.evaluate("""() => {
+                const scene = window.game.scene.getScene('TermsScene');
+                if (!scene.acceptButton.input.enabled) throw new Error('Accept button is not interactive.');
                 scene.acceptButton.emit('pointerdown');
             }""")
 
-            # 2. Wait for AuthChoiceScene to become active
             await page.wait_for_function("window.game.scene.isActive('AuthChoiceScene')", timeout=15000)
-            print("AuthChoiceScene is active.")
+            print("Successfully transitioned to AuthChoiceScene.")
+            await page.screenshot(path="jules-scratch/verification/02_auth_choice_scene.png")
 
-            # --- Trigger Web3Modal ---
-            # Find the "Connect Wallet" button by its stable name and click it
+            # --- Step 3: Trigger and Verify Web3Modal ---
+            print("Waiting for Connect Wallet button...")
             await page.wait_for_function("""() => {
                 const scene = window.game.scene.getScene('AuthChoiceScene');
                 const button = scene.children.getByName('web3LoginButton');
                 return button && button.active;
             }""", timeout=15000)
-            print("Connect button is ready. Clicking it...")
 
+            print("Clicking Connect Wallet button...")
             await page.evaluate("""() => {
                 const scene = window.game.scene.getScene('AuthChoiceScene');
-                const button = scene.children.getByName('web3LoginButton');
-                button.emit('pointerdown');
+                scene.children.getByName('web3LoginButton').emit('pointerdown');
             }""")
 
-            # --- Verify Web3Modal ---
-            print("Waiting for Web3Modal to appear...")
+            print("Waiting for Web3Modal UI...")
             modal = page.locator("w3m-modal")
             await expect(modal).to_be_visible(timeout=15000)
 
             print("Web3Modal is visible!")
             await asyncio.sleep(2) # Allow modal animation to complete
 
-            await page.screenshot(path="jules-scratch/verification/web3modal_verification.png")
-            print("Screenshot of Web3Modal taken successfully.")
+            await page.screenshot(path="jules-scratch/verification/03_web3modal_visible.png")
+            print("Final verification screenshot taken successfully.")
 
         except Exception as e:
             print(f"An error occurred during verification: {e}")
             await page.screenshot(path="jules-scratch/verification/error.png")
+            raise
         finally:
             await browser.close()
 
