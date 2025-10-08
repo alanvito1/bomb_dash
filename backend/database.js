@@ -138,24 +138,44 @@ async function seedDatabase() {
  */
 async function runMigrations(queryInterface) {
     const tables = await queryInterface.showAllTables();
+    console.log("MIGRATION: Running database migrations...");
 
-    if (tables.includes('heroes')) {
-        const tableInfo = await queryInterface.describeTable('heroes');
-        if (!tableInfo.status) {
-            console.log("MIGRATION: Adding 'status' column to heroes table.");
-            await queryInterface.addColumn('heroes', 'status', {
-                type: DataTypes.STRING,
-                defaultValue: 'in_wallet',
-                allowNull: false
-            });
-        }
-        if (!tableInfo.sprite_name) {
-            console.log("MIGRATION: Adding 'sprite_name' column to heroes table.");
-            await queryInterface.addColumn('heroes', 'sprite_name', {
-                type: DataTypes.STRING
-            });
+    // --- Migrations for 'users' table ---
+    if (tables.includes('users')) {
+        const userTableInfo = await queryInterface.describeTable('users');
+        const userColumnsToAdd = {
+            max_score: { type: DataTypes.INTEGER, defaultValue: 0 },
+            account_level: { type: DataTypes.INTEGER, defaultValue: 1 },
+            account_xp: { type: DataTypes.INTEGER, defaultValue: 0 },
+            coins: { type: DataTypes.INTEGER, defaultValue: 1000 },
+            last_score_timestamp: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+        };
+
+        for (const [column, definition] of Object.entries(userColumnsToAdd)) {
+            if (!userTableInfo[column]) {
+                console.log(`MIGRATION: Adding column '${column}' to 'users' table.`);
+                await queryInterface.addColumn('users', column, definition);
+            }
         }
     }
+
+    // --- Migrations for 'heroes' table ---
+    if (tables.includes('heroes')) {
+        const heroTableInfo = await queryInterface.describeTable('heroes');
+        const heroColumnsToAdd = {
+            status: { type: DataTypes.STRING, defaultValue: 'in_wallet', allowNull: false },
+            sprite_name: { type: DataTypes.STRING },
+            last_updated: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+        };
+
+        for (const [column, definition] of Object.entries(heroColumnsToAdd)) {
+            if (!heroTableInfo[column]) {
+                console.log(`MIGRATION: Adding column '${column}' to 'heroes' table.`);
+                await queryInterface.addColumn('heroes', column, definition);
+            }
+        }
+    }
+    console.log("MIGRATION: Database migrations complete.");
 }
 
 
@@ -421,7 +441,8 @@ async function updateHeroStatus(nftId, newStatus) {
 }
 
 async function updateHeroStats(heroId, stats) {
-    const validFields = ['level', 'xp', 'hp', 'maxHp', 'damage', 'speed', 'extraLives', 'fireRate', 'bombSize', 'multiShot'];
+    // Add 'status' to the list of fields that can be updated.
+    const validFields = ['level', 'xp', 'hp', 'maxHp', 'damage', 'speed', 'extraLives', 'fireRate', 'bombSize', 'multiShot', 'status'];
     const updateData = {};
      for (const key in stats) {
         if (validFields.includes(key)) {
