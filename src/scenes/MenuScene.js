@@ -120,41 +120,53 @@ export default class MenuScene extends Phaser.Scene {
       { name: 'shop_button', label: LanguageManager.get('menu_shop'), scene: CST.SCENES.SHOP },
       { name: 'profile_button', label: LanguageManager.get('profile_title'), scene: CST.SCENES.PROFILE },
       { name: 'config_button', label: "Settings", scene: CST.SCENES.CONFIG },
-      { name: 'logout_button', label: LanguageManager.get('menu_logout'), action: 'logout', color: '#FF6347' }
+      { name: 'logout_button', label: LanguageManager.get('menu_logout'), action: 'logout' }
     ];
 
     const buttonStartY = centerY - 120;
-    const buttonSpacing = 55;
+    const buttonSpacing = 65;
 
     menuItems.forEach((item, i) => {
-      const button = this.add.text(centerX, buttonStartY + i * buttonSpacing, item.label, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '16px',
-        fill: item.color || '#00ffff',
-        backgroundColor: '#000000cc',
-        padding: { x: 20, y: 12 },
-        align: 'center'
-      });
-      button.setName(item.name); // Assign a stable name for automation
-      button.setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          SoundManager.play(this, 'click');
-          if (item.action === 'logout') {
-            api.logout();
-            this.registry.remove('loggedInUser');
-            this.scene.start(CST.SCENES.AUTH_CHOICE);
-          } else if (item.scene === CST.SCENES.CONFIG) {
-            // Launch the config scene as an overlay
-            this.scene.pause();
-            this.scene.launch(item.scene);
-          } else if (item.scene) {
-            this.scene.stop(CST.SCENES.MENU);
-            this.scene.start(item.scene, { userData: this.userData });
-          }
-        })
-        .on('pointerover', () => button.setStyle({ fill: '#ffffff' }))
-        .on('pointerout', () => button.setStyle({ fill: item.color || '#00ffff' }));
+        const buttonY = buttonStartY + i * buttonSpacing;
+        const button = this.add.image(centerX, buttonY, 'btn_menu').setOrigin(0.5);
+        button.setDisplaySize(280, 50);
+
+        const buttonText = this.add.text(centerX, buttonY, item.label, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            fill: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        button.setName(item.name);
+        button.setInteractive({ useHandCursor: true });
+
+        button.on('pointerover', () => {
+            button.setTint(0xcccccc);
+            buttonText.setTint(0xffd700);
+        });
+        button.on('pointerout', () => {
+            button.clearTint();
+            buttonText.clearTint();
+        });
+        button.on('pointerdown', () => {
+            button.setTint(0xaaaaaa);
+        });
+        button.on('pointerup', () => {
+            button.clearTint();
+            SoundManager.play(this, 'click');
+            if (item.action === 'logout') {
+                api.logout();
+                this.registry.remove('loggedInUser');
+                this.scene.start(CST.SCENES.AUTH_CHOICE);
+            } else if (item.scene === CST.SCENES.CONFIG) {
+                this.scene.pause();
+                this.scene.launch(item.scene);
+            } else if (item.scene) {
+                this.scene.stop(CST.SCENES.MENU);
+                this.scene.start(item.scene, { userData: this.userData });
+            }
+        });
     });
   }
 
