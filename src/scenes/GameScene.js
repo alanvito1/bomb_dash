@@ -71,7 +71,27 @@ export default class GameScene extends Phaser.Scene {
         return; // Stop scene execution
     }
 
-    const selectedHero = this.registry.get('selectedHero') || {};
+    const selectedHero = this.registry.get('selectedHero');
+
+    // --- GUARD CLAUSE ---
+    // If no hero was selected or passed, the game cannot proceed.
+    if (!selectedHero || !selectedHero.id) {
+        console.error("[GameScene] CRITICAL: Scene started without a valid selected hero. Aborting.");
+        // We can't use LanguageManager here as it might not be ready.
+        this.add.text(this.scale.width / 2, this.scale.height / 2, 'ERROR: No hero data found.\nReturning to menu.', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            color: '#ff0000',
+            align: 'center',
+            wordWrap: { width: this.scale.width - 40 }
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(3000, () => {
+            this.scene.start('MenuScene');
+        });
+        return; // Stop scene execution
+    }
+
 
     this.playerStats = {
       ...this.DEFAULT_STATS,

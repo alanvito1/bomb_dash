@@ -539,8 +539,7 @@ app.post('/api/debug/setup-test-player', verifyAdmin, async (req, res) => {
             const newUser = await db.createUserByAddress(walletAddress, 0); // Create with 0 coins initially
             user = { id: newUser.userId, wallet_address: walletAddress };
         } else {
-            // Get full user object if they exist
-            user = await db.getUserByAddress(walletAddress);
+            user = await db.getUserByAddress(walletAddress); // Get full user object if they exist
         }
 
         // 2. Set BCOIN balance to 10,000
@@ -549,7 +548,19 @@ app.post('/api/debug/setup-test-player', verifyAdmin, async (req, res) => {
         // 3. Assign mock heroes
         await nft.assignMockHeroes(user.id);
 
-        // 4. Fetch the final state of the user to confirm
+        // 4. Fetch the newly created heroes to find one to stake
+        const heroes = await db.getHeroesByUserId(user.id);
+        const mockHeroToStake = heroes.find(h => h.hero_type === 'mock');
+
+        if (mockHeroToStake) {
+            // 5. Update the hero's status to 'staked'
+            await db.updateHeroStats(mockHeroToStake.id, { status: 'staked' });
+            console.log(`[Debug] Mock hero ${mockHeroToStake.id} for user ${user.id} has been set to 'staked'.`);
+        } else {
+            console.warn(`[Debug] Could not find a mock hero to stake for user ${user.id}.`);
+        }
+
+        // 6. Fetch the final state of the user to confirm all changes
         const finalUser = await db.getUserByAddress(walletAddress);
         const finalHeroes = await db.getHeroesByUserId(user.id);
 
@@ -621,86 +632,6 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
 });
 
 
-app.post('/api/pvp/wager/enter', verifyToken, async (req, res) => {
-    const { tierId } = req.body;
-    if (!tierId) {
-        return res.status(400).json({ success: false, message: 'O ID do tier de aposta é obrigatório.' });
-    }
-
-    try {
-        const user = await db.getUserByAddress(req.user.address);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
-        }
-
-        const tier = await db.getWagerTier(tierId);
-        if (!tier) {
-            return res.status(404).json({ success: false, message: 'Tier de aposta não encontrado.' });
-        }
-
-        // Check if the user has enough BCOIN (coins) and XP
-        if (user.coins < tier.bcoin_cost) {
-            return res.status(403).json({ success: false, message: `BCOINs insuficientes. Necessário: ${tier.bcoin_cost}, Você tem: ${user.coins}.` });
-        }
-        if (user.xp < tier.xp_cost) {
-            return res.status(403).json({ success: false, message: `XP insuficiente. Necessário: ${tier.xp_cost}, Você tem: ${user.xp}.` });
-        }
-
-        // If checks pass, the client is now responsible for calling the smart contract
-        res.json({
-            success: true,
-            message: 'Você é elegível para esta aposta. Prossiga com a transação no contrato.',
-            tier: tier
-        });
-
-    } catch (error) {
-        console.error("Erro em /api/pvp/wager/enter:", error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao entrar na fila de aposta.' });
-    }
-});
-
-app.post('/api/pvp/wager/report', verifyToken, async (req, res) => {
-    const { matchId } = req.body;
-    if (!matchId) {
-        return res.status(400).json({ success: false, message: 'O ID da partida é obrigatório.' });
-    }
-
-    try {
-        const match = await db.getWagerMatch(matchId);
-        if (!match) {
-            return res.status(404).json({ success: false, message: 'Partida não encontrada.' });
-        }
-
-        if (match.status !== 'pending') {
-            return res.status(403).json({ success: false, message: `Esta partida já foi finalizada. Vencedor: ${match.winner_address}` });
-        }
-
-        const winnerAddress = req.user.address;
-        let loserAddress;
-
-        if (winnerAddress === match.player1_address) {
-            loserAddress = match.player2_address;
-        } else if (winnerAddress === match.player2_address) {
-            loserAddress = match.player1_address;
-        } else {
-            return res.status(403).json({ success: false, message: 'Você não é um participante desta partida.' });
-        }
-
-        console.log(`Reportando resultado da partida ${matchId}. Vencedor (auto-reportado): ${winnerAddress}`);
-
-        // Acionar o oráculo para a liquidação on-chain e off-chain
-        await oracle.reportWagerMatchResult(match.match_id, winnerAddress, loserAddress, match.tier_id);
-
-        // Atualizar o status da partida no banco de dados
-        await db.updateWagerMatch(match.match_id, 'completed', winnerAddress);
-
-        res.json({ success: true, message: 'Resultado da partida reportado e processado com sucesso!' });
-
-    } catch (error) {
-        console.error(`Erro ao reportar resultado da partida ${matchId}:`, error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao reportar o resultado.' });
-    }
-});
 
 app.post('/api/tournaments/report-match', verifyToken, async (req, res) => {
     const { tournamentId, matchId, winnerAddress } = req.body;
