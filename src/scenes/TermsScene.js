@@ -64,15 +64,49 @@ class TermsScene extends Phaser.Scene {
             fontFamily: 'Arial', fontSize: '14px', fill: '#ff4d4d', align: 'center'
         }).setOrigin(0.5);
 
-        const maxScroll = Math.max(0, textObject.height - (scrollableAreaHeight - 20));
-        let canAccept = maxScroll <= 0;
+        // Assign key variables to the scene's context (`this`) to make them accessible
+        // to other methods and for easier testing via Playwright's `evaluate`.
+        this.textObject = textObject;
+        this.maxScroll = Math.max(0, this.textObject.height - (scrollableAreaHeight - 20));
+        this.canAccept = this.maxScroll <= 0;
 
-        if (!canAccept) {
-            this.input.on('wheel', () => {
-                textObject.y = Phaser.Math.Clamp(textObject.y - (this.input.mouse.wheel.deltaY * 0.5), -maxScroll, 0);
-                if (textObject.y <= -maxScroll && !canAccept) {
-                    canAccept = true;
-                    this.activateButton();
+        // Define checkScrollAndActivate as a method of the scene class.
+        this.checkScrollAndActivate = () => {
+            if (!this.canAccept && this.textObject.y <= -this.maxScroll) {
+                this.canAccept = true;
+                this.activateButton();
+            }
+        };
+
+        if (!this.canAccept) {
+            // Use the class method for the check
+            this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+                this.textObject.y = Phaser.Math.Clamp(this.textObject.y - (deltaY * 0.5), -this.maxScroll, 0);
+                this.checkScrollAndActivate();
+            });
+
+            let isDragging = false;
+            let startY = 0;
+            this.input.on('pointerdown', (pointer) => {
+                if (pointer.y >= scrollableAreaY && pointer.y <= scrollableAreaY + scrollableAreaHeight) {
+                    isDragging = true;
+                    startY = pointer.y - this.textObject.y;
+                }
+            });
+
+            this.input.on('pointerup', () => {
+                isDragging = false;
+            });
+
+            this.input.on('pointerleave', () => {
+                isDragging = false;
+            });
+
+            this.input.on('pointermove', (pointer) => {
+                if (isDragging) {
+                    const newY = pointer.y - startY;
+                    this.textObject.y = Phaser.Math.Clamp(newY, -this.maxScroll, 0);
+                    this.checkScrollAndActivate(); // Use the class method here as well
                 }
             });
         } else {

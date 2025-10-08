@@ -1,6 +1,5 @@
 import { SiweMessage } from 'siwe';
 import * as contracts from './config/contracts.js';
-import web3Modal from './web3/web3modal-client.js'; // Import the new Web3Modal client
 
 const { address: TOURNAMENT_CONTROLLER_ADDRESS, abi: TOURNAMENT_CONTROLLER_ABI } = contracts.default.tournamentController;
 
@@ -65,78 +64,57 @@ class ApiClient {
     // --- Métodos de Autenticação ---
 
     async web3Login() {
-        return new Promise(async (resolve, reject) => {
+        if (!window.ethereum) throw new Error('MetaMask not detected.');
+
+        try {
             const { ethers } = await import('ethers');
-            let isConnected = false;
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
+            const chainId = (await provider.getNetwork()).chainId;
 
-            const unsubscribeProvider = web3Modal.subscribeProvider(async (state) => {
-                if (state.isConnected && !isConnected) {
-                    isConnected = true; // Prevent re-entry
-                    unsubscribeAll(); // Clean up listeners immediately
+            // 1. Fetch nonce from the backend
+            const { nonce } = await this.fetch('/auth/nonce', {}, false);
 
-                    try {
-                        const provider = web3Modal.getWalletProvider();
-                        if (!provider) throw new Error("Wallet provider not found after connection.");
+            // 2. AGGRESSIVE NONCE VALIDATION
+            if (!nonce || typeof nonce !== 'string' || nonce.length < 8) {
+                throw new Error(`Invalid nonce received from server: ${nonce}`);
+            }
 
-                        const ethersProvider = new ethers.BrowserProvider(provider);
-                        const signer = await ethersProvider.getSigner();
-                        const address = await signer.getAddress();
-                        const chainId = web3Modal.getChainId();
-
-                        const { nonce } = await this.fetch('/auth/nonce', {}, false);
-                        if (!nonce || typeof nonce !== 'string' || nonce.length < 8) {
-                            throw new Error(`Invalid nonce from server: ${nonce}`);
-                        }
-
-                        const siweMessage = new SiweMessage({
-                            domain: window.location.host,
-                            address,
-                            statement: 'Sign in to Bomb Dash Web3 to continue.',
-                            uri: window.location.origin,
-                            version: '1',
-                            chainId: Number(chainId),
-                            nonce: nonce,
-                            issuedAt: new Date().toISOString(),
-                        });
-                        const messageToSign = siweMessage.prepareMessage();
-                        const signature = await signer.signMessage(messageToSign);
-
-                        const verifyData = await this.fetch('/auth/verify', {
-                            method: 'POST',
-                            body: JSON.stringify({ message: siweMessage, signature }),
-                        }, false);
-
-                        if (verifyData.success && verifyData.token) {
-                            this.setJwtToken(verifyData.token);
-                            console.log('SIWE Login successful!');
-                            resolve(verifyData);
-                        } else {
-                            throw new Error(verifyData.message || 'SIWE server-side verification failed.');
-                        }
-                    } catch (err) {
-                        reject(err);
-                    } finally {
-                        await web3Modal.close();
-                    }
-                }
+            // 3. Create the SIWE message with all recommended security fields
+            const siweMessage = new SiweMessage({
+                domain: window.location.host,
+                address,
+                statement: 'Sign in to Bomb Dash Web3 to continue.',
+                uri: window.location.origin,
+                version: '1',
+                chainId: Number(chainId),
+                nonce: nonce,
+                issuedAt: new Date().toISOString(),
+                expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // Signature is valid for 5 minutes
             });
 
-            const unsubscribeState = web3Modal.subscribeState(async (state) => {
-                if (!state.open && !isConnected) {
-                    // Modal was closed by the user without connecting
-                    unsubscribeAll();
-                    reject(new Error('User closed the wallet selection modal.'));
-                }
-            });
+            const messageToSign = siweMessage.prepareMessage();
+            const signature = await signer.signMessage(messageToSign);
 
-            const unsubscribeAll = () => {
-                unsubscribeProvider();
-                unsubscribeState();
-            };
+            // Send the ORIGINAL message object and the signature to the backend
+            const verifyData = await this.fetch('/auth/verify', {
+                method: 'POST',
+                body: JSON.stringify({ message: siweMessage, signature }),
+            }, false);
 
-            // Open the modal to start the process
-            await web3Modal.open();
-        });
+            if (verifyData.success && verifyData.token) {
+                this.setJwtToken(verifyData.token);
+                console.log('SIWE Login successful!');
+                return verifyData;
+            } else {
+                throw new Error(verifyData.message || 'SIWE server-side verification failed.');
+            }
+
+        } catch (error) {
+            console.error('Authentication failed:', error);
+            throw error;
+        }
     }
 
     /**
