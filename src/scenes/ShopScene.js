@@ -29,6 +29,20 @@ export default class ShopScene extends Phaser.Scene {
         this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
         this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 40);
 
+        // --- Guard Clause ---
+        if (!this.hero) {
+            this.add.text(centerX, centerY, LanguageManager.get('shop_hero_not_found'), {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '18px',
+                color: '#ff0000',
+                align: 'center',
+                wordWrap: { width: this.scale.width - 60 }
+            }).setOrigin(0.5);
+
+            this.time.delayedCall(3000, () => this.scene.start('MenuScene'));
+            return; // Stop execution to prevent crash
+        }
+
         // --- Visual Polish: Standard Font Styles ---
         const titleStyle = { fontSize: '24px', fill: '#FFD700', fontFamily: '"Press Start 2P"', stroke: '#000', strokeThickness: 4 };
         const textStyle = { fontSize: '14px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };

@@ -525,6 +525,48 @@ app.post('/api/debug/assign-mock-hero', verifyAdmin, async (req, res) => {
     }
 });
 
+// Rota de Debug completa para preparar um jogador de teste com BCOINs e Heróis
+app.post('/api/debug/setup-test-player', verifyAdmin, async (req, res) => {
+    const { walletAddress } = req.body;
+    if (!walletAddress) {
+        return res.status(400).json({ success: false, message: 'O endereço da carteira (walletAddress) é obrigatório.' });
+    }
+
+    try {
+        // 1. Find or create the user
+        let user = await db.findUserByAddress(walletAddress);
+        if (!user) {
+            const newUser = await db.createUserByAddress(walletAddress, 0); // Create with 0 coins initially
+            user = { id: newUser.userId, wallet_address: walletAddress };
+        } else {
+            // Get full user object if they exist
+            user = await db.getUserByAddress(walletAddress);
+        }
+
+        // 2. Set BCOIN balance to 10,000
+        await db.updatePlayerStats(user.id, { coins: 10000 });
+
+        // 3. Assign mock heroes
+        await nft.assignMockHeroes(user.id);
+
+        // 4. Fetch the final state of the user to confirm
+        const finalUser = await db.getUserByAddress(walletAddress);
+        const finalHeroes = await db.getHeroesByUserId(user.id);
+
+        res.json({
+            success: true,
+            message: `Jogador de teste ${walletAddress} configurado com sucesso.`,
+            player: {
+                ...finalUser.toJSON(),
+                heroes: finalHeroes
+            }
+        });
+    } catch (error) {
+        console.error(`Erro ao configurar jogador de teste para ${walletAddress}:`, error);
+        res.status(500).json({ success: false, message: 'Erro interno ao configurar o jogador de teste.' });
+    }
+});
+
 app.post('/api/game/checkpoint', verifyToken, async (req, res) => {
     const { waveNumber } = req.body;
     if (typeof waveNumber === 'undefined' || waveNumber < 0) {
@@ -708,17 +750,6 @@ app.post('/api/rewards/generate-claim-signature', verifyToken, async (req, res) 
 // Rota para verificar o status atual do PvP
 app.get('/api/pvp/status', (req, res) => {
     res.json({ success: true, status: gameState.getPvpStatus() });
-});
-
-// Rota para obter o ranking dos top 10 jogadores
-app.get('/api/ranking', async (req, res) => {
-    try {
-        const ranking = await db.getTop10Ranking();
-        res.json({ success: true, ranking });
-    } catch (error) {
-        console.error("Erro ao buscar ranking:", error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar o ranking.' });
-    }
 });
 
 // Rota pública para obter as configurações do jogo (ex: monster scaling factor)

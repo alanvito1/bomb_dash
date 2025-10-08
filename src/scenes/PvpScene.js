@@ -21,11 +21,6 @@ export default class PvpScene extends Phaser.Scene {
     create() {
         this.add.image(0, 0, 'black_bg').setOrigin(0, 0).setDepth(0);
 
-        // --- Main Title ---
-        this.titleText = this.add.text(this.game.config.width / 2, 50, "PvP 1v1", {
-            fontFamily: '"Press Start 2P"', fontSize: '48px', color: '#FFD700', align: 'center'
-        }).setOrigin(0.5).setDepth(1);
-
         // --- Back Button ---
         const backButton = this.add.text(this.game.config.width - 100, 50, "Voltar", {
             fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#00ffff'
@@ -34,12 +29,34 @@ export default class PvpScene extends Phaser.Scene {
         backButton.on('pointerover', () => backButton.setStyle({ fill: '#ffffff' }));
         backButton.on('pointerout', () => backButton.setStyle({ fill: '#00ffff' }));
 
+        // --- Guard Clause ---
+        if (!this.userData || !this.userData.heroes) {
+            this.add.text(this.game.config.width / 2, this.game.config.height / 2, 'Erro: Dados do jogador não encontrados.\nRetornando ao menu...', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '18px',
+                color: '#ff0000',
+                align: 'center',
+                wordWrap: { width: this.game.config.width - 40 }
+            }).setOrigin(0.5);
+
+            this.time.delayedCall(3000, () => {
+                this.scene.start(CST.SCENES.MENU);
+            });
+            return; // Stop execution to prevent crashes
+        }
+
+        // --- Main Title ---
+        this.titleText = this.add.text(this.game.config.width / 2, 50, "PvP 1v1", {
+            fontFamily: '"Press Start 2P"', fontSize: '48px', color: '#FFD700', align: 'center'
+        }).setOrigin(0.5).setDepth(1);
+
         // --- Mode Selection ---
         this.mode = 'ranked'; // Default mode
         this.contentContainer = this.add.container(); // To hold mode-specific UI
 
-        this.rankedButton = this.createModeButton(250, 120, 'Ranqueado', 'ranked');
-        this.wagerButton = this.createModeButton(this.game.config.width - 250, 120, 'Arena de Aposta', 'wager');
+        this.rankedButton = this.createModeButton(200, 120, 'Ranqueado', 'ranked');
+        this.wagerButton = this.createModeButton(this.game.config.width / 2, 120, 'Aposta', 'wager');
+        this.botButton = this.createModeButton(this.game.config.width - 200, 120, 'Contra Bot', 'bot');
 
         this.updateModeUI();
     }
@@ -68,19 +85,29 @@ export default class PvpScene extends Phaser.Scene {
         this.selectedHeroCard = null;
 
 
+        this.rankedButton.setStyle({ fill: '#888888' }).setAlpha(0.7);
+        this.wagerButton.setStyle({ fill: '#888888' }).setAlpha(0.7);
+        this.botButton.setStyle({ fill: '#888888' }).setAlpha(0.7);
+
         if (this.mode === 'ranked') {
             this.rankedButton.setStyle({ fill: '#FFD700' }).setAlpha(1);
-            this.wagerButton.setStyle({ fill: '#888888' }).setAlpha(0.7);
             this.drawRankedUI();
-        } else { // wager mode
+        } else if (this.mode === 'wager') {
             this.wagerButton.setStyle({ fill: '#FFD700' }).setAlpha(1);
-            this.rankedButton.setStyle({ fill: '#888888' }).setAlpha(0.7);
             this.drawWagerUI();
+        } else { // bot mode
+            this.botButton.setStyle({ fill: '#FFD700' }).setAlpha(1);
+            this.drawBotUI();
         }
     }
 
     drawRankedUI() {
         this.titleText.setText("PvP 1v1 Ranqueado");
+        this.displayHeroes();
+    }
+
+    drawBotUI() {
+        this.titleText.setText("Treino Contra Bot");
         this.displayHeroes();
     }
 
@@ -372,8 +399,23 @@ export default class PvpScene extends Phaser.Scene {
             this.enterQueueButton.destroy();
         }
 
-        this.enterQueueButton = this.add.text(this.game.config.width / 2, this.game.config.height - 100, `Entrar na Fila (Taxa: ${PVP_ENTRY_FEE} BCOIN)`, {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#00ff00', backgroundColor: '#000000cc', padding: { x: 10, y: 5 }
+        let buttonText;
+        let buttonAction;
+
+        if (this.mode === 'bot') {
+            buttonText = 'Jogar!';
+            buttonAction = () => this.handleStartBotMatch();
+        } else { // 'ranked'
+            buttonText = `Entrar na Fila (Taxa: ${PVP_ENTRY_FEE} BCOIN)`;
+            buttonAction = () => this.handleEnterQueue();
+        }
+
+        this.enterQueueButton = this.add.text(this.game.config.width / 2, this.game.config.height - 100, buttonText, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '20px',
+            fill: '#00ff00',
+            backgroundColor: '#000000cc',
+            padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.enterQueueButton.on('pointerdown', async () => {
@@ -381,8 +423,9 @@ export default class PvpScene extends Phaser.Scene {
                 this.showPopup("Selecione um herói primeiro!");
                 return;
             }
-            await this.handleEnterQueue();
+            await buttonAction();
         });
+
         this.enterQueueButton.on('pointerover', () => this.enterQueueButton.setStyle({ fill: '#ffffff' }));
         this.enterQueueButton.on('pointerout', () => this.enterQueueButton.setStyle({ fill: '#00ff00' }));
     }
@@ -424,6 +467,35 @@ export default class PvpScene extends Phaser.Scene {
             console.error("Erro ao entrar na fila de PvP:", error);
             this.showPopup(`Falha ao entrar na fila: ${error.message.substring(0, 50)}...`);
         }
+    }
+
+    handleStartBotMatch() {
+        if (!this.selectedHero) {
+            this.showPopup("Selecione um herói para o treino!");
+            return;
+        }
+
+        this.showPopup("Iniciando treino contra o bot...");
+
+        const botOpponent = {
+            address: '0x000000000000000000000000000000000000dEaD', // Dead address for bots
+            hero: {
+                // Mock stats for the bot's hero
+                sprite_name: 'Bot',
+                level: this.selectedHero.level, // Match player's level for fairness
+                hp: 100,
+                damage: 1,
+                speed: 200
+            }
+        };
+
+        this.scene.start(CST.SCENES.GAME, {
+            userData: this.userData,
+            web3: this.web3,
+            gameMode: 'bot',
+            opponent: botOpponent,
+            matchId: `bot-match-${Date.now()}` // Unique ID for the bot match
+        });
     }
 
     startMatchmakingStatusCheck() {
