@@ -67,12 +67,37 @@ class TermsScene extends Phaser.Scene {
         const maxScroll = Math.max(0, textObject.height - (scrollableAreaHeight - 20));
         let canAccept = maxScroll <= 0;
 
+        const checkScrollAndActivate = () => {
+            if (!canAccept && textObject.y <= -maxScroll) {
+                canAccept = true;
+                this.activateButton();
+            }
+        };
+
         if (!canAccept) {
-            this.input.on('wheel', () => {
-                textObject.y = Phaser.Math.Clamp(textObject.y - (this.input.mouse.wheel.deltaY * 0.5), -maxScroll, 0);
-                if (textObject.y <= -maxScroll && !canAccept) {
-                    canAccept = true;
-                    this.activateButton();
+            this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+                textObject.y = Phaser.Math.Clamp(textObject.y - (deltaY * 0.5), -maxScroll, 0);
+                checkScrollAndActivate();
+            });
+
+            let isDragging = false;
+            let startY = 0;
+            this.input.on('pointerdown', (pointer) => {
+                if (pointer.y >= scrollableAreaY && pointer.y <= scrollableAreaY + scrollableAreaHeight) {
+                    isDragging = true;
+                    startY = pointer.y - textObject.y;
+                }
+            });
+
+            this.input.on('pointerup', () => {
+                isDragging = false;
+            });
+
+            this.input.on('pointermove', (pointer) => {
+                if (isDragging) {
+                    const newY = pointer.y - startY;
+                    textObject.y = Phaser.Math.Clamp(newY, -maxScroll, 0);
+                    checkScrollAndActivate();
                 }
             });
         } else {
