@@ -23,36 +23,30 @@ class LanguageManager {
     static async loadLanguage(scene, lang) {
         this.currentLanguage = lang;
         window.i18nReady = false; // Set flag to false during load
-        try {
-            const response = await fetch(`src/locales/${lang}.json`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            this.translations = await response.json();
 
+        try {
+            // Use Vite's dynamic import feature for robust path handling.
+            const langModule = await import(`../locales/${lang}.json`);
+            this.translations = langModule.default;
             scene.registry.set('translations', this.translations);
             console.log(`[i18n] Language file for '${lang}' loaded successfully.`);
-            window.i18nReady = true; // Signal that translations are ready
         } catch (error) {
-            console.error(`[i18n] Could not load language file for '${lang}'. Trying fallback.`, error);
-            // If the initial fetch fails, always try to load English as a fallback.
+            console.error(`[i18n] Could not load language file for '${lang}'. Trying fallback to 'en'.`, error);
             try {
-                const response = await fetch(`src/locales/en.json`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                this.translations = await response.json();
+                const fallbackModule = await import('../locales/en.json');
+                this.translations = fallbackModule.default;
                 scene.registry.set('translations', this.translations);
                 console.log(`[i18n] Fallback to 'en' loaded successfully.`);
             } catch (fallbackError) {
-                // This is the ultimate failure case: even English didn't load.
-                console.error('[i18n] Fallback to English also failed. Using empty translations.', fallbackError);
-                this.translations = {}; // Set empty translations to prevent errors.
+                console.error('[i18n] CRITICAL: Fallback to English also failed. UI text will be broken.', fallbackError);
+                this.translations = {}; // Use empty object to prevent crashes
                 scene.registry.set('translations', this.translations);
             }
-            // CRITICAL: Always set the flag to true after the fallback attempt.
+        } finally {
+            // CRITICAL: Always set the flag to true after any attempt.
             // This ensures the application does not hang, even if all language files fail to load.
             window.i18nReady = true;
+            console.log(`[i18n] Finalized loading. i18nReady is now ${window.i18nReady}.`);
         }
     }
 

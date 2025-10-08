@@ -113,19 +113,19 @@ export default class LoadingScene extends Phaser.Scene {
             titleText.setText(LanguageManager.get('game_title'));
             loadingText.setText(LanguageManager.get('loading_initializing'));
 
-            console.log('🔄 Checking for existing user session...');
+                console.log('[VCL-09] Checking for existing user session...');
             try {
                 const loginStatus = await api.checkLoginStatus();
                 this.scene.launch(CST.SCENES.NOTIFICATION);
                 if (loginStatus.success) {
-                    console.log(`✅ Session validated for user: ${loginStatus.user.address}.`);
+                    console.log(`[VCL-09] Session validated for user: ${loginStatus.user.address}.`);
                     this.registry.set('loggedInUser', loginStatus.user);
                     this.scene.start('MenuScene');
                 } else {
                     throw new Error(loginStatus.message || "Login status check was not successful.");
                 }
             } catch (error) {
-                console.log(`ℹ️ No valid session found. Proceeding to login. Reason: ${error.message}`);
+                console.log(`[VCL-09] No valid session found. Proceeding to login. Reason: ${error.message}`);
                 this.registry.remove('loggedInUser');
                 this.scene.launch(CST.SCENES.NOTIFICATION);
                 this.scene.start('TermsScene');

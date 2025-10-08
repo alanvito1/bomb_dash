@@ -84,5 +84,9 @@
   "hud_hero_xp": "EXP HERÓI",
   "menu_bcoin_balance": "BCOIN: {balance}",
   "hud_buff": "BUFF: {buff}",
-  "hud_buff_time_left": "restam {hours}h {minutes}m"
+  "hud_buff_time_left": "restam {hours}h {minutes}m",
+  "pause_title": "PAUSADO",
+  "pause_continue": "Continuar",
+  "pause_settings": "Configurações",
+  "pause_exit": "Sair para o Menu"
 }

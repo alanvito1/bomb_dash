@@ -12,15 +12,15 @@ import perpetualRewardPoolAbi from '../../backend/contracts/PerpetualRewardPool.
 const contracts = {
     wagerArena: {
         address: addresses.wagerArenaAddress,
-        abi: wagerArenaAbi
+        abi: wagerArenaAbi.abi
     },
     heroStaking: {
         address: addresses.heroStakingAddress,
-        abi: heroStakingAbi
+        abi: heroStakingAbi.abi
     },
     mockHeroNFT: {
         address: addresses.mockHeroNFTAddress,
-        abi: mockHeroNFTAbi
+        abi: mockHeroNFTAbi.abi
     },
     bcoin: {
         address: addresses.bcoinTokenAddress,
@@ -28,11 +28,11 @@ const contracts = {
     },
     tournamentController: {
         address: addresses.tournamentControllerAddress,
-        abi: tournamentControllerAbi
+        abi: tournamentControllerAbi.abi
     },
     perpetualRewardPool: {
         address: addresses.perpetualRewardPoolAddress,
-        abi: perpetualRewardPoolAbi // Use the imported ABI directly
+        abi: perpetualRewardPoolAbi.abi
     }
 };
 

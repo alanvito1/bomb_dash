@@ -1,5 +1,6 @@
 import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
+import { createFloatingText } from './FloatingText.js';
 
 export default class CollisionHandler {
   // SIF 21.3: The HUD is now driven by events from the scene
@@ -46,6 +47,7 @@ export default class CollisionHandler {
 
     const damage = this.scene.playerStats?.damage ?? 1;
     enemy.hp = enemy.hp - damage;
+    createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, '#ff4d4d');
 
     SoundManager.play(this.scene, 'hit_enemy');
 
@@ -64,6 +66,7 @@ export default class CollisionHandler {
       stats.account_xp += xpGained;
       stats.hero_xp += xpGained;
       stats.bcoin += coinsGained;
+      createFloatingText(this.scene, enemy.x, enemy.y - 20, `+${xpGained} XP`, '#ffd700');
 
       this.events.emit('update-xp', {
           accountXP: stats.account_xp,
@@ -82,7 +85,7 @@ export default class CollisionHandler {
         this.scene.bossDefeated = true;
         this.scene.bossSpawned = false;
         this.scene.physics.pause();
-        this.scene.bombTimer.paused = true;
+        this.scene.bombTimer?.paused = true;
         this.scene.showNextStageDialog();
       }
 

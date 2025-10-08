@@ -61,7 +61,7 @@ export default class EnemySpawner {
       this._spawnEnemy(randomEnemyKey, level, true); // O 'true' ativa o scaling infinito
 
       if (maxEnemies > 1) {
-        this.scene.time.addEvent({
+        this.scene.enemySpawnTimer = this.scene.time.addEvent({
           delay: this.spawnInterval,
           repeat: maxEnemies - 1,
           callback: () => this._spawnEnemy(randomEnemyKey, level, true)
@@ -122,7 +122,7 @@ export default class EnemySpawner {
     this.scene.enemiesSpawned = currentMaxEnemies;
 
     // Schedule the spawning of all enemies
-    this.scene.time.addEvent({
+    this.scene.enemySpawnTimer = this.scene.time.addEvent({
       delay: this.spawnInterval,
       repeat: currentMaxEnemies - 1,
       callback: () => this._spawnEnemy(spriteKey, level)
