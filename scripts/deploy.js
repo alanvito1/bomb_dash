@@ -135,11 +135,6 @@ async function main() {
     await wagerTx2.wait();
     console.log(`- Set solo reward pool address in WagerArena.`);
 
-    // Grant Oracle role in PerpetualRewardPool to enable reward processing
-    const txOracle = await perpetualRewardPool.setOracle(oracle.address);
-    await txOracle.wait();
-    console.log(`- Granted Oracle role to ${oracle.address} in PerpetualRewardPool.`);
-
     // 6. Fund the Reward Pool
     console.log("\nFunding the perpetual reward pool...");
     const initialPoolFunding = ethers.parseUnits("100000", 18); // 100,000 BCOIN
