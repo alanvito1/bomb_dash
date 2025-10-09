@@ -46,6 +46,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   async initializeScene() {
+    console.log('[VCL-09] GameScene: Starting initialization...');
     try {
       const serverSettings = await api.getGameSettings();
       if (serverSettings.success) this.gameSettings = serverSettings.settings;
@@ -135,6 +136,9 @@ export default class GameScene extends Phaser.Scene {
       this.gamePaused = false;
       this.physics.resume();
       this.bombTimer.paused = false;
+        if (this.enemySpawnTimer) {
+            this.enemySpawnTimer.paused = false;
+        }
     });
   }
 
@@ -392,6 +396,9 @@ export default class GameScene extends Phaser.Scene {
     this.gamePaused = true;
     this.physics.pause();
     this.bombTimer.paused = true;
+    if (this.enemySpawnTimer) {
+        this.enemySpawnTimer.paused = true;
+    }
     this.scene.launch('PauseScene');
     this.scene.pause();
   }

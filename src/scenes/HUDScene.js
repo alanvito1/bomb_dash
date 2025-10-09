@@ -79,27 +79,21 @@ export default class HUDScene extends Phaser.Scene {
     }
 
     createHUD() {
-        const iconStyle = { x: 25, y: 20 };
-        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
-        const levelTextStyle = { x: barStyle.x + barStyle.width + 15, y: 18 };
+        const barWidth = 180;
+        const barHeight = 16;
+        const margin = 15;
 
         // Health Bar
-        this.add.image(iconStyle.x, iconStyle.y, 'rapid_fire').setDisplaySize(24, 24); // Heart Icon Placeholder
+        this.add.text(margin, margin, LanguageManager.get('hud_hp'), { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ff4d4d' });
         this.healthBar = this.add.graphics();
         this.updateHealth({ health: this.playerHealth, maxHealth: this.playerMaxHealth });
 
         // Account XP Bar
-        this.add.image(iconStyle.x, iconStyle.y + 25, 'multi_shot').setDisplaySize(24, 24); // Star Icon Placeholder
+        this.accountLevelText = this.add.text(margin, margin + 30, ``, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
         this.accountXpBar = this.add.graphics();
-        this.accountLevelText = this.add.text(levelTextStyle.x, levelTextStyle.y + 25, `Lvl ${this.accountLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ff00' });
-
-        // Hero XP Bar
-        this.add.image(iconStyle.x, iconStyle.y + 50, 'power_bomb').setDisplaySize(24, 24); // Hero Icon Placeholder
-        this.heroXpBar = this.add.graphics();
-        this.heroLevelText = this.add.text(levelTextStyle.x, levelTextStyle.y + 50, `Lvl ${this.heroLevel}`, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
 
         // BCOIN Balance
-        this.bcoinText = this.add.text(this.scale.width - 10, 10, LanguageManager.get('hud_bcoin_loading'), {
+        this.bcoinText = this.add.text(this.scale.width - margin, margin, LanguageManager.get('hud_bcoin_loading'), {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             fill: '#ffd700',
@@ -107,7 +101,7 @@ export default class HUDScene extends Phaser.Scene {
         }).setOrigin(1, 0);
 
         // Global Buff Display
-        this.buffText = this.add.text(this.scale.width - 10, 30, '', {
+        this.buffText = this.add.text(this.scale.width - margin, margin + 30, '', {
             fontFamily: '"Press Start 2P"',
             fontSize: '12px',
             fill: '#00ffff', // Cyan color for buffs
@@ -118,24 +112,33 @@ export default class HUDScene extends Phaser.Scene {
     updateHealth({ health, maxHealth }) {
         this.playerHealth = health;
         this.playerMaxHealth = maxHealth;
-        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
+        const barWidth = 180;
+        const barHeight = 16;
+        const margin = 15;
+        const barX = 60;
 
         this.healthBar.clear();
-        this.healthBar.fillStyle(0x333333); // Background
-        this.healthBar.fillRect(barStyle.x, barStyle.y, barStyle.width, barStyle.height);
+        // Background
+        this.healthBar.fillStyle(0x000000, 0.5);
+        this.healthBar.fillRect(barX, margin, barWidth, barHeight);
 
-        const healthPercentage = Math.max(0, this.playerHealth / this.playerMaxHealth);
-        this.healthBar.fillStyle(0xff0000); // Foreground
-        this.healthBar.fillRect(barStyle.x, barStyle.y, barStyle.width * healthPercentage, barStyle.height);
+        // Foreground
+        const healthPercentage = maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
+        this.healthBar.fillStyle(0xff4d4d);
+        this.healthBar.fillRect(barX, margin, barWidth * healthPercentage, barHeight);
     }
 
     updateXP(data) {
-        const barStyle = { x: 55, y: 18, width: 200, height: 14 };
+        const barWidth = 180;
+        const barHeight = 16;
+        const margin = 15;
+        const barX = 60;
+
         // Handle Account Level and XP
         if (data.accountXP !== undefined && data.accountLevel !== undefined) {
             this.accountXP = data.accountXP;
             this.accountLevel = data.accountLevel;
-            this.accountLevelText.setText(`Lvl ${data.accountLevel}`);
+            this.accountLevelText.setText(`Lvl: ${this.accountLevel}`);
 
             const xpForCurrentLevel = getExperienceForLevel(data.accountLevel);
             const xpForNextLevel = getExperienceForLevel(data.accountLevel + 1);
@@ -143,31 +146,16 @@ export default class HUDScene extends Phaser.Scene {
             const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
             const accXpPercentage = xpNeededForLevelUp > 0 ? Phaser.Math.Clamp(xpEarnedInCurrentLevel / xpNeededForLevelUp, 0, 1) : 0;
 
+            const barY = margin + 30;
             this.accountXpBar.clear();
-            this.accountXpBar.fillStyle(0x333333);
-            this.accountXpBar.fillRect(barStyle.x, barStyle.y + 25, barStyle.width, barStyle.height);
+            // Background
+            this.accountXpBar.fillStyle(0x000000, 0.5);
+            this.accountXpBar.fillRect(barX, barY, barWidth, barHeight);
+            // Foreground
             this.accountXpBar.fillStyle(0x00ff00);
-            this.accountXpBar.fillRect(barStyle.x, barStyle.y + 25, barStyle.width * accXpPercentage, barStyle.height);
+            this.accountXpBar.fillRect(barX, barY, barWidth * accXpPercentage, barHeight);
         }
-
-        // Handle Hero Level and XP
-        if (data.heroXP !== undefined && data.heroLevel !== undefined) {
-            this.heroXP = data.heroXP;
-            this.heroLevel = data.heroLevel;
-            this.heroLevelText.setText(`Lvl ${this.heroLevel}`);
-
-            const xpForCurrentLevel = getExperienceForLevel(this.heroLevel);
-            const xpForNextLevel = getExperienceForLevel(this.heroLevel + 1);
-            const xpEarnedInCurrentLevel = this.heroXP - xpForCurrentLevel;
-            const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
-            const heroXpPercentage = xpNeededForLevelUp > 0 ? Phaser.Math.Clamp(xpEarnedInCurrentLevel / xpNeededForLevelUp, 0, 1) : 0;
-
-            this.heroXpBar.clear();
-            this.heroXpBar.fillStyle(0x333333);
-            this.heroXpBar.fillRect(barStyle.x, barStyle.y + 50, barStyle.width, barStyle.height);
-            this.heroXpBar.fillStyle(0x00ffff);
-            this.heroXpBar.fillRect(barStyle.x, barStyle.y + 50, barStyle.width * heroXpPercentage, barStyle.height);
-        }
+        // Removed Hero XP bar logic for a cleaner HUD
     }
 
     handleBalanceUpdate({ balance, error }) {

@@ -92,7 +92,7 @@ export default class SoundManager {
         return reject(new Error(errorMsg));
       }
 
-      if (!scene.sound.exists(key)) {
+      if (!scene.cache.audio.exists(key)) {
         const errorMsg = `[SoundManager] Audio key "${key}" not found in cache.`;
         console.error(errorMsg);
         return reject(new Error(errorMsg));

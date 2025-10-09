@@ -96,7 +96,7 @@ export default class PowerupLogic {
       return;
     }
 
-    console.log(`[PowerupLogic] Aplicando efeito para: ${id}`);
+    console.log(`[VCL-09] PowerupLogic: Applying effect for power-up: ${id}`);
     switch (id) {
       case 'rapid_fire':
         stats.fireRate = Math.max(100, stats.fireRate - 100);
@@ -112,7 +112,8 @@ export default class PowerupLogic {
         stats.bombSize = (stats.bombSize || 1) * 1.5;
         break;
       case 'energy_shield':
-        stats.extraLives = (stats.extraLives || 0) + 1;
+        stats.hp = Math.min(stats.maxHp, stats.hp + 50); // Heal for 50 HP
+        this.scene.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
         break;
       default:
         console.warn(`[PowerupLogic] Tipo de power-up desconhecido ao aplicar: ${id}`);
@@ -143,7 +144,7 @@ export default class PowerupLogic {
       case 'mega_bomb':
         stats.bombSize = Math.max(DEFAULT_BOMB_SIZE, (stats.bombSize || DEFAULT_BOMB_SIZE) / 1.5);
         break;
-      // 'energy_shield' não tem remoção.
+      // 'energy_shield' is an instant effect and has no removal logic.
       default:
         console.warn(`[PowerupLogic] Tipo de power-up desconhecido ao remover: ${id}`);
     }
