@@ -145,8 +145,9 @@ export default class EnemySpawner {
       spriteKey
     );
 
-    let baseSpeed = (100 + level * 2) * 0.7;
-    let enemyHp = (this.scene.baseEnemyHp || 1) + Math.floor((level - 1) / 2);
+    // CQ-06: Increase difficulty scaling per wave
+    let baseSpeed = (100 + level * 4) * 0.7; // Increased speed scaling
+    let enemyHp = (this.scene.baseEnemyHp || 1) + (level - 1); // HP now increases every wave
 
     // Apply account-level difficulty scaling
     baseSpeed *= this.difficultyMultiplier;

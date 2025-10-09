@@ -14,17 +14,23 @@ export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
     this.transitioning = false;
+    this.playerState = 'CAN_SHOOT'; // CQ-02: State machine for player actions
     this.currentTarget = null;
     this.gameMode = 'solo';
     this.opponent = null;
     this.matchId = null;
 
     this.DEFAULT_STATS = {
-      hp: 300, maxHp: 300, mana: 100, maxMana: 100, damage: 1, speed: 200,
+      hp: 2100, maxHp: 2100, mana: 100, maxMana: 100, damage: 1, speed: 200, // CQ-05: Increased base HP by 7x
       extraLives: 1, fireRate: 600, bombSize: 1, multiShot: 0, coins: 0,
     };
 
     this.gameSettings = { monsterScaleFactor: 7 };
+  }
+
+  setPlayerState(newState, reason) {
+    console.log(`[PlayerState] Changing from ${this.playerState} to ${newState}. Reason: ${reason}`);
+    this.playerState = newState;
   }
 
   init(data) {
@@ -135,8 +141,9 @@ export default class GameScene extends Phaser.Scene {
     this.events.on('resume', () => {
       this.gamePaused = false;
       this.physics.resume();
-      this.bombTimer.paused = false;
-        if (this.enemySpawnTimer) {
+      this.setPlayerState('CAN_SHOOT', 'Game resumed from pause');
+        // CQ-04: Safely resume the timer only if it exists and was actually paused.
+        if (this.enemySpawnTimer && this.enemySpawnTimer.paused) {
             this.enemySpawnTimer.paused = false;
         }
     });
@@ -165,11 +172,21 @@ export default class GameScene extends Phaser.Scene {
     this.bombTimer = this.time.addEvent({
       delay: this.playerStats.fireRate,
       loop: true,
-      callback: () => { if (this.player?.active) this.firePlayerBomb(true); },
+      callback: () => {
+        // CQ-02: Only fire if player state allows it
+        if (this.player?.active && this.playerState === 'CAN_SHOOT') {
+          this.firePlayerBomb(true);
+        }
+      },
     });
 
     const initialSpawnResult = this.enemySpawner.spawn();
     if (initialSpawnResult === 'GAME_SHOULD_END') this.handleGameOver();
+
+    // CQ-07: Emit initial wave update
+    const waveInStage = ((this.level - 1) % 5) + 1;
+    const totalWavesInStage = (this.level % 5 === 0) ? 1 : 5;
+    this.events.emit('update-wave', { current: waveInStage, total: totalWavesInStage, isBoss: (this.level % 5 === 0) });
   }
 
   initializePvpMatch() {
@@ -198,7 +215,16 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerBombs = this.physics.add.group();
     this.opponentBombs = this.physics.add.group();
-    this.bombTimer = this.time.addEvent({ delay: this.playerStats.fireRate, loop: true, callback: () => this.firePlayerBomb(false) });
+    this.bombTimer = this.time.addEvent({
+      delay: this.playerStats.fireRate,
+      loop: true,
+      callback: () => {
+        // CQ-02: Only fire if player state allows it
+        if (this.player?.active && this.playerState === 'CAN_SHOOT') {
+          this.firePlayerBomb(false);
+        }
+      },
+    });
 
     this.physics.add.collider(this.playerBombs, this.opponentPlayer, (opponent, bomb) => {
       bomb.destroy();
@@ -264,9 +290,7 @@ export default class GameScene extends Phaser.Scene {
     this.transitioning = true;
     this.gamePaused = true;
     this.physics.pause();
-    if (this.bombTimer) {
-      this.bombTimer.paused = true;
-    }
+    this.setPlayerState('CANNOT_SHOOT', 'Match ending');
     SoundManager.stopAll(this);
 
     if (result.winner === 'player') {
@@ -310,7 +334,7 @@ export default class GameScene extends Phaser.Scene {
     this.transitioning = true; // Use transitioning to prevent double calls
     this.gamePaused = true;
     this.player?.setActive(false);
-    if (this.bombTimer) this.bombTimer.paused = true;
+    this.setPlayerState('CANNOT_SHOOT', 'Game over');
     SoundManager.stopAll(this);
     SoundManager.play(this, 'gameover');
 
@@ -351,9 +375,12 @@ export default class GameScene extends Phaser.Scene {
     this.level++;
     this.resetWaveState();
     this.physics.resume();
-    if (this.bombTimer) {
-      this.bombTimer.paused = false;
-    }
+    this.setPlayerState('CAN_SHOOT', 'Next stage prepared');
+
+    // CQ-07: Emit wave update for the new stage
+    const waveInStage = ((this.level - 1) % 5) + 1;
+    const totalWavesInStage = (this.level % 5 === 0) ? 1 : 5;
+    this.events.emit('update-wave', { current: waveInStage, total: totalWavesInStage, isBoss: (this.level % 5 === 0) });
 
     if (this.enemySpawner.spawn() === 'GAME_SHOULD_END') {
       this.handleGameOver();
@@ -407,8 +434,9 @@ export default class GameScene extends Phaser.Scene {
     if (this.gamePaused || this.transitioning || !this.player.active) return;
     this.gamePaused = true;
     this.physics.pause();
-    this.bombTimer.paused = true;
-    if (this.enemySpawnTimer) {
+    this.setPlayerState('CANNOT_SHOOT', 'Game paused');
+    // CQ-04: Safely pause the timer only if it exists and is still running.
+    if (this.enemySpawnTimer && this.enemySpawnTimer.getProgress() < 1) {
         this.enemySpawnTimer.paused = true;
     }
     this.scene.launch('PauseScene');

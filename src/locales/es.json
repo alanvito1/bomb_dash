@@ -84,5 +84,7 @@
   "hud_hero_xp": "EXP HÉROE",
   "menu_bcoin_balance": "BCOIN: {balance}",
   "hud_buff": "BUFF: {buff}",
-  "hud_buff_time_left": "restan {hours}h {minutes}m"
+  "hud_buff_time_left": "restan {hours}h {minutes}m",
+  "hud_wave_counter": "Oleada: {current}/{total}",
+  "hud_wave_boss": "OLEADA DE JEFE"
 }

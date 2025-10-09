@@ -15,6 +15,8 @@ async function getEthers() {
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
+    // CQ-01 (BCOIN Erro - Prova de Depuração)
+    console.log('[BCOIN ABI PROOF]', contracts.bcoin.abi);
     const contract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, provider);
     ethersInstance = { ethers, provider, contract };
     return ethersInstance;
@@ -22,13 +24,13 @@ async function getEthers() {
 
 class BcoinService {
     constructor() {
-        this.balance = '0.00';
+        this.balance = 0; // CQ-01: Use number type for balance
         this.error = null;
         GameEventEmitter.on('bcoin-balance-changed', this.updateBalance.bind(this));
     }
 
     async getBalance(forceUpdate = false) {
-        if (!forceUpdate && this.balance !== '0.00') {
+        if (!forceUpdate && this.balance > 0) {
             return { balance: this.balance, error: this.error };
         }
         await this.updateBalance();
@@ -42,12 +44,13 @@ class BcoinService {
             const address = await signer.getAddress();
             const rawBalance = await contract.balanceOf(address);
             const decimals = await contract.decimals();
-            this.balance = ethers.formatUnits(rawBalance, decimals);
+            // CQ-01: Parse the formatted string back into a number
+            this.balance = parseFloat(ethers.formatUnits(rawBalance, decimals));
             this.error = null;
         } catch (err) {
             console.error('[BcoinService] Error fetching balance:', err);
             this.error = (err.message === 'No wallet detected') ? 'No wallet connected' : 'RPC Error';
-            this.balance = '--.--';
+            this.balance = 0; // Use 0 for error state
         }
         GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
     }

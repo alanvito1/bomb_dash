@@ -44,7 +44,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         const playButtonBg = this.add.image(0, 0, 'btn_menu').setOrigin(0.5).setDisplaySize(280, 50);
         const playButtonText = this.add.text(0, 0, LanguageManager.get('char_select_start_game'), { ...style, fill: '#90EE90', backgroundColor: null }).setOrigin(0.5);
         playButtonContainer.add([playButtonBg, playButtonText]);
-        playButtonContainer.setSize(280, 50).setInteractive({ useHandCursor: true });
+        playButtonContainer.setSize(280, 50).setInteractive({ useHandCursor: true }).setName('confirm_button');
         this.playButton = playButtonContainer; // Assign container to the class property
 
         this.shopButton = this.add.text(x, y + 60, LanguageManager.get('char_select_upgrades'), style)
