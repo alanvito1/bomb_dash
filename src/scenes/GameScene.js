@@ -353,9 +353,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // LP-05 & LP-07: Pass all relevant data to GameOverScene
-    const xpGained = this.score;
     this.scene.stop('HUDScene');
-    this.scene.start('GameOverScene', { score: this.score, world: this.world, phase: this.phase, coins: this.coinsEarned, xpGained: xpGained });
+    this.scene.start('GameOverScene', { score: this.score, world: this.world, phase: this.phase, coins: this.coinsEarned, xpGained: this.score });
   }
 
   update() {
