@@ -1,6 +1,7 @@
 import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
 import { createFloatingText } from './FloatingText.js';
+import { showNextStageDialog as StageDialog } from './NextStageDialog.js';
 
 export default class CollisionHandler {
   // SIF 21.3: The HUD is now driven by events from the scene
@@ -56,7 +57,8 @@ export default class CollisionHandler {
       SoundManager.play(this.scene, enemy.isBoss ? 'boss_death' : 'enemy_death');
 
       // SIF 21.3: Update stats and emit events for the HUD
-      const xpGained = enemy.isBoss ? 50 : 10;
+      // HS1-03: Reduce XP gain by ~95%
+      const xpGained = enemy.isBoss ? 3 : 1;
       const coinsGained = enemy.isBoss ? 5 : 1;
 
       // This was the missing piece. The score was never being incremented.
@@ -84,11 +86,17 @@ export default class CollisionHandler {
       if (enemy.isBoss) {
         this.scene.bossDefeated = true;
         this.scene.bossSpawned = false;
+
+        // HS1-02: The soft-lock was caused because the bombTimer was paused here,
+        // but never resumed. The new `prepareNextStage` method in GameScene
+        // now handles resuming the physics and the timer. We pass it as a
+        // callback to the dialog.
         this.scene.physics.pause();
         if (this.scene.bombTimer) {
           this.scene.bombTimer.paused = true;
         }
-        this.scene.showNextStageDialog();
+        // Correctly call the imported StageDialog function.
+        StageDialog(this.scene, () => this.scene.prepareNextStage());
       }
 
       enemy.destroy();
