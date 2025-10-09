@@ -55,7 +55,10 @@ export default class MenuScene extends Phaser.Scene {
 
     this.createMenuContent(centerX, centerY);
     this.playMenuMusic();
-    this.setupBcoinListener();
+    // The BCOIN listener is removed from here. The balance is now displayed
+    // by the HUDScene, which runs in parallel with the GameScene. This MenuScene
+    // should not be listening to global game events.
+    // this.setupBcoinListener();
     this.displayUserData();
 
     // Trigger an initial balance update
@@ -86,24 +89,7 @@ export default class MenuScene extends Phaser.Scene {
     this.createMenu(centerX, centerY);
   }
 
-  setupBcoinListener() {
-    const textStyle = {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '14px',
-      fill: '#FFD700',
-      align: 'right'
-    };
-    this.bcoinBalanceText = this.add.text(this.scale.width - 20, 20, LanguageManager.get('hud_bcoin_loading'), textStyle).setOrigin(1, 0);
-
-    GameEventEmitter.on('bcoin-balance-update', ({ balance, error }) => {
-        if (error) {
-            this.bcoinBalanceText.setText(LanguageManager.get('hud_bcoin_error'));
-        } else {
-            const formattedBalance = parseFloat(balance).toFixed(4);
-            this.bcoinBalanceText.setText(`$BCOIN: ${formattedBalance}`);
-        }
-    });
-  }
+  // Removed setupBcoinListener as it caused a crash. HUDScene is responsible for this now.
 
   displayUserData() {
     if (this.userData && this.userData.walletAddress) {
@@ -195,7 +181,7 @@ export default class MenuScene extends Phaser.Scene {
     if (window.DEBUG_MODE) {
         console.log('[DEBUG] MenuScene: shutdown() called.');
     }
-    GameEventEmitter.off('bcoin-balance-update');
+    // No need to turn off the bcoin listener as it has been removed.
     // Destroy all children to prevent them from leaking into the next scene
     this.children.removeAll(true);
   }
