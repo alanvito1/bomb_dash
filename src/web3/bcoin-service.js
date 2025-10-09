@@ -11,13 +11,14 @@ async function getEthers() {
     const { ethers } = await import('ethers');
 
     if (!window.ethereum) {
-        throw new Error('No wallet detected');
+        // LP-01 / Final Verification Fix: Handle no wallet gracefully instead of throwing.
+        console.warn('[BcoinService] No wallet (window.ethereum) detected. Cannot initialize ethers.');
+        return null;
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
-    // CQ-01 (BCOIN Erro - Prova de Depuração)
-    console.log('[BCOIN ABI PROOF]', contracts.bcoin.abi);
-    const contract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, provider);
+    // LP-01 / Final Verification Fix: Call the address and ABI as functions.
+    const contract = new ethers.Contract(contracts.bcoin.address(), contracts.bcoin.abi(), provider);
     ethersInstance = { ethers, provider, contract };
     return ethersInstance;
 }
@@ -39,7 +40,15 @@ class BcoinService {
 
     async updateBalance() {
         try {
-            const { ethers, provider, contract } = await getEthers();
+            const ethersInfo = await getEthers();
+            // LP-01 / Final Verification Fix: If no wallet, ethersInfo will be null.
+            if (!ethersInfo) {
+                this.error = 'No wallet connected';
+                this.balance = 0;
+                GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
+                return;
+            }
+            const { ethers, provider, contract } = ethersInfo;
             const signer = await provider.getSigner();
             const address = await signer.getAddress();
             const rawBalance = await contract.balanceOf(address);

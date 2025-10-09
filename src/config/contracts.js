@@ -1,54 +1,55 @@
-// This file centralizes all smart contract addresses and ABIs for the frontend.
-import addresses from '../../backend/contracts/contract-addresses.json';
-import heroStakingAbi from '../../backend/contracts/HeroStaking.json';
-import mockHeroNFTAbi from '../../backend/contracts/MockHeroNFT.json';
-import bcoinAbi from '../../backend/contracts/IBEP20.json';
-import tournamentControllerAbi from '../../backend/contracts/TournamentController.json';
-import wagerArenaAbi from '../../backend/contracts/WagerArena.json';
-import perpetualRewardPoolAbi from '../../backend/contracts/PerpetualRewardPool.json';
+// This file is the central point of access for contract data (addresses and ABIs).
+// It acts as an abstraction layer over the ContractProvider.
+import contractProvider from '../web3/ContractProvider.js';
 
-// Note: Vite can handle the .json imports automatically.
+// IMPORTANT: This file no longer stores addresses OR ABIs directly. It retrieves them
+// at runtime from the ContractProvider, which is initialized in LoadingScene.
+// All exports are now functions to defer execution until the provider is ready.
 
+export const WAGER_ARENA_ABI = () => contractProvider.getAbi('wagerArena');
+export const WAGER_ARENA_ADDRESS = () => contractProvider.getAddress('wagerArena');
+
+export const HERO_STAKING_ABI = () => contractProvider.getAbi('heroStaking');
+export const HERO_STAKING_ADDRESS = () => contractProvider.getAddress('heroStaking');
+
+export const MOCK_HERO_NFT_ABI = () => contractProvider.getAbi('mockHeroNFT');
+export const MOCK_HERO_NFT_ADDRESS = () => contractProvider.getAddress('mockHeroNFT');
+
+export const BCOIN_ABI = () => contractProvider.getAbi('bcoin');
+export const BCOIN_ADDRESS = () => contractProvider.getAddress('bcoin');
+
+export const TOURNAMENT_CONTROLLER_ABI = () => contractProvider.getAbi('tournamentController');
+export const TOURNAMENT_CONTROLLER_ADDRESS = () => contractProvider.getAddress('tournamentController');
+
+export const PERPETUAL_REWARD_POOL_ABI = () => contractProvider.getAbi('perpetualRewardPool');
+export const PERPETUAL_REWARD_POOL_ADDRESS = () => contractProvider.getAddress('perpetualRewardPool');
+
+// The default export provides a convenient way to get a contract's address and ABI together.
 const contracts = {
     wagerArena: {
-        address: addresses.wagerArenaAddress,
-        abi: wagerArenaAbi.abi
+        get address() { return WAGER_ARENA_ADDRESS(); },
+        get abi() { return WAGER_ARENA_ABI(); }
     },
     heroStaking: {
-        address: addresses.heroStakingAddress,
-        abi: heroStakingAbi.abi
+        get address() { return HERO_STAKING_ADDRESS(); },
+        get abi() { return HERO_STAKING_ABI(); }
     },
     mockHeroNFT: {
-        address: addresses.mockHeroNFTAddress,
-        abi: mockHeroNFTAbi.abi
+        get address() { return MOCK_HERO_NFT_ADDRESS(); },
+        get abi() { return MOCK_HERO_NFT_ABI(); }
     },
     bcoin: {
-        address: addresses.bcoinTokenAddress,
-        abi: bcoinAbi // HYDRA-FIX: Correctly reference the imported JSON ABI array
+        get address() { return BCOIN_ADDRESS(); },
+        get abi() { return BCOIN_ABI(); }
     },
     tournamentController: {
-        address: addresses.tournamentControllerAddress,
-        abi: tournamentControllerAbi.abi
+        get address() { return TOURNAMENT_CONTROLLER_ADDRESS(); },
+        get abi() { return TOURNAMENT_CONTROLLER_ABI(); }
     },
     perpetualRewardPool: {
-        address: addresses.perpetualRewardPoolAddress,
-        abi: perpetualRewardPoolAbi.abi
+        get address() { return PERPETUAL_REWARD_POOL_ADDRESS(); },
+        get abi() { return PERPETUAL_REWARD_POOL_ABI(); }
     }
 };
-
-export const WAGER_ARENA_ABI = contracts.wagerArena.abi;
-export const WAGER_ARENA_ADDRESS = contracts.wagerArena.address;
-
-export const HERO_STAKING_ABI = contracts.heroStaking.abi;
-export const HERO_STAKING_ADDRESS = contracts.heroStaking.address;
-
-export const MOCK_HERO_NFT_ABI = contracts.mockHeroNFT.abi;
-export const MOCK_HERO_NFT_ADDRESS = contracts.mockHeroNFT.address;
-
-export const BCOIN_ABI = contracts.bcoin.abi;
-export const BCOIN_ADDRESS = contracts.bcoin.address;
-
-export const TOURNAMENT_CONTROLLER_ABI = contracts.tournamentController.abi;
-export const TOURNAMENT_CONTROLLER_ADDRESS = contracts.tournamentController.address;
 
 export default contracts;

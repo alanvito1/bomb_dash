@@ -59,8 +59,8 @@ export default class PauseScene extends Phaser.Scene {
 
         switch (action) {
             case 'resume':
-                this.scene.stop();
-                gameScene.scene.resume();
+                // Delegate the entire resume process to the centralized PauseManager
+                gameScene.pauseManager.resume();
                 break;
             case 'settings':
                 // Placeholder for settings

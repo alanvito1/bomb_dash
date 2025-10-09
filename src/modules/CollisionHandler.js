@@ -98,6 +98,14 @@ export default class CollisionHandler {
         StageDialog(this.scene, () => this.scene.prepareNextStage());
       }
 
+      // LP-03: Sanity check to ensure we are not destroying healthy enemies.
+      if (enemy.hp > 0) {
+        console.warn('[SANITY CHECK] Attempted to destroy an enemy with positive health.', {
+            id: enemy.id,
+            hp: enemy.hp,
+            source: 'CollisionHandler.hitEnemy'
+        });
+      }
       enemy.destroy();
       this.powerupLogic.spawn(enemy.x, enemy.y);
     }

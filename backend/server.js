@@ -76,6 +76,17 @@ if (process.env.NODE_ENV !== 'test') {
 // Servir arquivos estáticos da raiz do projeto (para admin.html, etc.)
 app.use(express.static(path.join(__dirname, '..')));
 
+// Rota para fornecer os endereços dos contratos para o frontend
+app.get('/api/contracts', (req, res) => {
+    try {
+        const contractAddresses = require('./contracts/contract-addresses.json');
+        res.json({ success: true, ...contractAddresses });
+    } catch (error) {
+        console.error("Could not read contract addresses file:", error);
+        res.status(500).json({ success: false, message: 'Could not load contract configuration.' });
+    }
+});
+
 const nonceStore = new Map();
 
 function verifyToken(req, res, next) {

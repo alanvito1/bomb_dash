@@ -1,11 +1,13 @@
 // src/scenes/LoadingScene.js
 import LanguageManager from '../utils/LanguageManager.js';
+import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import { CST } from '../CST.js';
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
     super('LoadingScene');
     console.log('✅ LoadingScene: Constructor has been called!');
+    this.contractsInitializedPromise = null;
   }
 
   preload() {
@@ -17,6 +19,7 @@ export default class LoadingScene extends Phaser.Scene {
     // We call this without `await` because `preload` is not designed for blocking async operations.
     // The test script will poll the `window.i18nReady` flag to wait for completion.
     LanguageManager.init(this);
+    this.contractsInitializedPromise = contractProvider.initialize();
     // -----------------------------
 
     const centerX = this.cameras.main.centerX;
@@ -108,25 +111,41 @@ export default class LoadingScene extends Phaser.Scene {
 
         // Use the loaded WebFont script to load the custom font
         const checkSessionAndProceed = async () => {
-            // Update text with the now-loaded translations.
-            // This will use the custom font if it loaded, or a fallback if it didn't.
-            titleText.setText(LanguageManager.get('game_title'));
-            loadingText.setText(LanguageManager.get('loading_initializing'));
+            try {
+                // BLOCKING STEP 1: Wait for contract addresses to be loaded from the backend.
+                console.log('Waiting for ContractProvider to initialize...');
+                await this.contractsInitializedPromise;
+                console.log('✅ ContractProvider initialized successfully.');
+
+                // BLOCKING STEP 2: Now that contracts are ready, check the user's session.
+                titleText.setText(LanguageManager.get('game_title'));
+                loadingText.setText(LanguageManager.get('loading_initializing'));
 
                 console.log('[VCL-09] Checking for existing user session...');
-            try {
                 const loginStatus = await api.checkLoginStatus();
                 this.scene.launch(CST.SCENES.NOTIFICATION);
+
                 if (loginStatus.success) {
                     console.log(`[VCL-09] Session validated for user: ${loginStatus.user.address}.`);
                     this.registry.set('loggedInUser', loginStatus.user);
                     this.scene.start('MenuScene');
                 } else {
+                    // This case should ideally not be hit if checkLoginStatus throws on failure.
                     throw new Error(loginStatus.message || "Login status check was not successful.");
                 }
             } catch (error) {
-                console.log(`[VCL-09] No valid session found. Proceeding to login. Reason: ${error.message}`);
+                // This catch block now handles failures from BOTH contract initialization and session check.
+                console.warn(`Proceeding to public flow. Reason: ${error.message}`);
                 this.registry.remove('loggedInUser');
+
+                // If contract provider failed, we can't proceed to scenes that use Web3.
+                // We should show an error and stop.
+                if (!contractProvider.isInitialized()) {
+                    loadingText.setText('ERROR: Cannot connect to server.').setStyle({ fill: '#ff0000' });
+                    // Optionally, add a retry button or more info here.
+                    return; // Halt the loading process.
+                }
+
                 this.scene.launch(CST.SCENES.NOTIFICATION);
                 this.scene.start('TermsScene');
             }
