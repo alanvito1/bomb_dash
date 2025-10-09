@@ -110,30 +110,25 @@ export default class ShopScene extends Phaser.Scene {
                     SoundManager.play(this, 'click');
                     button.setText(LanguageManager.get('shop_approving', {}, 'Approving...')).disableInteractive();
 
-                    // Step 1: Approve BCOIN spending
-                    const approveTx = await bcoinService.approve(contracts.tournamentController.address, currentCost);
-                    if (approveTx) {
-                        button.setText(LanguageManager.get('shop_waiting_approval', {}, 'Confirming...'));
-                        await approveTx.wait();
-                    }
+                    // Step 1: Approve BCOIN spending. The service now handles the wait and returns the tx.
+                    await bcoinService.approve(contracts.tournamentController.address, currentCost);
 
-                    // Step 2: Pay the upgrade fee to the contract
+                    // Step 2: Pay the upgrade fee to the contract. The service handles the wait.
                     button.setText(LanguageManager.get('shop_paying', {}, 'Paying...'));
                     const payTx = await tournamentService.payUpgradeFee(currentCost);
 
-                    // Step 3: Wait for the payment transaction to be mined
+                    // Step 3: Notify backend to verify and persist the upgrade.
+                    // The 'payTx' object is now the confirmed transaction with a valid hash.
                     button.setText(LanguageManager.get('shop_verifying', {}, 'Verifying...'));
-                    await payTx.wait();
-
-                    // Step 4: Notify backend to verify and persist the upgrade
                     const result = await api.updateUserStats(this.hero.id, btnConfig.type, payTx.hash);
 
                     if (result.success) {
                         SoundManager.play(this, 'upgrade');
                         this.showToast(LanguageManager.get('shop_upgrade_success'), true);
-                        this.hero = result.hero;
+                        this.hero = result.hero; // Update hero data with the response from the backend
 
-                        GameEventEmitter.emit('bcoin-balance-changed');
+                        // Manually trigger a balance update since the on-chain event might take time.
+                        bcoinService.updateBalance();
                         this.refreshUI();
                     } else {
                         throw new Error(result.message || LanguageManager.get('shop_verification_failed', {}, 'Backend verification failed.'));

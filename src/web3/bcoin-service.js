@@ -81,6 +81,7 @@ class BcoinService {
             GameEventEmitter.emit('transaction:pending', tx.hash);
             await tx.wait();
             GameEventEmitter.emit('transaction:success', successMessage);
+            return tx; // PT-02: Return the confirmed transaction object
         } catch (error) {
             console.error("Transaction failed:", error);
             GameEventEmitter.emit('transaction:error', error);
