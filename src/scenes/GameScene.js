@@ -10,6 +10,7 @@ import PowerupLogic from '../modules/PowerupLogic.js';
 import { createUIButtons } from '../modules/UIMenuButtons.js';
 import PauseManager from '../utils/PauseManager.js';
 import SoundManager from '../utils/sound.js';
+import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -126,7 +127,8 @@ export default class GameScene extends Phaser.Scene {
         accountXP: this.playerStats.account_xp,
         heroXP: this.playerStats.hero_xp, heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
       });
-      this.events.emit('update-bcoin', { balance: this.playerStats.bcoin });
+      // JF-02 FIX: Use the global event emitter to update the BCOIN balance in the HUD
+      GameEventEmitter.emit('bcoin-balance-update', { balance: this.playerStats.bcoin });
     });
 
     this.playerController = new PlayerController(this);
@@ -140,7 +142,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createUIButtons(this, this.playerStats);
-    await SoundManager.playWorldMusic(this, 1);
+    // JF-01 FIX: Removed 'await' to prevent scene from hanging on audio load.
+    SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
 
     // FURIA-FS-01: Signal that initialization is complete and the update loop can run.
@@ -422,12 +425,15 @@ export default class GameScene extends Phaser.Scene {
     // at the exact moment of the boss's defeat. This prevents race conditions
     // and bugs where the game state wasn't paused/resumed correctly.
 
-    this.enemies.getChildren().forEach(enemy => {
+    // Use a temporary array to avoid issues with modifying the group while iterating
+    const enemiesToProcess = this.enemies.getChildren().slice();
+    enemiesToProcess.forEach(enemy => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {
-        // LP-03: Fix disappearing enemies bug.
-        // Instead of destroying the enemy, we deactivate it. This follows the rule
-        // that enemies should only be destroyed when their health is <= 0.
-        enemy.setActive(false).setVisible(false);
+        // JF-04 FIX: Destroy the enemy instead of deactivating it.
+        // The previous deactivation logic caused race conditions with the EnemySpawner's
+        // object pooling, leading to enemies disappearing mid-screen. Destroying them is a
+        // more robust solution that permanently fixes the bug.
+        enemy.destroy();
 
         if (this.pauseManager.isPaused) return;
         const damageTaken = 50;
