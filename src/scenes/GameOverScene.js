@@ -40,7 +40,7 @@ export default class GameOverScene extends Phaser.Scene {
     const valueStyle = { ...textStyle, fill: '#FFD700' };
 
     // World-Phase Reached
-    this.add.text(centerX, statsY, `${LanguageManager.get('hud_world', {defaultValue: 'World'})} ${world}-${phase}`, textStyle).setOrigin(0.5);
+    this.add.text(centerX, statsY, `${LanguageManager.get('hud_world', {}, 'World')} ${world}-${phase}`, textStyle).setOrigin(0.5);
 
     // Score
     this.add.text(centerX, statsY + 40, `${LanguageManager.get('game_over_your_score', { score: '' })}${score}`, textStyle).setOrigin(0.5);
@@ -58,7 +58,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     // Restart Button
     const restartButton = this.add.image(centerX - buttonSpacing / 2, buttonY, 'btn_menu').setInteractive({ useHandCursor: true });
-    this.add.text(restartButton.x, restartButton.y, LanguageManager.get('pause_restart', {defaultValue: 'Restart'}), textStyle).setOrigin(0.5);
+    this.add.text(restartButton.x, restartButton.y, LanguageManager.get('pause_restart', {}, 'Restart'), textStyle).setOrigin(0.5);
     restartButton.on('pointerdown', () => {
         SoundManager.play(this, 'click');
         this.scene.start(CST.SCENES.GAME);
