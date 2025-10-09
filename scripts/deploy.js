@@ -135,10 +135,10 @@ async function main() {
     await wagerTx2.wait();
     console.log(`- Set solo reward pool address in WagerArena.`);
 
-    // Grant oracle permissions on the reward pool
-    const tx3 = await perpetualRewardPool.setOracle(oracle.address);
-    await tx3.wait();
-    console.log(`- Set oracle on PerpetualRewardPool.`);
+    // FURIA-FS-05: The oracle is set in the constructor for PerpetualRewardPool.
+    // The explicit call to setOracle was incorrect as the function does not exist.
+    // This line is intentionally removed.
+    console.log(`- Oracle for PerpetualRewardPool was set in the constructor.`);
 
     // 6. Fund the Reward Pool
     console.log("\nFunding the perpetual reward pool...");

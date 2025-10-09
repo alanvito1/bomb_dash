@@ -29,16 +29,9 @@ export default class PauseManager {
         // 1. Set the player state to prevent actions.
         this.scene.setPlayerState('CANNOT_SHOOT', 'Game paused');
 
-        // 2. Pause all relevant timers to prevent them from running in the background.
-        this.scene.bombTimer?.remove(); // Remove and recreate on resume to reset it
-        if (this.scene.enemySpawner?.timer) {
-             this.scene.enemySpawner.timer.paused = true;
-        }
-
-        // 3. Pause the physics engine.
-        this.scene.physics.pause();
-
-        // 4. Launch the Pause UI and pause the current scene.
+        // 2. Pause the entire scene. This is the correct, robust way to handle it.
+        // It pauses the physics, the update loop, AND all scene-specific timers
+        // (including delayedCalls used by the EnemySpawner).
         this.scene.scene.launch('PauseScene');
         this.scene.scene.pause();
     }
@@ -58,25 +51,11 @@ export default class PauseManager {
         // 1. Stop the Pause UI Scene.
         this.scene.scene.stop('PauseScene');
 
-        // 2. Resume the physics engine.
-        this.scene.physics.resume();
+        // 2. Resume the entire scene. This correctly resumes physics, timers, and the update loop.
+        // This was the missing piece that caused the soft-lock.
+        this.scene.scene.resume();
 
-        // 3. Un-pause timers.
-        if (this.scene.enemySpawner?.timer) {
-            this.scene.enemySpawner.timer.paused = false;
-        }
-        // Re-create the bomb timer
-        this.scene.bombTimer = this.scene.time.addEvent({
-            delay: this.scene.playerStats.fireRate,
-            loop: true,
-            callback: () => {
-                if (this.scene.player?.active && this.scene.playerState === 'CAN_SHOOT') {
-                    this.scene.firePlayerBomb(true);
-                }
-            },
-        });
-
-        // 4. Restore the player state.
+        // 3. Restore the player state.
         this.scene.setPlayerState('CAN_SHOOT', 'Game resumed');
     }
 }
