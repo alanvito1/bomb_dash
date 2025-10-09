@@ -85,7 +85,9 @@ export default class CollisionHandler {
         this.scene.bossDefeated = true;
         this.scene.bossSpawned = false;
         this.scene.physics.pause();
-        this.scene.bombTimer?.paused = true;
+        if (this.scene.bombTimer) {
+          this.scene.bombTimer.paused = true;
+        }
         this.scene.showNextStageDialog();
       }
 
