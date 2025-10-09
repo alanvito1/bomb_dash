@@ -1,8 +1,6 @@
 import { SiweMessage } from 'siwe';
 import * as contracts from './config/contracts.js';
 
-const { address: TOURNAMENT_CONTROLLER_ADDRESS, abi: TOURNAMENT_CONTROLLER_ABI } = contracts.default.tournamentController;
-
 const API_BASE_URL = 'http://localhost:3000/api';
 
 /**
@@ -186,8 +184,9 @@ class ApiClient {
             const signer = await provider.getSigner();
             const playerAddress = await signer.getAddress();
 
-            // 2. Create a contract instance
-            const contract = new ethers.Contract(TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, signer);
+            // 2. Create a contract instance by fetching the address and ABI at runtime
+            const { address, abi } = contracts.default.tournamentController;
+            const contract = new ethers.Contract(address, abi(), signer);
 
             // 3. Call the smart contract function to pay the fee.
             // The contract itself handles the BCOIN transfer logic (approve/transferFrom).

@@ -49,6 +49,14 @@ export default class MenuScene extends Phaser.Scene {
     // Isso corrige o bug onde os dados não eram passados para a ProfileScene.
     this.userData = this.registry.get('loggedInUser');
 
+    // --- GUARD CLAUSE ---
+    // If the scene is started without user data, it cannot function.
+    if (!this.userData) {
+        console.error("CRITICAL: MenuScene started without loggedInUser data. Returning to AuthChoiceScene.");
+        this.scene.start(CST.SCENES.AUTH_CHOICE);
+        return; // Stop execution of create()
+    }
+
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 

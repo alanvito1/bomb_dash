@@ -8,6 +8,7 @@ import { showNextStageDialog as StageDialog } from '../modules/NextStageDialog.j
 import PlayerController from '../modules/PlayerController.js';
 import PowerupLogic from '../modules/PowerupLogic.js';
 import { createUIButtons } from '../modules/UIMenuButtons.js';
+import PauseManager from '../utils/PauseManager.js';
 import SoundManager from '../utils/sound.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -60,8 +61,8 @@ export default class GameScene extends Phaser.Scene {
       console.warn('[GameScene] Could not fetch game settings. Using defaults.', error);
     }
 
+    this.pauseManager = new PauseManager(this);
     SoundManager.stop(this, 'menu_music');
-    this.gamePaused = false;
     this.score = 0;
 
     let userAccountData = {};
@@ -138,15 +139,6 @@ export default class GameScene extends Phaser.Scene {
     createUIButtons(this, this.playerStats);
     await SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
-    this.events.on('resume', () => {
-      this.gamePaused = false;
-      this.physics.resume();
-      this.setPlayerState('CAN_SHOOT', 'Game resumed from pause');
-        // CQ-04: Safely resume the timer only if it exists and was actually paused.
-        if (this.enemySpawnTimer && this.enemySpawnTimer.paused) {
-            this.enemySpawnTimer.paused = false;
-        }
-    });
   }
 
   initializePveMatch() {
@@ -395,8 +387,12 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.getChildren().forEach(enemy => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {
-        enemy.destroy();
-        if (this.gamePaused) return;
+        // LP-03: Fix disappearing enemies bug.
+        // Instead of destroying the enemy, we deactivate it. This follows the rule
+        // that enemies should only be destroyed when their health is <= 0.
+        enemy.setActive(false).setVisible(false);
+
+        if (this.pauseManager.isPaused) return;
         const damageTaken = 50;
         this.playerStats.hp -= damageTaken;
         this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
@@ -431,15 +427,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   togglePause() {
-    if (this.gamePaused || this.transitioning || !this.player.active) return;
-    this.gamePaused = true;
-    this.physics.pause();
-    this.setPlayerState('CANNOT_SHOOT', 'Game paused');
-    // CQ-04: Safely pause the timer only if it exists and is still running.
-    if (this.enemySpawnTimer && this.enemySpawnTimer.getProgress() < 1) {
-        this.enemySpawnTimer.paused = true;
-    }
-    this.scene.launch('PauseScene');
-    this.scene.pause();
+    this.pauseManager.pause();
   }
 }
