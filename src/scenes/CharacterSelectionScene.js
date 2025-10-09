@@ -47,7 +47,8 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         playButtonContainer.setSize(280, 50).setInteractive({ useHandCursor: true }).setName('confirm_button');
         this.playButton = playButtonContainer; // Assign container to the class property
 
-        this.shopButton = this.add.text(x, y + 60, LanguageManager.get('char_select_upgrades'), style)
+        // LP-08: Position the shop button above the play button to prevent overlap with the back button.
+        this.shopButton = this.add.text(x, y - 60, LanguageManager.get('char_select_upgrades'), style)
             .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.playButton.on('pointerdown', () => {

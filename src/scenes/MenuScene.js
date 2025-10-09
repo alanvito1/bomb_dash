@@ -5,15 +5,6 @@ import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import bcoinService from '../web3/bcoin-service.js';
-import { ethers } from 'ethers'; // Required for Wager Arena contract interaction - KEPT FOR CLAIM REWARDS
-
-// --- Contract Configuration ---
-// Note: BCOIN contract details are now handled by the bcoin-service
-const PERPETUAL_REWARD_POOL_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // From .env
-const PERPETUAL_REWARD_POOL_ABI = [
-    "function claimReward(address player, uint256 gamesPlayed, uint256 nonce, bytes calldata signature)"
-];
-// ------------------------------------
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -132,12 +123,13 @@ export default class MenuScene extends Phaser.Scene {
       { name: 'pvp_button', label: "PvP Modes", scene: CST.SCENES.PVP },
       { name: 'shop_button', label: LanguageManager.get('menu_shop'), scene: CST.SCENES.SHOP },
       { name: 'profile_button', label: LanguageManager.get('profile_title'), scene: CST.SCENES.PROFILE },
+      { name: 'ranking_button', label: 'Ranking', scene: CST.SCENES.RANKING },
       { name: 'config_button', label: "Settings", scene: CST.SCENES.CONFIG },
       { name: 'logout_button', label: LanguageManager.get('menu_logout'), action: 'logout' }
     ];
 
-    const buttonStartY = centerY - 120;
-    const buttonSpacing = 65;
+    const buttonStartY = centerY - 150; // Adjusted for more items
+    const buttonSpacing = 60; // Adjusted for more items
 
     menuItems.forEach((item, i) => {
         const buttonY = buttonStartY + i * buttonSpacing;

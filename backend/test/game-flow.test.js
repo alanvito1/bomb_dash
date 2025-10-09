@@ -60,7 +60,8 @@ describe('Game Flow API', () => {
             expect(response.status).to.equal(200);
             expect(response.body.success).to.be.true;
             expect(response.body.message).to.include(`Successfully awarded ${xpToGain} XP`);
-            expect(response.body.hero.xp).to.equal(xpToGain);
+            // LP-04: With the new XP capping logic, the hero's XP should be capped at 99 (max for level 1)
+            expect(response.body.hero.xp).to.equal(99);
 
             // Assert (Database Verification)
             const updatedHeroes = await db.getHeroesByUserId(testUser.id);
@@ -68,7 +69,8 @@ describe('Game Flow API', () => {
             // Use getUserByAddress to fetch the full user object for assertion.
             const updatedUser = await db.getUserByAddress(testUser.wallet_address);
 
-            expect(updatedHero.xp).to.equal(xpToGain);
+            expect(updatedHero.xp).to.equal(99);
+            // Account XP should still get the full amount, only hero XP is capped.
             expect(updatedUser.account_xp).to.equal(xpToGain);
         });
 

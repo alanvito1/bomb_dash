@@ -1,6 +1,7 @@
 import api from '../api.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
+import { CST } from '../CST.js';
 
 export default class RankingScene extends Phaser.Scene {
   constructor() {
@@ -11,82 +12,74 @@ export default class RankingScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // --- Visual Polish: Background and Data Window ---
+    // --- Background & UI Window ---
     this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
-    this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 40);
+    this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 120);
 
-    // --- Visual Polish: Standard Font Styles ---
-    const titleStyle = { fontSize: '24px', fill: '#FFD700', fontFamily: '"Press Start 2P"', stroke: '#000', strokeThickness: 4 };
-    const textStyle = { fontSize: '14px', fill: '#cccccc', fontFamily: '"Press Start 2P"', align: 'center' };
-    const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
+    // --- Title with Neon Style ---
+    this.add.text(centerX, 70, LanguageManager.get('ranking_title'), {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '28px',
+        fill: '#FFD700',
+        stroke: '#000',
+        strokeThickness: 4,
+        shadow: { offsetX: 2, offsetY: 2, color: '#FFD700', blur: 10, fill: true }
+    }).setOrigin(0.5);
 
-    // --- UI Elements ---
-    this.add.text(centerX, 70, LanguageManager.get('ranking_title'), titleStyle).setOrigin(0.5);
-    this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
-
-    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('ranking_loading'), textStyle).setOrigin(0.5);
-
-    try {
-        const rankingData = await api.getRanking();
-        loadingText.destroy();
-
-        if (rankingData && rankingData.length > 0) {
-            this.createRankingTable(centerX, 130, rankingData);
-        } else if (rankingData && rankingData.length === 0) {
-            this.add.text(centerX, centerY, LanguageManager.get('ranking_empty'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
-        } else {
-            this.add.text(centerX, centerY, LanguageManager.get('ranking_failed'), { ...textStyle, fill: '#ffdddd' }).setOrigin(0.5);
-        }
-    } catch (error) {
-        loadingText.destroy();
-        console.error("Error fetching ranking for scene:", error);
-        this.add.text(centerX, centerY, LanguageManager.get('ranking_error'), { ...textStyle, fill: '#ff0000' }).setOrigin(0.5);
-    }
-  }
-
-  createBackButton(x, y, style) {
-    const backButton = this.add.text(x, y, LanguageManager.get('shop_back_to_menu'), style)
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-
+    // --- Back Button ---
+    const backButton = this.add.image(centerX, this.scale.height - 60, 'btn_menu').setInteractive({ useHandCursor: true });
+    this.add.text(backButton.x, backButton.y, LanguageManager.get('shop_back_to_menu'), { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#ffffff' }).setOrigin(0.5);
     backButton.on('pointerdown', () => {
         SoundManager.play(this, 'click');
-        this.scene.start('MenuScene');
+        this.scene.start(CST.SCENES.MENU);
     });
 
-    backButton.on('pointerover', () => backButton.setStyle({ fill: '#ffffff' }));
-    backButton.on('pointerout', () => backButton.setStyle({ fill: '#00ffff' }));
+    // --- Loading/Error Text ---
+    const statusText = this.add.text(centerX, centerY, LanguageManager.get('ranking_loading'), { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#cccccc' }).setOrigin(0.5);
+
+    try {
+        const response = await api.getRanking();
+        statusText.destroy();
+
+        if (response.success && response.ranking.length > 0) {
+            this.createRankingTable(centerX, 130, response.ranking);
+        } else if (response.success && response.ranking.length === 0) {
+            statusText.setText(LanguageManager.get('ranking_empty')).setStyle({ fill: '#ffdddd' });
+        } else {
+            statusText.setText(LanguageManager.get('ranking_failed')).setStyle({ fill: '#ffdddd' });
+        }
+    } catch (error) {
+        statusText.destroy();
+        console.error("Error fetching ranking for scene:", error);
+        this.add.text(centerX, centerY, LanguageManager.get('ranking_error'), { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#ff0000' }).setOrigin(0.5);
+    }
   }
 
   createRankingTable(x, startY, rankingData) {
     const headerStyle = { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#FFD700' };
     const rowStyle = { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ffffff' };
 
-    // Define column positions relative to the center `x`
     const rankX = x - 140;
     const playerX = x;
-    const scoreX = x + 140;
+    const waveX = x + 140;
 
-    // Add Headers
+    // Headers
     this.add.text(rankX, startY, LanguageManager.get('ranking_header_rank'), headerStyle).setOrigin(0.5);
     this.add.text(playerX, startY, LanguageManager.get('ranking_header_player'), headerStyle).setOrigin(0.5);
-    this.add.text(scoreX, startY, LanguageManager.get('ranking_header_score'), headerStyle).setOrigin(0.5);
+    this.add.text(waveX, LanguageManager.get('ranking_header_wave', {}, 'Wave'), headerStyle).setOrigin(0.5);
 
-    // Add a separator line
     this.add.graphics().fillStyle(0x00ffff, 0.5).fillRect(x - 180, startY + 25, 360, 2);
 
-    // Add Player Rows
+    // Rows
     let yPos = startY + 60;
-    const top10 = rankingData.slice(0, 10); // Ensure we only show top 10
-
-    top10.forEach((player, index) => {
-        const rank = (index + 1).toString();
-        const playerName = this.truncateAddress(player.username);
-        const score = player.score.toString();
+    rankingData.forEach((player) => {
+        const rank = player.rank.toString();
+        const playerName = this.truncateAddress(player.address);
+        const wave = player.wave.toString();
 
         this.add.text(rankX, yPos, rank, rowStyle).setOrigin(0.5);
         this.add.text(playerX, yPos, playerName, rowStyle).setOrigin(0.5);
-        this.add.text(scoreX, yPos, score, rowStyle).setOrigin(0.5);
+        this.add.text(waveX, yPos, wave, rowStyle).setOrigin(0.5);
 
         yPos += 35;
     });
