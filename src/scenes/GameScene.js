@@ -142,7 +142,9 @@ export default class GameScene extends Phaser.Scene {
   }
 
   initializePveMatch() {
-    this.level = 1;
+    // LP-05: Initialize world and phase progression system
+    this.world = 1;
+    this.phase = 1;
     this.waveStarted = false;
     this.enemiesSpawned = 0;
     this.enemiesKilled = 0;
@@ -172,13 +174,15 @@ export default class GameScene extends Phaser.Scene {
       },
     });
 
-    const initialSpawnResult = this.enemySpawner.spawn();
-    if (initialSpawnResult === 'GAME_SHOULD_END') this.handleGameOver();
+    // LP-05: Call the new wave spawner with the world and phase
+    this.enemySpawner.spawnWave(this.world, this.phase);
 
-    // CQ-07: Emit initial wave update
-    const waveInStage = ((this.level - 1) % 5) + 1;
-    const totalWavesInStage = (this.level % 5 === 0) ? 1 : 5;
-    this.events.emit('update-wave', { current: waveInStage, total: totalWavesInStage, isBoss: (this.level % 5 === 0) });
+    // LP-05: Emit initial wave update for the HUD
+    this.events.emit('update-wave', {
+        world: this.world,
+        phase: this.phase,
+        isBoss: (this.phase === 7)
+    });
   }
 
   initializePvpMatch() {
@@ -270,11 +274,9 @@ export default class GameScene extends Phaser.Scene {
     this.bossSpawned = false;
     this.waveStarted = false;
     this.transitioning = false;
-    this.stage = Math.ceil(this.level / 5);
-    this.stageCode = `${this.stage}-${((this.level - 1) % 5) + 1}`;
-    this.bg.setTexture(`bg${Math.min(this.stage, 5)}`);
-    SoundManager.playWorldMusic(this, this.stage);
-    SoundManager.play(this, 'wave_start');
+    // LP-05: Update background and music based on the current world
+    this.bg.setTexture(`bg${Math.min(this.world, 5)}`);
+    SoundManager.playWorldMusic(this, this.world);
   }
 
   async endMatch(result) {
@@ -350,12 +352,14 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    // LP-05 & LP-07: Pass all relevant data to GameOverScene
+    const xpGained = this.score;
     this.scene.stop('HUDScene');
-    this.scene.start('GameOverScene', { score: this.score, level: this.level, coins: this.coinsEarned });
+    this.scene.start('GameOverScene', { score: this.score, world: this.world, phase: this.phase, coins: this.coinsEarned, xpGained: xpGained });
   }
 
   update() {
-    if (this.gamePaused || !this.player?.active) return;
+    if (this.pauseManager.isPaused || !this.player?.active) return;
     this.playerController.update(this.cursors, this.playerStats.speed);
 
     if (this.gameMode !== 'ranked') {
@@ -364,19 +368,25 @@ export default class GameScene extends Phaser.Scene {
   }
 
   prepareNextStage() {
-    this.level++;
+    // LP-05: This function is now the single point of logic for advancing waves.
+    this.phase++;
+    if (this.phase > 7) { // 7 phases per world, with phase 7 being the boss
+        this.phase = 1;
+        this.world++;
+    }
+
     this.resetWaveState();
     this.physics.resume();
     this.setPlayerState('CAN_SHOOT', 'Next stage prepared');
 
-    // CQ-07: Emit wave update for the new stage
-    const waveInStage = ((this.level - 1) % 5) + 1;
-    const totalWavesInStage = (this.level % 5 === 0) ? 1 : 5;
-    this.events.emit('update-wave', { current: waveInStage, total: totalWavesInStage, isBoss: (this.level % 5 === 0) });
+    // LP-05: Emit wave update for the HUD
+    this.events.emit('update-wave', {
+        world: this.world,
+        phase: this.phase,
+        isBoss: (this.phase === 7)
+    });
 
-    if (this.enemySpawner.spawn() === 'GAME_SHOULD_END') {
-      this.handleGameOver();
-    }
+    this.enemySpawner.spawnWave(this.world, this.phase);
   }
 
   updatePve() {
@@ -414,15 +424,10 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
+    // LP-05: Check if the current non-boss wave is complete, then advance.
     if (this.enemiesSpawned > 0 && this.enemiesKilled >= this.enemiesSpawned && !this.bossSpawned && !this.waveStarted && !this.transitioning) {
-      this.waveStarted = true;
-      this.time.delayedCall(500, () => {
-        this.level++;
-        this.resetWaveState();
-        if (this.enemySpawner.spawn() === 'GAME_SHOULD_END') {
-          this.handleGameOver();
-        }
-      });
+      this.waveStarted = true; // Prevents this from being called multiple times
+      this.time.delayedCall(1000, this.prepareNextStage, [], this);
     }
   }
 

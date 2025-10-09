@@ -462,20 +462,16 @@ async function addXpToHero(heroId, xpAmount) {
         const setting = await GameSetting.findOne({ where: { key: 'xp_multiplier' }, transaction: t });
         const multiplier = parseFloat(setting ? setting.value : '1.0');
 
-        hero.xp += xpAmount;
-        let newMaxHp = hero.maxHp;
+        const xpCap = getExperienceForLevel(hero.level + 1, multiplier) - 1;
 
-        while (true) {
-            const xpForNextLevel = getExperienceForLevel(hero.level + 1, multiplier);
-            if (hero.xp >= xpForNextLevel) {
-                hero.level++;
-                newMaxHp += 10;
-            } else {
-                break;
-            }
+        // If hero is already at max XP for their level, do not add more.
+        if (hero.xp >= xpCap) {
+            return { success: true, hero: hero.toJSON() };
         }
-        hero.maxHp = newMaxHp;
-        hero.hp = newMaxHp; // Refill HP on level up
+
+        const newXp = hero.xp + xpAmount;
+        hero.xp = Math.min(newXp, xpCap); // Cap the XP at the max for the current level
+
         await hero.save({ transaction: t });
 
         return { success: true, hero: hero.toJSON() };
@@ -592,6 +588,18 @@ async function markGamesAsClaimed(userId, cycleStartTime) {
     return { success: true, count: affectedRows };
 }
 
+async function getRanking(limit = 10) {
+    return PlayerCheckpoint.findAll({
+        include: [{
+            model: User,
+            attributes: ['wallet_address'],
+            required: true // Ensures we only get checkpoints for existing users
+        }],
+        order: [['highest_wave_reached', 'DESC']],
+        limit: limit
+    });
+}
+
 
 module.exports = {
     initDb,
@@ -629,6 +637,7 @@ module.exports = {
     countGamesInCycle,
     getUnclaimedGamesForUser,
     markGamesAsClaimed,
+    getRanking,
     // Export models and sequelize instance for testing or advanced usage
     sequelize,
     User,
