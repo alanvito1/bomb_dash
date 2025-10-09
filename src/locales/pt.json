@@ -88,5 +88,13 @@
   "pause_title": "PAUSADO",
   "pause_continue": "Continuar",
   "pause_settings": "Configurações",
-  "pause_exit": "Sair para o Menu"
+  "pause_exit": "Sair para o Menu",
+  "char_select_loading": "Carregando heróis...",
+  "back_button": "VOLTAR",
+  "char_select_start_game": "INICIAR GAME",
+  "char_select_upgrades": "MELHORIAS",
+  "char_select_no_heroes": "Nenhum herói encontrado. Jogue para conseguir um!",
+  "char_select_error": "Erro ao carregar heróis: {message}",
+  "char_select_error_connection": "Erro de conexão ao buscar heróis.",
+  "level_up_button": "SUBIR DE NÍVEL"
 }

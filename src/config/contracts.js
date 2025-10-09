@@ -24,7 +24,7 @@ const contracts = {
     },
     bcoin: {
         address: addresses.bcoinTokenAddress,
-        abi: bcoinAbi.abi
+        abi: bcoinAbi // HYDRA-FIX: Correctly reference the imported JSON ABI array
     },
     tournamentController: {
         address: addresses.tournamentControllerAddress,

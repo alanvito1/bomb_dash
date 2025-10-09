@@ -347,12 +347,24 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  updatePve() {
-    if (this.bossSpawned && !this.bossDefeated && this.enemies.countActive(true) === 0 && !this.transitioning) {
-      this.transitioning = true;
-      this.bossDefeated = true;
-      this.showNextStageDialog();
+  prepareNextStage() {
+    this.level++;
+    this.resetWaveState();
+    this.physics.resume();
+    if (this.bombTimer) {
+      this.bombTimer.paused = false;
     }
+
+    if (this.enemySpawner.spawn() === 'GAME_SHOULD_END') {
+      this.handleGameOver();
+    }
+  }
+
+  updatePve() {
+    // HS1-02: The logic for advancing to the next stage after a boss is defeated
+    // has been moved entirely to CollisionHandler.js to ensure it's triggered
+    // at the exact moment of the boss's defeat. This prevents race conditions
+    // and bugs where the game state wasn't paused/resumed correctly.
 
     this.enemies.getChildren().forEach(enemy => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {

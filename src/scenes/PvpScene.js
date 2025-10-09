@@ -17,10 +17,13 @@ export default class PvpScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.image(0, 0, 'menu_bg_vertical').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height);
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
 
         // --- Back Button ---
-        const backButton = this.add.text(this.game.config.width - 100, 50, "Voltar", {
+        const backButton = this.add.text(centerX, this.scale.height - 50, "Voltar", {
             fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#00ffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         backButton.on('pointerdown', () => this.scene.start(CST.SCENES.MENU, { userData: this.userData, web3: this.web3 }));
@@ -29,32 +32,26 @@ export default class PvpScene extends Phaser.Scene {
 
         // --- Guard Clause ---
         if (!this.userData || !this.userData.heroes) {
-            this.add.text(this.game.config.width / 2, this.game.config.height / 2, 'Erro: Dados do jogador não encontrados.\nRetornando ao menu...', {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '18px',
-                color: '#ff0000',
-                align: 'center',
-                wordWrap: { width: this.game.config.width - 40 }
+            this.add.text(centerX, centerY, 'Erro: Dados do jogador não encontrados.\nRetornando ao menu...', {
+                fontFamily: '"Press Start 2P"', fontSize: '18px', color: '#ff0000', align: 'center', wordWrap: { width: this.scale.width - 40 }
             }).setOrigin(0.5);
-
-            this.time.delayedCall(3000, () => {
-                this.scene.start(CST.SCENES.MENU);
-            });
-            return; // Stop execution to prevent crashes
+            this.time.delayedCall(3000, () => this.scene.start(CST.SCENES.MENU));
+            return;
         }
 
         // --- Main Title ---
-        this.titleText = this.add.text(this.game.config.width / 2, 50, "PvP 1v1", {
-            fontFamily: '"Press Start 2P"', fontSize: '48px', color: '#FFD700', align: 'center'
+        this.titleText = this.add.text(centerX, 50, "PvP 1v1", {
+            fontFamily: '"Press Start 2P"', fontSize: '36px', color: '#FFD700', align: 'center'
         }).setOrigin(0.5).setDepth(1);
 
         // --- Mode Selection ---
-        this.mode = 'ranked'; // Default mode
-        this.contentContainer = this.add.container(); // To hold mode-specific UI
+        this.mode = 'ranked';
+        this.contentContainer = this.add.container(0, 0);
 
-        this.rankedButton = this.createModeButton(200, 120, LanguageManager.get('pvp_ranked'), 'ranked');
-        this.wagerButton = this.createModeButton(this.game.config.width / 2, 120, LanguageManager.get('pvp_wager'), 'wager');
-        this.botButton = this.createModeButton(this.game.config.width - 200, 120, LanguageManager.get('pvp_bot'), 'bot');
+        const buttonY = 120;
+        this.rankedButton = this.createModeButton(centerX - 150, buttonY, LanguageManager.get('pvp_ranked'), 'ranked');
+        this.wagerButton = this.createModeButton(centerX, buttonY, LanguageManager.get('pvp_wager'), 'wager');
+        this.botButton = this.createModeButton(centerX + 150, buttonY, LanguageManager.get('pvp_bot'), 'bot');
 
         this.updateModeUI();
     }
@@ -232,29 +229,32 @@ export default class PvpScene extends Phaser.Scene {
         return card;
     }
 
-    // THIS BLOCK WAS THE CAUSE OF THE CRASH
-    // It appears to be a malformed, duplicated function.
-    // selectHeroForWager(card) {
-    //    if (this.selectedHeroCard) {
-    //        const oldBg = this.selectedHeroCard.getData('bg');
-    //        oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-250, -40, 500, 80);
-    //    }
-    //
-    //    this.selectedHeroCard = card;
-    //    this.selectedHero = card.getData('hero');
-    //
-    //    card.getData('bg').lineStyle(2, 0x00FFFF).strokeRect(-250, -40, 500, 80);
-    //
-    //    this.showEnterWagerButton();
-    // }
+    // HS1-05: This entire malformed, duplicated function block was causing the scene to crash.
+    // It has been removed.
+
+    selectHeroForWager(card) {
+        if (this.selectedHeroCard) {
+            const oldBg = this.selectedHeroCard.getData('bg');
+            oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-250, -40, 500, 80);
+        }
+
+        this.selectedHeroCard = card;
+        this.selectedHero = card.getData('hero');
+
+        card.getData('bg').lineStyle(2, 0x00FFFF).strokeRect(-250, -40, 500, 80);
+
+        this.showEnterWagerButton();
+    }
 
     showEnterWagerButton() {
         if (this.enterWagerButton) this.enterWagerButton.destroy();
+        const centerX = this.cameras.main.centerX;
+        const buttonY = this.scale.height - 100;
 
         const tier = this.selectedTier;
         const buttonText = `Entrar na Fila (${tier.bcoin_cost} BCOIN + ${tier.xp_cost} XP)`;
 
-        this.enterWagerButton = this.add.text(this.game.config.width / 2, this.game.config.height - 100, buttonText, {
+        this.enterWagerButton = this.add.text(centerX, buttonY, buttonText, {
             fontFamily: '"Press Start 2P"', fontSize: '18px', fill: '#00ff00', backgroundColor: '#000000cc', padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
