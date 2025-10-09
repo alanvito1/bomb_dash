@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { setupWallet, login, getGame } = require('./test-utils.js');
 const { Wallet } = require('ethers');
 
-test.describe.skip('E2E: New Player Journey', () => {
+test.describe('E2E: New Player Journey', () => {
     let page;
     const newPlayerWallet = Wallet.createRandom();
 

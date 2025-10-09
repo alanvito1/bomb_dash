@@ -8,10 +8,11 @@ export default class AuthChoiceScene extends Phaser.Scene {
         super({ key: 'AuthChoiceScene' });
     }
 
-    create() {
-        // AGGRESSIVE DEBUGGING - STEP 2:
-        // The minimal scene worked. Now, let's add back the button UI
-        // WITHOUT the event handler logic to see if rendering the button causes the crash.
+    async create() {
+        // JF-FIX: Initialize LanguageManager before creating UI
+        // The scene was crashing because it tried to get translations before they were loaded.
+        await LanguageManager.init(this);
+
         console.log('--- AuthChoiceScene: CREATE METHOD (adding button UI) ---');
 
         this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x1a1a1a).setOrigin(0);

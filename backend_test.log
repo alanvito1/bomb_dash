@@ -1,0 +1,31 @@
+
+> app@1.0.0 start:backend:test
+> NODE_ENV=test node backend/server.js
+
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+=============================================
+     INICIALIZANDO O SERVIDOR DO JOGO
+=============================================
+Database & tables created!
+[OK] Conexão com o banco de dados estabelecida com sucesso.
+[Game State] Inicializando o serviço de estado do PvP...
+[Game State] O status do PvP está permanentemente definido como: OPEN
+[OK] Cron jobs (Ciclo de PvP, etc.) foram iniciados.
+[OK] Processador da fila de matchmaking iniciado.
+[OK] Cron job do Altar de Buffs iniciado.
+[OK] Cron job for Solo Rewards scheduled (runs every 10 minutes).
+[StakingListener] Initializing...
+[StakingListener] Failed to initialize: TypeError: abi is not iterable
+    at new Interface (/app/backend/node_modules/ethers/lib.commonjs/abi/interface.js:251:25)
+    at Interface.from (/app/backend/node_modules/ethers/lib.commonjs/abi/interface.js:1106:16)
+    at new BaseContract (/app/backend/node_modules/ethers/lib.commonjs/contract/contract.js:550:44)
+    at new Contract (/app/backend/node_modules/ethers/lib.commonjs/contract/contract.js:957:1)
+    at Object.initStakingListener (/app/backend/staking_listener.js:24:27)
+    at startServer (/app/backend/server.js:1081:31)
+[OK] Listener de staking de heróis iniciado.
+[OK] Todos os serviços foram inicializados. O servidor está pronto para aceitar conexões.
+---------------------------------------------
+[OK] Servidor HTTP iniciado e escutando na porta 3000.
+=============================================
+      O SERVIDOR ESTÁ TOTALMENTE OPERACIONAL
+=============================================
