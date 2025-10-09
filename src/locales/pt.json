@@ -96,5 +96,7 @@
   "char_select_no_heroes": "Nenhum herói encontrado. Jogue para conseguir um!",
   "char_select_error": "Erro ao carregar heróis: {message}",
   "char_select_error_connection": "Erro de conexão ao buscar heróis.",
-  "level_up_button": "SUBIR DE NÍVEL"
+  "level_up_button": "SUBIR DE NÍVEL",
+  "hud_wave_counter": "Onda: {current}/{total}",
+  "hud_wave_boss": "ONDA DE CHEFE"
 }

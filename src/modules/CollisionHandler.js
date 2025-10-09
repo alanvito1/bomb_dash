@@ -92,9 +92,8 @@ export default class CollisionHandler {
         // now handles resuming the physics and the timer. We pass it as a
         // callback to the dialog.
         this.scene.physics.pause();
-        if (this.scene.bombTimer) {
-          this.scene.bombTimer.paused = true;
-        }
+        // CQ-02: Use the state machine to prevent shooting during the dialog
+        this.scene.setPlayerState('CANNOT_SHOOT', 'Boss defeated, dialog showing');
         // Correctly call the imported StageDialog function.
         StageDialog(this.scene, () => this.scene.prepareNextStage());
       }
@@ -107,8 +106,9 @@ export default class CollisionHandler {
   onHit(player, enemy) {
     if (this.scene.gamePaused || this.scene.transitioning) return;
 
+    // CQ-03: Do not destroy the enemy on collision. Only damage the player.
     if (!enemy.isBoss) {
-        enemy.destroy();
+      // The enemy.destroy() call was removed from here.
     }
 
     const stats = this.scene.playerStats;

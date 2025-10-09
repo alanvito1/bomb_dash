@@ -84,5 +84,7 @@
   "hud_hero_xp": "HERO XP",
   "menu_bcoin_balance": "BCOIN: {balance}",
   "hud_buff": "BUFF: {buff}",
-  "hud_buff_time_left": "{hours}h {minutes}m left"
+  "hud_buff_time_left": "{hours}h {minutes}m left",
+  "hud_wave_counter": "Wave: {current}/{total}",
+  "hud_wave_boss": "BOSS WAVE"
 }

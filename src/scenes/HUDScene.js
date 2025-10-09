@@ -23,6 +23,7 @@ export default class HUDScene extends Phaser.Scene {
         this.accountLevelText = null;
         this.heroXpBar = null;
         this.heroLevelText = null; // To display the hero's level
+        this.waveText = null; // CQ-07: Wave counter text
         this.bcoinText = null;
         this.buffText = null;
         this.balanceRefreshTimer = null;
@@ -35,6 +36,7 @@ export default class HUDScene extends Phaser.Scene {
         if (gameScene) {
             gameScene.events.on('update-health', this.updateHealth, this);
             gameScene.events.on('update-xp', this.updateXP, this);
+            gameScene.events.on('update-wave', this.updateWave, this); // CQ-07
         }
 
         // Listen for balance updates from the BcoinService
@@ -75,6 +77,17 @@ export default class HUDScene extends Phaser.Scene {
         if (gameScene) {
              gameScene.events.off('update-health', this.updateHealth, this);
              gameScene.events.off('update-xp', this.updateXP, this);
+             gameScene.events.off('update-wave', this.updateWave, this); // CQ-07
+        }
+    }
+
+    updateWave({ current, total, isBoss }) {
+        if (!this.waveText) return;
+
+        if (isBoss) {
+            this.waveText.setText(LanguageManager.get('hud_wave_boss'));
+        } else {
+            this.waveText.setText(LanguageManager.get('hud_wave_counter', { current, total }));
         }
     }
 
@@ -107,6 +120,14 @@ export default class HUDScene extends Phaser.Scene {
             fill: '#00ffff', // Cyan color for buffs
             align: 'right'
         }).setOrigin(1, 0);
+
+        // CQ-07: Wave Counter Text
+        this.waveText = this.add.text(this.scale.width / 2, margin, '', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            fill: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5, 0);
     }
 
     updateHealth({ health, maxHealth }) {
@@ -155,7 +176,34 @@ export default class HUDScene extends Phaser.Scene {
             this.accountXpBar.fillStyle(0x00ff00);
             this.accountXpBar.fillRect(barX, barY, barWidth * accXpPercentage, barHeight);
         }
-        // Removed Hero XP bar logic for a cleaner HUD
+        // Removed Hero XP bar logic for a cleaner HUD - RE-IMPLEMENTING FOR CQ-07
+
+        // Handle Hero Level and XP
+        if (data.heroXP !== undefined && data.heroLevel !== undefined) {
+            this.heroXP = data.heroXP;
+            this.heroLevel = data.heroLevel;
+
+            const xpForCurrentLevel = getExperienceForLevel(this.heroLevel);
+            const xpForNextLevel = getExperienceForLevel(this.heroLevel + 1);
+            const xpEarnedInCurrentLevel = this.heroXP - xpForCurrentLevel;
+            const xpNeededForLevelUp = xpForNextLevel - xpForCurrentLevel;
+            const heroXpPercentage = xpNeededForLevelUp > 0 ? Phaser.Math.Clamp(xpEarnedInCurrentLevel / xpNeededForLevelUp, 0, 1) : 0;
+
+            if (!this.heroXpBar) {
+                this.heroXpBar = this.add.graphics();
+                this.heroLevelText = this.add.text(margin, margin + 60, '', { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#00ffff' });
+            }
+
+            this.heroLevelText.setText(`Hero: ${this.heroLevel}`);
+            const barY = margin + 60;
+            this.heroXpBar.clear();
+            // Background
+            this.heroXpBar.fillStyle(0x000000, 0.5);
+            this.heroXpBar.fillRect(barX, barY, barWidth, barHeight);
+            // Foreground
+            this.heroXpBar.fillStyle(0x00ffff); // Cyan for hero XP
+            this.heroXpBar.fillRect(barX, barY, barWidth * heroXpPercentage, barHeight);
+        }
     }
 
     handleBalanceUpdate({ balance, error }) {
