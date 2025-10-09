@@ -17,8 +17,8 @@ async function getEthers() {
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
-    // LP-01 / Final Verification Fix: Call the address and ABI as functions.
-    const contract = new ethers.Contract(contracts.bcoin.address(), contracts.bcoin.abi(), provider);
+    // FURIA-FS-02: Access address and abi as properties. They are getters that return the values.
+    const contract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, provider);
     ethersInstance = { ethers, provider, contract };
     return ethersInstance;
 }
@@ -26,16 +26,17 @@ async function getEthers() {
 class BcoinService {
     constructor() {
         this.balance = 0; // CQ-01: Use number type for balance
+        this.nativeBalance = 0;
         this.error = null;
         GameEventEmitter.on('bcoin-balance-changed', this.updateBalance.bind(this));
     }
 
     async getBalance(forceUpdate = false) {
         if (!forceUpdate && this.balance > 0) {
-            return { balance: this.balance, error: this.error };
+            return { balance: this.balance, nativeBalance: this.nativeBalance, error: this.error };
         }
         await this.updateBalance();
-        return { balance: this.balance, error: this.error };
+        return { balance: this.balance, nativeBalance: this.nativeBalance, error: this.error };
     }
 
     async updateBalance() {
@@ -45,7 +46,8 @@ class BcoinService {
             if (!ethersInfo) {
                 this.error = 'No wallet connected';
                 this.balance = 0;
-                GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
+                this.nativeBalance = 0;
+                GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, nativeBalance: this.nativeBalance, error: this.error });
                 return;
             }
             const { ethers, provider, contract } = ethersInfo;
@@ -55,13 +57,22 @@ class BcoinService {
             const decimals = await contract.decimals();
             // CQ-01: Parse the formatted string back into a number
             this.balance = parseFloat(ethers.formatUnits(rawBalance, decimals));
+
+            const nativeBalanceWei = await provider.getBalance(address);
+            this.nativeBalance = parseFloat(ethers.formatUnits(nativeBalanceWei, 18));
+
             this.error = null;
         } catch (err) {
             console.error('[BcoinService] Error fetching balance:', err);
             this.error = (err.message === 'No wallet detected') ? 'No wallet connected' : 'RPC Error';
             this.balance = 0; // Use 0 for error state
+            this.nativeBalance = 0;
         }
-        GameEventEmitter.emit('bcoin-balance-update', { balance: this.balance, error: this.error });
+        GameEventEmitter.emit('bcoin-balance-update', {
+            balance: this.balance,
+            nativeBalance: this.nativeBalance,
+            error: this.error
+        });
     }
 
     async _handleTransaction(transactionPromise, successMessage) {

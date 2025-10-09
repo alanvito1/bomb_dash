@@ -14,6 +14,7 @@ import SoundManager from '../utils/sound.js';
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
+    this.isInitialized = false;
     this.transitioning = false;
     this.playerState = 'CAN_SHOOT'; // CQ-02: State machine for player actions
     this.currentTarget = null;
@@ -53,6 +54,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   async initializeScene() {
+    // FURIA-FS-04: Black box recorder for debugging disappearing enemies.
+    window.enemyStateHistory = [];
     console.log('[VCL-09] GameScene: Starting initialization...');
     try {
       const serverSettings = await api.getGameSettings();
@@ -139,6 +142,9 @@ export default class GameScene extends Phaser.Scene {
     createUIButtons(this, this.playerStats);
     await SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
+
+    // FURIA-FS-01: Signal that initialization is complete and the update loop can run.
+    this.isInitialized = true;
   }
 
   initializePveMatch() {
@@ -358,7 +364,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.pauseManager.isPaused || !this.player?.active) return;
+    // FURIA-FS-01: Add guard clause to prevent update loop from running before async create() is complete.
+    if (!this.isInitialized || this.pauseManager.isPaused || !this.player?.active) return;
     this.playerController.update(this.cursors, this.playerStats.speed);
 
     if (this.gameMode !== 'ranked') {
@@ -389,6 +396,27 @@ export default class GameScene extends Phaser.Scene {
   }
 
   updatePve() {
+    // FURIA-FS-04: Black box recorder for debugging disappearing enemies.
+    // We log the state of every enemy on every frame to a global array.
+    // If the bug occurs, we can inspect `window.enemyStateHistory` in the console.
+    if (this.enemies && this.enemies.getChildren().length > 0) {
+        const enemyStates = this.enemies.getChildren().map(e => ({
+            id: e.name, // Assuming enemies have a unique name/ID
+            x: e.x,
+            y: e.y,
+            active: e.active,
+            visible: e.visible,
+            hp: e.hp,
+            timestamp: this.time.now
+        }));
+        window.enemyStateHistory.push(...enemyStates);
+    }
+     // Keep history from getting too large
+    if (window.enemyStateHistory.length > 5000) {
+        window.enemyStateHistory.splice(0, window.enemyStateHistory.length - 5000);
+    }
+
+
     // HS1-02: The logic for advancing to the next stage after a boss is defeated
     // has been moved entirely to CollisionHandler.js to ensure it's triggered
     // at the exact moment of the boss's defeat. This prevents race conditions

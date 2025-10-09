@@ -6,6 +6,7 @@ export default class EnemySpawner {
   constructor(scene, accountLevel = 1) {
     this.scene = scene;
     this.accountLevel = accountLevel;
+    this.enemyIdCounter = 0;
     this.difficultyMultiplier = 1 + (this.accountLevel - 1) * 0.07;
 
     console.log(`[EnemySpawner V2] Initialized for Account Level: ${this.accountLevel}. Difficulty Multiplier: ${this.difficultyMultiplier.toFixed(2)}`);
@@ -110,6 +111,7 @@ export default class EnemySpawner {
     boss.setDisplaySize(48, 48);
     boss.hp = bossHp;
     boss.isBoss = true;
+    boss.name = `boss_${this.enemyIdCounter++}`;
 
     SoundManager.play(this.scene, 'boss_spawn');
   }
@@ -133,5 +135,6 @@ export default class EnemySpawner {
     enemy.setDisplaySize(32, 32);
     enemy.hp = hp;
     enemy.isBoss = false;
+    enemy.name = `enemy_${this.enemyIdCounter++}`;
   }
 }
