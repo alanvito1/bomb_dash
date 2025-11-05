@@ -4,6 +4,12 @@ import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 let ethersState = null;
 
+/**
+ * Lazily initializes and returns Ethers.js dependencies for the tournament service.
+ * @returns {Promise<{ethers: object, provider: object, signer: object, contract: object}>} A promise that resolves with the ethers instances.
+ * @throws {Error} Throws an error if no wallet is detected.
+ * @private
+ */
 async function getEthersDependencies() {
     if (ethersState) {
         return ethersState;
@@ -23,40 +29,55 @@ async function getEthersDependencies() {
     return ethersState;
 }
 
+/**
+ * @class TournamentService
+ * @description A service for interacting with the TournamentController smart contract.
+ * It primarily handles on-chain payments for in-game actions like hero upgrades.
+ */
 class TournamentService {
+    /**
+     * @constructor
+     */
     constructor() {
-        // Initialization is now handled on-demand by getEthersDependencies
+        // Initialization is handled on-demand.
     }
 
+    /**
+     * Gets the initialized TournamentController contract instance.
+     * @returns {Promise<ethers.Contract>} A promise that resolves with the contract instance.
+     */
     async getContract() {
         const { contract } = await getEthersDependencies();
         return contract;
     }
 
     /**
-     * A centralized handler for blockchain transactions.
-     * @param {Promise} transactionPromise The promise returned by the contract method call.
-     * @param {string} successMessage The message to show on successful confirmation.
+     * A centralized handler for blockchain transactions that emits global events.
+     * @param {Promise} transactionPromise - The promise returned by the contract method call.
+     * @param {string} successMessage - The message to emit on successful confirmation.
+     * @returns {Promise<object>} A promise that resolves with the confirmed transaction receipt.
+     * @throws {Error} Re-throws the error from the transaction promise.
      * @private
      */
     async _handleTransaction(transactionPromise, successMessage) {
         try {
             const tx = await transactionPromise;
             GameEventEmitter.emit('transaction:pending', tx.hash);
-            await tx.wait(); // Wait for the transaction to be mined
+            const receipt = await tx.wait();
             GameEventEmitter.emit('transaction:success', successMessage);
-            return tx; // PT-02: Return the confirmed transaction object
+            return receipt;
         } catch (error) {
             console.error("Transaction failed:", error);
             GameEventEmitter.emit('transaction:error', error);
-            throw error; // Re-throw so the UI can know the operation failed
+            throw error;
         }
     }
 
     /**
-     * Executes the on-chain transaction to pay the fee for a hero stat upgrade.
-     * This function should be called *after* the user has approved the BCOIN spending.
-     * @param {number|string} cost The cost of the upgrade in BCOIN (not wei).
+     * Executes the on-chain transaction to pay the BCOIN fee for a hero stat upgrade.
+     * @param {number|string} cost - The cost of the upgrade in BCOIN (e.g., 10), not wei.
+     * @returns {Promise<object>} A promise that resolves with the transaction receipt.
+     * @throws {Error} Throws an error if the BCOIN allowance is insufficient.
      */
     async payUpgradeFee(cost) {
         const { ethers, contract } = await getEthersDependencies();
@@ -66,16 +87,11 @@ class TournamentService {
 
         const allowance = await bcoinService.getAllowance(playerAddress, contracts.tournamentController.address);
         if (allowance < cost) {
-             throw new Error(`Insufficient BCOIN allowance. Required: ${cost}, You have approved: ${allowance}`);
+             throw new Error(`Insufficient BCOIN allowance. Required: ${cost}, You have: ${allowance}`);
         }
 
-        console.log(`Executing payUpgradeFee for player ${playerAddress} with cost ${cost.toString()} BCOIN (${costInWei.toString()} wei)`);
-
-        const txPromise = contract.payUpgradeFee(playerAddress, costInWei, {
-            gasLimit: 300000
-        });
-
-        await this._handleTransaction(txPromise, "Upgrade fee paid successfully!");
+        const txPromise = contract.payUpgradeFee(playerAddress, costInWei, { gasLimit: 300000 });
+        return this._handleTransaction(txPromise, "Upgrade fee paid successfully!");
     }
 }
 

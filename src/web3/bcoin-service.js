@@ -3,6 +3,11 @@ import GameEventEmitter from '../utils/GameEventEmitter.js';
 
 let ethersInstance = null;
 
+/**
+ * Lazily initializes and returns the Ethers.js instance and BCOIN contract.
+ * @returns {Promise<{ethers: object, provider: object, contract: object} | null>} A promise that resolves with the ethers instances, or null if no wallet is found.
+ * @private
+ */
 async function getEthers() {
     if (ethersInstance) {
         return ethersInstance;
@@ -11,26 +16,40 @@ async function getEthers() {
     const { ethers } = await import('ethers');
 
     if (!window.ethereum) {
-        // LP-01 / Final Verification Fix: Handle no wallet gracefully instead of throwing.
         console.warn('[BcoinService] No wallet (window.ethereum) detected. Cannot initialize ethers.');
         return null;
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
-    // FURIA-FS-02: Access address and abi as properties. They are getters that return the values.
     const contract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, provider);
     ethersInstance = { ethers, provider, contract };
     return ethersInstance;
 }
 
+/**
+ * @class BcoinService
+ * @description A service for managing interactions with the BCOIN (BEP-20) smart contract.
+ * It handles fetching user balances, approving token spending, and checking allowances.
+ */
 class BcoinService {
+    /**
+     * @constructor
+     */
     constructor() {
-        this.balance = 0; // CQ-01: Use number type for balance
+        /** @type {number} The user's BCOIN balance. */
+        this.balance = 0;
+        /** @type {number} The user's native currency (e.g., BNB) balance. */
         this.nativeBalance = 0;
+        /** @type {string | null} Stores any error that occurred while fetching the balance. */
         this.error = null;
         GameEventEmitter.on('bcoin-balance-changed', this.updateBalance.bind(this));
     }
 
+    /**
+     * Gets the user's BCOIN and native currency balances.
+     * @param {boolean} [forceUpdate=false] - If true, forces a refetch from the blockchain.
+     * @returns {Promise<{balance: number, nativeBalance: number, error: string | null}>} An object with the balances and error state.
+     */
     async getBalance(forceUpdate = false) {
         if (!forceUpdate && this.balance > 0) {
             return { balance: this.balance, nativeBalance: this.nativeBalance, error: this.error };
@@ -39,10 +58,14 @@ class BcoinService {
         return { balance: this.balance, nativeBalance: this.nativeBalance, error: this.error };
     }
 
+    /**
+     * Fetches the latest BCOIN and native balances from the blockchain and updates the service's state.
+     * Emits a 'bcoin-balance-update' event with the new state.
+     * @returns {Promise<void>}
+     */
     async updateBalance() {
         try {
             const ethersInfo = await getEthers();
-            // LP-01 / Final Verification Fix: If no wallet, ethersInfo will be null.
             if (!ethersInfo) {
                 this.error = 'No wallet connected';
                 this.balance = 0;
@@ -55,7 +78,6 @@ class BcoinService {
             const address = await signer.getAddress();
             const rawBalance = await contract.balanceOf(address);
             const decimals = await contract.decimals();
-            // CQ-01: Parse the formatted string back into a number
             this.balance = parseFloat(ethers.formatUnits(rawBalance, decimals));
 
             const nativeBalanceWei = await provider.getBalance(address);
@@ -64,8 +86,8 @@ class BcoinService {
             this.error = null;
         } catch (err) {
             console.error('[BcoinService] Error fetching balance:', err);
-            this.error = (err.message === 'No wallet detected') ? 'No wallet connected' : 'RPC Error';
-            this.balance = 0; // Use 0 for error state
+            this.error = 'RPC Error';
+            this.balance = 0;
             this.nativeBalance = 0;
         }
         GameEventEmitter.emit('bcoin-balance-update', {
@@ -75,13 +97,20 @@ class BcoinService {
         });
     }
 
+    /**
+     * A private helper to wrap a transaction promise, emitting standard events.
+     * @param {Promise<object>} transactionPromise - The promise returned by the contract method call.
+     * @param {string} successMessage - The message to emit on successful confirmation.
+     * @returns {Promise<object>} A promise that resolves with the confirmed transaction receipt.
+     * @private
+     */
     async _handleTransaction(transactionPromise, successMessage) {
         try {
             const tx = await transactionPromise;
             GameEventEmitter.emit('transaction:pending', tx.hash);
-            await tx.wait();
+            const receipt = await tx.wait();
             GameEventEmitter.emit('transaction:success', successMessage);
-            return tx; // PT-02: Return the confirmed transaction object
+            return receipt;
         } catch (error) {
             console.error("Transaction failed:", error);
             GameEventEmitter.emit('transaction:error', error);
@@ -89,6 +118,12 @@ class BcoinService {
         }
     }
 
+    /**
+     * Approves a spender to withdraw a specified amount of BCOIN from the user's wallet.
+     * @param {string} spender - The blockchain address of the contract or wallet to approve.
+     * @param {number|string} amount - The amount of BCOIN to approve.
+     * @returns {Promise<object>} A promise that resolves with the transaction receipt.
+     */
     async approve(spender, amount) {
         const { ethers, provider, contract } = await getEthers();
         const signer = await provider.getSigner();
@@ -97,9 +132,15 @@ class BcoinService {
         const amountInWei = ethers.parseUnits(amount.toString(), decimals);
 
         const txPromise = contractWithSigner.approve(spender, amountInWei);
-        await this._handleTransaction(txPromise, `Successfully approved ${amount} BCOIN.`);
+        return this._handleTransaction(txPromise, `Successfully approved ${amount} BCOIN.`);
     }
 
+    /**
+     * Checks the allowance a spender has to withdraw from an owner's address.
+     * @param {string} owner - The address of the token owner.
+     * @param {string} spender - The address of the spender.
+     * @returns {Promise<number>} A promise that resolves with the approved amount in BCOIN units.
+     */
     async getAllowance(owner, spender) {
         const { ethers, contract } = await getEthers();
         const allowanceInWei = await contract.allowance(owner, spender);

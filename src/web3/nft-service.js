@@ -2,6 +2,12 @@ import contracts from '../config/contracts.js';
 
 let ethersState = null;
 
+/**
+ * Lazily initializes and returns Ethers.js dependencies for the NFT service.
+ * @returns {Promise<{ethers: object, provider: object, contract: object}>} A promise that resolves with the ethers instances.
+ * @throws {Error} Throws an error if MetaMask is not installed or if the network is incorrect.
+ * @private
+ */
 async function getEthersDependencies() {
     if (ethersState) {
         return ethersState;
@@ -26,22 +32,27 @@ async function getEthersDependencies() {
         return ethersState;
     } catch (error) {
         console.error("Failed to initialize NftService dependencies:", error);
-        throw error; // Re-throw to be caught by the calling function
+        throw error;
     }
 }
 
 /**
- * A service for interacting with the Bombcrypto NFT smart contract.
+ * @class NftService
+ * @description A service dedicated to interacting with the Hero NFT smart contract.
+ * It provides methods for fetching NFT data owned by the current user.
  */
 class NftService {
-
+  /**
+   * @constructor
+   */
   constructor() {
-    // Initialization is handled on demand by getEthersDependencies
+    // Initialization is handled on-demand.
   }
 
   /**
-   * Fetches all Bombcrypto hero NFTs owned by the connected user.
-   * @returns {Promise<Array<object>>} A list of hero objects with their on-chain stats.
+   * Fetches all Hero NFTs owned by the connected user's wallet address.
+   * @returns {Promise<{success: boolean, heroes: Array<object>, message?: string}>} An object containing a success flag,
+   * an array of hero objects, and an optional error message.
    */
   async getOwnedNfts() {
     try {
@@ -61,12 +72,11 @@ class NftService {
         const tokenId = await contract.tokenOfOwnerByIndex(ownerAddress, i);
         const stats = await contract.getHeroStats(tokenId);
 
-        // Map on-chain stats to the game's hero data structure
         const heroData = {
           id: `nft-${tokenId.toString()}`,
           tokenId: tokenId.toString(),
-          name: `Bomber #${tokenId.toString()}`, // Placeholder name
-          level: 1, // Base level for new NFTs
+          name: `Bomber #${tokenId.toString()}`,
+          level: 1,
           xp: 0,
           stats: {
             damage: Number(stats.damage),
@@ -74,23 +84,20 @@ class NftService {
             speed: Number(stats.speed),
             stamina: Number(stats.stamina),
           },
-          sprite_name: 'player', // Default sprite, can be mapped from stats.bomb_skin later
+          sprite_name: 'player',
           isNFT: true,
         };
         heroes.push(heroData);
       }
 
       return { success: true, heroes: heroes };
-
     } catch (error) {
       console.error("Error fetching owned NFTs:", error);
       let userMessage = "An error occurred while fetching your NFTs.";
       if (error.code === 'CALL_EXCEPTION') {
-        userMessage = "Could not retrieve hero data. The contract might be unavailable or you are on the wrong network.";
+        userMessage = "Could not retrieve hero data.";
       } else if (error.message.includes("Incorrect network")) {
         userMessage = error.message;
-      } else if (error.message.includes("MetaMask")) {
-        userMessage = "Could not connect to the blockchain. Check your wallet and network.";
       }
       return { success: false, message: userMessage, heroes: [] };
     }

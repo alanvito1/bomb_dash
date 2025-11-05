@@ -4,16 +4,22 @@ import * as contracts from './config/contracts.js';
 const API_BASE_URL = 'http://localhost:3000/api';
 
 /**
- * Classe de cliente de API para centralizar a lógica de fetch e autenticação.
+ * @class ApiClient
+ * @description Centralizes all client-server communication, handling API requests,
+ * authentication, and JWT management.
  */
 class ApiClient {
+    /**
+     * @constructor
+     * @description Initializes the ApiClient and retrieves the JWT from localStorage.
+     */
     constructor() {
         this.jwtToken = localStorage.getItem('jwtToken');
     }
 
     /**
-     * Define o token JWT e o armazena no localStorage.
-     * @param {string} token - O token JWT.
+     * Sets the JWT and stores it in localStorage.
+     * @param {string | null} token - The JWT. If null, the token is removed.
      */
     setJwtToken(token) {
         this.jwtToken = token;
@@ -25,11 +31,13 @@ class ApiClient {
     }
 
     /**
-     * Realiza uma requisição fetch, adicionando o token de autenticação se necessário.
-     * @param {string} endpoint - O endpoint da API (ex: '/auth/me').
-     * @param {object} options - As opções da requisição fetch.
-     * @param {boolean} requiresAuth - Se a requisição requer o token JWT.
-     * @returns {Promise<any>} A resposta da API em JSON.
+     * Performs a generic fetch request to the backend API.
+     * It automatically includes the JWT for authenticated requests.
+     * @param {string} endpoint - The API endpoint (e.g., '/auth/me').
+     * @param {object} options - Standard fetch options (method, body, etc.).
+     * @param {boolean} [requiresAuth=true] - Whether the request requires JWT authentication.
+     * @returns {Promise<any>} A promise that resolves with the JSON response from the API.
+     * @throws {Error} Throws an error if the network request fails or the API returns a non-OK status.
      */
     async fetch(endpoint, options = {}, requiresAuth = true) {
         const headers = {
@@ -51,7 +59,6 @@ class ApiClient {
             throw new Error(errorData.message || 'API request failed');
         }
 
-        // Handle cases with no content
         if (response.status === 204) {
             return null;
         }
@@ -59,8 +66,18 @@ class ApiClient {
         return response.json();
     }
 
-    // --- Métodos de Autenticação ---
+    // --- Authentication Methods ---
 
+    /**
+     * Handles the entire Sign-In with Ethereum (SIWE) authentication flow.
+     * 1. Connects to the user's wallet.
+     * 2. Fetches a unique nonce from the backend.
+     * 3. Prompts the user to sign a SIWE message.
+     * 4. Sends the message and signature to the backend for verification.
+     * 5. On success, stores the received JWT.
+     * @returns {Promise<object>} A promise that resolves with the verification data, including the JWT.
+     * @throws {Error} Throws an error if any step of the SIWE process fails.
+     */
     async web3Login() {
         if (!window.ethereum) throw new Error('MetaMask not detected.');
 
@@ -71,15 +88,12 @@ class ApiClient {
             const address = await signer.getAddress();
             const chainId = (await provider.getNetwork()).chainId;
 
-            // 1. Fetch nonce from the backend
             const { nonce } = await this.fetch('/auth/nonce', {}, false);
 
-            // 2. AGGRESSIVE NONCE VALIDATION
             if (!nonce || typeof nonce !== 'string' || nonce.length < 8) {
                 throw new Error(`Invalid nonce received from server: ${nonce}`);
             }
 
-            // 3. Create the SIWE message with all recommended security fields
             const siweMessage = new SiweMessage({
                 domain: window.location.host,
                 address,
@@ -89,13 +103,12 @@ class ApiClient {
                 chainId: Number(chainId),
                 nonce: nonce,
                 issuedAt: new Date().toISOString(),
-                expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // Signature is valid for 5 minutes
+                expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
             });
 
             const messageToSign = siweMessage.prepareMessage();
             const signature = await signer.signMessage(messageToSign);
 
-            // Send the ORIGINAL message object and the signature to the backend
             const verifyData = await this.fetch('/auth/verify', {
                 method: 'POST',
                 body: JSON.stringify({ message: siweMessage, signature }),
@@ -116,40 +129,51 @@ class ApiClient {
     }
 
     /**
-     * Verifica o status do token atual com o backend. Lança um erro se o token for inválido.
-     * @returns {Promise<object>} A resposta do servidor com os dados do usuário se o token for válido.
+     * Checks the validity of the current JWT with the backend.
+     * @returns {Promise<object>} A promise that resolves with user data if the token is valid.
+     * @throws {Error} Throws an error if no token is found or if the token is invalid.
      */
     async checkLoginStatus() {
         if (!this.jwtToken) {
             throw new Error('No token found in storage.');
         }
         try {
-            // Este endpoint (/api/auth/me) valida o token e retorna os dados do usuário.
-            // O wrapper `fetch` já lançará um erro para respostas não-OK (ex: 401, 403, 500).
             const data = await this.fetch('/auth/me');
             if (!data.success) {
-                // Caso o servidor retorne 200 OK mas com success: false
                 throw new Error(data.message || 'Token validation failed on server.');
             }
             return data;
         } catch (error) {
             console.error('Session check failed:', error.message);
-            this.setJwtToken(null); // Limpa o token inválido antes de relançar o erro
-            throw error; // Relança o erro para que o chamador possa lidar com ele (ex: redirecionar para o login)
+            this.setJwtToken(null);
+            throw error;
         }
     }
 
+    /**
+     * Logs the user out by clearing the JWT from memory and localStorage.
+     */
     logout() {
         this.setJwtToken(null);
-        // Opcional: notificar o backend sobre o logout
     }
 
-    // --- Métodos da API do Jogo ---
+    // --- Game API Methods ---
 
+    /**
+     * Fetches the list of heroes for the currently authenticated user.
+     * @returns {Promise<Array<object>>} A promise that resolves with an array of hero objects.
+     */
     async getHeroes() {
         return this.fetch('/heroes');
     }
 
+    /**
+     * @deprecated Use `updateUserStats` instead for on-chain verification.
+     * @param {number|string} heroId - The ID of the hero.
+     * @param {string} upgradeType - The type of upgrade.
+     * @param {number} cost - The cost of the upgrade.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async purchaseHeroUpgrade(heroId, upgradeType, cost) {
         console.warn("`purchaseHeroUpgrade` is deprecated and will be removed. Use `updateUserStats` instead.");
         return this.fetch(`/heroes/${heroId}/purchase-upgrade`, {
@@ -159,11 +183,11 @@ class ApiClient {
     }
 
     /**
-     * Notifies the backend to verify an on-chain upgrade transaction and update hero stats.
+     * Notifies the backend to verify an on-chain upgrade transaction and update hero stats accordingly.
      * @param {number|string} heroId - The ID of the hero that was upgraded.
      * @param {string} upgradeType - The type of stat that was upgraded (e.g., 'damage').
      * @param {string} txHash - The transaction hash of the on-chain payment.
-     * @returns {Promise<any>} The response from the backend.
+     * @returns {Promise<any>} A promise that resolves with the backend's response.
      */
     async updateUserStats(heroId, upgradeType, txHash) {
         const body = {
@@ -171,34 +195,35 @@ class ApiClient {
             upgradeType,
             txHash
         };
-        return this.fetch('/user/stats', 'POST', { body: JSON.stringify(body) }, true);
+        return this.fetch('/user/stats', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }, true);
     }
 
+    /**
+     * Handles the full hero level-up process, including on-chain payment and backend verification.
+     * @param {number|string} heroId - The ID of the hero to level up.
+     * @returns {Promise<any>} A promise that resolves with the backend's response after verification.
+     * @throws {Error} Throws an error if the wallet is not detected or if the transaction fails.
+     */
     async levelUpHero(heroId) {
         if (!window.ethereum) throw new Error('MetaMask not detected.');
 
         try {
             const { ethers } = await import('ethers');
-            // 1. Connect to the wallet and get the signer
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const playerAddress = await signer.getAddress();
 
-            // 2. Create a contract instance by fetching the address and ABI at runtime
             const { address, abi } = contracts.default.tournamentController;
             const contract = new ethers.Contract(address, abi(), signer);
 
-            // 3. Call the smart contract function to pay the fee.
-            // The contract itself handles the BCOIN transfer logic (approve/transferFrom).
-            // This function call will prompt the user in MetaMask.
             console.log(`Sending level up transaction for hero ${heroId}...`);
             const tx = await contract.payLevelUpFee(playerAddress, {
-                 // Setting a manual gas limit can help prevent "out of gas" errors.
-                 // This value might need adjustment based on network conditions.
                 gasLimit: 300000
             });
 
-            // 4. Wait for the transaction to be mined
             console.log(`Transaction sent! Waiting for confirmation... Hash: ${tx.hash}`);
             const receipt = await tx.wait();
             console.log('Transaction confirmed!', receipt);
@@ -207,7 +232,6 @@ class ApiClient {
                 throw new Error("The on-chain transaction failed.");
             }
 
-            // 5. Send the transaction hash to the backend for verification
             return this.fetch(`/heroes/${heroId}/level-up`, {
                 method: 'POST',
                 body: JSON.stringify({ txHash: tx.hash }),
@@ -215,11 +239,15 @@ class ApiClient {
 
         } catch (error) {
             console.error('Hero level-up process failed:', error);
-            // Re-throw the error with a user-friendly message
             throw new Error(error.reason || error.message || 'An unknown error occurred during the level-up process.');
         }
     }
 
+    /**
+     * Enters the user into a wager match queue for a specific tier.
+     * @param {number|string} tierId - The ID of the wager tier to join.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async enterWagerMatch(tierId) {
         return this.fetch('/pvp/wager/enter', {
             method: 'POST',
@@ -227,11 +255,20 @@ class ApiClient {
         });
     }
 
+    /**
+     * Fetches the player ranking leaderboard.
+     * @returns {Promise<Array<object>>} A promise that resolves with the ranking data.
+     */
     async getRanking() {
         const data = await this.fetch('/ranking');
         return data.success ? data.ranking : [];
     }
 
+    /**
+     * Saves the player's highest wave reached in a game session.
+     * @param {number} waveNumber - The wave number to save.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async saveCheckpoint(waveNumber) {
         return this.fetch('/game/checkpoint', {
             method: 'POST',
@@ -239,48 +276,68 @@ class ApiClient {
         });
     }
 
+    /**
+     * Fetches the profile of the currently authenticated user.
+     * @returns {Promise<object>} A promise that resolves with the user's data.
+     */
     async getCurrentUser() {
         return this.fetch('/auth/me');
     }
 
+    /**
+     * Fetches the NFT assets owned by the current user.
+     * @returns {Promise<Array<object>>} A promise that resolves with an array of NFT objects.
+     */
     async getOwnedNfts() {
         return this.fetch('/user/nfts');
     }
 
+    /**
+     * Initiates a generic user level-up request.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async levelUp() {
         return this.fetch('/user/level-up', {
             method: 'POST'
         });
     }
 
-    // --- Métodos de Admin ---
+    // --- Admin Methods ---
 
+    /**
+     * Fetches game settings, requiring an admin secret.
+     * @param {string} adminSecret - The secret key for accessing admin endpoints.
+     * @returns {Promise<object>} A promise that resolves with the game settings.
+     */
     async getGameSettings(adminSecret) {
          return this.fetch('/admin/settings', {
             headers: { 'X-Admin-Secret': adminSecret }
         });
     }
 
-    // --- Métodos de Status do Jogo ---
+    // --- Game Status Methods ---
 
     /**
-     * Busca o status atual do PvP e o tempo para a próxima mudança.
-     * @returns {Promise<object>} Ex: { pvpEnabled: true, nextChangeIn: 3600 }
+     * Fetches the current status of the PvP mode (enabled/disabled) and time until the next change.
+     * @returns {Promise<{pvpEnabled: boolean, nextChangeIn: number}>} A promise that resolves with the PvP status.
      */
     async getPvpStatus() {
-        // Este endpoint não deve exigir autenticação para que todos possam ver o status
         return this.fetch('/game/pvp-status', {}, false);
     }
 
     /**
-     * Busca a lista de buffs globais ativos.
-     * @returns {Promise<Array<object>>} Ex: [{ id: 'sunday_bonus', name: 'XP em Dobro', duration: 86400 }]
+     * Fetches the list of currently active global buffs.
+     * @returns {Promise<Array<object>>} A promise that resolves with an array of buff objects.
      */
     async getGlobalBuffs() {
-        // Este endpoint também deve ser público
         return this.fetch('/game/global-buffs', {}, false);
     }
 
+    /**
+     * Saves a collection of player statistics to the backend.
+     * @param {object} stats - An object containing player stats to be saved.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async savePlayerStats(stats) {
         return this.fetch('/user/stats', {
             method: 'POST',
@@ -290,6 +347,11 @@ class ApiClient {
 
     // --- Matchmaking Methods ---
 
+    /**
+     * Joins the matchmaking queue with a specific hero.
+     * @param {number|string} heroId - The ID of the hero to join the queue with.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async joinMatchmakingQueue(heroId) {
         return this.fetch('/matchmaking/join', {
             method: 'POST',
@@ -297,21 +359,29 @@ class ApiClient {
         });
     }
 
+    /**
+     * Leaves the matchmaking queue.
+     * @returns {Promise<any>} A promise that resolves with the API response.
+     */
     async leaveMatchmakingQueue() {
         return this.fetch('/matchmaking/leave', {
             method: 'POST',
         });
     }
 
+    /**
+     * Fetches the user's current matchmaking status.
+     * @returns {Promise<any>} A promise that resolves with the matchmaking status.
+     */
     async getMatchmakingStatus() {
         return this.fetch('/matchmaking/status');
     }
 
     /**
-     * Notifies the backend that a solo match has been completed, reporting score for XP.
-     * @param {number} heroId The ID of the hero used in the match.
-     * @param {number} xpGained The amount of XP (score) gained.
-     * @returns {Promise<any>} The response from the backend.
+     * Reports the completion of a match to the backend, including XP gained.
+     * @param {number} heroId - The ID of the hero used in the match.
+     * @param {number} xpGained - The amount of XP (score) gained.
+     * @returns {Promise<any>} A promise that resolves with the backend's response.
      */
     async completeMatch(heroId, xpGained) {
         return this.fetch('/matches/complete', {
@@ -323,8 +393,8 @@ class ApiClient {
     // --- Solo Reward Methods ---
 
     /**
-     * Notifies the backend that a solo game has been completed by the user.
-     * @returns {Promise<any>} The response from the backend.
+     * Logs that the user has completed a solo game, making them eligible for rewards.
+     * @returns {Promise<any>} A promise that resolves with the backend's response.
      */
     async logSoloGameCompleted() {
         return this.fetch('/solo/game-completed', {
@@ -333,8 +403,8 @@ class ApiClient {
     }
 
     /**
-     * Requests a signature from the backend to claim accumulated solo rewards.
-     * @returns {Promise<{signature: string, gamesPlayed: number, nonce: number}>} The signature and associated data.
+     * Requests a signature from the backend oracle to claim accumulated solo game rewards.
+     * @returns {Promise<{signature: string, gamesPlayed: number, nonce: number}>} A promise that resolves with the signature and associated claim data.
      */
     async getSoloRewardClaimSignature() {
         return this.fetch('/solo/claim-reward', {
@@ -345,9 +415,10 @@ class ApiClient {
     // --- Hero Staking Methods ---
 
     /**
-     * Requests a signature from the backend to authorize a hero withdrawal.
+     * Requests a signature from the backend oracle to authorize withdrawing a staked hero NFT.
+     * The signature contains the hero's current off-chain progress (level and XP).
      * @param {number|string} heroId - The ID of the hero to withdraw.
-     * @returns {Promise<{success: boolean, tokenId: number, level: number, xp: number, signature: string}>} The signature and hero progress data.
+     * @returns {Promise<{success: boolean, tokenId: number, level: number, xp: number, signature: string}>} A promise that resolves with the signature and hero data.
      */
     async initiateHeroWithdrawal(heroId) {
         return this.fetch(`/heroes/${heroId}/initiate-withdrawal`, {
@@ -356,6 +427,5 @@ class ApiClient {
     }
 }
 
-// Exporta uma instância única do cliente
 const api = new ApiClient();
 export default api;

@@ -1,12 +1,25 @@
-// src/utils/LanguageManager.js
-
+/**
+ * @class LanguageManager
+ * @description A static utility class to handle internationalization (i18n).
+ * It loads translation files based on browser language, provides a method to
+ * retrieve translated strings, and handles placeholder replacements.
+ */
 class LanguageManager {
+    /**
+     * @static
+     * @property {object | null} translations - Stores the loaded translation key-value pairs.
+     */
     static translations = null;
+    /**
+     * @static
+     * @property {string} currentLanguage - The currently active language code (e.g., 'en').
+     */
     static currentLanguage = 'en'; // Default language
 
     /**
      * Detects the browser's preferred language.
-     * @returns {string} The detected language code (e.g., 'en', 'pt', 'es').
+     * Maps specific language codes (e.g., 'pt-BR') to supported languages ('pt').
+     * @returns {string} The detected language code ('en', 'pt', 'es'). Defaults to 'en'.
      */
     static getBrowserLanguage() {
         const lang = navigator.language || navigator.userLanguage;
@@ -16,16 +29,20 @@ class LanguageManager {
     }
 
     /**
-     * Loads the translation file for the given language.
-     * @param {Phaser.Scene} scene - The scene context to access the registry.
-     * @param {string} lang - The language code (e.g., 'en', 'pt', 'es').
+     * Asynchronously loads a translation file for the specified language.
+     * It uses dynamic imports to fetch the JSON file and stores the result.
+     * If the requested language fails, it attempts to load 'en' as a fallback.
+     * It also sets a global `window.i18nReady` flag upon completion to signal
+     * that the application can proceed with rendering text.
+     * @param {Phaser.Scene} scene - The scene context used to access the global registry.
+     * @param {string} lang - The language code to load (e.g., 'en').
+     * @returns {Promise<void>} A promise that resolves when the language file has been loaded or failed.
      */
     static async loadLanguage(scene, lang) {
         this.currentLanguage = lang;
-        window.i18nReady = false; // Set flag to false during load
+        window.i18nReady = false;
 
         try {
-            // Use Vite's dynamic import feature for robust path handling.
             const langModule = await import(`../locales/${lang}.json`);
             this.translations = langModule.default;
             scene.registry.set('translations', this.translations);
@@ -39,20 +56,21 @@ class LanguageManager {
                 console.log(`[i18n] Fallback to 'en' loaded successfully.`);
             } catch (fallbackError) {
                 console.error('[i18n] CRITICAL: Fallback to English also failed. UI text will be broken.', fallbackError);
-                this.translations = {}; // Use empty object to prevent crashes
+                this.translations = {}; // Prevent crashes on get()
                 scene.registry.set('translations', this.translations);
             }
         } finally {
-            // CRITICAL: Always set the flag to true after any attempt.
-            // This ensures the application does not hang, even if all language files fail to load.
             window.i18nReady = true;
             console.log(`[i18n] Finalized loading. i18nReady is now ${window.i18nReady}.`);
         }
     }
 
     /**
-     * Initializes the language manager by detecting the browser language and loading the translations.
-     * @param {Phaser.Scene} scene - The scene context needed for initialization.
+     * Initializes the LanguageManager.
+     * It detects the browser's language and loads the corresponding translation file.
+     * This should be called once at the start of the application (e.g., in a loading scene).
+     * @param {Phaser.Scene} scene - The scene context required for loading.
+     * @returns {Promise<void>} A promise that resolves when initialization is complete.
      */
     static async init(scene) {
         const browserLang = this.getBrowserLanguage();
@@ -60,11 +78,14 @@ class LanguageManager {
     }
 
     /**
-     * Gets a translated string for the given key and replaces placeholders.
-     * This method is now static and does not require a scene context.
-     * @param {string} key - The key of the translation string.
+     * Gets a translated string for a given key and interpolates parameters.
+     * @param {string} key - The key of the translation string (e.g., 'mainMenu.playButton').
      * @param {object} [params={}] - An object with key-value pairs for placeholder replacement.
-     * @returns {string} The translated and formatted string, or the key itself if not found.
+     * Placeholders in the string should be in the format `{placeholderName}`.
+     * @example
+     * // In en.json: "welcome": "Welcome, {username}!"
+     * LanguageManager.get('welcome', { username: 'Player1' }); // Returns "Welcome, Player1!"
+     * @returns {string} The translated and formatted string. If the key is not found, it returns the key itself.
      */
     static get(key, params = {}) {
         const translations = this.translations;
