@@ -1,46 +1,66 @@
-// src/utils/sound.js
-
+/**
+ * @class SoundManager
+ * @description A static utility class to manage all game audio, including music and sound effects.
+ * It handles loading, playing, and stopping sounds, and manages volume levels for master,
+ * music, and SFX channels, persisting settings to localStorage.
+ */
 export default class SoundManager {
+  /** @type {number} The master volume for all game audio. */
   static masterVolume = 1;
+  /** @type {number} The volume for background music. */
   static musicVolume = 1;
+  /** @type {number} The volume for sound effects. */
   static sfxVolume = 1;
+  /** @type {boolean} Flag to ensure initialization only occurs once. */
   static initialized = false;
-  static music = new Map(); // Armazena instâncias de música para controle de volume
+  /** @type {Map<string, Phaser.Sound.BaseSound>} A map to store and manage music instances. */
+  static music = new Map();
 
+  /**
+   * Initializes the SoundManager. It loads volume settings from localStorage
+   * and applies the master volume to the global Phaser sound object.
+   * @param {Phaser.Scene} scene - The Phaser scene instance.
+   */
   static init(scene) {
     if (this.initialized) {
       return;
     }
-    console.log('[SoundManager] Inicializando...');
+    console.log('[SoundManager] Initializing...');
 
-    // Carrega as configurações de volume do localStorage ou usa valores padrão
     this.masterVolume = parseFloat(localStorage.getItem('masterVolume') ?? 1.0);
     this.musicVolume = parseFloat(localStorage.getItem('musicVolume') ?? 1.0);
     this.sfxVolume = parseFloat(localStorage.getItem('sfxVolume') ?? 1.0);
 
-    // Aplica o volume principal ao gerenciador de som global do Phaser
     if (scene && scene.sound) {
       scene.sound.volume = this.masterVolume;
     }
     this.initialized = true;
 
-    console.log(`[SoundManager] Volumes Carregados: Master=${this.masterVolume}, Music=${this.musicVolume}, SFX=${this.sfxVolume}`);
+    console.log(`[SoundManager] Volumes Loaded: Master=${this.masterVolume}, Music=${this.musicVolume}, SFX=${this.sfxVolume}`);
   }
 
-  // Setters para os volumes
+  /**
+   * Sets the master volume for all sounds and persists it to localStorage.
+   * @param {Phaser.Scene} scene - The Phaser scene instance to apply the volume.
+   * @param {number} volume - The volume level (0 to 1).
+   */
   static setMasterVolume(scene, volume) {
     this.masterVolume = Phaser.Math.Clamp(volume, 0, 1);
-    localStorage.setItem('masterVolume', this.masterVolume);
+    localStorage.setItem('masterVolume', this.masterVolume.toString());
     if (scene && scene.sound) {
-      scene.sound.volume = this.masterVolume; // Aplica globalmente
+      scene.sound.volume = this.masterVolume;
     }
     console.log(`[SoundManager] Master Volume set to ${this.masterVolume}`);
   }
 
+  /**
+   * Sets the volume for music tracks and persists it to localStorage.
+   * Updates the volume of any currently playing music.
+   * @param {number} volume - The volume level (0 to 1).
+   */
   static setMusicVolume(volume) {
     this.musicVolume = Phaser.Math.Clamp(volume, 0, 1);
-    localStorage.setItem('musicVolume', this.musicVolume);
-    // Atualiza o volume de todas as músicas que estão tocando
+    localStorage.setItem('musicVolume', this.musicVolume.toString());
     this.music.forEach(musicInstance => {
       if (musicInstance.isPlaying) {
         musicInstance.setVolume(this.musicVolume);
@@ -49,15 +69,24 @@ export default class SoundManager {
     console.log(`[SoundManager] Music Volume set to ${this.musicVolume}`);
   }
 
+  /**
+   * Sets the volume for sound effects and persists it to localStorage.
+   * @param {number} volume - The volume level (0 to 1).
+   */
   static setSfxVolume(volume) {
     this.sfxVolume = Phaser.Math.Clamp(volume, 0, 1);
-    localStorage.setItem('sfxVolume', this.sfxVolume);
+    localStorage.setItem('sfxVolume', this.sfxVolume.toString());
     console.log(`[SoundManager] SFX Volume set to ${this.sfxVolume}`);
   }
 
+  /**
+   * Loads audio assets into a scene's loader from a manifest file.
+   * @param {Phaser.Scene} scene - The scene to load assets into.
+   * @param {object} manifest - The asset manifest containing sound definitions.
+   */
   static loadFromManifest(scene, manifest) {
     if (!scene || !scene.load || !manifest || !manifest.sounds) {
-      console.error('[SoundManager] Cena, loader ou manifesto inválido para carregar sons');
+      console.error('[SoundManager] Invalid scene, loader, or manifest for loading sounds');
       return;
     }
 
@@ -66,12 +95,18 @@ export default class SoundManager {
     Object.keys(sfx).forEach(key => scene.load.audio(key, sfx[key]));
   }
 
+  /**
+   * Plays a sound effect, applying the current SFX volume.
+   * It waits for the sound to be decoded before playing to prevent race conditions.
+   * @param {Phaser.Scene} scene - The scene in which to play the sound.
+   * @param {string} key - The key of the sound effect to play.
+   * @param {Phaser.Types.Sound.SoundConfig} [config={}] - Optional configuration for the sound.
+   */
   static play(scene, key, config = {}) {
     if (!scene?.sound) {
-      console.error('[SoundManager] Cena inválida para tocar som:', key);
+      console.error('[SoundManager] Invalid scene for playing sound:', key);
       return;
     }
-    // Aplica o volume de SFX ao som individual
     const sfxConfig = { ...config, volume: this.sfxVolume };
     const sfx = scene.sound.add(key, sfxConfig);
 
@@ -84,6 +119,13 @@ export default class SoundManager {
     }
   }
 
+  /**
+   * Plays a music track, ensuring it loops. It stops all other music first.
+   * Returns a promise that resolves when the music starts playing.
+   * @param {Phaser.Scene} scene - The scene in which to play the music.
+   * @param {string} key - The key of the music track.
+   * @returns {Promise<Phaser.Sound.BaseSound>} A promise that resolves with the sound instance.
+   */
   static playMusic(scene, key) {
     return new Promise((resolve, reject) => {
       if (!scene?.sound) {
@@ -125,11 +167,20 @@ export default class SoundManager {
     });
   }
 
+  /**
+   * Stops a specific sound if it is playing.
+   * @param {Phaser.Scene} scene - The scene containing the sound.
+   * @param {string} key - The key of the sound to stop.
+   */
   static stop(scene, key) {
     const sound = scene.sound.get(key);
     if (sound?.isPlaying) sound.stop();
   }
 
+  /**
+   * Stops all sounds in a given scene, including music.
+   * @param {Phaser.Scene} scene - The scene in which to stop all sounds.
+   */
   static stopAll(scene) {
     if (scene && scene.sound) {
         scene.sound.stopAll();
@@ -137,6 +188,9 @@ export default class SoundManager {
     this.music.clear();
   }
 
+  /**
+   * Stops all currently playing music tracks managed by the SoundManager.
+   */
   static stopAllMusic() {
     this.music.forEach(musicInstance => {
       if (musicInstance.isPlaying) {
@@ -145,6 +199,12 @@ export default class SoundManager {
     });
   }
 
+  /**
+   * Plays the appropriate music for a given world number.
+   * @param {Phaser.Scene} scene - The scene in which to play the music.
+   * @param {number} worldNumber - The number of the world.
+   * @returns {Promise<void>}
+   */
   static async playWorldMusic(scene, worldNumber) {
     if (!scene?.sound) return;
     const musicKey = `world${Math.min(worldNumber, 5)}_music`;

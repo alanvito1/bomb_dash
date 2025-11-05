@@ -2,34 +2,41 @@ import SoundManager from '../utils/sound.js';
 
 const BOSS_PHASE = 7;
 
+/**
+ * @class EnemySpawner
+ * @description Manages the creation and progression of enemy waves.
+ * It scales enemy count, health, and speed based on the player's current world, phase,
+ * and account level, ensuring a balanced difficulty curve.
+ */
 export default class EnemySpawner {
+  /**
+   * @constructor
+   * @param {Phaser.Scene} scene - The main game scene instance.
+   * @param {number} [accountLevel=1] - The player's account level, used to calculate a difficulty multiplier.
+   */
   constructor(scene, accountLevel = 1) {
     this.scene = scene;
     this.accountLevel = accountLevel;
     this.enemyIdCounter = 0;
     this.difficultyMultiplier = 1 + (this.accountLevel - 1) * 0.07;
 
-    console.log(`[EnemySpawner V2] Initialized for Account Level: ${this.accountLevel}. Difficulty Multiplier: ${this.difficultyMultiplier.toFixed(2)}`);
-
     const manifest = this.scene.cache.json.get('assetManifest');
     if (manifest && manifest.assets) {
       this.enemyKeys = Object.keys(manifest.assets.enemies || {});
       this.bossKeys = Object.keys(manifest.assets.bosses || {});
     } else {
-      console.error('[EnemySpawner V2] Asset manifest not found or invalid.');
       this.enemyKeys = [];
       this.bossKeys = [];
     }
   }
 
   /**
-   * Spawns a wave of enemies based on the current world and phase.
+   * Spawns a complete wave of enemies or a boss, depending on the phase.
    * @param {number} world - The current world number (e.g., 1, 2, 3).
-   * @param {number} phase - The current phase within the world (e.g., 1-7).
+   * @param {number} phase - The current phase within the world (1-7).
    */
   spawnWave(world, phase) {
     if (!this.scene || !this.scene.enemies) {
-      console.error('[EnemySpawner V2] Scene or enemies group is invalid.');
       return;
     }
 
@@ -49,34 +56,27 @@ export default class EnemySpawner {
   }
 
   /**
-   * Spawns a regular wave of enemies.
+   * Spawns a standard wave of multiple enemies.
+   * @param {number} world - The current world number.
+   * @param {number} phase - The current phase number.
    * @private
    */
   _spawnRegularWave(world, phase) {
     const enemySpriteKey = this.enemyKeys[Math.min(world - 1, this.enemyKeys.length - 1)] || this.enemyKeys[0];
     if (!enemySpriteKey) {
-        console.error(`[EnemySpawner V2] No enemy sprite key found for world ${world}.`);
         return;
     }
 
-    // --- Difficulty Scaling Logic ---
     const baseCount = 3;
     const enemyCount = baseCount + (world - 1) * 2 + phase;
-
     const baseHp = 1;
     const enemyHp = Math.ceil((baseHp + (world - 1) * 5 + (phase - 1) * 1) * this.difficultyMultiplier);
-
     const baseSpeed = 80;
     const enemySpeed = (baseSpeed + (world - 1) * 15 + (phase - 1) * 5) * this.difficultyMultiplier;
-
     const spawnInterval = Math.max(200, 800 - (world * 50));
-    // --------------------------------
-
-    console.log(`[EnemySpawner V2] World ${world}-${phase}: Spawning ${enemyCount} '${enemySpriteKey}' (HP: ${enemyHp}, Speed: ${enemySpeed.toFixed(0)})`);
 
     this.scene.enemiesSpawned = enemyCount;
 
-    // Spawn all enemies with a delay
     for (let i = 0; i < enemyCount; i++) {
         this.scene.time.delayedCall(i * spawnInterval, () => {
             this._spawnSingleEnemy(enemySpriteKey, enemyHp, enemySpeed);
@@ -85,23 +85,19 @@ export default class EnemySpawner {
   }
 
   /**
-   * Spawns a boss wave.
+   * Spawns a single, powerful boss enemy.
+   * @param {number} world - The current world number, which determines the boss type.
    * @private
    */
   _spawnBossWave(world) {
     const bossSpriteKey = this.bossKeys[Math.min(world - 1, this.bossKeys.length - 1)] || this.bossKeys[0];
      if (!bossSpriteKey) {
-        console.error(`[EnemySpawner V2] No boss sprite key found for world ${world}.`);
         return;
     }
 
-    // --- Boss Difficulty Scaling ---
     const baseHp = 100;
     const bossHp = Math.ceil((baseHp + (world - 1) * 150) * this.difficultyMultiplier);
     const bossSpeed = 28 + (world - 1) * 4;
-    // ----------------------------
-
-    console.log(`[EnemySpawner V2] World ${world}-7 (BOSS): Spawning '${bossSpriteKey}' (HP: ${bossHp}, Speed: ${bossSpeed})`);
 
     this.scene.enemiesSpawned = 1;
     this.scene.bossSpawned = true;
@@ -117,7 +113,10 @@ export default class EnemySpawner {
   }
 
   /**
-   * Creates a single enemy instance.
+   * Creates and configures a single enemy instance and adds it to the scene.
+   * @param {string} spriteKey - The asset key for the enemy's sprite.
+   * @param {number} hp - The health points for the enemy.
+   * @param {number} speed - The vertical speed for the enemy.
    * @private
    */
   _spawnSingleEnemy(spriteKey, hp, speed) {

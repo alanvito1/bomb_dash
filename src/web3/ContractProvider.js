@@ -1,7 +1,5 @@
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// Import all ABIs directly into the provider.
-// The paths are relative to this file's location (src/web3/).
 import heroStakingAbi from '../../backend/contracts/HeroStaking.json';
 import mockHeroNFTAbi from '../../backend/contracts/MockHeroNFT.json';
 import bcoinAbi from '../../backend/contracts/IBEP20.json';
@@ -9,24 +7,46 @@ import tournamentControllerAbi from '../../backend/contracts/TournamentControlle
 import wagerArenaAbi from '../../backend/contracts/WagerArena.json';
 import perpetualRewardPoolAbi from '../../backend/contracts/PerpetualRewardPool.json';
 
+/**
+ * @class ContractProvider
+ * @description A singleton service that fetches, stores, and provides smart contract
+ * addresses and ABIs. It acts as a single source of truth for on-chain contract
+ * information, ensuring the application uses the correct, deployed contract versions.
+ */
 class ContractProvider {
+    /**
+     * @constructor
+     */
     constructor() {
+        /**
+         * Stores the fetched contract addresses, mapped by a simplified name.
+         * @type {object | null}
+         */
         this.addresses = null;
-        // Centralize ABIs for easy access. Note that some are objects with an .abi property,
-        // while others are the ABI array itself.
+        /**
+         * A centralized map of all contract ABIs, imported from their JSON artifacts.
+         * @type {object}
+         */
         this.abis = {
             wagerArena: wagerArenaAbi.abi,
             heroStaking: heroStakingAbi.abi,
             mockHeroNFT: mockHeroNFTAbi.abi,
-            bcoin: bcoinAbi, // This ABI is an array, not an object.
+            bcoin: bcoinAbi,
             tournamentController: tournamentControllerAbi.abi,
             perpetualRewardPool: perpetualRewardPoolAbi.abi,
         };
+        /**
+         * A flag to track whether the provider has successfully fetched addresses.
+         * @type {boolean}
+         */
         this.initialized = false;
     }
 
     /**
-     * Fetches contract addresses from the backend. This must be called at game startup.
+     * Initializes the provider by fetching contract addresses from the backend API.
+     * This method must be called successfully at application startup.
+     * @returns {Promise<void>} A promise that resolves on successful initialization.
+     * @throws {Error} Throws an error if the API call fails.
      */
     async initialize() {
         if (this.initialized) {
@@ -43,7 +63,6 @@ class ContractProvider {
             const data = await response.json();
 
             if (data.success) {
-                // Map backend address names to a cleaner, consistent key format.
                 this.addresses = {
                     wagerArena: data.wagerArenaAddress,
                     heroStaking: data.heroStakingAddress,
@@ -58,16 +77,15 @@ class ContractProvider {
                 throw new Error(data.message || 'Failed to fetch contract addresses.');
             }
         } catch (error) {
-            console.error("CRITICAL: Failed to initialize ContractProvider. The application cannot connect to the blockchain.", error);
+            console.error("CRITICAL: Failed to initialize ContractProvider.", error);
             this.initialized = false;
-            // Re-throw the error so the calling context (e.g., a loading scene) can handle it.
             throw error;
         }
     }
 
     /**
      * Checks if the provider has been successfully initialized.
-     * @returns {boolean}
+     * @returns {boolean} True if addresses have been fetched, otherwise false.
      */
     isInitialized() {
         return this.initialized;
@@ -77,6 +95,7 @@ class ContractProvider {
      * Gets the address for a specific contract by name.
      * @param {string} name - The simplified name of the contract (e.g., 'bcoin').
      * @returns {string} The contract's blockchain address.
+     * @throws {Error} Throws an error if the provider is not initialized or the name is not found.
      */
     getAddress(name) {
         if (!this.initialized) throw new Error("ContractProvider not initialized. Cannot get address.");
@@ -87,7 +106,8 @@ class ContractProvider {
     /**
      * Gets the ABI for a specific contract by name.
      * @param {string} name - The simplified name of the contract (e.g., 'bcoin').
-     * @returns {Array<any>} The contract's ABI.
+     * @returns {Array<any>} The contract's Application Binary Interface (ABI).
+     * @throws {Error} Throws an error if the provider is not initialized or the name is not found.
      */
     getAbi(name) {
         if (!this.initialized) throw new Error("ContractProvider not initialized. Cannot get ABI.");
@@ -98,7 +118,8 @@ class ContractProvider {
     /**
      * Gets both the address and ABI for a specific contract.
      * @param {string} name - The simplified name of the contract (e.g., 'bcoin').
-     * @returns {{address: string, abi: Array<any>}}
+     * @returns {{address: string, abi: Array<any>}} An object containing the address and ABI.
+     * @throws {Error} Throws an error if the provider is not initialized.
      */
     getContract(name) {
          if (!this.initialized) throw new Error("ContractProvider not initialized.");
@@ -108,6 +129,5 @@ class ContractProvider {
     }
 }
 
-// Export a singleton instance.
 const contractProvider = new ContractProvider();
 export default contractProvider;
