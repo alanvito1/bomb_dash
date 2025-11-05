@@ -1,63 +1,39 @@
-# Bomb Dash - Web3 Edition (BSC Testnet)
+# Bomb Dash - Web3 Edition
 
-Este é o repositório do projeto full-stack para o Bomb Dash, um jogo de ação 2D com uma arquitetura Web3 completa, configurado para operar na **Binance Smart Chain (BSC) Testnet**.
+This is the full-stack repository for Bomb Dash, a 2D action game with a complete Web3 architecture designed for the BNB Smart Chain (BSC). It features a real-money economy, NFT-based heroes, and a self-sustaining reward system.
 
-## Arquitetura do Projeto
+## Project Overview
 
-O projeto é construído sobre uma base que separa a lógica do jogo (cliente) da lógica de negócios e estado (backend e blockchain).
+For a comprehensive understanding of the project's current status, future direction, and detailed feature checklist, please refer to the official project roadmap.
 
-*   **Client (Frontend):** Um cliente de jogo construído com **Phaser.js**, localizado na pasta `src/`. É responsável pela renderização e entrada do usuário, comunicando-se com o backend via API REST.
+**➡️ [View the Project ROADMAP.md](./ROADMAP.md)**
 
-*   **Backend (Node.js/Express):** O servidor (`backend/`) atua como a autoridade para ações off-chain. Ele gerencia:
-    *   **Autenticação:** Utiliza **Sign-In with Ethereum (SIWE)**, permitindo que os jogadores façam login de forma segura com suas carteiras.
-    *   **Banco de Dados (SQLite):** Armazena dados do jogador como XP, nível e estatísticas.
-    *   **Oráculo (`oracle.js`):** Um serviço confiável que reporta resultados de partidas para os contratos inteligentes, servindo como uma ponte segura entre o mundo off-chain e on-chain.
-    *   **Configuração Global (`game_config.json`):** Um arquivo central que armazena variáveis de balanceamento do jogo, editáveis em tempo real através do Painel de Administrador.
+## Architecture & Technical Documentation
 
-*   **Blockchain (Hardhat/Solidity):** Os contratos inteligentes (`contracts/`) que governam as regras on-chain.
-    *   **`TournamentController.sol`:** Gerencia a criação de torneios e a distribuição de prêmios.
-    *   **`PerpetualRewardPool.sol`:** Um pool de recompensas para o modo solo.
-    *   **`WagerArena.sol`:** Contrato que gerencia as partidas de aposta no modo PvP.
+The project is built on a decoupled architecture that separates the game client from the backend and blockchain logic. Detailed documentation covering the architecture, technical specifications, development protocols, and deployment process can be found in the `/docs` directory.
 
-*   **Painel de Administrador (`admin.html`):** Uma interface web separada que permite aos administradores gerenciar as configurações globais do jogo e as estatísticas dos jogadores em tempo real.
+- **[Project Briefing](./docs/BRIEFING.md):** The high-level vision and economic goals.
+- **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md):** A detailed breakdown of the technical implementation.
+- **[Architecture & Coding Standards](./docs/ARQUITETURA_E_PADROES.md):** The development standards and patterns.
+- **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md):** Step-by-step guide for setup and deployment.
 
-## Mecânicas de Jogo Principais
+## Core Components
 
-- **Ciclo de PvP (24h Aberto / 24h Fechado):** O modo PvP alterna entre os estados "Aberto" e "Fechado" em ciclos de 24 horas. Esta lógica é gerenciada por um cron job no backend (`backend/game_state.js`).
-- **Bônus de Domingo no PvP:** As recompensas de XP e BCOIN por vitórias no modo PvP recebem um bônus de +10% todos os domingos. A lógica é aplicada no momento do processamento da recompensa (`backend/database.js`).
+*   **Client (Frontend):** A game client built with **Phaser.js**, responsible for rendering and user input.
+*   **Backend (Node.js/Express):** The server (`/backend`) manages off-chain logic, including **SIWE Authentication**, a **SQLite Database** for player stats, and a secure **Oracle** to communicate with the blockchain.
+*   **Blockchain (Solidity):** The smart contracts (`/contracts`) that govern all on-chain rules for tournaments, rewards, and wagers.
 
-## Setup e Deploy na BSC Testnet
+## Getting Started
 
-O processo de setup e deploy é detalhado e mantido no **`DEPLOYMENT_MANUAL.md`**. O manual cobre:
+To set up the project locally, please follow the complete **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**. The manual covers environment setup, dependency installation, and contract deployment.
 
-1.  Configuração do arquivo `.env` com as chaves e URLs necessárias.
-2.  Instalação de todas as dependências do projeto.
-3.  Configuração da MetaMask para a BSC Testnet.
-4.  Como obter `tBNB` (BNB de teste) em faucets.
-5.  O comando exato para implantar os contratos na Testnet.
-6.  Como iniciar o servidor backend.
+### Quick Commands
 
-Consulte o **`DEPLOYMENT_MANUAL.md`** para o guia completo.
-
-## API Endpoints Principais
-
-A API é servida em `http://localhost:3000/api`.
-
-### Autenticação (SIWE)
-*   `GET /auth/nonce`: Gera um nonce para a assinatura.
-*   `POST /auth/verify`: Verifica a assinatura e retorna um JWT.
-*   `GET /auth/me` (Protegido): Retorna os dados do usuário autenticado.
-
-### PvP
-*   `GET /pvp/status`: Retorna o estado atual do ciclo de PvP ('open' ou 'closed').
-*   `POST /pvp/wager/enter` (Protegido): Valida se um jogador é elegível para entrar em uma partida de aposta.
-*   `POST /pvp/wager/report` (Protegido): Reporta o resultado de uma partida de aposta.
-
-### Admin (Protegido por `X-Admin-Secret`)
-*   `GET /admin/settings`: Busca as configurações globais do jogo.
-*   `POST /admin/settings`: Atualiza as configurações globais do jogo.
-*   `GET /admin/players`: Retorna uma lista de todos os jogadores e suas estatísticas.
-*   `POST /admin/player/:id`: Atualiza as estatísticas de um jogador específico.
+- **Install all dependencies:** `npm run install:all`
+- **Deploy contracts to BSC Testnet:** `npm run deploy:testnet`
+- **Start the backend server:** `npm run start:backend`
+- **Run the frontend dev server:** `npm run dev`
+- **Run E2E tests:** `npm run test:e2e`
 
 ---
-Este README fornece uma visão geral precisa do estado atual do projeto, facilitando a contribuição e o desenvolvimento contínuo.
+This `README.md` serves as a central hub for navigating the project. For any details not covered here, please consult the linked documentation.
