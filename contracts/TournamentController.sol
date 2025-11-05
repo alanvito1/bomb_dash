@@ -211,6 +211,85 @@ contract TournamentController {
         delete playerTier[playerToRemove];
     }
 
+    // =================================================================
+    // MULTIPLAYER TOURNAMENT (4 & 8 Players)
+    // =================================================================
+
+    /**
+     * @dev Creates a new tournament for 4 or 8 players.
+     * @param _capacity The number of players for the tournament (must be 4 or 8).
+     * @param _entryFee The BCOIN entry fee for each player.
+     */
+    function createTournament(uint8 _capacity, uint256 _entryFee) external {
+        require(_capacity == 4 || _capacity == 8, "Capacity must be 4 or 8");
+        require(_entryFee > 0, "Entry fee must be positive");
+
+        // Transfer entry fee from the creator to this contract
+        IBEP20 token = IBEP20(bcoinTokenAddress);
+        require(token.transferFrom(msg.sender, address(this), _entryFee), "BCOIN transfer failed");
+
+        tournamentCounter++;
+        uint256 newTournamentId = tournamentCounter;
+
+        address[] memory initialParticipants = new address[](1);
+        initialParticipants[0] = msg.sender;
+
+        tournaments[newTournamentId] = Tournament({
+            id: newTournamentId,
+            creator: msg.sender,
+            capacity: _capacity,
+            participants: initialParticipants,
+            entryFee: _entryFee,
+            winners: new address[](0),
+            isActive: true
+        });
+
+        // A simple mechanism to track an open tournament for a given capacity.
+        // This assumes one open tournament per capacity. A real-world scenario might need a list.
+        require(openTournaments[_capacity][0] == 0, "An open tournament for this capacity already exists");
+        openTournaments[_capacity][0] = newTournamentId;
+
+        emit TournamentCreated(newTournamentId, msg.sender, _capacity, _entryFee);
+    }
+
+    /**
+     * @dev Allows a player to join an active and open tournament.
+     * @param _tournamentId The ID of the tournament to join.
+     */
+    function joinTournament(uint256 _tournamentId) external {
+        Tournament storage t = tournaments[_tournamentId];
+        require(t.isActive, "Tournament is not active or does not exist");
+        require(t.participants.length < t.capacity, "Tournament is already full");
+
+        // Check if player is already in this tournament
+        for (uint i = 0; i < t.participants.length; i++) {
+            require(t.participants[i] != msg.sender, "Player already joined this tournament");
+        }
+
+        // Transfer entry fee from the player to this contract
+        IBEP20 token = IBEP20(bcoinTokenAddress);
+        require(token.transferFrom(msg.sender, address(this), t.entryFee), "BCOIN transfer failed");
+
+        t.participants.push(msg.sender);
+        emit PlayerJoinedTournament(_tournamentId, msg.sender);
+
+        // If the tournament is now full, start it
+        if (t.participants.length == t.capacity) {
+            // Remove from open tournaments list
+            delete openTournaments[t.capacity][0];
+            emit TournamentStarted(_tournamentId);
+        }
+    }
+
+    /**
+     * @dev Gets the list of participants for a given tournament.
+     * @param _tournamentId The ID of the tournament.
+     * @return An array of participant addresses.
+     */
+    function getTournamentParticipants(uint256 _tournamentId) external view returns (address[] memory) {
+        return tournaments[_tournamentId].participants;
+    }
+
 
     // =================================================================
     // MATCH & TOURNAMENT COMPLETION
