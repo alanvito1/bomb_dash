@@ -5,6 +5,7 @@ import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import bcoinService from '../web3/bcoin-service.js';
+import { createButton, createTitle } from '../modules/UIGenerator.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -77,14 +78,7 @@ export default class MenuScene extends Phaser.Scene {
 
   createMenuContent(centerX, centerY) {
     // 🎮 Título do jogo
-    this.add.text(centerX, 80, LanguageManager.get('game_title'), {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '20px',
-      fill: '#FFD700',
-      stroke: '#000',
-      strokeThickness: 4,
-      align: 'center'
-    }).setOrigin(0.5);
+    createTitle(this, centerX, 80, LanguageManager.get('game_title'));
 
     this.createMenu(centerX, centerY);
   }
@@ -119,33 +113,7 @@ export default class MenuScene extends Phaser.Scene {
 
     menuItems.forEach((item, i) => {
         const buttonY = buttonStartY + i * buttonSpacing;
-        const button = this.add.image(centerX, buttonY, 'btn_menu').setOrigin(0.5);
-        button.setDisplaySize(280, 50);
-
-        const buttonText = this.add.text(centerX, buttonY, item.label, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '16px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        button.setName(item.name);
-        button.setInteractive({ useHandCursor: true });
-
-        button.on('pointerover', () => {
-            button.setTint(0xcccccc);
-            buttonText.setTint(0xffd700);
-        });
-        button.on('pointerout', () => {
-            button.clearTint();
-            buttonText.clearTint();
-        });
-        button.on('pointerdown', () => {
-            button.setTint(0xaaaaaa);
-        });
-        button.on('pointerup', () => {
-            button.clearTint();
-            SoundManager.play(this, 'click');
+        const onClick = () => {
             if (item.action === 'logout') {
                 api.logout();
                 this.registry.remove('loggedInUser');
@@ -157,7 +125,8 @@ export default class MenuScene extends Phaser.Scene {
                 this.scene.stop(CST.SCENES.MENU);
                 this.scene.start(item.scene, { userData: this.userData });
             }
-        });
+        };
+        createButton(this, centerX, buttonY, item.label, onClick).setName(item.name);
     });
   }
 
