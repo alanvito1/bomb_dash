@@ -77,7 +77,7 @@ async function startServer() {
         await db.initDb();
         console.log("[OK] Database connection established.");
 
-        // await oracle.initOracle(); // Uncomment for production
+        await oracle.initOracle();
 
         await gameState.startPvpCycleCron();
         console.log("[OK] Cron jobs (PvP Cycle, etc.) started.");

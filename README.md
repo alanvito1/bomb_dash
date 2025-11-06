@@ -1,6 +1,6 @@
-# Bomb Dash - Web3 Edition
+# Bomb Dash - Web3 Edition (Dockerized)
 
-This is the full-stack repository for Bomb Dash, a 2D action game with a complete Web3 architecture designed for the BNB Smart Chain (BSC). It features a real-money economy, NFT-based heroes, and a self-sustaining reward system.
+This is the full-stack repository for Bomb Dash, a 2D action game with a complete Web3 architecture designed for the BNB Smart Chain (BSC). This project is now fully containerized with Docker, providing a consistent and easy-to-manage development environment.
 
 ## Project Overview
 
@@ -10,30 +10,53 @@ For a comprehensive understanding of the project's current status, future direct
 
 ## Architecture & Technical Documentation
 
-The project is built on a decoupled architecture that separates the game client from the backend and blockchain logic. Detailed documentation covering the architecture, technical specifications, development protocols, and deployment process can be found in the `/docs` directory.
+The project is built on a decoupled architecture. Detailed documentation covering the architecture, technical specifications, and development protocols can be found in the `/docs` directory.
 
 - **[Project Briefing](./docs/BRIEFING.md):** The high-level vision and economic goals.
 - **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md):** A detailed breakdown of the technical implementation.
 - **[Architecture & Coding Standards](./docs/ARQUITETURA_E_PADROES.md):** The development standards and patterns.
-- **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md):** Step-by-step guide for setup and deployment.
 
-## Core Components
+## 🚀 Getting Started with Docker
 
-*   **Client (Frontend):** A game client built with **Phaser.js**, responsible for rendering and user input.
-*   **Backend (Node.js/Express):** The server (`/backend`) manages off-chain logic, including **SIWE Authentication**, a **SQLite Database** for player stats, and a secure **Oracle** to communicate with the blockchain.
-*   **Blockchain (Solidity):** The smart contracts (`/contracts`) that govern all on-chain rules for tournaments, rewards, and wagers.
+This project is configured to run entirely within Docker containers. This eliminates the need for manual setup of Node.js, Hardhat, or any other dependencies on your local machine.
 
-## Getting Started
+### Prerequisites
 
-To set up the project locally, please follow the complete **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**. The manual covers environment setup, dependency installation, and contract deployment.
+*   **Docker Desktop** or **Docker Engine** installed on your system.
 
-### Quick Commands
+### Instructions
 
-- **Install all dependencies:** `npm run install:all`
-- **Deploy contracts to BSC Testnet:** `npm run deploy:testnet`
-- **Start the backend server:** `npm run start:backend`
-- **Run the frontend dev server:** `npm run dev`
-- **Run E2E tests:** `npm run test:e2e`
+1.  **Clone the Repository:**
+    ```bash
+    git clone <repository-url>
+    cd bomb-dash-repo
+    ```
+
+2.  **Create an Environment File:**
+    Copy the example environment file to create your own local configuration.
+    ```bash
+    cp .env.example .env
+    ```
+    *Note: The default values in `.env` are pre-configured to work with the Dockerized Hardhat network. You do not need to change anything to get started.*
+
+3.  **Build and Run the Application:**
+    Use Docker Compose to build the images and start all the services (Hardhat Node, Backend, Frontend) in the correct order.
+    ```bash
+    sudo docker compose up --build
+    ```
+    *Note: The `--build` flag is only necessary the first time you run the command or after making changes to the `Dockerfile`s or source code.*
+
+4.  **Access the Application:**
+    *   **Frontend (Game):** Open your browser and navigate to `http://localhost:5173`
+    *   **Backend API:** The API is available at `http://localhost:3000`
+    *   **Hardhat Node:** The local blockchain is running at `http://localhost:8545`
+
+### Stopping the Application
+
+To stop all running services, press `Ctrl + C` in the terminal where `docker compose` is running, or run the following command from the project root in another terminal:
+```bash
+sudo docker compose down
+```
 
 ---
-This `README.md` serves as a central hub for navigating the project. For any details not covered here, please consult the linked documentation.
+This `README.md` provides everything you need to get the Bomb Dash project running in a clean, containerized environment.

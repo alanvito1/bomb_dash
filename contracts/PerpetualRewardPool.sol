@@ -50,7 +50,7 @@ contract PerpetualRewardPool {
      * @dev Starts a new 10-minute reward cycle. Can be called by anyone.
      * Calculates the reward per game for the new cycle based on the pool's balance.
      */
-    function startNewCycle() external {
+    function startNewCycle() external onlyOracle {
         require(block.timestamp > lastCycleTimestamp + 10 minutes, "A new cycle can only be started every 10 minutes");
 
         // Use the game count from the previous cycle for calculation.
