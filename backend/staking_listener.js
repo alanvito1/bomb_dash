@@ -1,8 +1,30 @@
 const { ethers } = require('ethers');
 const db = require('./database');
+const fs = require('fs');
+const path = require('path');
 
-// Load contract ABI and address from environment variables
-const heroStakingABI = require('./contracts/HeroStaking.json');
+// Defensively load contract ABI
+const abiPath = path.join(__dirname, 'contracts', 'HeroStaking.json');
+let heroStakingABI;
+
+if (fs.existsSync(abiPath)) {
+    try {
+        const abiFile = require(abiPath);
+        if (Array.isArray(abiFile)) {
+            heroStakingABI = abiFile;
+        } else if (abiFile && abiFile.abi && Array.isArray(abiFile.abi)) {
+            heroStakingABI = abiFile.abi;
+        } else {
+            console.error(`[StakingListener] Invalid ABI format in ${abiPath}.`);
+        }
+    } catch (error) {
+        console.error(`[StakingListener] Error loading or parsing ABI from ${abiPath}:`, error);
+    }
+} else {
+    // This is not an error during startup, as the deploy script hasn't run yet.
+    console.warn(`[StakingListener] ABI file not found: ${abiPath}. Listener will not start.`);
+}
+
 const HERO_STAKING_ADDRESS = process.env.HERO_STAKING_ADDRESS;
 const TESTNET_RPC_URL = process.env.TESTNET_RPC_URL;
 
@@ -13,8 +35,8 @@ let stakingContract;
  * Initializes the connection to the blockchain and sets up the event listener.
  */
 async function initStakingListener() {
-    if (!HERO_STAKING_ADDRESS || !TESTNET_RPC_URL) {
-        console.warn('[StakingListener] HERO_STAKING_ADDRESS or TESTNET_RPC_URL not found in .env. Staking listener will not start.');
+    if (!HERO_STAKING_ADDRESS || !TESTNET_RPC_URL || !heroStakingABI) {
+        console.warn('[StakingListener] HERO_STAKING_ADDRESS, TESTNET_RPC_URL, or ABI not found/valid. Staking listener will not start.');
         return;
     }
 

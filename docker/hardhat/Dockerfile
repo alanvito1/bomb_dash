@@ -19,5 +19,8 @@ COPY . .
 # Expose the Hardhat network port
 EXPOSE 8545
 
-# Start the Hardhat node and then run the deployment script
-CMD ["sh", "-c", "npx hardhat node --hostname 0.0.0.0 & sleep 10 && npx hardhat run scripts/deploy.js --network localhost && tail -f /dev/null"]
+# Copy the entrypoint script
+COPY docker/hardhat/entrypoint.sh /usr/local/bin/
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

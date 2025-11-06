@@ -30,6 +30,19 @@ export default defineConfig({
   define: {
     global: 'globalThis'
   },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+    }
+  },
+  optimizeDeps: {
+    exclude: ['@sentry/browser']
+  },
+  build: {
+    rollupOptions: {
+      external: ['@sentry/browser']
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom', // Use jsdom to simulate browser environment for tests

@@ -22,7 +22,10 @@ TESTNET_RPC_URL="https://data-seed-prebsc-1-s1.binance.org:8545/"
 PRIVATE_KEY="bdf9349232e6e5640836354d4b87531993549c8ea837faf8913de6293a6dd46b"
 
 # The key for the oracle wallet, used for signing off-chain data.
-ORACLE_PRIVATE_KEY="bdf9349232e6e5640836354d4b87531993549c8ea837faf8913de6293a6dd46b"
+ORACLE_PRIVATE_KEY="59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+
+# The key for the team wallet, which receives commissions and fees.
+TEAM_WALLET_PRIVATE_KEY="5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
 
 # -- Security Secrets --
 # Secret key for signing and verifying JSON Web Tokens (JWT).
