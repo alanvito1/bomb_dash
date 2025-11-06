@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs').promises;
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -80,7 +81,34 @@ async function startServer() {
         await oracle.initOracle();
 
         const nftService = require('./nft.js');
-        nftService.initNftService(oracle.getProvider(), process.env.BHERO_TOKEN_ADDRESS);
+        const provider = oracle.getProvider();
+        if (!provider) {
+            throw new Error("Failed to get provider from oracle. NFT service cannot be initialized.");
+        }
+
+        // Resiliently load contract addresses from the shared volume
+        const contractAddressesPath = path.join(__dirname, 'contracts', 'contract-addresses.json');
+        let heroTokenAddress;
+        for (let i = 0; i < 15; i++) {
+            try {
+                const addressesFile = await fs.readFile(contractAddressesPath, 'utf8');
+                const addresses = JSON.parse(addressesFile);
+                if (addresses.mockHeroNFTAddress) {
+                    heroTokenAddress = addresses.mockHeroNFTAddress;
+                    console.log(`[OK] Successfully loaded MockHeroNFT address: ${heroTokenAddress}`);
+                    break;
+                }
+            } catch (error) {
+                console.warn(`[WARN] Waiting for contract addresses file... Attempt ${i + 1}/15`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        if (!heroTokenAddress) {
+            throw new Error("FATAL: Could not load hero token address from shared volume after multiple attempts.");
+        }
+
+        nftService.initNftService(provider, heroTokenAddress);
 
         await gameState.startPvpCycleCron();
         console.log("[OK] Cron jobs (PvP Cycle, etc.) started.");
