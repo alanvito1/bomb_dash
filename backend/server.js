@@ -78,13 +78,14 @@ async function startServer() {
         await db.initDb();
         console.log("[OK] Database connection established.");
 
-        await oracle.initOracle();
+        const isOracleReady = await oracle.initOracle();
 
-        const nftService = require('./nft.js');
-        const provider = oracle.getProvider();
-        if (!provider) {
-            throw new Error("Failed to get provider from oracle. NFT service cannot be initialized.");
-        }
+        if (isOracleReady) {
+            const nftService = require('./nft.js');
+            const provider = oracle.getProvider();
+            if (!provider) {
+                throw new Error("Oracle reported ready, but failed to get provider. NFT service cannot be initialized.");
+            }
 
         // Resiliently load contract addresses from the shared volume
         const contractAddressesPath = path.join(__dirname, 'contracts', 'contract-addresses.json');
@@ -106,9 +107,19 @@ async function startServer() {
 
         if (!heroTokenAddress) {
             throw new Error("FATAL: Could not load hero token address from shared volume after multiple attempts.");
-        }
+            }
 
-        nftService.initNftService(provider, heroTokenAddress);
+            nftService.initNftService(provider, heroTokenAddress);
+
+            await stakingListener.initStakingListener();
+            console.log("[OK] Hero staking listener started.");
+
+            const tournamentControllerContract = oracle.getTournamentControllerContract();
+            tournamentService.initTournamentService(tournamentControllerContract);
+            console.log("[OK] Tournament service initialized.");
+        } else {
+            console.warn("[WARN] Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).");
+        }
 
         await gameState.startPvpCycleCron();
         console.log("[OK] Cron jobs (PvP Cycle, etc.) started.");
@@ -120,13 +131,6 @@ async function startServer() {
         // setInterval(checkAltarAndActivateBuff, 60000);
 
         soloRewardService.startSoloRewardCycleCron();
-
-        await stakingListener.initStakingListener();
-        console.log("[OK] Hero staking listener started.");
-
-        const tournamentControllerContract = oracle.getTournamentControllerContract();
-        tournamentService.initTournamentService(tournamentControllerContract);
-        console.log("[OK] Tournament service initialized.");
 
         isInitialized = true;
         console.log("[OK] All services initialized. Server is ready.");
