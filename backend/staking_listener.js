@@ -18,29 +18,51 @@ async function initStakingListener() {
         return;
     }
 
-    // Load ABI at runtime inside the initializer
     const abiPath = path.join(__dirname, 'contracts', 'HeroStaking.json');
     let heroStakingABI;
 
-    if (!fs.existsSync(abiPath)) {
-        console.warn(`[StakingListener] ABI file not found: ${abiPath}. Listener will not start.`);
-        return;
+    // Retry mechanism to wait for ABI file to be created by the hardhat container.
+    const maxRetries = 15;
+    const retryInterval = 2000; // 2 seconds
+
+    for (let i = 0; i < maxRetries; i++) {
+        if (!fs.existsSync(abiPath)) {
+            console.warn(`[StakingListener] ABI file not found at ${abiPath}. Retrying in ${retryInterval}ms... (${i + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, retryInterval));
+            continue;
+        }
+
+        try {
+            const abiFileContent = fs.readFileSync(abiPath, 'utf8');
+            // Handle case where file is being written and is empty
+            if (!abiFileContent) {
+                 console.warn(`[StakingListener] ABI file is empty. Retrying... (${i + 1}/${maxRetries})`);
+                 await new Promise(resolve => setTimeout(resolve, retryInterval));
+                 continue;
+            }
+
+            const abiData = JSON.parse(abiFileContent);
+
+            if (Array.isArray(abiData)) {
+                heroStakingABI = abiData;
+                console.log(`[StakingListener] Successfully loaded ABI from ${abiPath}.`);
+                break; // Exit loop on success
+            } else if (abiData && Array.isArray(abiData.abi)) {
+                heroStakingABI = abiData.abi;
+                console.log(`[StakingListener] Successfully loaded ABI from ${abiPath}.`);
+                break; // Exit loop on success
+            } else {
+                 console.error(`[StakingListener] Invalid ABI format in ${abiPath}. Retrying... (${i + 1}/${maxRetries})`);
+            }
+        } catch (error) {
+            console.error(`[StakingListener] Failed to read or parse ABI file ${abiPath}. Retrying... (${i + 1}/${maxRetries})`, error);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, retryInterval));
     }
 
-    try {
-        const abiFileContent = fs.readFileSync(abiPath, 'utf8');
-        const abiData = JSON.parse(abiFileContent);
-
-        if (Array.isArray(abiData)) {
-            heroStakingABI = abiData;
-        } else if (abiData && Array.isArray(abiData.abi)) {
-            heroStakingABI = abiData.abi;
-        } else {
-            console.error(`[StakingListener] Invalid ABI format in ${abiPath}. Cannot find ABI array.`);
-            return;
-        }
-    } catch (error) {
-        console.error(`[StakingListener] Failed to read or parse ABI file ${abiPath}:`, error);
+    if (!heroStakingABI) {
+        console.error(`[StakingListener] FATAL: Could not load ABI from ${abiPath} after ${maxRetries} attempts. Listener will not start.`);
         return;
     }
 
