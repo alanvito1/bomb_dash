@@ -2,18 +2,7 @@ import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
 import { ethers } from 'ethers';
-
-// Constants should be managed in a central config file
-const BCOIN_CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-const SPENDER_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // The TournamentController contract
-
-const BCOIN_ABI = [
-    "function approve(address spender, uint256 amount) public returns (bool)",
-    "function allowance(address owner, address spender) view returns (uint256)"
-];
-const ALTAR_ABI = [
-    "function donateToAltar(uint256 amount) external"
-];
+import * as contracts from '../config/contracts.js';
 
 export default class AltarScene extends Phaser.Scene {
     constructor() {
@@ -115,14 +104,14 @@ export default class AltarScene extends Phaser.Scene {
 
             // 1. Approve the contract to spend BCOIN
             this.showToast(LanguageManager.get('altar_info_step1'));
-            const bcoinContract = new ethers.Contract(BCOIN_CONTRACT_ADDRESS, BCOIN_ABI, signer);
+            const bcoinContract = new ethers.Contract(contracts.bcoin.address, contracts.bcoin.abi, signer);
             const amountInWei = ethers.parseUnits(amount.toString(), 18);
-            const approveTx = await bcoinContract.approve(SPENDER_ADDRESS, amountInWei);
+            const approveTx = await bcoinContract.approve(contracts.tournamentController.address, amountInWei);
             await approveTx.wait();
 
             // 2. Call the donation function on the smart contract
             this.showToast(LanguageManager.get('altar_info_step2'));
-            const altarContract = new ethers.Contract(SPENDER_ADDRESS, ALTAR_ABI, signer);
+            const altarContract = new ethers.Contract(contracts.tournamentController.address, contracts.tournamentController.abi, signer);
             const donateTx = await altarContract.donateToAltar(amountInWei);
             const receipt = await donateTx.wait();
 

@@ -111,7 +111,7 @@ class ApiClient {
 
             const verifyData = await this.fetch('/auth/verify', {
                 method: 'POST',
-                body: JSON.stringify({ message: siweMessage, signature }),
+                body: JSON.stringify({ message: messageToSign, signature }),
             }, false);
 
             if (verifyData.success && verifyData.token) {
