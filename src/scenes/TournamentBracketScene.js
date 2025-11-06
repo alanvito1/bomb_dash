@@ -2,7 +2,7 @@ import { CST } from '../CST.js';
 import api from '../api.js';
 import { createButton, createTitle } from '../modules/UIGenerator.js';
 
-export class TournamentBracketScene extends Phaser.Scene {
+export default class TournamentBracketScene extends Phaser.Scene {
     constructor() {
         super({ key: CST.SCENES.TOURNAMENT_BRACKET });
     }

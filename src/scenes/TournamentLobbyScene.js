@@ -3,7 +3,7 @@ import api from '../api.js';
 import { createButton, createTitle } from '../modules/UIGenerator.js';
 import LanguageManager from '../utils/LanguageManager.js';
 
-export class TournamentLobbyScene extends Phaser.Scene {
+export default class TournamentLobbyScene extends Phaser.Scene {
     constructor() {
         super({ key: CST.SCENES.TOURNAMENT_LOBBY });
     }
