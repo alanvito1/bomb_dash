@@ -9,7 +9,7 @@ services:
     ports:
       - "8545:8545"
     healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/deployment_complete"]
+      test: ["CMD", "curl", "--fail", "-X", "POST", "--data", "{\"jsonrpc\":\"2.0\",\"method\":\"web3_clientVersion\",\"params\":[],\"id\":1}", "http://localhost:8545"]
       interval: 5s
       timeout: 5s
       retries: 30
