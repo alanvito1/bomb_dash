@@ -78,7 +78,7 @@ describe('SoundManager', () => {
 
     expect(SoundManager.masterVolume).toBe(0.8);
     expect(mockLocalStorage.store.masterVolume).toBe('0.8');
-    expect(setItemSpy).toHaveBeenCalledWith('masterVolume', 0.8);
+    expect(setItemSpy).toHaveBeenCalledWith('masterVolume', '0.8');
   });
 
   it('setMusicVolume() should update value and save to localStorage', () => {
@@ -86,7 +86,7 @@ describe('SoundManager', () => {
     SoundManager.setMusicVolume(0.6);
 
     expect(SoundManager.musicVolume).toBe(0.6);
-    expect(setItemSpy).toHaveBeenCalledWith('musicVolume', 0.6);
+    expect(setItemSpy).toHaveBeenCalledWith('musicVolume', '0.6');
   });
 
   it('setSfxVolume() should update value and save to localStorage', () => {
@@ -94,7 +94,7 @@ describe('SoundManager', () => {
     SoundManager.setSfxVolume(0.4);
 
     expect(SoundManager.sfxVolume).toBe(0.4);
-    expect(setItemSpy).toHaveBeenCalledWith('sfxVolume', 0.4);
+    expect(setItemSpy).toHaveBeenCalledWith('sfxVolume', '0.4');
   });
 
   it('should clamp volume values between 0 and 1', () => {
@@ -102,10 +102,10 @@ describe('SoundManager', () => {
 
     SoundManager.setMasterVolume(mockScene, 1.5);
     expect(SoundManager.masterVolume).toBe(1);
-    expect(setItemSpy).toHaveBeenCalledWith('masterVolume', 1);
+    expect(setItemSpy).toHaveBeenCalledWith('masterVolume', '1');
 
     SoundManager.setMusicVolume(-0.5);
     expect(SoundManager.musicVolume).toBe(0);
-    expect(setItemSpy).toHaveBeenCalledWith('musicVolume', 0);
+    expect(setItemSpy).toHaveBeenCalledWith('musicVolume', '0');
   });
 });

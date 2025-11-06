@@ -2,6 +2,7 @@ import api from '../api.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import { CST } from '../CST.js';
+import { createButton, createTitle, createPanel } from '../modules/UIGenerator.js';
 
 export default class RankingScene extends Phaser.Scene {
   constructor() {
@@ -14,23 +15,13 @@ export default class RankingScene extends Phaser.Scene {
 
     // --- Background & UI Window ---
     this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
-    this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 120);
+    createPanel(this, 20, 20, this.scale.width - 40, this.scale.height - 80);
 
     // --- Title with Neon Style ---
-    this.add.text(centerX, 70, LanguageManager.get('ranking_title'), {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '28px',
-        fill: '#FFD700',
-        stroke: '#000',
-        strokeThickness: 4,
-        shadow: { offsetX: 2, offsetY: 2, color: '#FFD700', blur: 10, fill: true }
-    }).setOrigin(0.5);
+    createTitle(this, centerX, 70, LanguageManager.get('ranking_title'));
 
     // --- Back Button ---
-    const backButton = this.add.image(centerX, this.scale.height - 60, 'btn_menu').setInteractive({ useHandCursor: true });
-    this.add.text(backButton.x, backButton.y, LanguageManager.get('shop_back_to_menu'), { fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#ffffff' }).setOrigin(0.5);
-    backButton.on('pointerdown', () => {
-        SoundManager.play(this, 'click');
+    createButton(this, centerX, this.scale.height - 60, LanguageManager.get('shop_back_to_menu'), () => {
         this.scene.start(CST.SCENES.MENU);
     });
 
@@ -72,16 +63,26 @@ export default class RankingScene extends Phaser.Scene {
 
     // Rows
     let yPos = startY + 60;
-    rankingData.forEach((player) => {
+    rankingData.forEach((player, index) => {
+        // Add a background panel for each row for better readability
+        const panel = this.add.graphics();
+        panel.fillStyle(0x1a1a1a, 0.5);
+        panel.fillRoundedRect(x - 180, yPos - 15, 360, 40, 10);
+
         const rank = player.rank.toString();
         const playerName = this.truncateAddress(player.address);
         const wave = player.wave.toString();
+
+        // Add icons for top 3 players
+        if (index < 3) {
+            const medal = this.add.image(rankX - 30, yPos, `medal_${index + 1}`).setScale(0.5);
+        }
 
         this.add.text(rankX, yPos, rank, rowStyle).setOrigin(0.5);
         this.add.text(playerX, yPos, playerName, rowStyle).setOrigin(0.5);
         this.add.text(waveX, yPos, wave, rowStyle).setOrigin(0.5);
 
-        yPos += 35;
+        yPos += 50; // Increased spacing
     });
   }
 

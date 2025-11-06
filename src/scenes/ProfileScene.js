@@ -4,6 +4,7 @@ import api from '../api.js';
 import { getExperienceForLevel } from '../utils/rpg.js';
 import stakingService from '../web3/staking-service.js';
 import { createHeroCard } from '../modules/HeroCard.js';
+import { createButton, createTitle, createPanel } from '../modules/UIGenerator.js';
 
 export default class ProfileScene extends Phaser.Scene {
   constructor() {
@@ -38,17 +39,15 @@ export default class ProfileScene extends Phaser.Scene {
     const centerY = this.cameras.main.centerY;
 
     this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
-    this.add.graphics().fillStyle(0x000000, 0.8).fillRect(20, 20, this.scale.width - 40, this.scale.height - 40);
+    createPanel(this, 20, 20, this.scale.width - 40, this.scale.height - 40);
 
-    const titleStyle = { fontSize: '24px', fill: '#FFD700', fontFamily: '"Press Start 2P"', stroke: '#000', strokeThickness: 4 };
     const textStyle = { fontSize: '16px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };
-    const buttonStyle = { fontSize: '16px', fill: '#00ffff', fontFamily: '"Press Start 2P"', backgroundColor: '#00000099', padding: { x: 10, y: 5 } };
 
-    this.add.text(centerX, 70, LanguageManager.get('profile_title'), titleStyle).setOrigin(0.5);
+    createTitle(this, centerX, 70, LanguageManager.get('profile_title'));
 
     const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
 
-    this.createBackButton(centerX, this.scale.height - 60, buttonStyle);
+    this.createBackButton(centerX, this.scale.height - 60);
 
     this.fetchAndDisplayHeroes(loadingText);
   }
@@ -95,15 +94,10 @@ export default class ProfileScene extends Phaser.Scene {
     });
   }
 
-  createBackButton(x, y, style) {
-    const backBtn = this.add.text(x, y, LanguageManager.get('back_button'), style)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true });
-    backBtn.on('pointerdown', () => {
-      SoundManager.play(this, 'click');
+  createBackButton(x, y) {
+    createButton(this, x, y, LanguageManager.get('back_button'), () => {
       this.scene.start('MenuScene');
     });
-    backBtn.on('pointerover', () => backBtn.setStyle({ fill: '#ffffff' }));
-    backBtn.on('pointerout', () => backBtn.setStyle({ fill: '#00ffff' }));
   }
 
   async handleDepositHero(hero, button) {
