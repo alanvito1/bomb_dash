@@ -708,23 +708,38 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
 
 
 
-app.post('/api/tournaments/report-match', verifyToken, async (req, res) => {
-    const { tournamentId, matchId, winnerAddress } = req.body;
-    if (!tournamentId || !matchId || !winnerAddress) {
-        return res.status(400).json({ success: false, message: 'tournamentId, matchId, e winnerAddress são obrigatórios.' });
+app.get('/api/tournaments/:id', async (req, res) => {
+    const { id } = req.params;
+    const tournamentId = parseInt(id, 10);
+    if (isNaN(tournamentId)) {
+        return res.status(400).json({ success: false, message: 'Invalid tournament ID.' });
     }
 
-    // In a real application, you'd have more validation here to ensure
-    // that the reporting user (from the JWT) is authorized to report this match.
-    // For V1, we trust the authenticated user.
+    try {
+        const state = tournamentService.getTournamentState(tournamentId);
+        if (state) {
+            res.json({ success: true, tournament: state });
+        } else {
+            res.status(404).json({ success: false, message: 'Tournament not found or is not active.' });
+        }
+    } catch (error) {
+        console.error(`Error fetching state for tournament ${tournamentId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+});
+
+app.post('/api/tournaments/report-match', verifyOracle, async (req, res) => {
+    const { tournamentId, matchId, winnerAddress } = req.body;
+    if (!tournamentId || !matchId || !winnerAddress) {
+        return res.status(400).json({ success: false, message: 'tournamentId, matchId, and winnerAddress are required.' });
+    }
 
     try {
         await tournamentService.reportTournamentMatchWinner(tournamentId, matchId, winnerAddress);
-        res.json({ success: true, message: `Resultado para a partida ${matchId} do torneio ${tournamentId} reportado com sucesso.` });
+        res.json({ success: true, message: `Match ${matchId} in tournament ${tournamentId} reported successfully.` });
     } catch (error) {
-        console.error(`Erro ao reportar resultado do torneio:`, error);
-        // Provide a more specific error message if available
-        res.status(500).json({ success: false, message: error.message || 'Erro interno do servidor ao reportar o resultado do torneio.' });
+        console.error(`Error reporting tournament match winner:`, error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to report tournament match winner.' });
     }
 });
 
@@ -1080,6 +1095,11 @@ async function startServer() {
         // 4.7 Iniciar o Listener de Staking de Heróis
         await stakingListener.initStakingListener();
         console.log("[OK] Listener de staking de heróis iniciado.");
+
+        // 4.8 Iniciar o Serviço de Torneio
+        const tournamentControllerContract = oracle.getTournamentControllerContract();
+        tournamentService.initTournamentService(tournamentControllerContract);
+        console.log("[OK] Serviço de torneio inicializado e ouvindo eventos.");
 
         // 5. Destravar o servidor para aceitar requisições
         isInitialized = true;
