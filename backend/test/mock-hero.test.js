@@ -4,8 +4,13 @@ const sinon = require('sinon');
 const { ethers } = require('ethers');
 const { SiweMessage } = require('siwe');
 const app = require('../server.js');
+const authRoutes = require('../routes/auth.js');
+const debugRoutes = require('../routes/debug.js');
 const db = require('../database.js');
 const nft = require('../nft.js');
+
+app.use('/api/auth', authRoutes.router);
+app.use('/api/debug', debugRoutes);
 
 // Use an in-memory SQLite database for testing
 process.env.DB_PATH = ':memory:';

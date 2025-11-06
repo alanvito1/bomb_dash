@@ -6,9 +6,14 @@ const sinon = require('sinon');
 const request = require('supertest');
 const { SiweMessage } = require('siwe');
 const { Wallet } = require('ethers');
-const app = require('../server.js');
+const app = require('../server.js'); // We still need the main app for supertest
+const authRoutes = require('../routes/auth.js');
 const nftService = require('../nft.js');
 const db = require('../database.js');
+
+// Mount the specific router on the app for this test file
+app.use('/api/auth', authRoutes.router);
+
 
 describe('Auth and NFT Selection Flow', () => {
     let wallet;

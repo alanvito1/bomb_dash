@@ -5,9 +5,12 @@ const { expect } = require('chai');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../server.js');
+const gameRoutes = require('../routes/game.js');
 const db = require('../database.js');
 
 const { Wallet } = require('ethers');
+
+app.use('/api/game', gameRoutes);
 
 describe('Game Flow API', () => {
     let testUser;
@@ -40,7 +43,7 @@ describe('Game Flow API', () => {
         authToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
     });
 
-    describe('POST /api/matches/complete', () => {
+    describe('POST /api/game/matches/complete', () => {
         it('should award XP to the hero and the user account upon match completion', async () => {
             // Arrange
             const xpToGain = 150;
@@ -49,7 +52,7 @@ describe('Game Flow API', () => {
 
             // Act
             const response = await request(app)
-                .post('/api/matches/complete')
+                .post('/api/game/matches/complete')
                 .set('Authorization', `Bearer ${authToken}`)
                 .send({
                     heroId: testHero.id,
@@ -84,7 +87,7 @@ describe('Game Flow API', () => {
 
             // Act
             const response = await request(app)
-                .post('/api/matches/complete')
+                .post('/api/game/matches/complete')
                 .set('Authorization', `Bearer ${authToken}`) // Use first user's token
                 .send({
                     heroId: otherHero.id, // But try to update second user's hero
@@ -99,7 +102,7 @@ describe('Game Flow API', () => {
          it('should return 400 if xpGained is missing or invalid', async () => {
             // Act
             const response = await request(app)
-                .post('/api/matches/complete')
+                .post('/api/game/matches/complete')
                 .set('Authorization', `Bearer ${authToken}`)
                 .send({ heroId: testHero.id }); // xpGained is missing
 
@@ -116,7 +119,7 @@ describe('Game Flow API', () => {
 
             // Act
             const response = await request(app)
-                .post('/api/matches/complete')
+                .post('/api/game/matches/complete')
                 .set('Authorization', `Bearer ${authToken}`)
                 .send({
                     heroId: testHero.id,

@@ -44,6 +44,8 @@ import PauseScene from './src/scenes/PauseScene.js';
 import NotificationScene from './src/scenes/NotificationScene.js';
 import AltarScene from './src/scenes/AltarScene.js';
 import PvpScene from './src/scenes/PvpScene.js';
+import TournamentLobbyScene from './src/scenes/TournamentLobbyScene.js';
+import TournamentBracketScene from './src/scenes/TournamentBracketScene.js';
 
 // --- Hardcoded Debug Mode ---
 // This constant provides a simple, reliable way to toggle debug features
@@ -90,7 +92,9 @@ const config = {
     PauseScene,
     NotificationScene,
     AltarScene,
-    PvpScene
+    PvpScene,
+    TournamentLobbyScene,
+    TournamentBracketScene
   ],
   render: {
     antialias: false,

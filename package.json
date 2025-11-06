@@ -17,7 +17,12 @@
     "start:backend:test": "NODE_ENV=test node backend/server.js",
     "install:all": "npm install && npm install --prefix backend",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:smoke": "playwright test --project=smoke",
+    "test:integration": "playwright test --project=integration",
+    "test:health": "node scripts/health-check.js",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed"
   },
   "repository": {
     "type": "git",

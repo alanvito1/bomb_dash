@@ -19,6 +19,9 @@ Do ponto de vista do jogador, a experiência será a seguinte:
   - **Torneios de 8 Jogadores:** Eventos maiores com prêmios mais significativos para os melhores colocados.
 - **Modo Solo Recompensado:** O modo de jogo clássico (single-player) continuará existindo, mas com uma grande novidade: jogar bem renderá frações de BCOIN como recompensa, extraídas de uma pool comunitária.
 - **Evolução e Estratégia:** O sistema de upgrades está funcional. Os jogadores podem usar BCOIN para comprar melhorias permanentes nos stats de seus heróis, com as transações sendo aprovadas on-chain para maior segurança.
+- **Arena de Apostas (Wager):** Para os jogadores mais competitivos, um modo de aposta 1v1 permite que eles apostem BCOIN no resultado da partida. O vencedor leva o prêmio total, criando uma experiência de alto risco e alta recompensa.
+- **Staking de Heróis:** Os jogadores podem fazer "staking" de seus NFTs de Herói para ganhar recompensas passivas, adicionando uma camada de estratégia de investimento ao jogo.
+- **Altar de Buffs Globais:** Uma funcionalidade comunitária onde os jogadores podem doar BCOIN para um altar global. Quando uma meta de doação é atingida, um buff poderoso aleatório (ex: ganho de XP aumentado) é ativado para todos os jogadores por tempo limitado.
 
 ## 3. O Coração do Sistema: A Arquitetura e a Economia
 
@@ -65,6 +68,9 @@ From the player's point of view, the experience will be as follows:
   - **8-Player Tournaments:** Larger events with more significant prizes for the top-placed players.
 - **Rewarded Solo Mode:** The classic single-player mode will continue to exist, but with a major new feature: playing well will earn fractions of BCOIN as rewards, drawn from a community pool.
 - **Evolution and Strategy:** The upgrade system is now functional. Players can use BCOIN to purchase permanent stat improvements for their heroes, with transactions being approved on-chain for enhanced security.
+- **High-Stakes Wager Arena:** For the most competitive players, a 1v1 wager mode allows them to bet BCOIN on the match outcome. The winner takes the pot, creating a high-risk, high-reward experience.
+- **Hero Staking:** Players can stake their Hero NFTs to earn passive rewards, adding a layer of investment strategy to the game.
+- **Altar of Global Buffs:** A community-driven feature where players can donate BCOIN to a global altar. Once a donation goal is met, a random powerful buff (e.g., increased XP gain) is activated for all players for a limited time.
 
 ## 3. The Heart of the System: Architecture and Economy
 

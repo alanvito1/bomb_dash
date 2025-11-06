@@ -263,9 +263,108 @@ async function signHeroWithdrawal(tokenId, level, xp) {
     return signature;
 }
 
+/**
+ * Reports the final result of a tournament to the smart contract.
+ * @param {string} tournamentId The ID of the tournament.
+ * @param {string[]} winners An array of winner addresses (1st, 2nd, 3rd, etc.).
+ * @returns {Promise<{success: boolean, txHash: string}>}
+ */
+async function reportTournamentResult(tournamentId, winners) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    console.log(`[Oracle] Reportando resultado final para o torneio ${tournamentId}. Vencedores: ${winners.join(', ')}`);
+    const tx = await tournamentControllerContract.reportTournamentResult(tournamentId, winners, { gasLimit: 300000 });
+    await tx.wait();
+
+    console.log(`[Oracle] Resultado final do torneio ${tournamentId} reportado com sucesso. Tx: ${tx.hash}`);
+    return { success: true, txHash: tx.hash };
+}
+
+/**
+ * Verifies a tournament creation transaction.
+ * @param {string} txHash The hash of the transaction.
+ * @param {string} expectedCreator The address of the player who should have created the tournament.
+ * @param {number} expectedCapacity The expected capacity (4 or 8).
+ * @param {number} expectedEntryFee The expected entry fee in BCOIN.
+ * @returns {Promise<string>} The ID of the created tournament.
+ */
+async function verifyTournamentCreation(txHash, expectedCreator, expectedCapacity, expectedEntryFee) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt || receipt.status !== 1) {
+        throw new Error("Transação de criação de torneio falhou ou não foi encontrada.");
+    }
+
+    const event = receipt.logs
+        .map(log => {
+            try { return tournamentControllerContract.interface.parseLog(log); } catch (e) { return null; }
+        })
+        .find(l => l && l.name === 'TournamentCreated');
+
+    if (!event) {
+        throw new Error("Evento TournamentCreated não encontrado na transação.");
+    }
+
+    const { tournamentId, creator, capacity, entryFee } = event.args;
+    const expectedFeeInWei = ethers.parseUnits(expectedEntryFee.toString(), 18);
+
+    if (creator.toLowerCase() !== expectedCreator.toLowerCase()) {
+        throw new Error(`Criador do torneio não corresponde. Esperado: ${expectedCreator}, Recebido: ${creator}`);
+    }
+    if (parseInt(capacity.toString()) !== expectedCapacity) {
+        throw new Error(`Capacidade do torneio não corresponde. Esperado: ${expectedCapacity}, Recebido: ${capacity}`);
+    }
+    if (entryFee.toString() !== expectedFeeInWei.toString()) {
+        throw new Error(`Taxa de entrada do torneio não corresponde. Esperado: ${expectedFeeInWei}, Recebido: ${entryFee}`);
+    }
+
+    console.log(`[Oracle] Criação do torneio ${tournamentId} verificada para o jogador ${creator}.`);
+    return tournamentId.toString();
+}
+
+/**
+ * Verifies a transaction for a player joining a tournament.
+ * @param {string} txHash The hash of the transaction.
+ * @param {string} expectedPlayer The address of the player who should have joined.
+ * @param {string} expectedTournamentId The ID of the tournament joined.
+ * @returns {Promise<boolean>} True if the verification is successful.
+ */
+async function verifyTournamentJoin(txHash, expectedPlayer, expectedTournamentId) {
+    if (!isOracleInitialized) throw new Error("O Oráculo não está inicializado.");
+
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt || receipt.status !== 1) {
+        throw new Error("Transação para entrar no torneio falhou ou não foi encontrada.");
+    }
+
+     const event = receipt.logs
+        .map(log => {
+            try { return tournamentControllerContract.interface.parseLog(log); } catch (e) { return null; }
+        })
+        .find(l => l && l.name === 'PlayerJoinedTournament');
+
+    if (!event) {
+        throw new Error("Evento PlayerJoinedTournament não encontrado na transação.");
+    }
+
+    const { tournamentId, player } = event.args;
+
+    if (player.toLowerCase() !== expectedPlayer.toLowerCase()) {
+        throw new Error(`Jogador que entrou no torneio não corresponde. Esperado: ${expectedPlayer}, Recebido: ${player}`);
+    }
+    if (tournamentId.toString() !== expectedTournamentId) {
+        throw new Error(`ID do torneio não corresponde. Esperado: ${expectedTournamentId}, Recebido: ${tournamentId}`);
+    }
+
+    console.log(`[Oracle] Entrada do jogador ${player} no torneio ${tournamentId} verificada.`);
+    return true;
+}
+
 
 module.exports = {
     initOracle,
+    getTournamentControllerContract,
     createRankedMatch,
     reportRankedMatchResult,
     verifyPvpEntryFee,
@@ -274,5 +373,13 @@ module.exports = {
     startNewRewardCycle,
     reportSoloGames,
     signSoloRewardClaim,
-    signHeroWithdrawal
+    signHeroWithdrawal,
+    verifyTournamentCreation,
+    verifyTournamentJoin,
+    reportTournamentResult
 };
+
+function getTournamentControllerContract() {
+    if (!isOracleInitialized) return null;
+    return tournamentControllerContract;
+}

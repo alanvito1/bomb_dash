@@ -1,7 +1,10 @@
 const request = require('supertest');
 const { expect } = require('chai');
-const server = require('../server');
+const app = require('../server');
 const db = require('../database');
+const rankingRoutes = require('../routes/ranking');
+
+app.use('/api/ranking', rankingRoutes);
 
 describe('Ranking API', () => {
   before(async () => {
@@ -13,7 +16,7 @@ describe('Ranking API', () => {
   // The test runner will handle the process exit.
 
   it('should return a list of players with a 200 status code', async () => {
-    const res = await request(server).get('/api/ranking');
+    const res = await request(app).get('/api/ranking');
     expect(res.statusCode).to.equal(200);
     expect(res.body.success).to.be.true;
     expect(res.body.ranking).to.be.an('array');

@@ -29,6 +29,8 @@ export const CST = {
         NOTIFICATION: "NotificationScene",
         ALTAR: "AltarScene",
         PVP: "PvpScene",
+        TOURNAMENT_LOBBY: "TournamentLobbyScene",
+        TOURNAMENT_BRACKET: "TournamentBracketScene",
     },
     /**
      * @memberof CST
