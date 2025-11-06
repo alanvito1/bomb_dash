@@ -362,8 +362,14 @@ async function verifyTournamentJoin(txHash, expectedPlayer, expectedTournamentId
 }
 
 
+function getProvider() {
+    if (!isOracleInitialized) return null;
+    return provider;
+}
+
 module.exports = {
     initOracle,
+    getProvider,
     getTournamentControllerContract,
     createRankedMatch,
     reportRankedMatchResult,

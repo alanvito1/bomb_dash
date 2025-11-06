@@ -15,6 +15,8 @@ services:
       retries: 30
     networks:
       - bombdash-net
+    volumes:
+      - contract-artifacts:/app/backend/contracts
 
   backend:
     build:
@@ -30,6 +32,8 @@ services:
       - TESTNET_RPC_URL=http://hardhat:8545
     networks:
       - bombdash-net
+    volumes:
+      - contract-artifacts:/app/backend/contracts
 
   frontend:
     build:
@@ -45,3 +49,6 @@ services:
 networks:
   bombdash-net:
     driver: bridge
+
+volumes:
+  contract-artifacts:

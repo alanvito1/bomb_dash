@@ -246,8 +246,8 @@ async function main() {
         TOURNAMENT_CONTROLLER_ADDRESS: tournamentControllerAddress,
         PERPETUAL_REWARD_POOL_ADDRESS: perpetualRewardPoolAddress,
         WAGER_ARENA_ADDRESS: wagerArenaAddress,
-        HERO_STAKING_ADDRESS: heroStakingAddress, // Add new staking address
-        MOCK_HERO_NFT_ADDRESS: mockHeroNFTAddress, // Add mock NFT address
+        HERO_STAKING_ADDRESS: heroStakingAddress,
+        BHERO_TOKEN_ADDRESS: mockHeroNFTAddress, // Correct variable name for the NFT service
         BCOIN_TESTNET_ADDRESS: bcoinAddress,
         ORACLE_WALLET_ADDRESS: oracle.address,
     };
