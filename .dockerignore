@@ -16,5 +16,4 @@ docker-compose.yml
 .gitignore
 
 # Ignore environment files
-.env
 jules-scratch/

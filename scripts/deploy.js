@@ -185,6 +185,12 @@ async function main() {
     console.log(`- Transferred ${ethers.formatEther(oracleEthAmount)} ETH to oracle ${oracle.address}.`);
     console.log(`- Oracle ETH balance: ${ethers.formatEther(oracleEthBalance)}`);
 
+    if (oracleEthBalance > 0 && oracleBcoinBalance > 0) {
+        console.log('[SUCCESS] Oracle wallet funded successfully.');
+    } else {
+        console.log('[WARNING] Oracle wallet funding might have failed. Please check balances.');
+    }
+
     // 7. Save Artifacts for Backend
     console.log("\nSaving contract addresses and ABIs for the backend...");
     const backendDir = path.join(__dirname, '..', 'backend', 'contracts');
