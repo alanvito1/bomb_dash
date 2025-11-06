@@ -38,21 +38,19 @@ async function main() {
     const provider = ethers.provider;
     let deployer, oracle, teamWallet;
 
-    if (hre.network.name === "bscTestnet") {
-        if (!process.env.PRIVATE_KEY || !process.env.ORACLE_PRIVATE_KEY) {
-            throw new Error("PRIVATE_KEY and ORACLE_PRIVATE_KEY must be set in .env for bscTestnet");
-        }
-        deployer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-        oracle = new ethers.Wallet(process.env.ORACLE_PRIVATE_KEY, provider);
-        // For testnet, we can generate a new wallet for the team or use a predefined one.
-        // Here, we'll use the deployer's address as the team wallet for simplicity.
-        teamWallet = deployer;
-        console.log("Running on bscTestnet...");
-    } else {
-        // For local hardhat network
-        [deployer, oracle, teamWallet] = await ethers.getSigners();
-        console.log("Running on local network...");
+    // For local hardhat network, we get the deployer from hardhat's signers,
+    // but we instantiate the oracle and team wallets from private keys in the .env file
+    // to ensure consistency with the backend.
+    const signers = await ethers.getSigners();
+    deployer = signers[0];
+
+    if (!process.env.ORACLE_PRIVATE_KEY || !process.env.TEAM_WALLET_PRIVATE_KEY) {
+        throw new Error("ORACLE_PRIVATE_KEY and TEAM_WALLET_PRIVATE_KEY must be set in .env");
     }
+
+    oracle = new ethers.Wallet(process.env.ORACLE_PRIVATE_KEY, provider);
+    teamWallet = new ethers.Wallet(process.env.TEAM_WALLET_PRIVATE_KEY, provider);
+    console.log("Running on local network...");
 
     console.log("Deploying contracts with the account:", deployer.address);
     console.log("Oracle address:", oracle.address);
@@ -164,6 +162,28 @@ async function main() {
     } else {
         console.log("\nSkipping test wallet funding: PRIVATE_KEY not found in .env file.");
     }
+
+    // 6.6 Fund Oracle Wallet
+    console.log("\nFunding the oracle wallet...");
+    const oracleBcoinAmount = ethers.parseUnits("10000", 18); // 10,000 BCOIN
+    const oracleEthAmount = ethers.parseEther("10.0"); // 10 ETH for gas
+
+    // Transfer BCOIN to Oracle
+    const bcoinTx = await bcoin.transfer(oracle.address, oracleBcoinAmount);
+    await bcoinTx.wait();
+    const oracleBcoinBalance = await bcoin.balanceOf(oracle.address);
+    console.log(`- Transferred ${ethers.formatUnits(oracleBcoinAmount, 18)} BCOIN to oracle ${oracle.address}.`);
+    console.log(`- Oracle BCOIN balance: ${ethers.formatUnits(oracleBcoinBalance, 18)}`);
+
+    // Transfer ETH to Oracle
+    const ethTx = await deployer.sendTransaction({
+        to: oracle.address,
+        value: oracleEthAmount
+    });
+    await ethTx.wait();
+    const oracleEthBalance = await provider.getBalance(oracle.address);
+    console.log(`- Transferred ${ethers.formatEther(oracleEthAmount)} ETH to oracle ${oracle.address}.`);
+    console.log(`- Oracle ETH balance: ${ethers.formatEther(oracleEthBalance)}`);
 
     // 7. Save Artifacts for Backend
     console.log("\nSaving contract addresses and ABIs for the backend...");

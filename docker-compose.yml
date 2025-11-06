@@ -8,6 +8,11 @@ services:
     env_file: ./.env
     ports:
       - "8545:8545"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/deployment_complete"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     networks:
       - bombdash-net
 
@@ -19,7 +24,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - hardhat
+      hardhat:
+        condition: service_healthy
     environment:
       - TESTNET_RPC_URL=http://hardhat:8545
     networks:
