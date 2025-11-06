@@ -19,5 +19,12 @@ COPY . .
 # Expose the backend port
 EXPOSE 3000
 
-# Start the backend server
+# Copy the entrypoint script
+COPY docker/backend/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Set the default command
 CMD ["npm", "run", "start:backend"]

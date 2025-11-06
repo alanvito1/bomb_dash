@@ -3,6 +3,14 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Check for .env file
+if [ -f /app/.env ]; then
+  echo "[SUCCESS] .env file loaded."
+else
+  echo "[ERROR] .env file not found. Please ensure it is present in the root directory."
+  exit 1
+fi
+
 # Start the Hardhat node in the background
 npx hardhat node --hostname 0.0.0.0 &
 
