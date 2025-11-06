@@ -381,23 +381,6 @@ app.post('/api/heroes/:heroId/initiate-withdrawal', verifyToken, async (req, res
     }
 });
 
-// Rota pública para obter o ranking dos melhores jogadores
-app.get('/api/ranking', async (req, res) => {
-    try {
-        const rankingData = await db.getRanking(10); // Pega o Top 10
-        const formattedRanking = rankingData.map((entry, index) => ({
-            rank: index + 1,
-            address: entry.User.wallet_address,
-            wave: entry.highest_wave_reached,
-        }));
-        res.json({ success: true, ranking: formattedRanking });
-    } catch (error) {
-        console.error("Error fetching ranking:", error);
-        res.status(500).json({ success: false, message: 'Failed to fetch ranking data.' });
-    }
-});
-
-
 // =================================================================
 // ROTAS DE JOGO
 // =================================================================
