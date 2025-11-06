@@ -74,11 +74,11 @@ router.post('/verify', async (req, res) => {
                         hero_type: 'nft',
                         nft_id: nftData.id,
                         level: nftData.level,
-                        hp: 100, // Default values, can be adjusted
+                        hp: 100,
                         maxHp: 100,
                         damage: nftData.bombPower,
                         speed: nftData.speed,
-                        // ... map other relevant stats
+                        sprite_name: 'ninja_hero', // CRITICAL FIX: Assign a default sprite
                     };
                     await db.createHeroForUser(user.id, heroStats);
                 }

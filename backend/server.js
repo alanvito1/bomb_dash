@@ -79,6 +79,9 @@ async function startServer() {
 
         await oracle.initOracle();
 
+        const nftService = require('./nft.js');
+        nftService.initNftService(oracle.getProvider(), process.env.BHERO_TOKEN_ADDRESS);
+
         await gameState.startPvpCycleCron();
         console.log("[OK] Cron jobs (PvP Cycle, etc.) started.");
 
