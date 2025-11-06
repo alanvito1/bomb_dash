@@ -462,7 +462,8 @@ async function addXpToHero(heroId, xpAmount) {
         const setting = await GameSetting.findOne({ where: { key: 'xp_multiplier' }, transaction: t });
         const multiplier = parseFloat(setting ? setting.value : '1.0');
 
-        const xpCap = getExperienceForLevel(hero.level + 1, multiplier);
+        const xpForNextLevel = getExperienceForLevel(hero.level + 1, multiplier);
+        const xpCap = xpForNextLevel > 0 ? xpForNextLevel - 1 : 0;
 
         // If hero is already at max XP for their level, do not add more.
         if (hero.xp >= xpCap) {
