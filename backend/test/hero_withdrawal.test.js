@@ -5,6 +5,10 @@ const app = require('../server');
 const db = require('../database');
 const oracle = require('../oracle');
 const jwt = require('jsonwebtoken');
+const heroRoutes = require('../routes/heroes');
+const authRoutes = require('../routes/auth');
+
+app.use('/api/heroes', authRoutes.verifyToken, heroRoutes);
 
 describe('Hero Withdrawal API Endpoint', () => {
     let userId;
@@ -25,7 +29,9 @@ describe('Hero Withdrawal API Endpoint', () => {
             xp: 550,
             status: 'staked'
         });
-        heroId = heroResult.heroId;
+        const heroes = await db.getHeroesByUserId(userId);
+        heroId = heroes[0].id;
+
 
         // Generate a JWT for the user
         token = jwt.sign({ userId: userId, address: '0xTestUserWithdrawal' }, process.env.JWT_SECRET);
@@ -71,15 +77,17 @@ describe('Hero Withdrawal API Endpoint', () => {
 
     it('should return 400 if the hero is not staked', async () => {
         // Create a hero that is not staked
-        const unstakedHeroResult = await db.createHeroForUser(userId, {
+        await db.createHeroForUser(userId, {
             hero_type: 'nft',
             nft_id: 998,
             status: 'in_wallet'
         });
-        const unstakedHeroId = unstakedHeroResult.heroId;
+        const heroes = await db.getHeroesByUserId(userId);
+        const unstakedHero = heroes.find(h => h.nft_id === 998);
+
 
         const res = await request(app)
-            .post(`/api/heroes/${unstakedHeroId}/initiate-withdrawal`)
+            .post(`/api/heroes/${unstakedHero.id}/initiate-withdrawal`)
             .set('Authorization', `Bearer ${token}`)
             .expect(400);
 

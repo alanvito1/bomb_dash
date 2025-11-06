@@ -16,24 +16,32 @@ function initTournamentService(tournamentControllerContract) {
 
     console.log("Initializing Tournament Service and listening for TournamentStarted events...");
 
-    tournamentControllerContract.on("TournamentStarted", (tournamentId, event) => {
+    tournamentControllerContract.on("TournamentStarted", async (tournamentId, event) => {
         console.log(`--- Event TournamentStarted Received ---`);
         console.log(`Tournament ID: ${tournamentId.toString()}`);
         console.log("------------------------------------");
-        // The contract doesn't emit participants, we need to fetch them.
-        // This is a limitation of the current event. For now, we assume the backend
-        // will get the participant list from another source (e.g., a dedicated API endpoint).
-        // For this implementation, we will mock fetching the tournament details.
-        // In a real scenario, you'd call: `tournamentControllerContract.tournaments(tournamentId)`
-        const mockParticipants = ["0xPlayer1", "0xPlayer2", "0xPlayer3", "0xPlayer4"]; // Example for 4 players
-        const mockTournamentData = {
-            id: tournamentId.toNumber(),
-            participants: mockParticipants,
-            capacity: mockParticipants.length,
-            entryFee: 10, // Example value
-            isActive: true,
-        };
-        createTournamentBracket(mockTournamentData);
+        try {
+            // Fetch the tournament data directly from the contract
+            const tournamentData = await tournamentControllerContract.tournaments(tournamentId);
+
+            // The contract returns an array-like structure, so we map it to an object.
+            const formattedTournamentData = {
+                id: tournamentData.id.toNumber(),
+                participants: tournamentData.participants,
+                capacity: tournamentData.capacity,
+                entryFee: tournamentData.entryFee,
+                isActive: tournamentData.isActive,
+            };
+
+            // Ensure the tournament is active before creating a bracket
+            if (formattedTournamentData.isActive) {
+                createTournamentBracket(formattedTournamentData);
+            } else {
+                console.warn(`Tournament ${tournamentId.toString()} is no longer active. Bracket will not be created.`);
+            }
+        } catch (error) {
+            console.error(`Failed to fetch data for tournament ${tournamentId.toString()}:`, error);
+        }
     });
 }
 

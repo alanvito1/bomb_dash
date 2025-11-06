@@ -79,4 +79,25 @@ O projeto é dividido em três camadas principais que trabalham em conjunto:
 
 ---
 
+### f) Sistemas Adicionais Implementados (Pós-escopo inicial)
+
+Durante o desenvolvimento, os seguintes sistemas foram adicionados para aumentar a profundidade econômica e de engajamento do jogo:
+
+*   **Sistema de Aposta de XP (XP Wager):**
+    *   **Contrato:** `WagerArena.sol`.
+    *   **Fluxo:** Jogadores entram em uma fila de aposta com uma taxa em BCOIN e, crucialmente, apostando o XP do seu herói. O vencedor da partida recebe o BCOIN do perdedor e também o XP.
+    *   **Mecânica de De-level:** A perda de XP pode fazer com que um herói **perca níveis (de-level)**, criando uma mecânica de alto risco. A lógica é gerenciada no `pvp_service.js` e `database.js`.
+    *   **API:** `GET /api/pvp/wager/tiers`, `POST /api/pvp/wager/enter`.
+
+*   **Sistema de Staking de Heróis:**
+    *   **Contrato:** `HeroStaking.sol`.
+    *   **Fluxo:** Permite que jogadores depositem (façam "stake") de seus NFTs de herói no contrato para ganhar recompensas passivas.
+    *   **Sincronização:** O backend (`staking_listener.js`) escuta os eventos `HeroDeposited` e `HeroWithdrawn` para atualizar o status do herói (`staked` ou `in_wallet`) no banco de dados.
+    *   **Retirada Segura:** A retirada de um herói requer uma assinatura do Oráculo (`signHeroWithdrawal`) que inclui o nível e XP atuais do herói, prevenindo a adulteração de dados.
+
+*   **Sistema do Altar de Buffs Globais:**
+    *   **Fluxo:** É um sistema de meta comunitária. Jogadores doam BCOIN para o "altar" através da função `donateToAltar`.
+    *   **Verificação:** O backend verifica cada doação on-chain através do endpoint `POST /api/altar/donate`, que exige um `txHash`.
+    *   **Ativação de Buff:** Um *cron job* no backend (`checkAltarAndActivateBuff`) verifica a cada minuto se a meta de doação foi atingida. Se sim, ele reseta as doações e ativa um buff global aleatório (ex: +10% de XP) para todos os jogadores por um tempo determinado.
+
 Este documento representa o estado técnico atual e completo do projeto.

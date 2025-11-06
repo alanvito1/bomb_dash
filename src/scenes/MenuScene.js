@@ -101,6 +101,7 @@ export default class MenuScene extends Phaser.Scene {
     const menuItems = [
       { name: 'solo_button', label: LanguageManager.get('menu_solo'), scene: CST.SCENES.CHARACTER_SELECTION },
       { name: 'pvp_button', label: "PvP Modes", scene: CST.SCENES.PVP },
+      { name: 'tournament_button', label: "Tournaments", scene: CST.SCENES.TOURNAMENT_LOBBY },
       { name: 'shop_button', label: LanguageManager.get('menu_shop'), scene: CST.SCENES.SHOP },
       { name: 'profile_button', label: LanguageManager.get('profile_title'), scene: CST.SCENES.PROFILE },
       { name: 'ranking_button', label: 'Ranking', scene: CST.SCENES.RANKING },
