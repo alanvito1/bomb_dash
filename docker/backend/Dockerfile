@@ -21,6 +21,8 @@ EXPOSE 3000
 
 # Copy the entrypoint script
 COPY docker/backend/entrypoint.sh /usr/local/bin/
+# Fix CRLF line endings that can cause execution errors
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set the entrypoint
