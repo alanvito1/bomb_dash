@@ -103,4 +103,20 @@ router.post('/setup-test-player', verifyAdmin, async (req, res) => {
     }
 });
 
+router.post('/set-hero-xp', verifyAdmin, async (req, res) => {
+    const { heroId, xp } = req.body;
+    if (!heroId || xp === undefined) {
+        return res.status(400).json({ success: false, message: 'heroId and xp are required.' });
+    }
+
+    try {
+        await db.updateHeroStats(heroId, { xp: parseInt(xp) });
+        const hero = await db.Hero.findByPk(heroId);
+        res.json({ success: true, message: `Hero ${heroId} XP set to ${xp}.`, hero });
+    } catch (error) {
+        console.error(`Error setting hero XP for ${heroId}:`, error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+});
+
 module.exports = router;
