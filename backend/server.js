@@ -33,6 +33,7 @@ const heroRoutes = require('./routes/heroes.js');
 const pvpRoutes = require('./routes/pvp.js');
 const tournamentRoutes = require('./routes/tournaments.js');
 const gameRoutes = require('./routes/game.js');
+const debugRoutes = require('./routes/debug.js');
 
 const app = express();
 let isInitialized = false;
@@ -68,6 +69,7 @@ app.use('/api/heroes', authRoutes.verifyToken, heroRoutes);
 app.use('/api/pvp', authRoutes.verifyToken, pvpRoutes);
 app.use('/api/tournaments', authRoutes.verifyToken, tournamentRoutes);
 app.use('/api/game', authRoutes.verifyToken, gameRoutes);
+app.use('/api/debug', debugRoutes);
 
 async function startServer() {
     console.log("=============================================");

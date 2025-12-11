@@ -10,7 +10,7 @@ const API_URL = 'http://localhost:3000'; // URL do nosso servidor backend
 const PLAYER1_PK = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 const PLAYER2_PK = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d';
 
-const provider = new ethers.providers.JsonRpcProvider("http://localhost:8545"); // Conexão com o nó Hardhat local
+const provider = new ethers.JsonRpcProvider("http://localhost:8545"); // Conexão com o nó Hardhat local
 const player1Wallet = new ethers.Wallet(PLAYER1_PK, provider);
 const player2Wallet = new ethers.Wallet(PLAYER2_PK, provider);
 
@@ -30,30 +30,47 @@ async function loginPlayer(wallet) {
     console.log(`Nonce obtido: ${nonce}`);
 
     // 2. Criar mensagem SIWE
-    const message = new SiweMessage({
-        domain: 'localhost',
-        address: wallet.address,
-        statement: 'Faça login no Bomb Dash para provar que você é o dono desta carteira.',
-        uri: `${API_URL}/login`,
-        version: '1',
-        chainId: 31337, // chainId do Hardhat
-        nonce: nonce,
-    });
-    const messageToSign = message.prepareMessage();
+    console.log("Creating SiweMessage...");
+    try {
+        const message = new SiweMessage({
+            domain: 'localhost',
+            address: wallet.address,
+            uri: `${API_URL}/login`,
+            version: '1',
+            chainId: 31337, // chainId do Hardhat
+            nonce: nonce,
+        });
+        console.log("SiweMessage created. Preparing message...");
+        const messageToSign = message.prepareMessage();
+        console.log("Message to sign:\n", messageToSign);
 
-    // 3. Assinar a mensagem
-    const signature = await wallet.signMessage(messageToSign);
-    console.log("Mensagem assinada com sucesso.");
+        // 3. Assinar a mensagem
+        const signature = await wallet.signMessage(messageToSign);
+        console.log("Mensagem assinada com sucesso.");
 
-    // 4. Verificar com o servidor e obter JWT
-    const verifyRes = await axios.post(`${API_URL}/api/auth/verify`, {
-        message: messageToSign,
-        signature: signature,
-    });
-    const token = verifyRes.data.token;
-    console.log("Verificação bem-sucedida. JWT recebido.");
+        // 4. Verificar com o servidor e obter JWT
+        const verifyRes = await axios.post(`${API_URL}/api/auth/verify`, {
+            message: messageToSign,
+            signature: signature,
+        });
+        const token = verifyRes.data.token;
+        console.log("Verificação bem-sucedida. JWT recebido.");
 
-    return token;
+        // Verify token immediately
+        try {
+            await axios.get(`${API_URL}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log("Token verificado via /api/auth/me: VÁLIDO");
+        } catch (e) {
+            console.error("Falha ao verificar token via /api/auth/me:", e.message);
+        }
+
+        return token;
+    } catch (err) {
+        console.error("Error inside loginPlayer:", err);
+        throw err;
+    }
 }
 
 
@@ -65,7 +82,9 @@ async function runSanityCheck() {
     try {
         // Etapa 1: Login de ambos os jogadores para obter tokens JWT.
         const tokenPlayer1 = await loginPlayer(player1Wallet);
+        console.log("Token Player 1:", tokenPlayer1 ? "OK" : "MISSING");
         const tokenPlayer2 = await loginPlayer(player2Wallet);
+        console.log("Token Player 2:", tokenPlayer2 ? "OK" : "MISSING");
 
         // Etapa 2: Simular o deploy e a distribuição de BCOINs de teste.
         // (Isso será feito via script Hardhat, mas aqui vamos assumir que já têm saldo)
@@ -74,8 +93,45 @@ async function runSanityCheck() {
 
         // Etapa 3: Jogador 1 entra na fila 1v1.
         console.log("\n--- Etapa 3: Jogador 1 entra na fila ---");
-        // TODO: Fazer a chamada de API para /api/matchmaking/join (ou similar)
-        // O jogador precisará aprovar o gasto de BCOIN e o contrato irá transferir.
+        // Buscar tiers de aposta
+        const tiersRes = await axios.get(`${API_URL}/api/pvp/wager/tiers`, {
+            headers: { Authorization: `Bearer ${tokenPlayer1}` }
+        });
+        const tiers = tiersRes.data.tiers;
+        if (!tiers || tiers.length === 0) {
+            throw new Error("Nenhum tier de aposta encontrado.");
+        }
+        const selectedTier = tiers[0];
+        console.log(`Tier selecionado: ${selectedTier.name} (ID: ${selectedTier.id})`);
+
+        // Buscar heróis do jogador 1
+        const heroesRes = await axios.get(`${API_URL}/api/heroes`, {
+            headers: { Authorization: `Bearer ${tokenPlayer1}` }
+        });
+        const heroes = heroesRes.data.heroes;
+        if (!heroes || heroes.length === 0) {
+            throw new Error("Jogador 1 não possui heróis.");
+        }
+        const selectedHero = heroes[0];
+        console.log(`Herói selecionado: ${selectedHero.id} (Nível: ${selectedHero.level})`);
+
+        // DEBUG: Adicionar XP ao herói para cumprir os requisitos do tier
+        console.log("DEBUG: Definindo XP do herói para 100...");
+        await axios.post(`${API_URL}/api/debug/set-hero-xp`, {
+            heroId: selectedHero.id,
+            xp: 100
+        }, {
+            headers: { 'x-admin-secret': 'admin123' }
+        });
+
+        // Entrar na fila
+        const joinRes = await axios.post(
+            `${API_URL}/api/pvp/wager/enter`,
+            { heroId: selectedHero.id, tierId: selectedTier.id },
+            { headers: { Authorization: `Bearer ${tokenPlayer1}` } }
+        );
+        console.log("Resposta da entrada na fila:", joinRes.data);
+
 
         // Etapa 4: Jogador 2 entra na fila 1v1, criando uma partida.
         console.log("\n--- Etapa 4: Jogador 2 entra na fila e cria a partida ---");
