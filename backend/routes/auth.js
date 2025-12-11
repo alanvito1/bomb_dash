@@ -7,7 +7,7 @@ const { randomBytes } = require('crypto');
 const db = require('../database.js');
 const nft = require('../nft.js');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-very-strong-secret-key-for-web3';
+const JWT_SECRET = process.env.JWT_SECRET;
 const nonceStore = new Map();
 
 function verifyToken(req, res, next) {

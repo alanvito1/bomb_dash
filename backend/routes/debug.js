@@ -6,7 +6,7 @@ const nft = require('../nft.js');
 
 function verifyAdmin(req, res, next) {
     const adminSecret = req.headers['x-admin-secret'];
-    if (adminSecret && adminSecret === (process.env.ADMIN_SECRET || 'supersecret')) {
+    if (adminSecret && adminSecret === process.env.ADMIN_SECRET) {
         next();
     } else {
         res.status(403).json({ success: false, message: 'Acesso negado. Requer privilégios de administrador.' });
