@@ -7,7 +7,7 @@ const gameState = require('../game_state.js');
 
 function verifyOracle(req, res, next) {
     const oracleSecret = req.headers['x-oracle-secret'];
-    if (oracleSecret && oracleSecret === (process.env.ADMIN_SECRET || 'supersecret')) {
+    if (oracleSecret && oracleSecret === process.env.ADMIN_SECRET) {
         next();
     } else {
         res.status(403).json({ success: false, message: 'Acesso negado. Requisição inválida do Oráculo.' });
