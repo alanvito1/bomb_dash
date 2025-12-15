@@ -27,6 +27,9 @@ contract HeroStaking is ERC721Holder, Ownable {
     // The address of the Oracle authorized to sign withdrawal messages.
     address public oracleAddress;
 
+    // Mapping to track user nonces for replay protection.
+    mapping(address => uint256) public nonces;
+
     /**
      * @dev Sets the addresses for the contract.
      */
@@ -75,11 +78,15 @@ contract HeroStaking is ERC721Holder, Ownable {
         require(staker != address(0), "HeroStaking: Token not staked or already withdrawn");
 
         // Verify the signature from the Oracle
-        bytes32 messageHash = keccak256(abi.encodePacked(tokenId, level, xp));
+        uint256 currentNonce = nonces[staker];
+        bytes32 messageHash = keccak256(abi.encodePacked(tokenId, level, xp, currentNonce));
         // Manually create the Ethereum signed message hash
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         address signer = ECDSA.recover(ethSignedMessageHash, signature);
         require(signer == oracleAddress, "HeroStaking: Invalid oracle signature");
+
+        // Increment nonce to prevent replay attacks
+        nonces[staker]++;
 
         // Clear the staking record *before* the transfer to prevent re-entrancy attacks.
         delete stakedBy[heroNftContractAddress][tokenId];

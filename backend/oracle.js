@@ -6,8 +6,10 @@ const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY;
 const BSC_RPC_URL = process.env.TESTNET_RPC_URL;
 const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
 const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
+const HERO_STAKING_ADDRESS = process.env.HERO_STAKING_ADDRESS;
 
 const PERPETUAL_REWARD_POOL_ABI = require('./contracts/PerpetualRewardPool.json');
+const HERO_STAKING_ABI = require('./contracts/HeroStaking.json');
 
 const TOURNAMENT_CONTROLLER_ABI = require('./contracts/TournamentController.json');
 
@@ -15,10 +17,11 @@ let provider;
 let oracleWallet;
 let tournamentControllerContract;
 let perpetualRewardPoolContract;
+let heroStakingContract;
 let isOracleInitialized = false;
 
 async function initOracle() {
-    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS) {
+    if (!ORACLE_PRIVATE_KEY || !BSC_RPC_URL || !TOURNAMENT_CONTROLLER_ADDRESS || !PERPETUAL_REWARD_POOL_ADDRESS || !HERO_STAKING_ADDRESS) {
         console.warn("Variáveis de ambiente essenciais do Oráculo não estão configuradas. O serviço do Oráculo está desativado.");
         isOracleInitialized = false;
         return false;
@@ -28,6 +31,7 @@ async function initOracle() {
         oracleWallet = new ethers.Wallet(ORACLE_PRIVATE_KEY, provider);
         tournamentControllerContract = new ethers.Contract(TOURNAMENT_CONTROLLER_ADDRESS, TOURNAMENT_CONTROLLER_ABI, oracleWallet);
         perpetualRewardPoolContract = new ethers.Contract(PERPETUAL_REWARD_POOL_ADDRESS, PERPETUAL_REWARD_POOL_ABI, oracleWallet);
+        heroStakingContract = new ethers.Contract(HERO_STAKING_ADDRESS, HERO_STAKING_ABI, oracleWallet);
         isOracleInitialized = true;
         console.log("[OK] Oráculo da blockchain inicializado para PvP e Recompensas.");
         return true;
@@ -247,18 +251,27 @@ async function signHeroWithdrawal(tokenId, level, xp) {
         throw new Error("O Oráculo não está inicializado.");
     }
 
-    // 1. Create the message hash, ensuring it matches the contract's hashing logic:
-    // keccak256(abi.encodePacked(tokenId, level, xp))
+    // 1. Get the staker's address to fetch their nonce
+    const stakerAddress = await heroStakingContract.getStaker(tokenId);
+    if (stakerAddress === ethers.ZeroAddress) {
+        throw new Error(`Token ${tokenId} não está em stake.`);
+    }
+
+    // 2. Get the current nonce from the contract
+    const nonce = await heroStakingContract.nonces(stakerAddress);
+
+    // 3. Create the message hash, ensuring it matches the contract's hashing logic:
+    // keccak256(abi.encodePacked(tokenId, level, xp, nonce))
     const messageHash = ethers.solidityPackedKeccak256(
-        ["uint256", "uint256", "uint256"],
-        [tokenId, level, xp]
+        ["uint256", "uint256", "uint256", "uint256"],
+        [tokenId, level, xp, nonce]
     );
 
-    // 2. Sign the hash. Ethers wallet's signMessage will automatically prepend
+    // 4. Sign the hash. Ethers wallet's signMessage will automatically prepend
     // the "\x19Ethereum Signed Message:\n32" prefix.
     const signature = await oracleWallet.signMessage(ethers.getBytes(messageHash));
 
-    console.log(`[Oracle] Assinatura de retirada gerada para Token ID: ${tokenId} com Nível: ${level}, XP: ${xp}.`);
+    console.log(`[Oracle] Assinatura de retirada gerada para Token ID: ${tokenId} com Nível: ${level}, XP: ${xp}, Nonce: ${nonce}.`);
 
     return signature;
 }
