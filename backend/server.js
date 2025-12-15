@@ -1,9 +1,54 @@
+/*
+ * 🌹 AVRE SOUL ENGINE
+ * Architect: Alan Victor Rocha Evangelista
+ * ---------------------------------------
+ * The beating heart of the Bomb Dash universe.
+ * Driven by passion. Powered by code.
+ */
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+// 🌹 AVRE LOGGING SYSTEM
+const colors = {
+    reset: "\x1b[0m",
+    bright: "\x1b[1m",
+    dim: "\x1b[2m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    magenta: "\x1b[35m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
+    bgRed: "\x1b[41m",
+};
+
+const AVRE = {
+    logo: () => {
+        console.log(`${colors.red}${colors.bright}
+    ___    _    __ ____  ______
+   /   |  | |  / // __ \\/ ____/
+  / /| |  | | / // /_/ / __/
+ / ___ |  | |/ // _, _/ /___
+/_/  |_|  |___//_/ |_/_____/
+
+        🌹 LEGACY EDITION 🌹
+${colors.reset}`);
+    },
+    info: (msg) => console.log(`${colors.white}[AVRE] 🌹 ${msg}${colors.reset}`),
+    success: (msg) => console.log(`${colors.red}${colors.bright}[AVRE] ❤️  ${msg}${colors.reset}`),
+    warn: (msg) => console.log(`${colors.red}${colors.dim}[AVRE] 🥀 ${msg}${colors.reset}`),
+    error: (msg, err) => {
+        console.log(`${colors.bgRed}${colors.white}[AVRE] 🩸 CRITICAL WOUND${colors.reset}`);
+        if (err) console.error(`${colors.red}${msg}${colors.reset}`, err);
+        else console.error(`${colors.red}${msg}${colors.reset}`);
+    }
+};
 
 function validateEnvVariables() {
     const requiredEnvVars = [
@@ -13,7 +58,7 @@ function validateEnvVariables() {
     ];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     if (missingVars.length > 0) {
-        console.error(`[FATAL] Missing critical environment variables: ${missingVars.join(', ')}.`);
+        AVRE.error(`Missing critical environment variables: ${missingVars.join(', ')}.`);
         process.exit(1);
     }
 }
@@ -58,7 +103,7 @@ app.get('/api/contracts', (req, res) => {
         const contractAddresses = require('./contracts/contract-addresses.json');
         res.json({ success: true, ...contractAddresses });
     } catch (error) {
-        console.error("Could not read contract addresses file:", error);
+        AVRE.warn("Could not read contract addresses file: " + error.message);
         res.status(500).json({ success: false, message: 'Could not load contract configuration.' });
     }
 });
@@ -72,13 +117,12 @@ app.use('/api/game', authRoutes.verifyToken, gameRoutes);
 app.use('/api/debug', debugRoutes);
 
 async function startServer() {
-    console.log("=============================================");
-    console.log("     INITIALIZING GAME SERVER      ");
-    console.log("=============================================");
+    AVRE.logo();
+    AVRE.info("System active... Initializing Game Server.");
 
     try {
         await db.initDb();
-        console.log("[OK] Database connection established.");
+        AVRE.success("Database connection established.");
 
         const isOracleReady = await oracle.initOracle();
 
@@ -89,45 +133,45 @@ async function startServer() {
                 throw new Error("Oracle reported ready, but failed to get provider. NFT service cannot be initialized.");
             }
 
-        // Resiliently load contract addresses from the shared volume
-        const contractAddressesPath = path.join(__dirname, 'contracts', 'contract-addresses.json');
-        let heroTokenAddress;
-        for (let i = 0; i < 15; i++) {
-            try {
-                const addressesFile = await fs.readFile(contractAddressesPath, 'utf8');
-                const addresses = JSON.parse(addressesFile);
-                if (addresses.mockHeroNFTAddress) {
-                    heroTokenAddress = addresses.mockHeroNFTAddress;
-                    console.log(`[OK] Successfully loaded MockHeroNFT address: ${heroTokenAddress}`);
-                    break;
+            // Resiliently load contract addresses from the shared volume
+            const contractAddressesPath = path.join(__dirname, 'contracts', 'contract-addresses.json');
+            let heroTokenAddress;
+            for (let i = 0; i < 15; i++) {
+                try {
+                    const addressesFile = await fs.readFile(contractAddressesPath, 'utf8');
+                    const addresses = JSON.parse(addressesFile);
+                    if (addresses.mockHeroNFTAddress) {
+                        heroTokenAddress = addresses.mockHeroNFTAddress;
+                        AVRE.success(`Successfully loaded MockHeroNFT address: ${heroTokenAddress}`);
+                        break;
+                    }
+                } catch (error) {
+                    AVRE.warn(`Waiting for contract addresses file... Attempt ${i + 1}/15`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
-            } catch (error) {
-                console.warn(`[WARN] Waiting for contract addresses file... Attempt ${i + 1}/15`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
             }
-        }
 
-        if (!heroTokenAddress) {
-            throw new Error("FATAL: Could not load hero token address from shared volume after multiple attempts.");
+            if (!heroTokenAddress) {
+                throw new Error("FATAL: Could not load hero token address from shared volume after multiple attempts.");
             }
 
             nftService.initNftService(provider, heroTokenAddress);
 
             await stakingListener.initStakingListener();
-            console.log("[OK] Hero staking listener started.");
+            AVRE.success("Hero staking listener started.");
 
             const tournamentControllerContract = oracle.getTournamentControllerContract();
             tournamentService.initTournamentService(tournamentControllerContract);
-            console.log("[OK] Tournament service initialized.");
+            AVRE.success("Tournament service initialized.");
         } else {
-            console.warn("[WARN] Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).");
+            AVRE.warn("Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).");
         }
 
         await gameState.startPvpCycleCron();
-        console.log("[OK] Cron jobs (PvP Cycle, etc.) started.");
+        AVRE.success("Cron jobs (PvP Cycle, etc.) started.");
 
         setInterval(matchmaking.processQueue, 5000);
-        console.log("[OK] Matchmaking queue processor started.");
+        AVRE.info("Matchmaking queue processor started.");
 
         // Altar of Buffs cron job placeholder
         // setInterval(checkAltarAndActivateBuff, 60000);
@@ -135,18 +179,16 @@ async function startServer() {
         soloRewardService.startSoloRewardCycleCron();
 
         isInitialized = true;
-        console.log("[OK] All services initialized. Server is ready.");
+        AVRE.success("All services initialized. Server is ready.");
 
         app.listen(PORT, () => {
-            console.log("---------------------------------------------");
-            console.log(`[OK] HTTP server started on port ${PORT}.`);
-            console.log("=============================================");
-            console.log("      SERVER IS FULLY OPERATIONAL      ");
-            console.log("=============================================");
+            console.log(`${colors.red}=============================================${colors.reset}`);
+            AVRE.success(`HTTP server started on port ${PORT}.`);
+            console.log(`${colors.red}=============================================${colors.reset}`);
         });
 
     } catch (error) {
-        console.error("[FATAL] Server initialization failed:", error);
+        AVRE.error("Server initialization failed", error);
         process.exit(1);
     }
 }

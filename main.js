@@ -1,5 +1,12 @@
 // main.js
 
+/*
+ * 🌹 AVRE CLIENT CORE
+ * Architect: Alan Victor Rocha Evangelista
+ * ---------------------------------------
+ * "Code is poetry written in logic."
+ */
+
 import * as Sentry from "@sentry/browser";
 
 // Initialize Sentry for error reporting and session replay
@@ -109,6 +116,8 @@ const config = {
 
 // Esperar o DOM estar completamente carregado antes de iniciar o jogo Phaser
 window.addEventListener('DOMContentLoaded', () => {
+  // 🌹 AVRE CONSOLE WHISPER
+  console.log('%cCreated with passion by AVRE 🌹', 'color: #DC143C; font-weight: bold; font-size: 16px;');
   console.log("DOM completamente carregado e processado. Iniciando Phaser...");
 
   // Set up wallet event listeners as the app starts
