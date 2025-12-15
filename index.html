@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
   <meta name="description" content="Bomb Dash - 8bit shooter retro game" />
+  <!-- 🌹 AVRE SIGNATURE -->
+  <meta name="author" content="Alan Victor Rocha Evangelista (AVRE)">
   <title>💣 Bomb Dash</title>
 
   <script type="module">
@@ -14,13 +16,14 @@
     window.process = process
   </script>
   
-  <!-- Ícone opcional -->
-  <!-- <link rel="icon" href="src/assets/favicon.ico" type="image/x-icon" /> -->
-
   <!-- Phaser CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 
   <style>
+    /*
+     * 🌹 AVRE AESTHETIC SYSTEM
+     * Palette: Crimson (#DC143C) | White (#FFFFFF) | Void (#000000)
+     */
     * {
       margin: 0;
       padding: 0;
@@ -30,58 +33,56 @@
       width: 100%;
       height: 100%;
       background-color: #000;
-      font-family: monospace; /* Fonte padrão para o corpo, caso a do Phaser falhe em algum elemento não-canvas */
-      overflow: hidden; /* Evita barras de rolagem */
+      font-family: "Press Start 2P", monospace;
+      overflow: hidden;
     }
-    /* Contêiner para elementos DOM do Phaser, se necessário para sobrepor o canvas */
+
     #phaser-dom-container {
-      position: absolute; /* Permite que os inputs fiquem sobre o canvas */
+      position: absolute;
       left: 0;
       top: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* Por padrão, não intercepta eventos do mouse, permitindo que o canvas os receba */
-                           /* Elementos DOM individuais (inputs) precisarão de pointer-events: auto */
-      z-index: 10; /* Garante que fique acima do canvas se necessário, mas inputs precisam de z-index maior se houver conflito */
+      pointer-events: none;
+      z-index: 10;
     }
-    /* Estilo para inputs de texto para garantir que sejam interativos */
     #phaser-dom-container input {
-        pointer-events: auto; /* Permite que inputs recebam eventos do mouse/toque */
+        pointer-events: auto;
     }
 
     canvas {
       display: block;
-      margin: auto; /* Centraliza o canvas */
-      /* Para renderização pixelada nítida */
-      image-rendering: -moz-crisp-edges;
-      image-rendering: -webkit-crisp-edges;
+      margin: auto;
       image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      /* Borda opcional para o canvas */
-      border: 2px solid #00ffff;
-      /* Garante que o canvas não exceda as dimensões da viewport */
+      /* 🌹 The Crimson Touch */
+      border: 2px solid #DC143C;
+      box-shadow: 0 0 20px rgba(220, 20, 60, 0.4);
       max-width: 100vw;
       max-height: 100vh;
     }
 
-    /* Estilos para os novos formulários HTML */
+    /* 🌹 Glassmorphism & Red Mode */
     .form-container {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       width: 90%;
-      max-width: 400px; /* Largura máxima para o formulário */
-      padding: 20px;
-      background-color: rgba(0, 0, 0, 0.85); /* Fundo escuro semi-transparente */
-      border: 2px solid #00ffff; /* Borda ciano, como o canvas */
+      max-width: 400px;
+      padding: 25px;
+      background-color: rgba(20, 0, 0, 0.9); /* Deep Burgundy */
+      border: 2px solid #DC143C; /* Crimson */
       border-radius: 8px;
-      z-index: 100; /* Garante que fique sobre o canvas e outros elementos DOM do Phaser */
-      color: #ffffff; /* Cor do texto padrão para os formulários */
-      font-family: "Press Start 2P", monospace; /* Usar a fonte do jogo se carregada, senão monospace */
-      display: flex; /* Usado para esconder/mostrar; será mudado para flex pelas cenas */
+      z-index: 100;
+      color: #ffffff;
+      font-family: "Press Start 2P", monospace;
+      display: flex;
       flex-direction: column;
       align-items: center;
+      /* 🌹 AVRE Shadow */
+      box-shadow: 0 4px 14px rgba(220, 20, 60, 0.25);
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
     }
 
     .form-box {
@@ -92,39 +93,48 @@
     }
 
     .form-title {
-      font-size: 20px; /* Tamanho um pouco menor que o título da cena Phaser */
-      margin-bottom: 20px;
-      color: #00ffff; /* Cor ciano para títulos de formulário */
+      font-size: 20px;
+      margin-bottom: 25px;
+      color: #FFFFFF;
+      text-shadow: 0 0 10px #DC143C;
     }
 
     .form-container label {
-      font-size: 12px;
+      font-size: 10px;
       margin-top: 10px;
       margin-bottom: 5px;
       width: 100%;
-      max-width: 300px; /* Alinhar com largura do input */
+      max-width: 300px;
       text-align: left;
+      color: #DC143C;
+      text-transform: uppercase;
     }
 
     .form-container input[type="text"],
     .form-container input[type="password"] {
       width: 100%;
       max-width: 300px;
-      padding: 10px;
-      font-size: 16px;
-      border: 2px solid #00ffff;
-      background-color: #333;
+      padding: 12px;
+      font-size: 14px;
+      border: 1px solid #DC143C;
+      background-color: #1a0505; /* Very Dark Red */
       color: #fff;
-      font-family: monospace; /* Inputs usam monospace para consistência de digitação */
+      font-family: monospace;
       margin-bottom: 15px;
       border-radius: 4px;
-      box-sizing: border-box;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .form-container input:focus {
+        box-shadow: 0 0 10px #DC143C;
+        border-color: #FFFFFF;
     }
 
     .form-message {
       font-size: 10px;
-      color: #ff0000; /* Vermelho para erros por padrão */
-      min-height: 20px; /* Para evitar que o layout salte quando a mensagem aparece */
+      color: #FF4444; /* Bright Red for Errors */
+      min-height: 20px;
       text-align: center;
       width: 100%;
       max-width: 300px;
@@ -133,130 +143,196 @@
     }
 
     .form-message.success {
-        color: #00ff00; /* Verde para sucesso */
+        color: #FFFFFF;
+        border-left: 3px solid #DC143C;
+        padding-left: 10px;
     }
     .form-message.processing {
-        color: #ffff00; /* Amarelo para processamento */
+        color: #FFFFFF;
+        opacity: 0.8;
     }
 
+    /* 🌹 Organic Motion Buttons */
     .form-button {
       width: 100%;
       max-width: 300px;
-      padding: 10px 15px;
-      font-size: 14px;
+      padding: 12px 15px;
+      font-size: 12px;
       font-family: "Press Start 2P", monospace;
-      color: #00ffff;
-      background-color: #000000cc;
-      border: 2px solid #00ffff;
+      color: #FFFFFF;
+      background-color: #DC143C; /* Crimson */
+      border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 15px;
       text-align: center;
-      transition: background-color 0.2s, color 0.2s;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
 
     .form-button:hover {
-      background-color: #00ffff;
-      color: #000000;
+      background-color: #B22222; /* Firebrick */
+      transform: scale(1.02);
+      box-shadow: 0 0 15px rgba(220, 20, 60, 0.6);
     }
 
     .form-button.secondary {
-      background-color: #00000099;
-      color: #00ff00; /* Verde para botões secundários como Voltar */
-      border-color: #00ff00;
+      background-color: transparent;
+      border: 1px solid #FFFFFF;
+      color: #FFFFFF;
     }
     .form-button.secondary:hover {
-      background-color: #00ff00;
-      color: #000000;
+      background-color: #FFFFFF;
+      color: #DC143C;
+      border-color: #FFFFFF;
     }
 
     .form-tip {
-        font-size: 10px;
-        color: #dddddd;
+        font-size: 9px;
+        color: #aaaaaa;
         margin-top: 20px;
         text-align: center;
         width: 100%;
         max-width: 300px;
     }
+
+    /* Confetti (Hidden by default) */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #DC143C;
+      animation: fall linear forwards;
+      z-index: 9999;
+    }
+    @keyframes fall {
+      to { transform: translateY(100vh) rotate(720deg); }
+    }
   </style>
 </head>
 
 <body>
-  <!-- Contêiner para elementos DOM criados pelo Phaser -->
   <div id="phaser-dom-container"></div>
-
-  <!-- Ponto de entrada do jogo Phaser -->
   <script type="module" src="./main.js"></script>
 
-  <!-- Formulário de Registro (inicialmente escondido) -->
+  <!-- Register Form -->
   <div id="register-form-container" class="form-container" style="display: none;">
     <div class="form-box">
-      <h2 class="form-title">Criar Conta</h2>
+      <h2 class="form-title">JOIN THE LEGACY</h2>
       <label for="register-username">Username:</label>
       <input type="text" id="register-username" name="register-username" autocomplete="username">
-      <label for="register-pin">PIN (4 dígitos):</label>
+      <label for="register-pin">PIN (4 digits):</label>
       <input type="password" id="register-pin" name="register-pin" maxlength="4" autocomplete="new-password">
       <p id="register-message" class="form-message"></p>
-      <button type="button" id="register-submit-button" class="form-button">Registrar e Entrar</button>
-      <button type="button" id="register-back-button" class="form-button secondary">Voltar</button>
-      <p class="form-tip">Escolha um nome de usuário e um PIN de 4 dígitos.</p>
-      <p class="form-pin-warning" style="color: #ffcc00; font-size: 9px; margin-top: 10px;">Atenção: Não há como recuperar seu PIN. Guarde-o em local seguro!</p>
+      <button type="button" id="register-submit-button" class="form-button">IGNITE</button>
+      <button type="button" id="register-back-button" class="form-button secondary">RETURN</button>
+      <p class="form-tip">Create your mark. Username & 4-digit PIN.</p>
+      <p class="form-pin-warning" style="color: #FF4444; font-size: 8px; margin-top: 10px;">WARNING: PIN IS IRRECOVERABLE.</p>
     </div>
   </div>
 
-  <!-- Formulário de Login (inicialmente escondido) -->
+  <!-- Login Form -->
   <div id="login-form-container" class="form-container" style="display: none;">
     <div class="form-box">
-      <h2 class="form-title">Fazer Login</h2>
+      <h2 class="form-title">AUTHENTICATE</h2>
       <label for="login-username">Username:</label>
       <input type="text" id="login-username" name="login-username" autocomplete="username">
-      <label for="login-pin">PIN (4 dígitos):</label>
+      <label for="login-pin">PIN (4 digits):</label>
       <input type="password" id="login-pin" name="login-pin" maxlength="4" autocomplete="current-password">
       <p id="login-message" class="form-message"></p>
-      <button type="button" id="login-submit-button" class="form-button">Login</button>
-      <button type="button" id="login-back-button" class="form-button secondary">Voltar</button>
-      <p class="form-tip">Entre com seu username e PIN de 4 dígitos.</p>
+      <button type="button" id="login-submit-button" class="form-button">ENTER</button>
+      <button type="button" id="login-back-button" class="form-button secondary">RETURN</button>
     </div>
   </div>
 
-  <!-- Lobby de Seleção PvP (inicialmente escondido) -->
+  <!-- PvP Lobby -->
   <div id="pvp-lobby-container" class="form-container" style="display: none;">
       <div class="form-box">
-          <h2 class="form-title">Modo PvP</h2>
-          <p class="form-message" style="color: #ffffff; min-height: 40px;">Escolha seu campo de batalha. A glória ou o risco te aguardam.</p>
-          <button type="button" id="ranked-mode-button" class="form-button">Modo Ranqueado</button>
-          <button type="button" id="wager-arena-button" class="form-button">Arena de Alto Risco</button>
-          <button type="button" id="pvp-lobby-back-button" class="form-button secondary">Voltar ao Menu</button>
+          <h2 class="form-title">PVP ARENA</h2>
+          <p class="form-message" style="color: #FFFFFF; min-height: 40px;">Choose your battlefield.</p>
+          <button type="button" id="ranked-mode-button" class="form-button">RANKED MODE</button>
+          <button type="button" id="wager-arena-button" class="form-button">HIGH STAKES</button>
+          <button type="button" id="pvp-lobby-back-button" class="form-button secondary">RETURN</button>
       </div>
   </div>
 
-  <!-- Arena de Alto Risco (inicialmente escondida) -->
+  <!-- Wager Arena -->
   <div id="wager-arena-container" class="form-container" style="display: none;">
       <div class="form-box">
-          <h2 class="form-title">Arena de Alto Risco</h2>
-          <p id="wager-arena-message" class="form-message" style="color: #ffffff;">Selecione o tier da sua aposta. A fortuna favorece os bravos.</p>
+          <h2 class="form-title">HIGH STAKES</h2>
+          <p id="wager-arena-message" class="form-message" style="color: #FFFFFF;">Fortune favors the bold.</p>
 
-          <!-- Tiers de Aposta -->
           <div id="wager-tiers-list" style="width: 100%; max-width: 300px; margin-bottom: 20px;">
-              <!-- Os tiers serão populados dinamicamente via JS, mas aqui está um exemplo estático -->
               <button type="button" class="form-button wager-tier-button" data-tier-id="1">Bronze: 10 BCOIN / 20 XP</button>
-              <button type="button" class="form-button wager-tier-button" data-tier-id="2">Prata: 50 BCOIN / 100 XP</button>
-              <button type="button" class="form-button wager-tier-button" data-tier-id="3">Ouro: 200 BCOIN / 500 XP</button>
+              <button type="button" class="form-button wager-tier-button" data-tier-id="2">Silver: 50 BCOIN / 100 XP</button>
+              <button type="button" class="form-button wager-tier-button" data-tier-id="3">Gold: 200 BCOIN / 500 XP</button>
           </div>
 
-          <button type="button" id="wager-arena-back-button" class="form-button secondary">Voltar ao Lobby PvP</button>
+          <button type="button" id="wager-arena-back-button" class="form-button secondary">RETURN</button>
       </div>
 
-      <!-- Tela de Confirmação (dentro do container da arena, mas controlada separadamente) -->
       <div id="wager-confirm-dialog" class="form-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
           <div class="form-box">
-              <h2 class="form-title" style="color: #ffcc00;">Confirmação Final</h2>
-              <p id="wager-confirm-message" class="form-message" style="color: #ffffff; font-size: 12px; min-height: 60px;">Você está prestes a arriscar X BCOIN e Y XP. Se perder, você pode perder um nível. Esta ação não pode ser desfeita.</p>
-              <button type="button" id="wager-confirm-button" class="form-button">Confirmar Aposta</button>
-              <button type="button" id="wager-cancel-button" class="form-button secondary">Cancelar</button>
+              <h2 class="form-title" style="color: #DC143C;">FINAL WARNING</h2>
+              <p id="wager-confirm-message" class="form-message" style="color: #FFFFFF; font-size: 10px; min-height: 60px;">You are risking X BCOIN and Y XP. Defeat means de-leveling. Proceed?</p>
+              <button type="button" id="wager-confirm-button" class="form-button">ACCEPT FATE</button>
+              <button type="button" id="wager-cancel-button" class="form-button secondary">RETREAT</button>
           </div>
       </div>
   </div>
 
+  <!-- 🤫 AVRE Easter Egg: Konami Code -->
+  <script>
+    const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    let konamiIndex = 0;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === konamiCode[konamiIndex]) {
+            konamiIndex++;
+            if (konamiIndex === konamiCode.length) {
+                activateAVREMode();
+                konamiIndex = 0;
+            }
+        } else {
+            konamiIndex = 0;
+        }
+    });
+
+    function activateAVREMode() {
+        console.log('%c🌹 AVRE MODE ACTIVATED 🌹', 'color: #DC143C; font-size: 24px; font-weight: bold;');
+
+        // Confetti Explosion
+        for (let i = 0; i < 100; i++) {
+            createConfetti();
+        }
+
+        // Pulse Effect
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(220, 20, 60, 0.5)';
+        overlay.style.zIndex = '99999';
+        overlay.style.pointerEvents = 'none';
+        overlay.style.transition = 'opacity 0.5s ease';
+        document.body.appendChild(overlay);
+
+        setTimeout(() => { overlay.style.opacity = '0'; }, 100);
+        setTimeout(() => { document.body.removeChild(overlay); }, 600);
+    }
+
+    function createConfetti() {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = Math.random() > 0.5 ? '#DC143C' : '#FFFFFF';
+        confetti.style.animationDuration = Math.random() * 2 + 1 + 's';
+        document.body.appendChild(confetti);
+
+        setTimeout(() => { confetti.remove(); }, 3000);
+    }
+  </script>
 </body>
 </html>
