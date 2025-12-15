@@ -13,6 +13,13 @@ const envContent = `
 # -- Blockchain Configuration --
 # URL for the Binance Smart Chain Testnet RPC.
 TESTNET_RPC_URL="https://data-seed-prebsc-1-s1.binance.org:8545/"
+# The expected Chain ID (97 for BSC Testnet).
+CHAIN_ID=97
+
+# -- Frontend Configuration --
+# The expected domain of the frontend (e.g., localhost:5173).
+# This is used to prevent SIWE phishing/relay attacks.
+FRONTEND_DOMAIN="localhost:5173"
 
 # -- Wallet Private Keys --
 # WARNING: These are public keys for development and testing ONLY.

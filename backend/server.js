@@ -54,7 +54,8 @@ function validateEnvVariables() {
     const requiredEnvVars = [
         'PRIVATE_KEY', 'JWT_SECRET', 'ADMIN_SECRET', 'TESTNET_RPC_URL',
         'ORACLE_PRIVATE_KEY', 'TOURNAMENT_CONTROLLER_ADDRESS',
-        'PERPETUAL_REWARD_POOL_ADDRESS', 'WAGER_ARENA_ADDRESS'
+        'PERPETUAL_REWARD_POOL_ADDRESS', 'WAGER_ARENA_ADDRESS',
+        'CHAIN_ID', 'FRONTEND_DOMAIN'
     ];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     if (missingVars.length > 0) {

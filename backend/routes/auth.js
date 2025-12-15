@@ -42,6 +42,18 @@ router.post('/verify', async (req, res) => {
     try {
         const siweMessage = new SiweMessage(message);
 
+        // Security Check: Verify that the message was signed for THIS specific domain and chain.
+        // This prevents replay attacks where a user is tricked into signing a message for a different site or chain.
+        if (siweMessage.domain !== process.env.FRONTEND_DOMAIN) {
+            console.warn(`[Security] Blocked login attempt from invalid domain: ${siweMessage.domain} (Expected: ${process.env.FRONTEND_DOMAIN})`);
+            return res.status(403).json({ success: false, message: 'Domínio inválido.' });
+        }
+
+        if (siweMessage.chainId !== parseInt(process.env.CHAIN_ID)) {
+            console.warn(`[Security] Blocked login attempt from invalid chain: ${siweMessage.chainId} (Expected: ${process.env.CHAIN_ID})`);
+            return res.status(403).json({ success: false, message: 'Chain ID inválido.' });
+        }
+
         const expirationTime = nonceStore.get(siweMessage.nonce);
         if (!expirationTime || Date.now() > expirationTime) {
             nonceStore.delete(siweMessage.nonce);
