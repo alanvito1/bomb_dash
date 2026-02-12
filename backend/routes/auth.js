@@ -77,7 +77,12 @@ router.post('/verify', async (req, res) => {
             console.log(`User created with ID: ${user.id}`);
 
             // 2. Fetch their NFTs from the blockchain.
-            const userNfts = await nft.getNftsForPlayer(address);
+            let userNfts = [];
+            try {
+                userNfts = await nft.getNftsForPlayer(address);
+            } catch (err) {
+                console.warn(`Failed to fetch NFTs for ${address} (Service might be down). Defaulting to empty list.`, err.message);
+            }
 
             if (userNfts && userNfts.length > 0) {
                 console.log(`Found ${userNfts.length} NFT(s). Creating hero records for them.`);

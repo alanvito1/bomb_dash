@@ -10,7 +10,13 @@ router.get('/', async (req, res) => {
     try {
         const { userId, address } = req.user;
 
-        const onChainNfts = await nft.getNftsForPlayer(address);
+        let onChainNfts = [];
+        try {
+            onChainNfts = await nft.getNftsForPlayer(address);
+        } catch (err) {
+            console.warn(`[Sync] Failed to fetch NFTs for ${address} (Service might be down). Skipping sync.`, err.message);
+        }
+
         if (onChainNfts && onChainNfts.length > 0) {
             const dbNfts = await db.Hero.findAll({ where: { user_id: userId, hero_type: 'nft' } });
             const dbNftIds = new Set(dbNfts.map(h => h.nft_id));

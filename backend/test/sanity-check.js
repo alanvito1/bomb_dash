@@ -33,11 +33,11 @@ async function loginPlayer(wallet) {
     console.log("Creating SiweMessage...");
     try {
         const message = new SiweMessage({
-            domain: 'localhost',
+            domain: 'localhost:5173',
             address: wallet.address,
             uri: `${API_URL}/login`,
             version: '1',
-            chainId: 31337, // chainId do Hardhat
+            chainId: 97, // Corresponde ao .env padrão gerado pelo setup-env.js
             nonce: nonce,
         });
         console.log("SiweMessage created. Preparing message...");
@@ -135,8 +135,36 @@ async function runSanityCheck() {
 
         // Etapa 4: Jogador 2 entra na fila 1v1, criando uma partida.
         console.log("\n--- Etapa 4: Jogador 2 entra na fila e cria a partida ---");
-        // TODO: Fazer a chamada de API para o Jogador 2.
-        // O backend deve detectar a criação da partida e logar o matchId.
+        // Buscar heróis do jogador 2
+        const heroesRes2 = await axios.get(`${API_URL}/api/heroes`, {
+            headers: { Authorization: `Bearer ${tokenPlayer2}` }
+        });
+        const heroes2 = heroesRes2.data.heroes;
+        if (!heroes2 || heroes2.length === 0) {
+            throw new Error("Jogador 2 não possui heróis.");
+        }
+        const selectedHero2 = heroes2[0];
+        console.log(`Herói selecionado para Jogador 2: ${selectedHero2.id} (Nível: ${selectedHero2.level})`);
+
+        // DEBUG: Adicionar XP ao herói para cumprir os requisitos do tier
+        console.log("DEBUG: Definindo XP do herói do Jogador 2 para 100...");
+        await axios.post(`${API_URL}/api/debug/set-hero-xp`, {
+            heroId: selectedHero2.id,
+            xp: 100
+        }, {
+            headers: { 'x-admin-secret': 'admin123' }
+        });
+
+        // Entrar na fila
+        const joinRes2 = await axios.post(
+            `${API_URL}/api/pvp/wager/enter`,
+            { heroId: selectedHero2.id, tierId: selectedTier.id },
+            { headers: { Authorization: `Bearer ${tokenPlayer2}` } }
+        );
+        console.log("Resposta da entrada na fila (Jogador 2):", joinRes2.data);
+
+        console.log("Aguardando matchmaking (6 segundos)...");
+        await new Promise(resolve => setTimeout(resolve, 6000));
 
         // Etapa 5: Simular o fim da partida e o Oráculo reportar o resultado.
         console.log("\n--- Etapa 5: Oráculo reporta o vencedor ---");
