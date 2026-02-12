@@ -24,9 +24,27 @@ export default class CollisionHandler {
    * Registers all the necessary physics overlap detectors for the game.
    */
   register() {
-    this.scene.physics.add.overlap(this.scene.bombs, this.scene.enemies, (bomb, enemy) => this.hitEnemy(bomb, enemy), null, this);
-    this.scene.physics.add.overlap(this.scene.player, this.scene.powerups, (player, powerup) => this.handlePowerup(player, powerup), null, this);
-    this.scene.physics.add.overlap(this.scene.player, this.scene.enemies, (player, enemy) => this.onHit(player, enemy), null, this);
+    this.scene.physics.add.overlap(
+      this.scene.bombs,
+      this.scene.enemies,
+      (bomb, enemy) => this.hitEnemy(bomb, enemy),
+      null,
+      this
+    );
+    this.scene.physics.add.overlap(
+      this.scene.player,
+      this.scene.powerups,
+      (player, powerup) => this.handlePowerup(player, powerup),
+      null,
+      this
+    );
+    this.scene.physics.add.overlap(
+      this.scene.player,
+      this.scene.enemies,
+      (player, enemy) => this.onHit(player, enemy),
+      null,
+      this
+    );
   }
 
   /**
@@ -55,7 +73,10 @@ export default class CollisionHandler {
 
     if (enemy.hp <= 0) {
       ExplosionEffect(this.scene, enemy.x, enemy.y);
-      SoundManager.play(this.scene, enemy.isBoss ? 'boss_death' : 'enemy_death');
+      SoundManager.play(
+        this.scene,
+        enemy.isBoss ? 'boss_death' : 'enemy_death'
+      );
 
       const xpGained = enemy.isBoss ? 3 : 1;
       this.scene.score += xpGained;
@@ -63,10 +84,18 @@ export default class CollisionHandler {
       const stats = this.scene.playerStats;
       stats.account_xp += xpGained;
       stats.hero_xp += xpGained;
-      stats.bcoin += (enemy.isBoss ? 5 : 1);
-      createFloatingText(this.scene, enemy.x, enemy.y - 20, `+${xpGained} XP`, '#ffd700');
+      stats.bcoin += enemy.isBoss ? 5 : 1;
+      createFloatingText(
+        this.scene,
+        enemy.x,
+        enemy.y - 20,
+        `+${xpGained} XP`,
+        '#ffd700'
+      );
 
-      this.events.emit('update-xp', { /* ... */ });
+      this.events.emit('update-xp', {
+        /* ... */
+      });
       this.events.emit('update-bcoin', { balance: stats.bcoin });
 
       this.scene.enemiesKilled++;
@@ -95,19 +124,28 @@ export default class CollisionHandler {
     const stats = this.scene.playerStats;
     stats.hp -= 100;
 
-    this.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
+    this.events.emit('update-health', {
+      health: stats.hp,
+      maxHealth: stats.maxHp,
+    });
     SoundManager.play(this.scene, 'player_hit');
 
     if (stats.hp <= 0) {
-        stats.extraLives--;
-        if (stats.extraLives >= 0) {
-            stats.hp = stats.maxHp;
-            this.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
-        } else {
-            stats.hp = 0;
-            this.events.emit('update-health', { health: 0, maxHealth: stats.maxHp });
-            this.scene.handleGameOver();
-        }
+      stats.extraLives--;
+      if (stats.extraLives >= 0) {
+        stats.hp = stats.maxHp;
+        this.events.emit('update-health', {
+          health: stats.hp,
+          maxHealth: stats.maxHp,
+        });
+      } else {
+        stats.hp = 0;
+        this.events.emit('update-health', {
+          health: 0,
+          maxHealth: stats.maxHp,
+        });
+        this.scene.handleGameOver();
+      }
     }
   }
 }

@@ -1,1 +1,3 @@
-export const backgroundImages = { /* ... */ };
+export const backgroundImages = {
+  /* ... */
+};

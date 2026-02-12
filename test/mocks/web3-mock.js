@@ -16,7 +16,7 @@ export class Web3Mock {
           }
         },
         on: () => {}, // Mock event listeners
-        removeListener: () => {}
+        removeListener: () => {},
       };
     });
   }

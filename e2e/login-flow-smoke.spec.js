@@ -1,6 +1,10 @@
 // e2e/login-flow-smoke.spec.js
 const { test, expect } = require('@playwright/test');
-const { waitForScene, findGameObjectByName, triggerGameObjectEvent } = require('./test-utils.js');
+const {
+  waitForScene,
+  findGameObjectByName,
+  triggerGameObjectEvent,
+} = require('./test-utils.js');
 
 // Smoke test to verify the critical user entry flow and API communication.
 // VALIDATION NOTE: This test suite is skipped due to an unresolvable instability
@@ -14,13 +18,15 @@ test.describe.skip('Application Login Flow Smoke Test', () => {
     nonceCalled = false;
   });
 
-  test('should display TermsScene, transition to AuthChoiceScene, and successfully call the auth API', async ({ page }) => {
+  test('should display TermsScene, transition to AuthChoiceScene, and successfully call the auth API', async ({
+    page,
+  }) => {
     // Capture all browser console messages
-    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
+    page.on('console', (msg) => console.log(`BROWSER LOG: ${msg.text()}`));
 
     // Mock the backend API route for getting a nonce to isolate the frontend flow.
     // A successful interception proves the frontend can communicate with the backend (CORS is resolved).
-    await page.route('**/api/auth/nonce', route => {
+    await page.route('**/api/auth/nonce', (route) => {
       console.log(`Intercepted and mocking API call: ${route.request().url()}`);
       nonceCalled = true; // Mark that the API was called
       route.fulfill({
@@ -42,14 +48,17 @@ test.describe.skip('Application Login Flow Smoke Test', () => {
     console.log('Attempting to click the "Accept" button in TermsScene...');
     // The button might be disabled until the user scrolls. The test can manually activate it.
     await page.evaluate(() => {
-        const scene = window.game.scene.getScene('TermsScene');
-        const button = scene.children.list.find(c => c.name === 'acceptButton');
-        if (!button) throw new Error('Button with name "acceptButton" not found in TermsScene.');
-        if (!button.input.enabled) {
-            console.log('Button not enabled, manually activating for test.');
-            scene.activateButton();
-        }
-        button.emit('pointerdown');
+      const scene = window.game.scene.getScene('TermsScene');
+      const button = scene.children.list.find((c) => c.name === 'acceptButton');
+      if (!button)
+        throw new Error(
+          'Button with name "acceptButton" not found in TermsScene.'
+        );
+      if (!button.input.enabled) {
+        console.log('Button not enabled, manually activating for test.');
+        scene.activateButton();
+      }
+      button.emit('pointerdown');
     });
 
     // 4. Verify the transition to AuthChoiceScene.
@@ -58,24 +67,39 @@ test.describe.skip('Application Login Flow Smoke Test', () => {
 
     // 5. Find and click the "Connect Wallet" button using its stable name.
     console.log('Attempting to click the "Login" button in AuthChoiceScene...');
-    await triggerGameObjectEvent(page, 'AuthChoiceScene', 'web3LoginButton', 'pointerdown');
+    await triggerGameObjectEvent(
+      page,
+      'AuthChoiceScene',
+      'web3LoginButton',
+      'pointerdown'
+    );
 
     // 6. Verify that the API call to /api/auth/nonce was made.
-    await page.waitForFunction(() => window.nonceCalled === true, null, { timeout: 5000 });
+    await page.waitForFunction(() => window.nonceCalled === true, null, {
+      timeout: 5000,
+    });
     expect(nonceCalled).toBe(true);
-    console.log('Successfully verified that the /api/auth/nonce endpoint was called.');
+    console.log(
+      'Successfully verified that the /api/auth/nonce endpoint was called.'
+    );
   });
 });
 
 // Helper to inject the nonceCalled flag into the page's context
 test.beforeEach(async ({ page }) => {
-    await page.exposeFunction('setNonceCalled', (value) => {
-        page.evaluate((val) => { window.nonceCalled = val; }, value);
-    });
-    page.on('route', async (route) => {
-        if (route.request().url().includes('/api/auth/nonce')) {
-            await page.evaluate(() => { window.nonceCalled = true; });
-        }
-    });
-     await page.evaluate(() => { window.nonceCalled = false; });
+  await page.exposeFunction('setNonceCalled', (value) => {
+    page.evaluate((val) => {
+      window.nonceCalled = val;
+    }, value);
+  });
+  page.on('route', async (route) => {
+    if (route.request().url().includes('/api/auth/nonce')) {
+      await page.evaluate(() => {
+        window.nonceCalled = true;
+      });
+    }
+  });
+  await page.evaluate(() => {
+    window.nonceCalled = false;
+  });
 });

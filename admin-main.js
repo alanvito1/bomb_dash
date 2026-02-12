@@ -25,7 +25,9 @@ async function fetchGlobalSettings() {
       form.elements.pvpCycleClosedHours.value = settings.pvpCycleClosedHours;
 
       // Popula dinamicamente a seção de XP de monstros
-      const monsterXpContainer = document.getElementById('monster-xp-container');
+      const monsterXpContainer = document.getElementById(
+        'monster-xp-container'
+      );
       monsterXpContainer.innerHTML = ''; // Limpa o container
       if (settings.monsterXp) {
         for (const monsterId in settings.monsterXp) {
@@ -65,7 +67,7 @@ async function fetchPlayers() {
 
     if (data.success) {
       playerList.innerHTML = ''; // Limpa a linha de "loading"
-      data.players.forEach(player => {
+      data.players.forEach((player) => {
         const row = document.createElement('tr');
         row.setAttribute('data-player-id', player.id);
         row.innerHTML = `
@@ -104,9 +106,11 @@ async function saveGlobalSettings(event) {
   messageEl.textContent = 'Saving...';
   messageEl.style.color = 'yellow';
 
-  const monsterXpInputs = document.querySelectorAll('#monster-xp-container input[type="number"]');
+  const monsterXpInputs = document.querySelectorAll(
+    '#monster-xp-container input[type="number"]'
+  );
   const monsterXp = {};
-  monsterXpInputs.forEach(input => {
+  monsterXpInputs.forEach((input) => {
     const monsterId = input.getAttribute('data-monster-id');
     monsterXp[monsterId] = parseInt(input.value, 10);
   });
@@ -124,7 +128,7 @@ async function saveGlobalSettings(event) {
     const response = await fetch(`${API_BASE_URL}/settings`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(settings)
+      body: JSON.stringify(settings),
     });
     const data = await response.json();
 
@@ -161,20 +165,22 @@ async function savePlayerStats(event) {
   const stats = {
     level: parseInt(row.querySelector('input[name="level"]').value, 10),
     xp: parseInt(row.querySelector('input[name="xp"]').value, 10),
-    coins: parseInt(row.querySelector('input[name="coins"]').value, 10)
+    coins: parseInt(row.querySelector('input[name="coins"]').value, 10),
   };
 
   try {
     const response = await fetch(`${API_BASE_URL}/player/${playerId}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(stats)
+      body: JSON.stringify(stats),
     });
     const data = await response.json();
 
     if (data.success) {
       button.textContent = 'Saved!';
-      setTimeout(() => { button.textContent = originalButtonText; }, 2000);
+      setTimeout(() => {
+        button.textContent = originalButtonText;
+      }, 2000);
     } else {
       throw new Error(data.message);
     }
@@ -184,27 +190,27 @@ async function savePlayerStats(event) {
     button.textContent = 'Error!';
   } finally {
     setTimeout(() => {
-        button.disabled = false;
-        button.textContent = originalButtonText;
+      button.disabled = false;
+      button.textContent = originalButtonText;
     }, 2000);
   }
 }
-
 
 // =================================================================
 // Event Listeners
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  const secret = prompt("Please enter the admin secret key:");
+  const secret = prompt('Please enter the admin secret key:');
   if (!secret) {
-    document.body.innerHTML = '<h1 style="color: red;">Access Denied. Admin secret is required.</h1>';
+    document.body.innerHTML =
+      '<h1 style="color: red;">Access Denied. Admin secret is required.</h1>';
     return;
   }
 
   headers = {
     'Content-Type': 'application/json',
-    'X-Admin-Secret': secret
+    'X-Admin-Secret': secret,
   };
 
   // Carrega os dados iniciais quando a página é carregada
@@ -212,8 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchPlayers();
 
   // Adiciona o listener para o formulário de configurações globais
-  document.getElementById('global-settings-form').addEventListener('submit', saveGlobalSettings);
+  document
+    .getElementById('global-settings-form')
+    .addEventListener('submit', saveGlobalSettings);
 
   // Adiciona um listener de clique na tabela para os botões de salvar (delegação de evento)
-  document.getElementById('player-list').addEventListener('click', savePlayerStats);
+  document
+    .getElementById('player-list')
+    .addEventListener('click', savePlayerStats);
 });

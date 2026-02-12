@@ -10,7 +10,7 @@ const pvpStatus = 'open';
  * @returns {string} Sempre 'open'.
  */
 function getPvpStatus() {
-    return pvpStatus;
+  return pvpStatus;
 }
 
 /**
@@ -20,17 +20,22 @@ function getPvpStatus() {
  * e não inicia nenhum cron job.
  */
 async function startPvpCycleCron() {
-    console.log('[Game State] Inicializando o serviço de estado do PvP...');
-    try {
-        await db.updateGameSetting(PVP_STATUS_KEY, 'open');
-        console.log(`[Game State] O status do PvP está permanentemente definido como: ${pvpStatus.toUpperCase()}`);
-    } catch (error) {
-        console.error('[Game State] Falha ao definir o estado inicial do PvP no banco de dados:', error);
-    }
-    // O cron job foi removido para manter o PvP sempre aberto.
+  console.log('[Game State] Inicializando o serviço de estado do PvP...');
+  try {
+    await db.updateGameSetting(PVP_STATUS_KEY, 'open');
+    console.log(
+      `[Game State] O status do PvP está permanentemente definido como: ${pvpStatus.toUpperCase()}`
+    );
+  } catch (error) {
+    console.error(
+      '[Game State] Falha ao definir o estado inicial do PvP no banco de dados:',
+      error
+    );
+  }
+  // O cron job foi removido para manter o PvP sempre aberto.
 }
 
 module.exports = {
-    startPvpCycleCron,
-    getPvpStatus
+  startPvpCycleCron,
+  getPvpStatus,
 };

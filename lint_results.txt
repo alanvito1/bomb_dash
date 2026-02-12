@@ -1,0 +1,98 @@
+
+> app@1.0.0 lint
+> eslint .
+
+
+/app/backend/test/journey-wager-player.test.js
+  4:8  error  Replace `⏎··initDb,⏎··User,⏎··Hero,⏎··processHeroWagerResult,⏎` with `·initDb,·User,·Hero,·processHeroWagerResult·`  prettier/prettier
+
+/app/backend/test/mock-hero.test.js
+  20:7  warning  'signature' is defined but never used  no-unused-vars
+  21:7  warning  'message' is defined but never used    no-unused-vars
+
+/app/backend/tournament_service.js
+   1:9   warning  'ethers' is assigned a value but never used  no-unused-vars
+  25:26  warning  'event' is defined but never used            no-unused-vars
+
+/app/e2e/journey-new-player.spec.js
+  2:29  warning  'getGame' is assigned a value but never used  no-unused-vars
+
+/app/e2e/login-flow-smoke.spec.js
+  5:3  warning  'findGameObjectByName' is assigned a value but never used  no-unused-vars
+
+/app/e2e/pvp-ranked-flow.spec.js
+    5:3   warning  'BCOIN_CONTRACT' is assigned a value but never used                  no-unused-vars
+    6:3   warning  'TOURNAMENT_CONTROLLER_CONTRACT' is assigned a value but never used  no-unused-vars
+  109:26  warning  'address' is defined but never used                                  no-unused-vars
+
+/app/e2e/pvp-wager-flow.spec.js
+   2:9   warning  'getExperienceForLevel' is assigned a value but never used  no-unused-vars
+  47:25  error    'getLevelFromExperience' is not defined                     no-undef
+
+/app/e2e/staking-flow.spec.js
+   3:9   warning  'Wallet' is assigned a value but never used        no-unused-vars
+  83:14  warning  'addresses' is defined but never used              no-unused-vars
+  86:15  warning  'mockContract' is assigned a value but never used  no-unused-vars
+
+/app/e2e/test-utils.js
+  2:9  warning  'SiweMessage' is assigned a value but never used  no-unused-vars
+
+/app/e2e/tournament-flow.spec.js
+  5:3  warning  'setupTestPlayer' is assigned a value but never used  no-unused-vars
+
+/app/main.js
+  161:44  warning  'accounts' is defined but never used  no-unused-vars
+  166:41  warning  'chainId' is defined but never used   no-unused-vars
+
+/app/scripts/deploy.js
+  277:22  error  'artifacts' is not defined  no-undef
+
+/app/scripts/health-check.js
+  14:11  warning  'gameLoaded' is assigned a value but never used  no-unused-vars
+
+/app/src/modules/CollisionHandler.js
+  121:9   warning  'player' is defined but never used  no-unused-vars
+  121:17  warning  'enemy' is defined but never used   no-unused-vars
+
+/app/src/modules/hud.js
+   73:20  warning  'playerStats' is defined but never used      no-unused-vars
+  130:11  warning  'chatBg' is assigned a value but never used  no-unused-vars
+
+/app/src/scenes/ConfigScene.js
+   2:8   warning  'LanguageManager' is defined but never used   no-unused-vars
+  12:11  warning  'centerY' is assigned a value but never used  no-unused-vars
+
+/app/src/scenes/GameScene.js
+  7:33  warning  'StageDialog' is defined but never used  no-unused-vars
+
+/app/src/scenes/HUDScene.js
+  27:11  warning  'barWidth' is assigned a value but never used   no-unused-vars
+  28:11  warning  'barHeight' is assigned a value but never used  no-unused-vars
+
+/app/src/scenes/MenuScene.js
+  6:8  warning  'GameEventEmitter' is defined but never used  no-unused-vars
+
+/app/src/scenes/PauseScene.js
+  57:13  warning  'buttonText' is assigned a value but never used  no-unused-vars
+
+/app/src/scenes/ProfileScene.js
+  4:10  warning  'getExperienceForLevel' is defined but never used  no-unused-vars
+
+/app/src/scenes/PvpScene.js
+  4:8  warning  'api' is defined but never used  no-unused-vars
+
+/app/src/scenes/RankingScene.js
+    2:8   warning  'SoundManager' is defined but never used    no-unused-vars
+  138:15  warning  'medal' is assigned a value but never used  no-unused-vars
+
+/app/src/scenes/TermsScene.js
+  5:8  warning  'api' is defined but never used  no-unused-vars
+
+/app/src/scenes/TournamentLobbyScene.js
+  70:38  warning  'entryFee' is defined but never used  no-unused-vars
+
+/app/test/setup.js
+  9:17  warning  'config' is defined but never used  no-unused-vars
+
+✖ 39 problems (3 errors, 36 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.

@@ -35,14 +35,12 @@ async function healthCheck() {
     });
 
     console.log('✅ Navegação entre cenas funcionando');
-
   } catch (error) {
     console.error('❌ Health check falhou:', error);
 
     // Captura screenshot para debug
     await page.screenshot({ path: 'health-check-failure.png' });
     console.log('📸 Screenshot salva em health-check-failure.png');
-
   } finally {
     await browser.close();
   }

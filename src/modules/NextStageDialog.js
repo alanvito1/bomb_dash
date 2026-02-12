@@ -15,24 +15,29 @@ export function showNextStageDialog(scene, onNext = () => {}) {
   if (scene.bombTimer) scene.bombTimer.paused = true;
 
   // Fundo do diálogo
-  const dialog = scene.add.rectangle(centerX, centerY, 300, 150, 0x000000, 0.8).setOrigin(0.5);
+  const dialog = scene.add
+    .rectangle(centerX, centerY, 300, 150, 0x000000, 0.8)
+    .setOrigin(0.5);
 
   // Texto principal
-  const message = scene.add.text(centerX, centerY - 30, 'Boss defeated!\nAdvance to next stage?', {
-    fontSize: '18px',
-    fill: '#ffffff',
-    align: 'center',
-    fontFamily: 'monospace'
-  }).setOrigin(0.5);
+  const message = scene.add
+    .text(centerX, centerY - 30, 'Boss defeated!\nAdvance to next stage?', {
+      fontSize: '18px',
+      fill: '#ffffff',
+      align: 'center',
+      fontFamily: 'monospace',
+    })
+    .setOrigin(0.5);
 
   // Botão "Next Stage"
-  const nextButton = scene.add.text(centerX, centerY + 40, '[ NEXT STAGE ]', {
-    fontSize: '20px',
-    fill: '#00ff00',
-    fontFamily: 'monospace',
-    backgroundColor: '#111',
-    padding: { x: 12, y: 6 }
-  })
+  const nextButton = scene.add
+    .text(centerX, centerY + 40, '[ NEXT STAGE ]', {
+      fontSize: '20px',
+      fill: '#00ff00',
+      fontFamily: 'monospace',
+      backgroundColor: '#111',
+      padding: { x: 12, y: 6 },
+    })
     .setOrigin(0.5)
     .setInteractive()
     .on('pointerdown', () => {

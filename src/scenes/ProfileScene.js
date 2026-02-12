@@ -4,7 +4,11 @@ import api from '../api.js';
 import { getExperienceForLevel } from '../utils/rpg.js';
 import stakingService from '../web3/staking-service.js';
 import { createHeroCard } from '../modules/HeroCard.js';
-import { createButton, createTitle, createPanel } from '../modules/UIGenerator.js';
+import {
+  createButton,
+  createTitle,
+  createPanel,
+} from '../modules/UIGenerator.js';
 
 export default class ProfileScene extends Phaser.Scene {
   constructor() {
@@ -14,38 +18,61 @@ export default class ProfileScene extends Phaser.Scene {
   }
 
   init(data) {
-      this.userData = data.userData;
+    this.userData = data.userData;
   }
 
   create() {
     // --- GUARD CLAUSE ---
     if (!this.userData) {
-        console.error("[ProfileScene] CRITICAL: Scene loaded without user data. Returning to menu.");
-        this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'ERROR: Player data not found.\nReturning to menu.', {
+      console.error(
+        '[ProfileScene] CRITICAL: Scene loaded without user data. Returning to menu.'
+      );
+      this.add
+        .text(
+          this.cameras.main.centerX,
+          this.cameras.main.centerY,
+          'ERROR: Player data not found.\nReturning to menu.',
+          {
             fontFamily: '"Press Start 2P"',
             fontSize: '18px',
             color: '#ff0000',
             align: 'center',
-            wordWrap: { width: this.scale.width - 40 }
-        }).setOrigin(0.5);
+            wordWrap: { width: this.scale.width - 40 },
+          }
+        )
+        .setOrigin(0.5);
 
-        this.time.delayedCall(3000, () => {
-            this.scene.start('MenuScene');
-        });
-        return; // Stop scene execution
+      this.time.delayedCall(3000, () => {
+        this.scene.start('MenuScene');
+      });
+      return; // Stop scene execution
     }
 
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    this.add.image(centerX, centerY, 'menu_bg_vertical').setOrigin(0.5).setDisplaySize(this.scale.width, this.scale.height);
+    this.add
+      .image(centerX, centerY, 'menu_bg_vertical')
+      .setOrigin(0.5)
+      .setDisplaySize(this.scale.width, this.scale.height);
     createPanel(this, 20, 20, this.scale.width - 40, this.scale.height - 40);
 
-    const textStyle = { fontSize: '16px', fill: '#ffffff', fontFamily: '"Press Start 2P"' };
+    const textStyle = {
+      fontSize: '16px',
+      fill: '#ffffff',
+      fontFamily: '"Press Start 2P"',
+    };
 
     createTitle(this, centerX, 70, LanguageManager.get('profile_title'));
 
-    const loadingText = this.add.text(centerX, centerY, LanguageManager.get('char_select_loading'), textStyle).setOrigin(0.5);
+    const loadingText = this.add
+      .text(
+        centerX,
+        centerY,
+        LanguageManager.get('char_select_loading'),
+        textStyle
+      )
+      .setOrigin(0.5);
 
     this.createBackButton(centerX, this.scale.height - 60);
 
@@ -63,7 +90,11 @@ export default class ProfileScene extends Phaser.Scene {
       } else if (apiResponse.success && apiResponse.heroes.length === 0) {
         loadingText.setText(LanguageManager.get('char_select_no_heroes'));
       } else {
-        loadingText.setText(LanguageManager.get('char_select_error', { message: apiResponse.message }));
+        loadingText.setText(
+          LanguageManager.get('char_select_error', {
+            message: apiResponse.message,
+          })
+        );
       }
     } catch (error) {
       console.error('Failed to fetch heroes from backend:', error);
@@ -78,19 +109,19 @@ export default class ProfileScene extends Phaser.Scene {
     const cardSpacingX = 220;
     const cardsPerRow = 2;
 
-    this.heroCards.forEach(card => card.destroy());
+    this.heroCards.forEach((card) => card.destroy());
     this.heroCards = [];
 
     heroes.forEach((hero, index) => {
-        const row = Math.floor(index / cardsPerRow);
-        const col = index % cardsPerRow;
+      const row = Math.floor(index / cardsPerRow);
+      const col = index % cardsPerRow;
 
-        const cardX = centerX - (cardSpacingX / 2) + (col * cardSpacingX);
-        const cardY = startY + (row * cardSpacingY);
+      const cardX = centerX - cardSpacingX / 2 + col * cardSpacingX;
+      const cardY = startY + row * cardSpacingY;
 
-        const card = createHeroCard(this, hero, cardX, cardY);
-        card.setData('hero', hero); // Make hero data accessible
-        this.heroCards.push(card);
+      const card = createHeroCard(this, hero, cardX, cardY);
+      card.setData('hero', hero); // Make hero data accessible
+      this.heroCards.push(card);
     });
   }
 
@@ -102,105 +133,141 @@ export default class ProfileScene extends Phaser.Scene {
 
   async handleDepositHero(hero, button) {
     SoundManager.play(this, 'click');
-    button.setText('CONNECTING...').disableInteractive().setStyle({ fill: '#FFA500' });
+    button
+      .setText('CONNECTING...')
+      .disableInteractive()
+      .setStyle({ fill: '#FFA500' });
 
     try {
-        await stakingService.init();
+      await stakingService.init();
 
-        const isApproved = await stakingService.isApproved();
-        if (!isApproved) {
-            button.setText('APPROVING...');
-            const approveTx = await stakingService.approve();
-            await approveTx.wait();
-            SoundManager.play(this, 'powerup');
-        }
-
-        button.setText('DEPOSITING...');
-        const depositTx = await stakingService.depositHero(hero.nft_id);
-        await depositTx.wait();
+      const isApproved = await stakingService.isApproved();
+      if (!isApproved) {
+        button.setText('APPROVING...');
+        const approveTx = await stakingService.approve();
+        await approveTx.wait();
         SoundManager.play(this, 'powerup');
+      }
 
-        this.scene.launch('PopupScene', {
-            title: 'Success!',
-            message: `${hero.name} has been staked and is ready for battle!`,
-            onClose: () => {
-                this.scene.restart();
-            }
-        });
+      button.setText('DEPOSITING...');
+      const depositTx = await stakingService.depositHero(hero.nft_id);
+      await depositTx.wait();
+      SoundManager.play(this, 'powerup');
 
+      this.scene.launch('PopupScene', {
+        title: 'Success!',
+        message: `${hero.name} has been staked and is ready for battle!`,
+        onClose: () => {
+          this.scene.restart();
+        },
+      });
     } catch (error) {
-        SoundManager.play(this, 'error');
-        console.error('Hero deposit process failed:', error);
-        this.scene.launch('PopupScene', {
-            title: 'Deposit Failed',
-            message: error.reason || error.message || 'An unknown error occurred.'
-        });
-        this.fetchAndDisplayHeroes(this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '', {}));
+      SoundManager.play(this, 'error');
+      console.error('Hero deposit process failed:', error);
+      this.scene.launch('PopupScene', {
+        title: 'Deposit Failed',
+        message: error.reason || error.message || 'An unknown error occurred.',
+      });
+      this.fetchAndDisplayHeroes(
+        this.add.text(
+          this.cameras.main.centerX,
+          this.cameras.main.centerY,
+          '',
+          {}
+        )
+      );
     }
   }
 
   async handleWithdrawHero(hero, button) {
-      SoundManager.play(this, 'click');
-      button.setText('PREPARING...').disableInteractive().setStyle({ fill: '#FFA500' });
+    SoundManager.play(this, 'click');
+    button
+      .setText('PREPARING...')
+      .disableInteractive()
+      .setStyle({ fill: '#FFA500' });
 
-      try {
-          button.setText('GETTING SIG...');
-          const response = await api.initiateHeroWithdrawal(hero.id);
-          if (!response.success) {
-              throw new Error(response.message || 'Failed to get withdrawal signature.');
-          }
-          const { tokenId, level, xp, signature } = response;
-
-          button.setText('CONFIRM...');
-          const withdrawTx = await stakingService.withdrawHero(tokenId, level, xp, signature);
-          button.setText('WITHDRAWING...');
-          await withdrawTx.wait();
-          SoundManager.play(this, 'powerup');
-
-          this.scene.launch('PopupScene', {
-              title: 'Success!',
-              message: `${hero.name} has been withdrawn to your wallet.`,
-              onClose: () => {
-                  this.scene.restart();
-              }
-          });
-
-      } catch (error) {
-          SoundManager.play(this, 'error');
-          console.error('Hero withdraw process failed:', error);
-          this.scene.launch('PopupScene', {
-              title: 'Withdraw Failed',
-              message: error.reason || error.message || 'An unknown error occurred.'
-          });
-          this.fetchAndDisplayHeroes(this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '', {}));
+    try {
+      button.setText('GETTING SIG...');
+      const response = await api.initiateHeroWithdrawal(hero.id);
+      if (!response.success) {
+        throw new Error(
+          response.message || 'Failed to get withdrawal signature.'
+        );
       }
+      const { tokenId, level, xp, signature } = response;
+
+      button.setText('CONFIRM...');
+      const withdrawTx = await stakingService.withdrawHero(
+        tokenId,
+        level,
+        xp,
+        signature
+      );
+      button.setText('WITHDRAWING...');
+      await withdrawTx.wait();
+      SoundManager.play(this, 'powerup');
+
+      this.scene.launch('PopupScene', {
+        title: 'Success!',
+        message: `${hero.name} has been withdrawn to your wallet.`,
+        onClose: () => {
+          this.scene.restart();
+        },
+      });
+    } catch (error) {
+      SoundManager.play(this, 'error');
+      console.error('Hero withdraw process failed:', error);
+      this.scene.launch('PopupScene', {
+        title: 'Withdraw Failed',
+        message: error.reason || error.message || 'An unknown error occurred.',
+      });
+      this.fetchAndDisplayHeroes(
+        this.add.text(
+          this.cameras.main.centerX,
+          this.cameras.main.centerY,
+          '',
+          {}
+        )
+      );
+    }
   }
 
   async handleLevelUp(hero) {
-      SoundManager.play(this, 'click');
-      const cardData = this.heroCards.find(c => c.getData('hero').id === hero.id);
-      if (!cardData) return;
-      const levelUpButton = cardData.getData('levelUpButton');
-      if (!levelUpButton) return;
+    SoundManager.play(this, 'click');
+    const cardData = this.heroCards.find(
+      (c) => c.getData('hero').id === hero.id
+    );
+    if (!cardData) return;
+    const levelUpButton = cardData.getData('levelUpButton');
+    if (!levelUpButton) return;
 
-      levelUpButton.setText('PROCESSING...').disableInteractive().setStyle({ fill: '#FFA500' });
+    levelUpButton
+      .setText('PROCESSING...')
+      .disableInteractive()
+      .setStyle({ fill: '#FFA500' });
 
-      try {
-          const response = await api.levelUpHero(hero.id);
-          if (response.success) {
-              SoundManager.play(this, 'powerup');
-              const heroIndex = this.heroes.findIndex(h => h.id === hero.id);
-              if (heroIndex !== -1) this.heroes[heroIndex] = response.hero;
-              this.displayHeroes(this.heroes);
-              this.scene.launch('PopupScene', { title: 'Success!', message: `${response.hero.name} is now Level ${response.hero.level}!` });
-          } else {
-              throw new Error(response.message || 'Level up failed on the server.');
-          }
-      } catch (error) {
-          SoundManager.play(this, 'error');
-          console.error('Level up process failed:', error);
-          this.scene.launch('PopupScene', { title: 'Level Up Failed', message: error.message || 'An unknown error occurred.' });
-          this.displayHeroes(this.heroes);
+    try {
+      const response = await api.levelUpHero(hero.id);
+      if (response.success) {
+        SoundManager.play(this, 'powerup');
+        const heroIndex = this.heroes.findIndex((h) => h.id === hero.id);
+        if (heroIndex !== -1) this.heroes[heroIndex] = response.hero;
+        this.displayHeroes(this.heroes);
+        this.scene.launch('PopupScene', {
+          title: 'Success!',
+          message: `${response.hero.name} is now Level ${response.hero.level}!`,
+        });
+      } else {
+        throw new Error(response.message || 'Level up failed on the server.');
       }
+    } catch (error) {
+      SoundManager.play(this, 'error');
+      console.error('Level up process failed:', error);
+      this.scene.launch('PopupScene', {
+        title: 'Level Up Failed',
+        message: error.message || 'An unknown error occurred.',
+      });
+      this.displayHeroes(this.heroes);
+    }
   }
 }

@@ -10,7 +10,7 @@ export default defineConfig({
         process: true,
       },
       protocolImports: true,
-    })
+    }),
   ],
   server: {
     port: 5173,
@@ -23,25 +23,25 @@ export default defineConfig({
         '**/node_modules/**',
         '**/dist/**',
         '**/vite.config.js.timestamp-*.mjs',
-        'vite.config.js'
-      ]
-    }
+        'vite.config.js',
+      ],
+    },
   },
   define: {
-    global: 'globalThis'
+    global: 'globalThis',
   },
   resolve: {
     alias: {
       buffer: 'buffer/',
-    }
+    },
   },
   optimizeDeps: {
-    exclude: ['@sentry/browser']
+    exclude: ['@sentry/browser'],
   },
   build: {
     rollupOptions: {
-      external: ['@sentry/browser']
-    }
+      external: ['@sentry/browser'],
+    },
   },
   test: {
     globals: true,
