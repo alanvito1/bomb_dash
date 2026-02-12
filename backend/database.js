@@ -311,7 +311,7 @@ async function addXpToUser(address, xpAmount) {
     let newXp = user.account_xp + xpAmount;
     let newLevel = user.account_level;
 
-    while (true) {
+    while (newLevel < 200) {
       const xpForNextLevel = getExperienceForLevel(newLevel + 1, multiplier);
       if (newXp >= xpForNextLevel) {
         newLevel++;
@@ -364,7 +364,7 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
     winner.coins += finalCoinReward;
     winner.account_xp += finalXpReward;
     let winnerNewLevel = winner.account_level;
-    while (true) {
+    while (winnerNewLevel < 200) {
       const xpForNextLevel = getExperienceForLevel(
         winnerNewLevel + 1,
         multiplier

@@ -32,7 +32,7 @@ function getLevelFromExperience(xp, difficultyMultiplier = 1.0) {
   let level = 1;
   // We check against the XP required for the *next* level.
   // If the player's XP is less than the amount needed for level L+1, they are at level L.
-  while (true) {
+  while (level <= 200) {
     const xpForNextLevel = getExperienceForLevel(
       level + 1,
       difficultyMultiplier

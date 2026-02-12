@@ -1,6 +1,7 @@
 // backend/routes/tournaments.js
 const express = require('express');
 const router = express.Router();
+const { ethers } = require('ethers');
 const oracle = require('../oracle.js');
 const tournamentService = require('../tournament_service.js');
 

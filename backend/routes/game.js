@@ -104,6 +104,19 @@ router.post('/user/stats', async (req, res) => {
     });
   }
 
+  const heroUpgrades = {
+    // Define dummy upgrades or import them if they exist elsewhere.
+    // Assuming a simple structure based on usage:
+    strength: {
+      cost: (hero) => 10 * hero.level,
+      effect: (hero) => ({ damage: hero.damage + 1 }),
+    },
+    speed: {
+      cost: (hero) => 5 * hero.level,
+      effect: (hero) => ({ speed: hero.speed + 10 }),
+    },
+  };
+
   if (!heroUpgrades[upgradeType]) {
     return res
       .status(400)
