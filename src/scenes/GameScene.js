@@ -24,15 +24,26 @@ export default class GameScene extends Phaser.Scene {
     this.matchId = null;
 
     this.DEFAULT_STATS = {
-      hp: 2100, maxHp: 2100, mana: 100, maxMana: 100, damage: 1, speed: 200, // CQ-05: Increased base HP by 7x
-      extraLives: 1, fireRate: 600, bombSize: 1, multiShot: 0, coins: 0,
+      hp: 2100,
+      maxHp: 2100,
+      mana: 100,
+      maxMana: 100,
+      damage: 1,
+      speed: 200, // CQ-05: Increased base HP by 7x
+      extraLives: 1,
+      fireRate: 600,
+      bombSize: 1,
+      multiShot: 0,
+      coins: 0,
     };
 
     this.gameSettings = { monsterScaleFactor: 7 };
   }
 
   setPlayerState(newState, reason) {
-    console.log(`[PlayerState] Changing from ${this.playerState} to ${newState}. Reason: ${reason}`);
+    console.log(
+      `[PlayerState] Changing from ${this.playerState} to ${newState}. Reason: ${reason}`
+    );
     this.playerState = newState;
   }
 
@@ -40,7 +51,9 @@ export default class GameScene extends Phaser.Scene {
     this.gameMode = data.gameMode || 'solo';
     this.opponent = data.opponent || null;
     this.matchId = data.matchId || null;
-    console.log(`[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}`);
+    console.log(
+      `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}`
+    );
   }
 
   preload() {
@@ -62,7 +75,10 @@ export default class GameScene extends Phaser.Scene {
       const serverSettings = await api.getGameSettings();
       if (serverSettings.success) this.gameSettings = serverSettings.settings;
     } catch (error) {
-      console.warn('[GameScene] Could not fetch game settings. Using defaults.', error);
+      console.warn(
+        '[GameScene] Could not fetch game settings. Using defaults.',
+        error
+      );
     }
 
     this.pauseManager = new PauseManager(this);
@@ -71,16 +87,19 @@ export default class GameScene extends Phaser.Scene {
 
     let userAccountData = {};
     try {
-        const response = await api.fetch('/auth/me', {}, true); // Fetch latest user data
-        if (response.success && response.user) {
-            userAccountData = response.user;
-        } else {
-            throw new Error(response.message || 'Failed to fetch user data.');
-        }
+      const response = await api.fetch('/auth/me', {}, true); // Fetch latest user data
+      if (response.success && response.user) {
+        userAccountData = response.user;
+      } else {
+        throw new Error(response.message || 'Failed to fetch user data.');
+      }
     } catch (error) {
-        console.error('[GameScene] Could not load player data, returning to menu.', error);
-        this.scene.start('MenuScene', { error: 'Could not load player data.' });
-        return; // Stop scene execution
+      console.error(
+        '[GameScene] Could not load player data, returning to menu.',
+        error
+      );
+      this.scene.start('MenuScene', { error: 'Could not load player data.' });
+      return; // Stop scene execution
     }
 
     const selectedHero = this.registry.get('selectedHero');
@@ -88,22 +107,30 @@ export default class GameScene extends Phaser.Scene {
     // --- GUARD CLAUSE ---
     // If no hero was selected or passed, the game cannot proceed.
     if (!selectedHero || !selectedHero.id) {
-        console.error("[GameScene] CRITICAL: Scene started without a valid selected hero. Aborting.");
-        // We can't use LanguageManager here as it might not be ready.
-        this.add.text(this.scale.width / 2, this.scale.height / 2, 'ERROR: No hero data found.\nReturning to menu.', {
+      console.error(
+        '[GameScene] CRITICAL: Scene started without a valid selected hero. Aborting.'
+      );
+      // We can't use LanguageManager here as it might not be ready.
+      this.add
+        .text(
+          this.scale.width / 2,
+          this.scale.height / 2,
+          'ERROR: No hero data found.\nReturning to menu.',
+          {
             fontFamily: '"Press Start 2P"',
             fontSize: '18px',
             color: '#ff0000',
             align: 'center',
-            wordWrap: { width: this.scale.width - 40 }
-        }).setOrigin(0.5);
+            wordWrap: { width: this.scale.width - 40 },
+          }
+        )
+        .setOrigin(0.5);
 
-        this.time.delayedCall(3000, () => {
-            this.scene.start('MenuScene');
-        });
-        return; // Stop scene execution
+      this.time.delayedCall(3000, () => {
+        this.scene.start('MenuScene');
+      });
+      return; // Stop scene execution
     }
-
 
     this.playerStats = {
       ...this.DEFAULT_STATS,
@@ -118,17 +145,26 @@ export default class GameScene extends Phaser.Scene {
     };
     this.registry.remove('selectedHero');
 
-    this.bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg1').setOrigin(0.5).setDisplaySize(480, 800);
+    this.bg = this.add
+      .image(this.scale.width / 2, this.scale.height / 2, 'bg1')
+      .setOrigin(0.5)
+      .setDisplaySize(480, 800);
     this.scene.launch('HUDScene');
     this.time.delayedCall(100, () => {
-      this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+      this.events.emit('update-health', {
+        health: this.playerStats.hp,
+        maxHealth: this.playerStats.maxHp,
+      });
       this.events.emit('update-xp', {
         accountLevel: this.playerStats.account_level,
         accountXP: this.playerStats.account_xp,
-        heroXP: this.playerStats.hero_xp, heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
+        heroXP: this.playerStats.hero_xp,
+        heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
       });
       // JF-02 FIX: Use the global event emitter to update the BCOIN balance in the HUD
-      GameEventEmitter.emit('bcoin-balance-update', { balance: this.playerStats.bcoin });
+      GameEventEmitter.emit('bcoin-balance-update', {
+        balance: this.playerStats.bcoin,
+      });
     });
 
     this.playerController = new PlayerController(this);
@@ -168,7 +204,11 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.powerups = this.physics.add.group();
     this.powerupLogic = new PowerupLogic(this);
-    this.collisionHandler = new CollisionHandler(this, this.events, this.powerupLogic);
+    this.collisionHandler = new CollisionHandler(
+      this,
+      this.events,
+      this.powerupLogic
+    );
     this.collisionHandler.register();
     this.enemySpawner = new EnemySpawner(this, this.playerStats.account_level);
 
@@ -188,15 +228,17 @@ export default class GameScene extends Phaser.Scene {
 
     // LP-05: Emit initial wave update for the HUD
     this.events.emit('update-wave', {
-        world: this.world,
-        phase: this.phase,
-        isBoss: (this.phase === 7)
+      world: this.world,
+      phase: this.phase,
+      isBoss: this.phase === 7,
     });
   }
 
   initializePvpMatch() {
     if (!this.opponent) {
-      console.error("PvP match started without opponent data! Returning to menu.");
+      console.error(
+        'PvP match started without opponent data! Returning to menu.'
+      );
       this.scene.start('MenuScene');
       return;
     }
@@ -204,18 +246,38 @@ export default class GameScene extends Phaser.Scene {
     this.waveStarted = true;
 
     // Construct the correct sprite key (e.g., 'witch_hero') from the opponent data
-    const opponentSpriteKey = this.opponent.hero.sprite_name ? `${this.opponent.hero.sprite_name.toLowerCase()}_hero` : 'player_default';
-    this.opponentPlayer = this.physics.add.sprite(this.scale.width / 2, 100, opponentSpriteKey)
-      .setCollideWorldBounds(true).setImmovable(true);
+    const opponentSpriteKey = this.opponent.hero.sprite_name
+      ? `${this.opponent.hero.sprite_name.toLowerCase()}_hero`
+      : 'player_default';
+    this.opponentPlayer = this.physics.add
+      .sprite(this.scale.width / 2, 100, opponentSpriteKey)
+      .setCollideWorldBounds(true)
+      .setImmovable(true);
     this.opponentPlayer.setTint(0xff8080);
-    this.opponentPlayer.body.setSize(this.opponentPlayer.width * 0.8, this.opponentPlayer.height * 0.8);
-
+    this.opponentPlayer.body.setSize(
+      this.opponentPlayer.width * 0.8,
+      this.opponentPlayer.height * 0.8
+    );
 
     if (this.opponent.userId === -1) {
       this.opponentMoveDirection = 1;
       this.opponentPlayer.setVelocityX(100 * this.opponentMoveDirection);
-      this.time.addEvent({ delay: 1500, callback: () => { if (this.opponentPlayer.active) { this.opponentMoveDirection *= -1; this.opponentPlayer.setVelocityX(100 * this.opponentMoveDirection); } }, loop: true });
-      this.time.addEvent({ delay: 1200, callback: this.fireOpponentBomb, callbackScope: this, loop: true });
+      this.time.addEvent({
+        delay: 1500,
+        callback: () => {
+          if (this.opponentPlayer.active) {
+            this.opponentMoveDirection *= -1;
+            this.opponentPlayer.setVelocityX(100 * this.opponentMoveDirection);
+          }
+        },
+        loop: true,
+      });
+      this.time.addEvent({
+        delay: 1200,
+        callback: this.fireOpponentBomb,
+        callbackScope: this,
+        loop: true,
+      });
     }
 
     this.playerBombs = this.physics.add.group();
@@ -231,18 +293,29 @@ export default class GameScene extends Phaser.Scene {
       },
     });
 
-    this.physics.add.collider(this.playerBombs, this.opponentPlayer, (opponent, bomb) => {
-      bomb.destroy();
-      new ExplosionEffect(this, opponent.x, opponent.y);
-      // TODO: Handle opponent health update via network
-    });
-    this.physics.add.collider(this.opponentBombs, this.player, (player, bomb) => {
-      bomb.destroy();
-      new ExplosionEffect(this, player.x, player.y);
-      this.playerStats.hp -= 10;
-      this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
-      if (this.playerStats.hp <= 0) this.handleGameOver();
-    });
+    this.physics.add.collider(
+      this.playerBombs,
+      this.opponentPlayer,
+      (opponent, bomb) => {
+        bomb.destroy();
+        new ExplosionEffect(this, opponent.x, opponent.y);
+        // TODO: Handle opponent health update via network
+      }
+    );
+    this.physics.add.collider(
+      this.opponentBombs,
+      this.player,
+      (player, bomb) => {
+        bomb.destroy();
+        new ExplosionEffect(this, player.x, player.y);
+        this.playerStats.hp -= 10;
+        this.events.emit('update-health', {
+          health: this.playerStats.hp,
+          maxHealth: this.playerStats.maxHp,
+        });
+        if (this.playerStats.hp <= 0) this.handleGameOver();
+      }
+    );
   }
 
   firePlayerBomb(isPve) {
@@ -259,8 +332,10 @@ export default class GameScene extends Phaser.Scene {
     const stats = isOpponent ? this.opponent.hero : this.playerStats;
     // Defensive check: Ensure stats object exists before accessing properties
     if (!stats) {
-        console.error("Attempted to fire a bomb for a firer with no stats.", { isOpponent });
-        return;
+      console.error('Attempted to fire a bomb for a firer with no stats.', {
+        isOpponent,
+      });
+      return;
     }
     const count = 1 + (stats.multiShot ?? 0);
     const spacing = 15;
@@ -270,7 +345,9 @@ export default class GameScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const bombY = firer.y + (velocityY > 0 ? 30 : -30);
       const bomb = bombGroup.create(startX + spacing * i, bombY, 'bomb');
-      bomb.setDisplaySize(bombDisplaySize, bombDisplaySize).setVelocityY(velocityY);
+      bomb
+        .setDisplaySize(bombDisplaySize, bombDisplaySize)
+        .setVelocityY(velocityY);
       if (isOpponent) bomb.setTint(0xff8080);
     }
     if (!isOpponent) SoundManager.play(this, 'bomb_fire');
@@ -297,38 +374,40 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.stopAll(this);
 
     if (result.winner === 'player') {
-        const winnerAddress = this.playerStats.address;
-        try {
-            const response = await window.api.post('/pvp/ranked/report', {
-                matchId: this.matchId,
-                winnerAddress: winnerAddress
-            });
-
-            if (response.success) {
-                SoundManager.play(this, 'gameover'); // Use victory sound later
-                this.scene.stop('HUDScene');
-                this.scene.start('GameOverScene', {
-                    score: 1000, // Placeholder for PvP
-                    coinsEarned: response.rewards ? response.rewards.bcoin || 0 : 0,
-                    finalScore: 1000,
-                    customMessage: response.message
-                });
-            } else {
-                throw new Error(response.message || "Failed to report match result.");
-            }
-        } catch (error) {
-            console.error("Error reporting match result:", error);
-            this.scene.stop('HUDScene');
-            this.scene.start('MenuScene', { error: 'Failed to report match result.' });
-        }
-    } else {
-        // Handle player loss
-        this.scene.stop('HUDScene');
-        this.scene.start('GameOverScene', {
-            score: 0,
-            coinsEarned: 0,
-            customMessage: "Você foi derrotado!"
+      const winnerAddress = this.playerStats.address;
+      try {
+        const response = await window.api.post('/pvp/ranked/report', {
+          matchId: this.matchId,
+          winnerAddress: winnerAddress,
         });
+
+        if (response.success) {
+          SoundManager.play(this, 'gameover'); // Use victory sound later
+          this.scene.stop('HUDScene');
+          this.scene.start('GameOverScene', {
+            score: 1000, // Placeholder for PvP
+            coinsEarned: response.rewards ? response.rewards.bcoin || 0 : 0,
+            finalScore: 1000,
+            customMessage: response.message,
+          });
+        } else {
+          throw new Error(response.message || 'Failed to report match result.');
+        }
+      } catch (error) {
+        console.error('Error reporting match result:', error);
+        this.scene.stop('HUDScene');
+        this.scene.start('MenuScene', {
+          error: 'Failed to report match result.',
+        });
+      }
+    } else {
+      // Handle player loss
+      this.scene.stop('HUDScene');
+      this.scene.start('GameOverScene', {
+        score: 0,
+        coinsEarned: 0,
+        customMessage: 'Você foi derrotado!',
+      });
     }
   }
 
@@ -347,28 +426,44 @@ export default class GameScene extends Phaser.Scene {
 
     // This is the critical fix: report the match result to the backend to award XP.
     if (heroId && xpGained > 0) {
-        try {
-            console.log(`[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${xpGained}`);
-            // Use the new, correct method on the api client.
-            const response = await api.completeMatch(heroId, xpGained);
-            if (response.success) {
-                console.log('[GameScene] XP awarded successfully by the server.');
-            } else {
-                console.warn('[GameScene] Server failed to award XP:', response.message);
-            }
-        } catch (error) {
-            console.error('[GameScene] Error reporting match completion:', error);
+      try {
+        console.log(
+          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${xpGained}`
+        );
+        // Use the new, correct method on the api client.
+        const response = await api.completeMatch(heroId, xpGained);
+        if (response.success) {
+          console.log('[GameScene] XP awarded successfully by the server.');
+        } else {
+          console.warn(
+            '[GameScene] Server failed to award XP:',
+            response.message
+          );
         }
+      } catch (error) {
+        console.error('[GameScene] Error reporting match completion:', error);
+      }
     }
 
     // LP-05 & LP-07: Pass all relevant data to GameOverScene
     this.scene.stop('HUDScene');
-    this.scene.start('GameOverScene', { score: this.score, world: this.world, phase: this.phase, coins: this.coinsEarned, xpGained: this.score });
+    this.scene.start('GameOverScene', {
+      score: this.score,
+      world: this.world,
+      phase: this.phase,
+      coins: this.coinsEarned,
+      xpGained: this.score,
+    });
   }
 
   update() {
     // FURIA-FS-01: Add guard clause to prevent update loop from running before async create() is complete.
-    if (!this.isInitialized || this.pauseManager.isPaused || !this.player?.active) return;
+    if (
+      !this.isInitialized ||
+      this.pauseManager.isPaused ||
+      !this.player?.active
+    )
+      return;
     this.playerController.update(this.cursors, this.playerStats.speed);
 
     if (this.gameMode !== 'ranked') {
@@ -379,9 +474,10 @@ export default class GameScene extends Phaser.Scene {
   prepareNextStage() {
     // LP-05: This function is now the single point of logic for advancing waves.
     this.phase++;
-    if (this.phase > 7) { // 7 phases per world, with phase 7 being the boss
-        this.phase = 1;
-        this.world++;
+    if (this.phase > 7) {
+      // 7 phases per world, with phase 7 being the boss
+      this.phase = 1;
+      this.world++;
     }
 
     this.resetWaveState();
@@ -390,9 +486,9 @@ export default class GameScene extends Phaser.Scene {
 
     // LP-05: Emit wave update for the HUD
     this.events.emit('update-wave', {
-        world: this.world,
-        phase: this.phase,
-        isBoss: (this.phase === 7)
+      world: this.world,
+      phase: this.phase,
+      isBoss: this.phase === 7,
     });
 
     this.enemySpawner.spawnWave(this.world, this.phase);
@@ -403,22 +499,24 @@ export default class GameScene extends Phaser.Scene {
     // We log the state of every enemy on every frame to a global array.
     // If the bug occurs, we can inspect `window.enemyStateHistory` in the console.
     if (this.enemies && this.enemies.getChildren().length > 0) {
-        const enemyStates = this.enemies.getChildren().map(e => ({
-            id: e.name, // Assuming enemies have a unique name/ID
-            x: e.x,
-            y: e.y,
-            active: e.active,
-            visible: e.visible,
-            hp: e.hp,
-            timestamp: this.time.now
-        }));
-        window.enemyStateHistory.push(...enemyStates);
+      const enemyStates = this.enemies.getChildren().map((e) => ({
+        id: e.name, // Assuming enemies have a unique name/ID
+        x: e.x,
+        y: e.y,
+        active: e.active,
+        visible: e.visible,
+        hp: e.hp,
+        timestamp: this.time.now,
+      }));
+      window.enemyStateHistory.push(...enemyStates);
     }
-     // Keep history from getting too large
+    // Keep history from getting too large
     if (window.enemyStateHistory.length > 5000) {
-        window.enemyStateHistory.splice(0, window.enemyStateHistory.length - 5000);
+      window.enemyStateHistory.splice(
+        0,
+        window.enemyStateHistory.length - 5000
+      );
     }
-
 
     // HS1-02: The logic for advancing to the next stage after a boss is defeated
     // has been moved entirely to CollisionHandler.js to ensure it's triggered
@@ -427,7 +525,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Use a temporary array to avoid issues with modifying the group while iterating
     const enemiesToProcess = this.enemies.getChildren().slice();
-    enemiesToProcess.forEach(enemy => {
+    enemiesToProcess.forEach((enemy) => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {
         // JF-04 FIX: Destroy the enemy instead of deactivating it.
         // The previous deactivation logic caused race conditions with the EnemySpawner's
@@ -438,17 +536,26 @@ export default class GameScene extends Phaser.Scene {
         if (this.pauseManager.isPaused) return;
         const damageTaken = 50;
         this.playerStats.hp -= damageTaken;
-        this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+        this.events.emit('update-health', {
+          health: this.playerStats.hp,
+          maxHealth: this.playerStats.maxHp,
+        });
         if (this.playerStats.hp <= 0) {
           this.playerStats.extraLives--;
           if (this.playerStats.extraLives >= 0) {
             this.playerStats.hp = this.playerStats.maxHp;
             SoundManager.play(this, 'player_hit');
-            this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+            this.events.emit('update-health', {
+              health: this.playerStats.hp,
+              maxHealth: this.playerStats.maxHp,
+            });
           } else {
             this.playerStats.hp = 0;
             this.playerStats.extraLives = 0;
-            this.events.emit('update-health', { health: 0, maxHealth: this.playerStats.maxHp });
+            this.events.emit('update-health', {
+              health: 0,
+              maxHealth: this.playerStats.maxHp,
+            });
             this.handleGameOver();
           }
         } else {
@@ -458,7 +565,13 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // LP-05: Check if the current non-boss wave is complete, then advance.
-    if (this.enemiesSpawned > 0 && this.enemiesKilled >= this.enemiesSpawned && !this.bossSpawned && !this.waveStarted && !this.transitioning) {
+    if (
+      this.enemiesSpawned > 0 &&
+      this.enemiesKilled >= this.enemiesSpawned &&
+      !this.bossSpawned &&
+      !this.waveStarted &&
+      !this.transitioning
+    ) {
       this.waveStarted = true; // Prevents this from being called multiple times
       this.time.delayedCall(1000, this.prepareNextStage, [], this);
     }

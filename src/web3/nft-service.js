@@ -9,31 +9,37 @@ let ethersState = null;
  * @private
  */
 async function getEthersDependencies() {
-    if (ethersState) {
-        return ethersState;
+  if (ethersState) {
+    return ethersState;
+  }
+
+  const { ethers } = await import('ethers');
+
+  if (!window.ethereum) {
+    throw new Error('MetaMask is not installed.');
+  }
+
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+
+    if (Number(network.chainId) !== contracts.BOMB_CRYPTO_CHAIN_ID) {
+      throw new Error(
+        `Incorrect network. Please connect to BSC Testnet (ID: ${contracts.BOMB_CRYPTO_CHAIN_ID}).`
+      );
     }
 
-    const { ethers } = await import('ethers');
-
-    if (!window.ethereum) {
-        throw new Error("MetaMask is not installed.");
-    }
-
-    try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const network = await provider.getNetwork();
-
-        if (Number(network.chainId) !== contracts.BOMB_CRYPTO_CHAIN_ID) {
-            throw new Error(`Incorrect network. Please connect to BSC Testnet (ID: ${contracts.BOMB_CRYPTO_CHAIN_ID}).`);
-        }
-
-        const contract = new ethers.Contract(contracts.mockHeroNFT.address, contracts.mockHeroNFT.abi, provider);
-        ethersState = { ethers, provider, contract };
-        return ethersState;
-    } catch (error) {
-        console.error("Failed to initialize NftService dependencies:", error);
-        throw error;
-    }
+    const contract = new ethers.Contract(
+      contracts.mockHeroNFT.address,
+      contracts.mockHeroNFT.abi,
+      provider
+    );
+    ethersState = { ethers, provider, contract };
+    return ethersState;
+  } catch (error) {
+    console.error('Failed to initialize NftService dependencies:', error);
+    throw error;
+  }
 }
 
 /**
@@ -92,11 +98,11 @@ class NftService {
 
       return { success: true, heroes: heroes };
     } catch (error) {
-      console.error("Error fetching owned NFTs:", error);
-      let userMessage = "An error occurred while fetching your NFTs.";
+      console.error('Error fetching owned NFTs:', error);
+      let userMessage = 'An error occurred while fetching your NFTs.';
       if (error.code === 'CALL_EXCEPTION') {
-        userMessage = "Could not retrieve hero data.";
-      } else if (error.message.includes("Incorrect network")) {
+        userMessage = 'Could not retrieve hero data.';
+      } else if (error.message.includes('Incorrect network')) {
         userMessage = error.message;
       }
       return { success: false, message: userMessage, heroes: [] };

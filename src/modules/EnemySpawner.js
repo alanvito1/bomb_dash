@@ -62,25 +62,31 @@ export default class EnemySpawner {
    * @private
    */
   _spawnRegularWave(world, phase) {
-    const enemySpriteKey = this.enemyKeys[Math.min(world - 1, this.enemyKeys.length - 1)] || this.enemyKeys[0];
+    const enemySpriteKey =
+      this.enemyKeys[Math.min(world - 1, this.enemyKeys.length - 1)] ||
+      this.enemyKeys[0];
     if (!enemySpriteKey) {
-        return;
+      return;
     }
 
     const baseCount = 3;
     const enemyCount = baseCount + (world - 1) * 2 + phase;
     const baseHp = 1;
-    const enemyHp = Math.ceil((baseHp + (world - 1) * 5 + (phase - 1) * 1) * this.difficultyMultiplier);
+    const enemyHp = Math.ceil(
+      (baseHp + (world - 1) * 5 + (phase - 1) * 1) * this.difficultyMultiplier
+    );
     const baseSpeed = 80;
-    const enemySpeed = (baseSpeed + (world - 1) * 15 + (phase - 1) * 5) * this.difficultyMultiplier;
-    const spawnInterval = Math.max(200, 800 - (world * 50));
+    const enemySpeed =
+      (baseSpeed + (world - 1) * 15 + (phase - 1) * 5) *
+      this.difficultyMultiplier;
+    const spawnInterval = Math.max(200, 800 - world * 50);
 
     this.scene.enemiesSpawned = enemyCount;
 
     for (let i = 0; i < enemyCount; i++) {
-        this.scene.time.delayedCall(i * spawnInterval, () => {
-            this._spawnSingleEnemy(enemySpriteKey, enemyHp, enemySpeed);
-        });
+      this.scene.time.delayedCall(i * spawnInterval, () => {
+        this._spawnSingleEnemy(enemySpriteKey, enemyHp, enemySpeed);
+      });
     }
   }
 
@@ -90,19 +96,27 @@ export default class EnemySpawner {
    * @private
    */
   _spawnBossWave(world) {
-    const bossSpriteKey = this.bossKeys[Math.min(world - 1, this.bossKeys.length - 1)] || this.bossKeys[0];
-     if (!bossSpriteKey) {
-        return;
+    const bossSpriteKey =
+      this.bossKeys[Math.min(world - 1, this.bossKeys.length - 1)] ||
+      this.bossKeys[0];
+    if (!bossSpriteKey) {
+      return;
     }
 
     const baseHp = 100;
-    const bossHp = Math.ceil((baseHp + (world - 1) * 150) * this.difficultyMultiplier);
+    const bossHp = Math.ceil(
+      (baseHp + (world - 1) * 150) * this.difficultyMultiplier
+    );
     const bossSpeed = 28 + (world - 1) * 4;
 
     this.scene.enemiesSpawned = 1;
     this.scene.bossSpawned = true;
 
-    const boss = this.scene.enemies.create(this.scene.scale.width / 2, -50, bossSpriteKey);
+    const boss = this.scene.enemies.create(
+      this.scene.scale.width / 2,
+      -50,
+      bossSpriteKey
+    );
     boss.setVelocityY(bossSpeed);
     boss.setDisplaySize(48, 48);
     boss.hp = bossHp;
