@@ -5,7 +5,9 @@ import { test, expect } from '@playwright/test';
 // The primary validation for this user journey is handled by the backend integration test
 // in `backend/test/journey-wager-player.test.js`.
 test.describe.skip('E2E Journey: High-Stakes Wager Player', () => {
-  test('should simulate a player losing a wager and de-leveling', async ({ page }) => {
+  test('should simulate a player losing a wager and de-leveling', async ({
+    page,
+  }) => {
     // 1. Setup: Log in as a player with a high-level hero.
     // 2. Action: Navigate to the Wager Arena.
     // 3. Action: Select a tier that will result in a de-level upon loss.

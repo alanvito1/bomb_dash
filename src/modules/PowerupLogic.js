@@ -9,24 +9,27 @@ export default class PowerupLogic {
     this.activePowerups = this.scene.activePowerups;
 
     this.powerupConfig = {
-      'rapid_fire': { name: 'Rapid Fire' },
-      'multi_shot': { name: 'Multi-Shot' },
-      'power_bomb': { name: 'Power Bomb' },
-      'mega_bomb': { name: 'Mega Bomb' },
-      'energy_shield': { name: 'Energy Shield' }
+      rapid_fire: { name: 'Rapid Fire' },
+      multi_shot: { name: 'Multi-Shot' },
+      power_bomb: { name: 'Power Bomb' },
+      mega_bomb: { name: 'Mega Bomb' },
+      energy_shield: { name: 'Energy Shield' },
     };
     this.powerupKeys = Object.keys(this.powerupConfig);
   }
 
   spawn(x, y) {
     if (Phaser.Math.Between(1, 100) <= 12) {
-      const key = this.powerupKeys[Phaser.Math.Between(0, this.powerupKeys.length - 1)];
+      const key =
+        this.powerupKeys[Phaser.Math.Between(0, this.powerupKeys.length - 1)];
       const powerup = this.scene.powerups.create(x, y, key);
       if (powerup) {
         powerup.setVelocityY(80);
         powerup.setDisplaySize(30, 30);
       } else {
-        console.warn(`[PowerupLogic] Falha ao criar powerup com a chave: ${key}`);
+        console.warn(
+          `[PowerupLogic] Falha ao criar powerup com a chave: ${key}`
+        );
       }
     }
   }
@@ -49,7 +52,10 @@ export default class PowerupLogic {
       this.activePowerups[id].event.remove(false);
     }
 
-    if (!this.activePowerups[id] || typeof this.activePowerups[id].time !== 'number') {
+    if (
+      !this.activePowerups[id] ||
+      typeof this.activePowerups[id].time !== 'number'
+    ) {
       this.activePowerups[id] = { time: 0 };
       this.applyEffect(id);
       this.activePowerups[id].time = currentEffectDuration;
@@ -85,14 +91,14 @@ export default class PowerupLogic {
         } else {
           this.scene.hud?.showPowerup?.(id, entry.time / 1000);
         }
-      }
+      },
     });
   }
 
   applyEffect(id) {
     const stats = this.scene.playerStats;
     if (!stats) {
-      console.error("[PowerupLogic] playerStats não encontrado na cena!");
+      console.error('[PowerupLogic] playerStats não encontrado na cena!');
       return;
     }
 
@@ -113,10 +119,15 @@ export default class PowerupLogic {
         break;
       case 'energy_shield':
         stats.hp = Math.min(stats.maxHp, stats.hp + 50); // Heal for 50 HP
-        this.scene.events.emit('update-health', { health: stats.hp, maxHealth: stats.maxHp });
+        this.scene.events.emit('update-health', {
+          health: stats.hp,
+          maxHealth: stats.maxHp,
+        });
         break;
       default:
-        console.warn(`[PowerupLogic] Tipo de power-up desconhecido ao aplicar: ${id}`);
+        console.warn(
+          `[PowerupLogic] Tipo de power-up desconhecido ao aplicar: ${id}`
+        );
     }
     this.scene.hud?.updateHUD?.();
   }
@@ -124,7 +135,9 @@ export default class PowerupLogic {
   removeEffect(id) {
     const stats = this.scene.playerStats;
     if (!stats) {
-      console.error("[PowerupLogic] playerStats não encontrado na cena ao remover efeito!");
+      console.error(
+        '[PowerupLogic] playerStats não encontrado na cena ao remover efeito!'
+      );
       return;
     }
     const DEFAULT_BOMB_SIZE = this.scene.DEFAULT_STATS?.bombSize || 1;
@@ -142,11 +155,16 @@ export default class PowerupLogic {
         stats.damage = Math.max(1, (stats.damage || 1) - 1);
         break;
       case 'mega_bomb':
-        stats.bombSize = Math.max(DEFAULT_BOMB_SIZE, (stats.bombSize || DEFAULT_BOMB_SIZE) / 1.5);
+        stats.bombSize = Math.max(
+          DEFAULT_BOMB_SIZE,
+          (stats.bombSize || DEFAULT_BOMB_SIZE) / 1.5
+        );
         break;
       // 'energy_shield' is an instant effect and has no removal logic.
       default:
-        console.warn(`[PowerupLogic] Tipo de power-up desconhecido ao remover: ${id}`);
+        console.warn(
+          `[PowerupLogic] Tipo de power-up desconhecido ao remover: ${id}`
+        );
     }
     this.scene.hud?.updateHUD?.();
   }
@@ -155,18 +173,29 @@ export default class PowerupLogic {
     if (this.scene.bombTimer) {
       this.scene.bombTimer.remove(false);
     }
-    if (this.scene.playerStats && typeof this.scene.playerStats.fireRate === 'number') { // Adicionado check
-        this.scene.bombTimer = this.scene.time.addEvent({
+    if (
+      this.scene.playerStats &&
+      typeof this.scene.playerStats.fireRate === 'number'
+    ) {
+      // Adicionado check
+      this.scene.bombTimer = this.scene.time.addEvent({
         delay: this.scene.playerStats.fireRate,
         loop: true,
         callback: () => {
-            if (this.scene && typeof this.scene.fireBomb === 'function' && this.scene.player?.active) { // Adicionado this.scene.player?.active
+          if (
+            this.scene &&
+            typeof this.scene.fireBomb === 'function' &&
+            this.scene.player?.active
+          ) {
+            // Adicionado this.scene.player?.active
             this.scene.fireBomb();
-            }
-        }
-        });
+          }
+        },
+      });
     } else {
-        console.warn('[PowerupLogic] fireRate inválido ou playerStats não definido ao tentar refreshBombTimer.');
+      console.warn(
+        '[PowerupLogic] fireRate inválido ou playerStats não definido ao tentar refreshBombTimer.'
+      );
     }
   }
 }

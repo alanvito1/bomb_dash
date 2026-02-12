@@ -11,45 +11,47 @@ import SoundManager from '../utils/sound.js';
  * @returns {Phaser.GameObjects.Container} The created button container.
  */
 export function createButton(scene, x, y, text, onClick) {
-    const button = scene.add.container(x, y);
+  const button = scene.add.container(x, y);
 
-    const buttonBackground = scene.add.image(0, 0, 'btn_menu').setOrigin(0.5);
-    buttonBackground.setDisplaySize(280, 50);
+  const buttonBackground = scene.add.image(0, 0, 'btn_menu').setOrigin(0.5);
+  buttonBackground.setDisplaySize(280, 50);
 
-    const buttonText = scene.add.text(0, 0, text, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '16px',
-        fill: '#ffffff',
-        align: 'center'
-    }).setOrigin(0.5);
+  const buttonText = scene.add
+    .text(0, 0, text, {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '16px',
+      fill: '#ffffff',
+      align: 'center',
+    })
+    .setOrigin(0.5);
 
-    button.add([buttonBackground, buttonText]);
-    button.setSize(280, 50);
-    button.setInteractive({ useHandCursor: true });
+  button.add([buttonBackground, buttonText]);
+  button.setSize(280, 50);
+  button.setInteractive({ useHandCursor: true });
 
-    button.on('pointerover', () => {
-        buttonBackground.setTint(0xcccccc);
-        buttonText.setTint(0xffd700);
-    });
+  button.on('pointerover', () => {
+    buttonBackground.setTint(0xcccccc);
+    buttonText.setTint(0xffd700);
+  });
 
-    button.on('pointerout', () => {
-        buttonBackground.clearTint();
-        buttonText.clearTint();
-    });
+  button.on('pointerout', () => {
+    buttonBackground.clearTint();
+    buttonText.clearTint();
+  });
 
-    button.on('pointerdown', () => {
-        buttonBackground.setTint(0xaaaaaa);
-    });
+  button.on('pointerdown', () => {
+    buttonBackground.setTint(0xaaaaaa);
+  });
 
-    button.on('pointerup', () => {
-        buttonBackground.clearTint();
-        SoundManager.play(scene, 'click');
-        if (onClick) {
-            onClick();
-        }
-    });
+  button.on('pointerup', () => {
+    buttonBackground.clearTint();
+    SoundManager.play(scene, 'click');
+    if (onClick) {
+      onClick();
+    }
+  });
 
-    return button;
+  return button;
 }
 
 /**
@@ -61,14 +63,22 @@ export function createButton(scene, x, y, text, onClick) {
  * @returns {Phaser.GameObjects.Text} The created title text object.
  */
 export function createTitle(scene, x, y, text) {
-    return scene.add.text(x, y, text, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '28px',
-        fill: '#FFD700',
-        stroke: '#000',
-        strokeThickness: 4,
-        shadow: { offsetX: 2, offsetY: 2, color: '#FFD700', blur: 10, fill: true }
-    }).setOrigin(0.5);
+  return scene.add
+    .text(x, y, text, {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '28px',
+      fill: '#FFD700',
+      stroke: '#000',
+      strokeThickness: 4,
+      shadow: {
+        offsetX: 2,
+        offsetY: 2,
+        color: '#FFD700',
+        blur: 10,
+        fill: true,
+      },
+    })
+    .setOrigin(0.5);
 }
 
 /**
@@ -81,10 +91,10 @@ export function createTitle(scene, x, y, text) {
  * @returns {Phaser.GameObjects.Graphics} The created panel graphics object.
  */
 export function createPanel(scene, x, y, width, height) {
-    const panel = scene.add.graphics();
-    panel.fillStyle(0x000000, 0.8);
-    panel.fillRect(x, y, width, height);
-    panel.lineStyle(2, 0x00ffff, 0.8);
-    panel.strokeRect(x, y, width, height);
-    return panel;
+  const panel = scene.add.graphics();
+  panel.fillStyle(0x000000, 0.8);
+  panel.fillRect(x, y, width, height);
+  panel.lineStyle(2, 0x00ffff, 0.8);
+  panel.strokeRect(x, y, width, height);
+  return panel;
 }

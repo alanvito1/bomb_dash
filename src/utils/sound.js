@@ -36,7 +36,9 @@ export default class SoundManager {
     }
     this.initialized = true;
 
-    console.log(`[SoundManager] Volumes Loaded: Master=${this.masterVolume}, Music=${this.musicVolume}, SFX=${this.sfxVolume}`);
+    console.log(
+      `[SoundManager] Volumes Loaded: Master=${this.masterVolume}, Music=${this.musicVolume}, SFX=${this.sfxVolume}`
+    );
   }
 
   /**
@@ -61,7 +63,7 @@ export default class SoundManager {
   static setMusicVolume(volume) {
     this.musicVolume = Phaser.Math.Clamp(volume, 0, 1);
     localStorage.setItem('musicVolume', this.musicVolume.toString());
-    this.music.forEach(musicInstance => {
+    this.music.forEach((musicInstance) => {
       if (musicInstance.isPlaying) {
         musicInstance.setVolume(this.musicVolume);
       }
@@ -86,13 +88,15 @@ export default class SoundManager {
    */
   static loadFromManifest(scene, manifest) {
     if (!scene || !scene.load || !manifest || !manifest.sounds) {
-      console.error('[SoundManager] Invalid scene, loader, or manifest for loading sounds');
+      console.error(
+        '[SoundManager] Invalid scene, loader, or manifest for loading sounds'
+      );
       return;
     }
 
     const { music, sfx } = manifest.sounds;
-    Object.keys(music).forEach(key => scene.load.audio(key, music[key]));
-    Object.keys(sfx).forEach(key => scene.load.audio(key, sfx[key]));
+    Object.keys(music).forEach((key) => scene.load.audio(key, music[key]));
+    Object.keys(sfx).forEach((key) => scene.load.audio(key, sfx[key]));
   }
 
   /**
@@ -144,7 +148,10 @@ export default class SoundManager {
 
       let musicInstance = this.music.get(key);
       if (!musicInstance) {
-        musicInstance = scene.sound.add(key, { loop: true, volume: this.musicVolume });
+        musicInstance = scene.sound.add(key, {
+          loop: true,
+          volume: this.musicVolume,
+        });
         this.music.set(key, musicInstance);
       }
 
@@ -183,7 +190,7 @@ export default class SoundManager {
    */
   static stopAll(scene) {
     if (scene && scene.sound) {
-        scene.sound.stopAll();
+      scene.sound.stopAll();
     }
     this.music.clear();
   }
@@ -192,7 +199,7 @@ export default class SoundManager {
    * Stops all currently playing music tracks managed by the SoundManager.
    */
   static stopAllMusic() {
-    this.music.forEach(musicInstance => {
+    this.music.forEach((musicInstance) => {
       if (musicInstance.isPlaying) {
         musicInstance.stop();
       }
@@ -211,7 +218,10 @@ export default class SoundManager {
     try {
       await this.playMusic(scene, musicKey);
     } catch (error) {
-      console.error(`[SoundManager] Could not play world music for world ${worldNumber}.`, error);
+      console.error(
+        `[SoundManager] Could not play world music for world ${worldNumber}.`,
+        error
+      );
     }
   }
 }

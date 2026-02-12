@@ -9,7 +9,11 @@ export function fireBomb(scene) {
   const bombSize = 8 * (scene.playerStats.bombSize || 1); // ✅ Aplica multiplicador de tamanho
 
   for (let i = 0; i < count; i++) {
-    const bomb = scene.bombs.create(startX + spacing * i, scene.player.y - 20, 'bomb');
+    const bomb = scene.bombs.create(
+      startX + spacing * i,
+      scene.player.y - 20,
+      'bomb'
+    );
     bomb.setDisplaySize(bombSize, bombSize);
     bomb.setVelocityY(-300);
   }
@@ -24,7 +28,9 @@ export default class PlayerController {
   create() {
     const playerStats = this.scene.playerStats;
     // Dynamically set the texture based on the selected hero
-    const textureKey = playerStats.sprite_name ? `${playerStats.sprite_name.toLowerCase()}_hero` : 'player_default';
+    const textureKey = playerStats.sprite_name
+      ? `${playerStats.sprite_name.toLowerCase()}_hero`
+      : 'player_default';
 
     this.player = this.scene.physics.add.sprite(
       this.scene.scale.width / 2,

@@ -12,8 +12,8 @@ test('Game should boot to main menu', async ({ page }) => {
         contentType: 'application/json',
         body: JSON.stringify({
           authenticated: true,
-          address: '0xMockAddress123'
-        })
+          address: '0xMockAddress123',
+        }),
       });
     }
 
@@ -23,8 +23,8 @@ test('Game should boot to main menu', async ({ page }) => {
         contentType: 'application/json',
         body: JSON.stringify({
           tournamentController: '0xMockContract',
-          perpetualRewardPool: '0xMockContract'
-        })
+          perpetualRewardPool: '0xMockContract',
+        }),
       });
     }
 
@@ -37,8 +37,9 @@ test('Game should boot to main menu', async ({ page }) => {
   // Verificação mais tolerante do boot do jogo
   await expect(async () => {
     const isGameLoaded = await page.evaluate(() => {
-      return window.game !== undefined &&
-             typeof window.game.scene !== 'undefined';
+      return (
+        window.game !== undefined && typeof window.game.scene !== 'undefined'
+      );
     });
     expect(isGameLoaded).toBeTruthy();
   }).toPass({ timeout: 10000 });
