@@ -6,13 +6,14 @@
  * @returns {number} The total XP needed to reach that level.
  */
 function getExperienceForLevel(level, difficultyMultiplier = 1.0) {
-    if (level <= 1) {
-        return 0;
-    }
-    // Original Formula: (50/3) * (level^3 - 6*level^2 + 17*level - 12)
-    const baseFormula = (50 / 3) * (Math.pow(level, 3) - 6 * Math.pow(level, 2) + 17 * level - 12);
-    const xp = baseFormula * difficultyMultiplier;
-    return Math.floor(xp);
+  if (level <= 1) {
+    return 0;
+  }
+  // Original Formula: (50/3) * (level^3 - 6*level^2 + 17*level - 12)
+  const baseFormula =
+    (50 / 3) * (Math.pow(level, 3) - 6 * Math.pow(level, 2) + 17 * level - 12);
+  const xp = baseFormula * difficultyMultiplier;
+  return Math.floor(xp);
 }
 
 /**
@@ -24,28 +25,31 @@ function getExperienceForLevel(level, difficultyMultiplier = 1.0) {
  * @returns {number} The calculated level.
  */
 function getLevelFromExperience(xp, difficultyMultiplier = 1.0) {
-    if (xp <= 0) {
-        return 1;
-    }
+  if (xp <= 0) {
+    return 1;
+  }
 
-    let level = 1;
-    // We check against the XP required for the *next* level.
-    // If the player's XP is less than the amount needed for level L+1, they are at level L.
-    while (true) {
-        const xpForNextLevel = getExperienceForLevel(level + 1, difficultyMultiplier);
-        if (xp < xpForNextLevel) {
-            return level;
-        }
-        level++;
-        // As a safeguard against infinite loops in case of unexpected input.
-        if (level > 200) { // Max level cap
-            return 200;
-        }
+  let level = 1;
+  // We check against the XP required for the *next* level.
+  // If the player's XP is less than the amount needed for level L+1, they are at level L.
+  while (true) {
+    const xpForNextLevel = getExperienceForLevel(
+      level + 1,
+      difficultyMultiplier
+    );
+    if (xp < xpForNextLevel) {
+      return level;
     }
+    level++;
+    // As a safeguard against infinite loops in case of unexpected input.
+    if (level > 200) {
+      // Max level cap
+      return 200;
+    }
+  }
 }
 
-
 module.exports = {
-    getExperienceForLevel,
-    getLevelFromExperience,
+  getExperienceForLevel,
+  getLevelFromExperience,
 };

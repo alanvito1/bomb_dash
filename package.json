@@ -16,7 +16,7 @@
     "start:backend": "node backend/server.js",
     "start:backend:test": "NODE_ENV=test node backend/server.js",
     "install:all": "npm install && npm install --prefix backend",
-    "lint": "eslint .",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
     "format": "prettier --write .",
     "test:smoke": "playwright test --project=smoke",
     "test:integration": "playwright test --project=integration",

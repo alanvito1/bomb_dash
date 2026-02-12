@@ -14,5 +14,7 @@ test('Infrastructure Smoke Test', async ({ page }) => {
   // This is a basic check to ensure the frontend is rendering as expected.
   await expect(page).toHaveTitle(/Bomb Dash/);
 
-  console.log('Infrastructure Smoke Test: PASSED. Servers are up and accessible.');
+  console.log(
+    'Infrastructure Smoke Test: PASSED. Servers are up and accessible.'
+  );
 });

@@ -20,7 +20,7 @@ async function getGameSettings() {
       pvpWinXp: 50,
       monsterXp: { mob1: 10, mob2: 15, mob3: 20 },
       pvpCycleOpenHours: 24,
-      pvpCycleClosedHours: 24
+      pvpCycleClosedHours: 24,
     };
   }
 }
@@ -41,5 +41,5 @@ async function saveGameSettings(settings) {
 
 module.exports = {
   getGameSettings,
-  saveGameSettings
+  saveGameSettings,
 };

@@ -12,11 +12,11 @@ module.exports = {
     {
       name: 'smoke',
       testMatch: '**/smoke/**',
-      timeout: 15000
+      timeout: 15000,
     },
     {
       name: 'integration',
-      testMatch: '**/integration/**'
-    }
-  ]
+      testMatch: '**/integration/**',
+    },
+  ],
 };

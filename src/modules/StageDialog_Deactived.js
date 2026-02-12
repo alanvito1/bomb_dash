@@ -7,21 +7,26 @@ export function showNextStageDialog(scene) {
   const centerX = scene.scale.width / 2;
   const centerY = scene.scale.height / 2;
 
-  const dialog = scene.add.rectangle(centerX, centerY, 300, 150, 0x000000, 0.8).setOrigin(0.5);
-  const text = scene.add.text(centerX, centerY - 30, 'Boss defeated!\nAdvance to next stage?', {
-    fontSize: '18px',
-    fill: '#ffffff',
-    align: 'center',
-    fontFamily: 'monospace'
-  }).setOrigin(0.5);
+  const dialog = scene.add
+    .rectangle(centerX, centerY, 300, 150, 0x000000, 0.8)
+    .setOrigin(0.5);
+  const text = scene.add
+    .text(centerX, centerY - 30, 'Boss defeated!\nAdvance to next stage?', {
+      fontSize: '18px',
+      fill: '#ffffff',
+      align: 'center',
+      fontFamily: 'monospace',
+    })
+    .setOrigin(0.5);
 
-  const nextButton = scene.add.text(centerX, centerY + 40, '[ NEXT STAGE ]', {
-    fontSize: '20px',
-    fill: '#00ff00',
-    fontFamily: 'monospace',
-    backgroundColor: '#111',
-    padding: { x: 12, y: 6 }
-  })
+  const nextButton = scene.add
+    .text(centerX, centerY + 40, '[ NEXT STAGE ]', {
+      fontSize: '20px',
+      fill: '#00ff00',
+      fontFamily: 'monospace',
+      backgroundColor: '#111',
+      padding: { x: 12, y: 6 },
+    })
     .setOrigin(0.5)
     .setInteractive()
     .on('pointerdown', () => {

@@ -17,24 +17,24 @@ export default class MenuScene extends Phaser.Scene {
 
   init(data) {
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: init() called.', data);
+      console.log('[DEBUG] MenuScene: init() called.', data);
     }
     this.userData = data.userData;
   }
 
   preload() {
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: preload() started...');
+      console.log('[DEBUG] MenuScene: preload() started...');
     }
     // Nothing to preload for this specific scene, but the hook is here.
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: preload() finished.');
+      console.log('[DEBUG] MenuScene: preload() finished.');
     }
   }
 
   create() {
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: create() started...');
+      console.log('[DEBUG] MenuScene: create() started...');
     }
 
     // Garante que os dados do usuário sejam carregados do registro global.
@@ -44,9 +44,11 @@ export default class MenuScene extends Phaser.Scene {
     // --- GUARD CLAUSE ---
     // If the scene is started without user data, it cannot function.
     if (!this.userData) {
-        console.error("CRITICAL: MenuScene started without loggedInUser data. Returning to AuthChoiceScene.");
-        this.scene.start(CST.SCENES.AUTH_CHOICE);
-        return; // Stop execution of create()
+      console.error(
+        'CRITICAL: MenuScene started without loggedInUser data. Returning to AuthChoiceScene.'
+      );
+      this.scene.start(CST.SCENES.AUTH_CHOICE);
+      return; // Stop execution of create()
     }
 
     const centerX = this.cameras.main.centerX;
@@ -66,12 +68,13 @@ export default class MenuScene extends Phaser.Scene {
     bcoinService.updateBalance();
 
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: create() finished.');
+      console.log('[DEBUG] MenuScene: create() finished.');
     }
   }
 
   createBackground(centerX, centerY) {
-    this.add.image(centerX, centerY, 'menu_bg_vertical')
+    this.add
+      .image(centerX, centerY, 'menu_bg_vertical')
       .setOrigin(0.5)
       .setDisplaySize(this.scale.width, this.scale.height);
   }
@@ -87,47 +90,73 @@ export default class MenuScene extends Phaser.Scene {
 
   displayUserData() {
     if (this.userData && this.userData.walletAddress) {
-        const address = this.userData.walletAddress;
-        const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-        this.userAddressText = this.add.text(20, 20, `Player: ${shortAddress}`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '12px',
-            fill: '#FFFFFF'
-        }).setOrigin(0, 0);
+      const address = this.userData.walletAddress;
+      const shortAddress = `${address.substring(0, 6)}...${address.substring(
+        address.length - 4
+      )}`;
+      this.userAddressText = this.add
+        .text(20, 20, `Player: ${shortAddress}`, {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '12px',
+          fill: '#FFFFFF',
+        })
+        .setOrigin(0, 0);
     }
   }
 
   createMenu(centerX, centerY) {
     const menuItems = [
-      { name: 'solo_button', label: LanguageManager.get('menu_solo'), scene: CST.SCENES.CHARACTER_SELECTION },
-      { name: 'pvp_button', label: "PvP Modes", scene: CST.SCENES.PVP },
-      { name: 'tournament_button', label: "Tournaments", scene: CST.SCENES.TOURNAMENT_LOBBY },
-      { name: 'shop_button', label: LanguageManager.get('menu_shop'), scene: CST.SCENES.SHOP },
-      { name: 'profile_button', label: LanguageManager.get('profile_title'), scene: CST.SCENES.PROFILE },
+      {
+        name: 'solo_button',
+        label: LanguageManager.get('menu_solo'),
+        scene: CST.SCENES.CHARACTER_SELECTION,
+      },
+      { name: 'pvp_button', label: 'PvP Modes', scene: CST.SCENES.PVP },
+      {
+        name: 'tournament_button',
+        label: 'Tournaments',
+        scene: CST.SCENES.TOURNAMENT_LOBBY,
+      },
+      {
+        name: 'shop_button',
+        label: LanguageManager.get('menu_shop'),
+        scene: CST.SCENES.SHOP,
+      },
+      {
+        name: 'profile_button',
+        label: LanguageManager.get('profile_title'),
+        scene: CST.SCENES.PROFILE,
+      },
       { name: 'ranking_button', label: 'Ranking', scene: CST.SCENES.RANKING },
-      { name: 'config_button', label: "Settings", scene: CST.SCENES.CONFIG },
-      { name: 'logout_button', label: LanguageManager.get('menu_logout'), action: 'logout' }
+      { name: 'config_button', label: 'Settings', scene: CST.SCENES.CONFIG },
+      {
+        name: 'logout_button',
+        label: LanguageManager.get('menu_logout'),
+        action: 'logout',
+      },
     ];
 
     const buttonStartY = centerY - 150; // Adjusted for more items
     const buttonSpacing = 60; // Adjusted for more items
 
     menuItems.forEach((item, i) => {
-        const buttonY = buttonStartY + i * buttonSpacing;
-        const onClick = () => {
-            if (item.action === 'logout') {
-                api.logout();
-                this.registry.remove('loggedInUser');
-                this.scene.start(CST.SCENES.AUTH_CHOICE);
-            } else if (item.scene === CST.SCENES.CONFIG) {
-                this.scene.pause();
-                this.scene.launch(item.scene);
-            } else if (item.scene) {
-                this.scene.stop(CST.SCENES.MENU);
-                this.scene.start(item.scene, { userData: this.userData });
-            }
-        };
-        createButton(this, centerX, buttonY, item.label, onClick).setName(item.name);
+      const buttonY = buttonStartY + i * buttonSpacing;
+      const onClick = () => {
+        if (item.action === 'logout') {
+          api.logout();
+          this.registry.remove('loggedInUser');
+          this.scene.start(CST.SCENES.AUTH_CHOICE);
+        } else if (item.scene === CST.SCENES.CONFIG) {
+          this.scene.pause();
+          this.scene.launch(item.scene);
+        } else if (item.scene) {
+          this.scene.stop(CST.SCENES.MENU);
+          this.scene.start(item.scene, { userData: this.userData });
+        }
+      };
+      createButton(this, centerX, buttonY, item.label, onClick).setName(
+        item.name
+      );
     });
   }
 
@@ -149,7 +178,7 @@ export default class MenuScene extends Phaser.Scene {
   // Ensure to clean up the event listener when the scene is destroyed
   shutdown() {
     if (window.DEBUG_MODE) {
-        console.log('[DEBUG] MenuScene: shutdown() called.');
+      console.log('[DEBUG] MenuScene: shutdown() called.');
     }
     // No need to turn off the bcoin listener as it has been removed.
     // Destroy all children to prevent them from leaking into the next scene

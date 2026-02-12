@@ -1,20 +1,19 @@
-# 💣 Bomb Dash - Web3 Edition
+# Bomb Dash - Web3 Edition (Dockerized)
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange)
 ![Docker](https://img.shields.io/badge/docker-enabled-blue?logo=docker)
 
-> **"Skill is the new Collateral."**
-> A competitive, decentralized E-Sports platform where players stake their skills, not just their tokens.
+**Bomb Dash** is a competitive 2D action game evolved into a Web3 E-Sports platform on the BNB Smart Chain (BSC). It features a client-server architecture where player skill is rewarded with BCOIN tokens through a secure, transparent, and sustainable economy.
 
 ---
 
 ## 📖 Table of Contents
 
-- [The Why](#-the-why)
-- [Key Features](#-key-features)
-- [Architecture Overview](#-architecture-overview)
+- [Why Bomb Dash?](#-why-bomb-dash)
+- [Features](#-features)
+- [Architecture](#-architecture)
 - [Quick Start](#-quick-start)
 - [Documentation](#-documentation)
 - [Roadmap](#-roadmap)
@@ -22,101 +21,88 @@
 
 ---
 
-## 💡 The Why
+## 💡 Why Bomb Dash?
 
-Traditional Web3 games often suffer from "Pay-to-Win" mechanics or unsustainable "Ponzi-nomics". **Bomb Dash** flips the script:
-
-*   **Problem**: Most P2E games reward users solely for holding assets, leading to inflation and lack of engagement.
-*   **Solution**: We built a **Skill-Based Economy**. Rewards are distributed based on gameplay performance (PvP wins, PvE milestones), verified by a secure Oracle.
-*   **Ownership**: Heroes are true NFTs on the BNB Smart Chain. Your stats, level, and history are immutable.
-
----
-
-## ✨ Key Features
-
-*   **⚔️ PvP Wagers**: Challenge other players to 1v1 duels. Winner takes the pot (BCOIN + XP).
-*   **🤖 Smart PvE**: Solo campaigns with difficulty scaling and "Perpetual Reward Pools".
-*   **🔒 Oracle Security**: Backend-verified game logic prevents client-side cheating.
-*   **🆔 SIWE Auth**: "Sign-In with Ethereum" for seamless, passwordless onboarding.
-*   **⚡ Instant Action**: Built with Phaser 3 and Vite for 60FPS browser gameplay.
+We are transforming a casual pixel-art game into a sustainable **Web3 E-Sport**.
+*   **Skill-Based Economy**: Earn rewards by competing in PvP or mastering PvE, not just by holding assets.
+*   **Sustainable Rewards**: A "Perpetual Reward Pool" inspired by Bitcoin's difficulty adjustment ensures longevity.
+*   **True Ownership**: Heroes are NFTs. Staking, Upgrading, and Trading are fully on-chain.
+*   **Fair Play**: Critical game logic is verified server-side, and financial transactions are secured by Smart Contracts.
 
 ---
 
-## 🏗 Architecture Overview
+## ✨ Features
 
-The system follows a modern, containerized microservices pattern:
+*   **🎮 PvP Arena**: 1v1 Wagers and Tournaments with on-chain prize pools.
+*   **🤖 PvE Campaign**: Solo mode with rewards scaled by global activity.
+*   **⚔️ Hero NFTs**: Use your Bombcrypto heroes. New players get a free "Mock Hero" to start.
+*   **🔒 Secure Auth**: Sign-In with Ethereum (SIWE) for passwordless, wallet-based authentication.
+*   **⚡ Instant Action**: Built with Phaser 3 and Vite for high-performance browser gameplay.
 
-| Component | Tech Stack | Responsibility |
-| :--- | :--- | :--- |
-| **Frontend** | Vite, Phaser 3, Ethers.js | Game Client, Rendering, Wallet Interaction |
-| **Backend** | Node.js, Express, Sequelize | Game Logic, Matchmaking, Oracle Verification |
-| **Blockchain** | Hardhat (Local), BSC | Smart Contracts (ERC-721 Heroes, ERC-20 Tokens) |
-| **Database** | SQLite (Dev), MySQL (Prod) | User Profiles, Game History, Leaderboards |
+---
 
-➡️ **[Explore the Full Architecture Maps](./docs/ARCHITECTURE.md)**
+## 🏗 Architecture
+
+The project uses a decoupled architecture containerized with Docker:
+
+*   **Frontend**: Vite + Phaser 3 (Game Client)
+*   **Backend**: Node.js + Express (API, Matchmaking, Oracle)
+*   **Blockchain**: Hardhat (Local) / BSC (Testnet/Mainnet)
+*   **Database**: SQLite (Dev) / MySQL (Prod)
+
+➡️ **[View Detailed Architecture Diagrams](./docs/ARCHITECTURE.md)**
 
 ---
 
 ## 🚀 Quick Start
 
-Get the entire stack (Blockchain + API + Client) running in under 2 minutes.
+The entire stack is Dockerized. You can spin up the blockchain, backend, and frontend with a single command.
 
 ### Prerequisites
-*   [Docker Desktop](https://www.docker.com/products/docker-desktop) (Running)
-*   [Git](https://git-scm.com/)
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop) installed.
 
-### One-Command Launch
+### One-Command Setup
 
-1.  **Clone the Repository**
+1.  **Clone & Configure**:
     ```bash
     git clone https://github.com/alanvito1/bomb_dash.git
     cd bomb_dash
-    ```
-
-2.  **Configure Environment**
-    ```bash
     cp .env.example .env
-    # No edits needed for local dev!
     ```
 
-3.  **Ignite the Engine**
+2.  **Launch**:
     ```bash
     sudo docker compose up --build
     ```
-    *Wait for the "Backend Server Ready" message.*
 
-4.  **Play**
-    *   🎮 **Game Client**: [http://localhost:5173](http://localhost:5173)
-    *   🔌 **API Endpoint**: [http://localhost:3000](http://localhost:3000)
-    *   ⛓️ **Local Chain**: [http://localhost:8545](http://localhost:8545)
+3.  **Play**:
+    *   **Game**: [http://localhost:5173](http://localhost:5173)
+    *   **API**: [http://localhost:3000](http://localhost:3000)
 
 ---
 
 ## 📚 Documentation
 
-Detailed manuals for every persona:
+For deeper dives into the code and design:
 
-*   **[Architecture Guide](./docs/ARCHITECTURE.md)**: C4 Diagrams, ERD, and Sequence Flows.
-*   **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Deep dive into the code implementation.
+*   **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, containers, and ERD diagrams.
 *   **[Project Briefing](./docs/BRIEFING.md)**: High-level vision and economic model.
-*   **[Learnings](./docs/LEARNINGS.md)**: Architectural decisions and trade-offs.
+*   **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Technical implementation details.
+*   **[Learnings](./docs/LEARNINGS.md)**: Log of architectural decisions and lessons learned.
 
 ---
 
 ## 🗺 Roadmap
 
-Track our journey from Alpha to Mainnet Launch.
+Check our progress and upcoming features:
 ➡️ **[View ROADMAP.md](./ROADMAP.md)**
 
 ---
 
 ## 🤝 Contributing
 
-We welcome code champions! Please read our **[Contributing Guide](./CONTRIBUTING.md)** for:
-*   Coding Standards (Linting/Formatting)
-*   Pull Request Process
-*   Development Setup Details
+We welcome contributions! Please read our **[Contributing Guide](./CONTRIBUTING.md)** to learn about our development process, coding standards, and how to submit Pull Requests.
 
 ---
 
-*Documented with ✍️ by Scribe*
+*Built with ❤️ by the Bomb Dash Team*
