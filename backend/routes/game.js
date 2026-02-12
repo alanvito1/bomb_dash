@@ -4,7 +4,23 @@ const router = express.Router();
 const db = require('../database.js');
 const admin = require('../admin.js');
 const oracle = require('../oracle.js');
-const soloRewardService = require('../solo_reward_service.js');
+const _soloRewardService = require('../solo_reward_service.js');
+
+// Define upgrade costs and effects
+const heroUpgrades = {
+  speed: {
+    cost: (hero) => 10 + hero.level * 2,
+    effect: (hero) => ({ speed: hero.speed + 10 }),
+  },
+  power: {
+    cost: (hero) => 20 + hero.level * 5,
+    effect: (hero) => ({ damage: hero.damage + 2 }),
+  },
+  range: {
+    cost: (hero) => 15 + hero.level * 3,
+    effect: (hero) => ({ bombSize: hero.bombSize + 0.5 }),
+  },
+};
 
 router.get('/settings', async (req, res) => {
   try {
