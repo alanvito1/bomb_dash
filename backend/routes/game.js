@@ -199,7 +199,7 @@ router.post('/altar/donate', async (req, res) => {
     }
 
     if (!provider) {
-       throw new Error('Blockchain provider not available');
+      throw new Error('Blockchain provider not available');
     }
 
     const receipt = await provider.getTransactionReceipt(txHash);
@@ -247,7 +247,9 @@ router.post('/altar/donate', async (req, res) => {
 
     if (value < expectedWei) {
       throw new Error(
-        `Transfer amount ${ethers.formatEther(value)} is less than declared ${amount}`
+        `Transfer amount ${ethers.formatEther(
+          value
+        )} is less than declared ${amount}`
       );
     }
 

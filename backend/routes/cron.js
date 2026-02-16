@@ -45,7 +45,7 @@ router.get('/sync-staking', verifyCron, async (req, res) => {
   try {
     const isOracleReady = await oracle.initOracle();
     if (!isOracleReady) {
-        throw new Error('Oracle initialization failed');
+      throw new Error('Oracle initialization failed');
     }
 
     const provider = oracle.getProvider();
@@ -149,16 +149,17 @@ router.get('/distribute-rewards', verifyCron, async (req, res) => {
   try {
     const isOracleReady = await oracle.initOracle();
     if (!isOracleReady) {
-         // Log and return specific message so cron doesn't look like a hard crash
-         console.warn('Oracle not ready for rewards distribution.');
-         return res.json({ success: false, message: 'Oracle not ready' });
+      // Log and return specific message so cron doesn't look like a hard crash
+      console.warn('Oracle not ready for rewards distribution.');
+      return res.json({ success: false, message: 'Oracle not ready' });
     }
 
     const provider = oracle.getProvider();
     // Re-create wallet since we need to read contract state that oracle.js might not expose directly
     // OR just use the contract instance if we could access it.
     // We'll create a read-only instance to get the timestamp.
-    const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
+    const PERPETUAL_REWARD_POOL_ADDRESS =
+      process.env.PERPETUAL_REWARD_POOL_ADDRESS;
     const PERPETUAL_REWARD_POOL_ABI = require('../contracts/PerpetualRewardPool.json');
 
     const rewardPool = new ethers.Contract(
