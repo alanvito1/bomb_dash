@@ -8,6 +8,12 @@ module.exports = {
     actionTimeout: 10000,
     ignoreHTTPSErrors: true,
   },
+  webServer: {
+    command: 'npm run dev',
+    port: 5173,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
   projects: [
     {
       name: 'smoke',
