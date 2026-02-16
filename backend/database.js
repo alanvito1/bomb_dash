@@ -3,13 +3,32 @@ const { getExperienceForLevel, getLevelFromExperience } = require('./rpg');
 
 // Use in-memory SQLite database for tests, otherwise use a dedicated file.
 const isTestEnv = process.env.NODE_ENV === 'test';
-const storage = isTestEnv ? ':memory:' : process.env.DB_PATH || './game.sqlite';
+let sequelize;
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: storage,
-  logging: false, // Disable logging, especially for tests. Set to console.log for debugging.
-});
+if (process.env.DATABASE_URL) {
+  // Use PostgreSQL for production (Supabase/Neon/Vercel)
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    protocol: 'postgres',
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, // For Supabase/Heroku/Vercel connections
+      },
+    },
+  });
+} else {
+  // Use SQLite for local development and testing
+  const storage = isTestEnv
+    ? ':memory:'
+    : process.env.DB_PATH || './game.sqlite';
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: storage,
+    logging: false, // Disable logging, especially for tests. Set to console.log for debugging.
+  });
+}
 
 // Define Models
 const User = sequelize.define(
@@ -142,6 +161,10 @@ const MatchmakingQueue = sequelize.define(
       allowNull: false,
       defaultValue: 'searching',
     },
+    match_data: {
+      type: DataTypes.TEXT, // Storing JSON as text for compatibility
+      allowNull: true,
+    },
   },
   { tableName: 'matchmaking_queue', timestamps: false }
 );
@@ -253,6 +276,24 @@ async function runMigrations(queryInterface) {
       console.log(
         "MIGRATION: 'sprite_name' column already exists in 'heroes' table."
       );
+    }
+  }
+
+  // --- MatchmakingQueue Table Migration ---
+  if (tables.includes('matchmaking_queue')) {
+    const queueTableInfo = await queryInterface.describeTable(
+      'matchmaking_queue'
+    );
+
+    if (!queueTableInfo.match_data) {
+      console.log(
+        "MIGRATION: 'match_data' column not found in 'matchmaking_queue' table. Adding it now..."
+      );
+      await queryInterface.addColumn('matchmaking_queue', 'match_data', {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      });
+      console.log("MIGRATION: 'match_data' column added successfully.");
     }
   }
 
@@ -669,6 +710,17 @@ async function getMatchmakingQueueUser(userId) {
   return MatchmakingQueue.findOne({ where: { user_id: userId } });
 }
 
+async function updateMatchmakingQueueStatus(userId, status, matchData = null) {
+  const updatePayload = { status };
+  if (matchData) {
+    updatePayload.match_data = JSON.stringify(matchData);
+  }
+  const [changes] = await MatchmakingQueue.update(updatePayload, {
+    where: { user_id: userId },
+  });
+  return { success: true, changes };
+}
+
 async function getAltarStatus() {
   return AltarStatus.findByPk(1);
 }
@@ -796,6 +848,7 @@ module.exports = {
   addToMatchmakingQueue,
   removeFromMatchmakingQueue,
   getMatchmakingQueueUser,
+  updateMatchmakingQueueStatus,
   getAltarStatus,
   updateAltarStatus,
   addDonationToAltar,
@@ -809,4 +862,5 @@ module.exports = {
   sequelize,
   User,
   Hero,
+  MatchmakingQueue,
 };

@@ -17,6 +17,11 @@ const config: HardhatUserConfig = {
       url: process.env.TESTNET_RPC_URL || "https://data-seed-prebsc-1-s1.binance.org:8545/",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    amoy: {
+      url: process.env.TESTNET_RPC_URL || "https://rpc-amoy.polygon.technology/",
+      chainId: 80002,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   mocha: {
     timeout: 40000
