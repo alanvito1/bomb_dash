@@ -195,6 +195,16 @@ const AltarStatus = sequelize.define(
   { tableName: 'altar_status', timestamps: false }
 );
 
+const AltarDonation = sequelize.define(
+  'AltarDonation',
+  {
+    tx_hash: { type: DataTypes.STRING, primaryKey: true },
+    amount: { type: DataTypes.INTEGER, allowNull: false },
+    timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { tableName: 'altar_donations', timestamps: false }
+);
+
 const SoloGameHistory = sequelize.define(
   'SoloGameHistory',
   {
@@ -730,14 +740,28 @@ async function updateAltarStatus(statusData) {
   return { success: true, changes };
 }
 
-async function addDonationToAltar(amount) {
-  const altar = await AltarStatus.findByPk(1);
-  if (altar) {
-    altar.current_donations += amount;
-    await altar.save();
-    return { success: true, changes: 1 };
-  }
-  return { success: false, changes: 0 };
+async function addDonationToAltar(amount, txHash) {
+  if (!txHash) throw new Error('txHash required for donation');
+  return sequelize.transaction(async (t) => {
+    // Check duplicate
+    const existing = await AltarDonation.findByPk(txHash, { transaction: t });
+    if (existing) {
+      throw new Error('Transaction already processed');
+    }
+
+    await AltarDonation.create(
+      { tx_hash: txHash, amount: amount },
+      { transaction: t }
+    );
+
+    const altar = await AltarStatus.findByPk(1, { transaction: t });
+    if (altar) {
+      altar.current_donations += amount;
+      await altar.save({ transaction: t });
+      return { success: true, changes: 1 };
+    }
+    return { success: false, changes: 0 };
+  });
 }
 
 async function grantRewards(userId, bcoinReward, accountXpReward) {
@@ -863,4 +887,5 @@ module.exports = {
   User,
   Hero,
   MatchmakingQueue,
+  AltarDonation,
 };

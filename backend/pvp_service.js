@@ -60,9 +60,21 @@ async function enterRankedQueue(userId, heroId, userAddress, txHash) {
   const tier = hero.level; // O tier é baseado no nível do herói
   const queueResult = await matchmaking.joinQueue(userId, heroId, tier);
 
+  // 4. Tentar encontrar partida imediatamente (Hybrid Matchmaking)
+  const immediateMatch = await matchmaking.findMatchForPlayer(userId);
+  if (immediateMatch) {
+    return {
+      success: true,
+      message: 'Partida encontrada!',
+      queueId: queueResult.queueId,
+      ...immediateMatch,
+    };
+  }
+
   return {
     success: true,
     message: 'Você entrou na fila ranqueada!',
+    status: 'QUEUED',
     ...queueResult,
   };
 }
@@ -154,9 +166,21 @@ async function enterWagerQueue(userId, heroId, tierId) {
     `wager_${tierId}`
   );
 
+  // 4. Try to find match immediately (Hybrid Matchmaking)
+  const immediateMatch = await matchmaking.findMatchForPlayer(userId);
+  if (immediateMatch) {
+    return {
+      success: true,
+      message: `Match found for ${tier.name} wager!`,
+      queueId: queueResult.queueId,
+      ...immediateMatch,
+    };
+  }
+
   return {
     success: true,
     message: `Entered ${tier.name} wager queue!`,
+    status: 'QUEUED',
     ...queueResult,
   };
 }

@@ -194,9 +194,77 @@ async function getQueueStatus(userId) {
   return { status: 'not_in_queue' };
 }
 
+/**
+ * Attempts to find a match for a specific player immediately.
+ * @param {number} userId - The ID of the user.
+ * @returns {Promise<object|null>} The match details if found, or null.
+ */
+async function findMatchForPlayer(userId) {
+  try {
+    const playerQueue = await db.MatchmakingQueue.findOne({
+      where: { user_id: userId },
+    });
+    if (!playerQueue || playerQueue.status !== 'searching') return null;
+
+    const config = JSON.parse(await fs.readFile(CONFIG_PATH, 'utf8'));
+    const levelRange = config.matchmakingLevelRange || 5;
+
+    // Fetch potential opponents in same tier
+    const potentialOpponents = await db.MatchmakingQueue.findAll({
+      where: {
+        status: 'searching',
+        tier: playerQueue.tier,
+        user_id: { [_Op.ne]: userId },
+      },
+      limit: 10, // Check first 10 candidates for speed
+      order: [['entry_time', 'ASC']],
+    });
+
+    const processedIds = new Set();
+    const match = await findHumanOpponent(
+      playerQueue,
+      potentialOpponents,
+      processedIds,
+      levelRange
+    );
+
+    if (match) {
+      const player1Id = match.player1.userId;
+      const player2Id = match.player2.userId;
+
+      console.log(
+        `[Matchmaking] Immediate match created for User ${player1Id} against User ${player2Id}`
+      );
+
+      // Update Player 1
+      await db.updateMatchmakingQueueStatus(player1Id, 'found', {
+        opponent: match.player2,
+        tier: playerQueue.tier,
+      });
+
+      // Update Player 2
+      await db.updateMatchmakingQueueStatus(player2Id, 'found', {
+        opponent: match.player1,
+        tier: playerQueue.tier,
+      });
+
+      return {
+        status: 'MATCH_FOUND',
+        matchId: `${player1Id}_${player2Id}_${Date.now()}`,
+        opponent: match.player2,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error in findMatchForPlayer:', error);
+    return null;
+  }
+}
+
 module.exports = {
   joinQueue,
   leaveQueue,
   processQueue,
   getQueueStatus,
+  findMatchForPlayer,
 };
