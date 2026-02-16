@@ -146,26 +146,25 @@ async function performInitialization() {
       let heroTokenAddress;
 
       try {
-          const addressesFile = await fs.readFile(
-            contractAddressesPath,
-            'utf8'
+        const addressesFile = await fs.readFile(contractAddressesPath, 'utf8');
+        const addresses = JSON.parse(addressesFile);
+        if (addresses.mockHeroNFTAddress) {
+          heroTokenAddress = addresses.mockHeroNFTAddress;
+          AVRE.success(
+            `Successfully loaded MockHeroNFT address: ${heroTokenAddress}`
           );
-          const addresses = JSON.parse(addressesFile);
-          if (addresses.mockHeroNFTAddress) {
-            heroTokenAddress = addresses.mockHeroNFTAddress;
-            AVRE.success(
-              `Successfully loaded MockHeroNFT address: ${heroTokenAddress}`
-            );
-          }
+        }
       } catch (error) {
-          AVRE.warn(
-            `Could not load contract addresses file: ${error.message}. Checking ENV vars.`
+        AVRE.warn(
+          `Could not load contract addresses file: ${error.message}. Checking ENV vars.`
+        );
+        // Fallback to ENV var if available
+        if (process.env.MOCK_HERO_NFT_ADDRESS) {
+          heroTokenAddress = process.env.MOCK_HERO_NFT_ADDRESS;
+          AVRE.success(
+            `Loaded MockHeroNFT address from ENV: ${heroTokenAddress}`
           );
-          // Fallback to ENV var if available
-          if (process.env.MOCK_HERO_NFT_ADDRESS) {
-              heroTokenAddress = process.env.MOCK_HERO_NFT_ADDRESS;
-              AVRE.success(`Loaded MockHeroNFT address from ENV: ${heroTokenAddress}`);
-          }
+        }
       }
 
       if (heroTokenAddress) {
@@ -176,14 +175,16 @@ async function performInitialization() {
         await stakingListener.initStakingListener();
         AVRE.success('Hero staking listener initialized.');
       } else {
-        AVRE.warn('Hero Token Address not found. NFT services partially disabled.');
+        AVRE.warn(
+          'Hero Token Address not found. NFT services partially disabled.'
+        );
       }
 
       const tournamentControllerContract =
         oracle.getTournamentControllerContract();
       if (tournamentControllerContract) {
-         tournamentService.initTournamentService(tournamentControllerContract);
-         AVRE.success('Tournament service initialized.');
+        tournamentService.initTournamentService(tournamentControllerContract);
+        AVRE.success('Tournament service initialized.');
       }
     } else {
       AVRE.warn(
@@ -210,23 +211,23 @@ async function performInitialization() {
 
 // Middleware to ensure initialization
 app.use(async (req, res, next) => {
-    // Skip init for health checks or static files if needed, but for API we need DB.
-    if (!isInitialized) {
-        if (!initPromise) {
-            initPromise = performInitialization();
-        }
-        try {
-            await initPromise;
-        } catch (error) {
-            console.error("Initialization Error:", error);
-            return res.status(503).json({
-                success: false,
-                message: 'Server failed to initialize.',
-                error: error.message
-            });
-        }
+  // Skip init for health checks or static files if needed, but for API we need DB.
+  if (!isInitialized) {
+    if (!initPromise) {
+      initPromise = performInitialization();
     }
-    next();
+    try {
+      await initPromise;
+    } catch (error) {
+      console.error('Initialization Error:', error);
+      return res.status(503).json({
+        success: false,
+        message: 'Server failed to initialize.',
+        error: error.message,
+      });
+    }
+  }
+  next();
 });
 
 app.use(express.static(path.join(__dirname, '..')));
@@ -257,27 +258,27 @@ app.use('/api/cron', cronRoutes); // New Cron Route
 if (require.main === module) {
   // Use a self-invoking function to handle async init before listen
   (async () => {
-      try {
-          await performInitialization();
-          app.listen(PORT, () => {
-            console.log(
-                `${colors.red}=============================================${colors.reset}`
-            );
-            AVRE.success(`HTTP server started on port ${PORT}.`);
-            console.log(
-                `${colors.red}=============================================${colors.reset}`
-            );
+    try {
+      await performInitialization();
+      app.listen(PORT, () => {
+        console.log(
+          `${colors.red}=============================================${colors.reset}`
+        );
+        AVRE.success(`HTTP server started on port ${PORT}.`);
+        console.log(
+          `${colors.red}=============================================${colors.reset}`
+        );
 
-            // If local, we CAN start intervals for convenience
-            if (process.env.NODE_ENV !== 'production') {
-                console.log("Running in LOCAL mode: Starting background intervals.");
-                setInterval(matchmaking.processQueue, 5000);
-            }
-          });
-      } catch (e) {
-          console.error("Failed to start local server:", e);
-          process.exit(1);
-      }
+        // If local, we CAN start intervals for convenience
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Running in LOCAL mode: Starting background intervals.');
+          setInterval(matchmaking.processQueue, 5000);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to start local server:', e);
+      process.exit(1);
+    }
   })();
 }
 

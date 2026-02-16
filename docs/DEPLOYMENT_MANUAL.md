@@ -38,6 +38,7 @@ WAGER_ARENA_ADDRESS=""
 O projeto possui dependências tanto na raiz (para Hardhat) quanto no backend.
 
 Para uma instalação inicial ou para atualizar dependências, use `npm install`:
+
 ```bash
 # Instalar dependências do Hardhat e do projeto principal
 npm install
@@ -61,19 +62,19 @@ Para interagir com o jogo na Testnet, você precisará configurar sua carteira M
 1.  Abra a MetaMask e clique no seletor de redes (geralmente no topo).
 2.  Clique em "Adicionar Rede" (Add Network).
 3.  Preencha os seguintes detalhes:
-    *   **Nome da Rede:** BSC Testnet
-    *   **Nova URL RPC:** `https://data-seed-prebsc-1-s1.binance.org:8545/`
-    *   **ID da Cadeia:** `97`
-    *   **Símbolo da Moeda:** `tBNB`
-    *   **URL do Block Explorer:** `https://testnet.bscscan.com`
+    - **Nome da Rede:** BSC Testnet
+    - **Nova URL RPC:** `https://data-seed-prebsc-1-s1.binance.org:8545/`
+    - **ID da Cadeia:** `97`
+    - **Símbolo da Moeda:** `tBNB`
+    - **URL do Block Explorer:** `https://testnet.bscscan.com`
 4.  Salve a rede.
 
 ### 2.1. Obtendo tBNB (BNB de Teste)
 
 Você precisará de `tBNB` para pagar as taxas de gás (gas fees) na Testnet. Você pode obtê-lo gratuitamente em "faucets":
 
-*   **Faucet Oficial da BSC:** [https://testnet.binance.org/faucet-smart](https://testnet.binance.org/faucet-smart)
-*   **Faucet da Chainlink:** [https://faucets.chain.link/bnb-chain-testnet](https://faucets.chain.link/bnb-chain-testnet)
+- **Faucet Oficial da BSC:** [https://testnet.binance.org/faucet-smart](https://testnet.binance.org/faucet-smart)
+- **Faucet da Chainlink:** [https://faucets.chain.link/bnb-chain-testnet](https://faucets.chain.link/bnb-chain-testnet)
 
 ## 3. Deploy dos Smart Contracts
 
@@ -111,9 +112,9 @@ O projeto inclui um `Dockerfile` e `docker-compose.yml` para facilitar o deploy 
     ```bash
     docker-compose up -d
     ```
-    *Nota: Certifique-se de que o seu `docker-compose.yml` está configurado para passar as variáveis de ambiente do arquivo `.env` para o contêiner.*
+    _Nota: Certifique-se de que o seu `docker-compose.yml` está configurado para passar as variáveis de ambiente do arquivo `.env` para o contêiner._
 
 ## 5. Acessando a Aplicação
 
-*   **Jogo Principal:** Abra o arquivo `index.html` em um navegador com a MetaMask instalada e conectada à BSC Testnet.
-*   **Painel de Administrador:** Acesse `http://localhost:3000/admin.html` (ou o endereço do seu servidor). Você será solicitado a inserir o `ADMIN_SECRET` que você definiu no arquivo `.env`.
+- **Jogo Principal:** Abra o arquivo `index.html` em um navegador com a MetaMask instalada e conectada à BSC Testnet.
+- **Painel de Administrador:** Acesse `http://localhost:3000/admin.html` (ou o endereço do seu servidor). Você será solicitado a inserir o `ADMIN_SECRET` que você definiu no arquivo `.env`.

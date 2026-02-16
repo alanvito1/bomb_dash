@@ -15,12 +15,14 @@ Este documento registra as decisões importantes tomadas durante o ciclo de vida
 **Problema:** Ao longo do desenvolvimento, a suíte de testes E2E com Playwright demonstrou ser extremamente frágil e propensa a falhas de timeout. A causa raiz foi identificada como uma "colisão silenciosa" entre o servidor de desenvolvimento Vite e o motor do Phaser. A simples adição de novos arquivos de cena (mesmo que vazios ou sintaticamente perfeitos) impedia o jogo de inicializar no ambiente de teste do Playwright, resultando em uma tela preta e timeouts, embora o jogo funcionasse normalmente no navegador.
 
 **Ações de Mitigação Tentadas:**
+
 - Aumento dos tempos de espera (timeouts).
 - Instalação e reinstalação de dependências do Playwright.
 - Limpeza do cache do Vite (`node_modules/.vite`).
 - Depuração sistemática, isolando cenas e importações.
 
 **Decisão Estratégica:** Dado que a resolução do problema de E2E exigiria uma investigação profunda e potencialmente demorada na configuração do Vite/Phaser, o que bloquearia a entrega da v1.0, a decisão foi **priorizar a validação manual para as novas interfaces de usuário** (como o lobby de torneios). Uma nova estratégia de testes automatizados foi implementada, focando em:
+
 1.  **Health Checks:** Scripts rápidos para verificar se o jogo "bota" corretamente.
 2.  **Smoke Tests:** Testes mínimos para garantir que as cenas principais carregam.
 3.  **Testes de Integração:** Testes mais focados em fluxos específicos com mocking pesado.

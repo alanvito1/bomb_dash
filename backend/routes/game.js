@@ -6,6 +6,22 @@ const admin = require('../admin.js');
 const oracle = require('../oracle.js');
 const soloRewardService = require('../solo_reward_service.js');
 
+// Define hero upgrades logic (moved from external or previous inline)
+const heroUpgrades = {
+  damage: {
+    cost: (hero) => 10 * hero.level, // Example cost formula
+    effect: (hero) => ({ damage: hero.damage + 1 }),
+  },
+  health: {
+    cost: (hero) => 10 * hero.level,
+    effect: (hero) => ({ maxHp: hero.maxHp + 10, hp: hero.maxHp + 10 }),
+  },
+  speed: {
+    cost: (hero) => 15 * hero.level,
+    effect: (hero) => ({ speed: hero.speed + 5 }),
+  },
+};
+
 router.get('/settings', async (req, res) => {
   try {
     const settings = await admin.getGameSettings();
