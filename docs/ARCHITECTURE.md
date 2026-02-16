@@ -1,29 +1,27 @@
-# Architecture & Design
+# Architecture & Design (Serverless Edition)
 
 ## System Context (C4 Level 1)
 
-This diagram illustrates the high-level interaction between the User, the Bomb Dash Game System, and external Blockchain components.
+This diagram illustrates the high-level interaction between the User, the Bomb Dash Game System (Serverless), and external Blockchain components.
 
 ```mermaid
 C4Context
-    title System Context Diagram for Bomb Dash Web3
+    title System Context Diagram for Bomb Dash Web3 (Vercel Native)
 
     Person(player, "Player", "A web3 gamer playing via browser")
-    System(bombDash, "Bomb Dash System", "The full-stack game application")
+    System(bombDash, "Bomb Dash System", "Full-stack Next.js/Express app on Vercel")
 
-    System_Ext(bsc, "BNB Smart Chain", "Blockchain network for assets and currency")
-    System_Ext(wallet, "User Wallet", "MetaMask/WalletConnect for signing")
+    System_Ext(bsc, "BNB Smart Chain", "Blockchain network for assets (Heroes, BCOIN)")
+    System_Ext(supabase, "Supabase", "Managed PostgreSQL Database & Auth")
 
     Rel(player, bombDash, "Plays game, manages heroes", "HTTPS")
-    Rel(player, wallet, "Signs transactions", "Local/Browser")
-    Rel(bombDash, wallet, "Requests signatures", "Web3 Provider")
-    Rel(wallet, bsc, "Submits transactions", "RPC")
-    Rel(bombDash, bsc, "Reads/Writes contract state", "JSON-RPC")
+    Rel(bombDash, supabase, "Stores user/game state", "PostgreSQL Connection")
+    Rel(bombDash, bsc, "Reads state, Oracle signs transactions", "JSON-RPC")
 ```
 
 ## Container Diagram (C4 Level 2)
 
-This diagram breaks down the "Bomb Dash System" into its core executable containers.
+The system is deployed as a Serverless application on Vercel.
 
 ```mermaid
 C4Container
@@ -31,24 +29,25 @@ C4Container
 
     Person(player, "Player", "Browser-based user")
 
-    Container_Boundary(app, "Bomb Dash Application") {
-        Container(frontend, "Frontend SPA", "Vite, Phaser 3, Ethers.js", "Game client running in browser")
-        Container(backend, "Backend API", "Node.js, Express", "Game logic, matchmaking, off-chain state")
-        ContainerDb(db, "Game Database", "SQLite (Dev) / MySQL (Prod)", "Stores user profiles, stats, match history")
+    Container_Boundary(app, "Vercel Deployment") {
+        Container(frontend, "Frontend", "React / Phaser 3", "Game client served via Vercel Edge")
+        Container(backend, "Backend API (Serverless)", "Node.js / Express", "Stateless functions executing game logic")
+        Container(cron, "Cron Jobs", "Vercel Cron", "Scheduled tasks for matchmaking & sync")
     }
 
-    System_Ext(bsc, "Smart Contracts", "Hardhat/BSC: HeroNFT, BCOIN, RewardPool")
+    ContainerDb(db, "Supabase Database", "PostgreSQL", "Persistent storage for user profiles and match history")
+    System_Ext(bsc, "Smart Contracts", "BSC Testnet: HeroNFT, BCOIN, RewardPool")
 
     Rel(player, frontend, "Interacts with", "HTTPS")
-    Rel(frontend, backend, "API Calls (Auth, Stats)", "JSON/HTTPS")
-    Rel(backend, db, "Reads/Writes", "Sequelize")
-    Rel(frontend, bsc, "Direct Contract Calls (Mint, Stake)", "Ethers.js")
-    Rel(backend, bsc, "Oracle Actions (Verify, Sign)", "Ethers.js")
+    Rel(frontend, backend, "API Calls (/api/*)", "JSON/HTTPS")
+    Rel(backend, db, "Reads/Writes State", "Sequelize / pg")
+    Rel(backend, bsc, "Oracle Operations (Sign/Verify)", "Ethers.js")
+    Rel(cron, backend, "Triggers Periodic Tasks", "HTTP GET")
 ```
 
 ## Database Schema (ERD)
 
-The following diagram represents the data model managed by the Backend API.
+The following diagram represents the data model managed by Supabase (PostgreSQL).
 
 ```mermaid
 erDiagram
@@ -120,29 +119,41 @@ erDiagram
     }
 ```
 
-## Key Flows
+## Key Flows & Processes
 
-### 1. Solo Reward Claiming
+### 1. Serverless "Oracle" Operations
+Unlike a persistent server, the Oracle runs on-demand within Vercel Functions.
+- **Trigger**: User requests a withdrawal or reward claim.
+- **Action**: Backend function spins up, initializes `ethers.Wallet` from env vars, checks logic, signs message, and returns signature.
+- **Shutdown**: Function terminates immediately after response.
+
+### 2. Scheduled Sync (Cron Jobs)
+Since there is no long-running process to listen for blockchain events, we use polling via Vercel Crons.
 
 ```mermaid
 sequenceDiagram
-    participant P as Player
-    participant FE as Frontend
-    participant BE as Backend
-    participant SC as Smart Contract (RewardPool)
+    participant Cron as Vercel Cron
+    participant API as Backend API (/api/cron/*)
+    participant DB as Supabase
+    participant BSC as Smart Contract
 
-    P->>FE: Plays Solo Game
-    FE->>BE: POST /api/solo/game-over (Result)
-    BE->>BE: Validate & Log Game (SoloGameHistory)
-    BE-->>FE: Acknowledge
-
-    P->>FE: Click "Claim Rewards"
-    FE->>BE: POST /api/solo/claim-reward
-    BE->>BE: Calculate Pending Rewards
-    BE->>BE: Generate Oracle Signature
-    BE-->>FE: Return { amount, signature, nonce }
-
-    FE->>SC: claimReward(amount, signature, nonce)
-    SC->>SC: Verify Oracle Signature
-    SC->>P: Transfer BCOIN
+    Note over Cron, BSC: Syncing Staking Status (Every Minute)
+    Cron->>API: GET /api/cron/sync-staking
+    API->>DB: Get last_processed_block
+    API->>BSC: queryFilter(HeroDeposited, fromBlock, toBlock)
+    BSC-->>API: List of Events
+    loop For Each Event
+        API->>DB: Update Hero Status (staked/in_wallet)
+    end
+    API->>DB: Update last_processed_block
 ```
+
+### 3. Degraded Mode (No Blockchain)
+If `ORACLE_PRIVATE_KEY` or `BSC_RPC_URL` are missing:
+- **Initialization**: `oracle.initOracle()` returns `false`.
+- **Gameplay**: Users can still play with "Mock Heroes".
+- **Restrictions**:
+    - No NFT verification.
+    - No On-Chain rewards (BCOIN).
+    - No PvP Wagers (since they require on-chain escrow).
+- **Purpose**: Allows development and testing of the game loop without blockchain dependencies.

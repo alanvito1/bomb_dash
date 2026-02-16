@@ -1,120 +1,92 @@
-# Bomb Dash Web3 - Manual de Deploy e Operação (V2.0 - Testnet)
+# AVRE Deployment Manual
 
-Este documento fornece um guia passo a passo para implantar, configurar e operar o ambiente completo do Bomb Dash Web3 na **Binance Smart Chain (BSC) Testnet**.
+This guide describes how to deploy the AVRE backend to Vercel (Serverless Functions) and Supabase (PostgreSQL Database).
 
-## 1. Configuração do Ambiente de Desenvolvimento
+## Prerequisites
 
-### 1.1. Variáveis de Ambiente (`.env`)
+1.  **GitHub Account**: With access to this repository.
+2.  **Vercel Account**: [Sign up here](https://vercel.com).
+3.  **Supabase Account**: [Sign up here](https://supabase.com).
 
-Crie um arquivo `.env` na raiz do projeto. Este arquivo é crucial para armazenar chaves privadas e URLs de API de forma segura.
+---
 
-**NUNCA adicione o arquivo `.env` ao controle de versão (Git).**
+## Step 1: Database Setup (Supabase)
 
-```bash
-# URL do RPC para a BSC Testnet. Você pode obter uma em serviços como Infura, Ankr ou QuickNode.
-TESTNET_RPC_URL="https://data-seed-prebsc-1-s1.binance.org:8545/"
+1.  **Create a Project**:
+    *   Log in to Supabase and create a new project.
+    *   Choose a strong database password and save it.
+    *   Select the region closest to your users.
 
-# A chave privada da carteira que será usada para implantar os contratos.
-# IMPORTANTE: Use uma carteira de desenvolvimento, NUNCA uma carteira com fundos reais.
-PRIVATE_KEY="SUA_CHAVE_PRIVADA_AQUI"
+2.  **Get Connection String**:
+    *   Go to **Project Settings** -> **Database**.
+    *   Under **Connection String**, select **URI**.
+    *   Copy the string. It will look like: `postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres`.
+    *   *Note: You will need this for the `DATABASE_URL` environment variable later.*
 
-# Chave secreta para a assinatura de tokens JWT no backend.
-JWT_SECRET="seu-segredo-super-forte-aqui"
+3.  **Initialize Schema**:
+    *   In the Supabase Dashboard, go to the **SQL Editor** (icon on the left sidebar).
+    *   Click **New Query**.
+    *   Open the file `supabase_schema.sql` from this repository root on your local machine.
+    *   Copy the entire content of `supabase_schema.sql` and paste it into the Supabase SQL Editor.
+    *   Click **Run**.
+    *   *Success Check*: You should see "Success. No rows returned." and tables like `users`, `heroes` created in the Table Editor.
 
-# Segredo para acessar o painel de administrador.
-ADMIN_SECRET="supersecret"
+---
 
-# Endereço da carteira do Oráculo que irá reportar os resultados aos contratos.
-ORACLE_PRIVATE_KEY="SUA_CHAVE_PRIVADA_DO_ORACULO_AQUI"
+## Step 2: Vercel Deployment
 
-# Endereços dos contratos (serão preenchidos após o deploy)
-TOURNAMENT_CONTROLLER_ADDRESS=""
-PERPETUAL_REWARD_POOL_ADDRESS=""
-WAGER_ARENA_ADDRESS=""
-```
+1.  **Import Repository**:
+    *   Log in to Vercel.
+    *   Click **Add New...** -> **Project**.
+    *   Import the Git repository containing this code.
 
-### 1.2. Instalação de Dependências
+2.  **Configure Project**:
+    *   **Framework Preset**: Select "Other" (or let it auto-detect).
+    *   **Root Directory**: Keep as `./`.
 
-O projeto possui dependências tanto na raiz (para Hardhat) quanto no backend.
+3.  **Environment Variables**:
+    *   Expand the **Environment Variables** section.
+    *   Add the following variables (see reference below for details).
 
-Para uma instalação inicial ou para atualizar dependências, use `npm install`:
+    | Variable Key | Description | Example Value |
+    | :--- | :--- | :--- |
+    | `NODE_ENV` | Environment Mode | `production` |
+    | `DATABASE_URL` | Supabase Connection URI | `postgresql://...` |
+    | `JWT_SECRET` | Secret for signing tokens | `long-random-string` |
+    | `FRONTEND_DOMAIN` | Domain for SIWE Verification | `avre-game.vercel.app` |
+    | `CHAIN_ID` | Blockchain Network ID | `97` (BSC Testnet) |
+    | `ADMIN_SECRET` | Secret for Admin/Debug Routes | `super-secret-admin-key` |
+    | `ORACLE_PRIVATE_KEY` | Oracle Wallet Private Key | `0x123...` |
+    | `TESTNET_RPC_URL` | Blockchain RPC URL | `https://data-seed-prebsc-1-s1.binance.org:8545/` |
+    | `TOURNAMENT_CONTROLLER_ADDRESS` | Smart Contract Address | `0x...` |
+    | `PERPETUAL_REWARD_POOL_ADDRESS` | Smart Contract Address | `0x...` |
+    | `HERO_STAKING_ADDRESS` | Smart Contract Address | `0x...` |
+    | `START_BLOCK_NUMBER` | Block to start syncing events | `35000000` |
+    | `ALTAR_WALLET_ADDRESS` | Wallet receiving donations | `0x...` |
 
-```bash
-# Instalar dependências do Hardhat e do projeto principal
-npm install
+4.  **Deploy**:
+    *   Click **Deploy**.
+    *   Wait for the build to complete.
 
-# Instalar dependências do backend
-npm install --prefix backend
-```
+---
 
-**Nota sobre Instalação Limpa:** Para garantir que todos os desenvolvedores e servidores usem as mesmas versões exatas de pacotes, é recomendado usar `npm ci` para instalações limpas e reproduzíveis, que se baseiam no arquivo `package-lock.json`.
+## Step 3: Verify Cron Jobs
 
-```bash
-# Exemplo de instalação limpa para garantir consistência
-npm ci
-npm ci --prefix backend
-```
+Vercel will automatically detect the Cron Jobs defined in `vercel.json`.
 
-## 2. Configuração da Carteira MetaMask
+1.  Go to your Vercel Project Dashboard.
+2.  Click on the **Settings** tab.
+3.  Click on **Cron Jobs** in the sidebar.
+4.  You should see the following jobs listed:
+    *   `/api/cron/matchmaking` (Every minute)
+    *   `/api/cron/sync-staking` (Every minute)
+    *   `/api/cron/check-altar` (Every 5 minutes)
+    *   `/api/cron/distribute-rewards` (Hourly)
 
-Para interagir com o jogo na Testnet, você precisará configurar sua carteira MetaMask.
+---
 
-1.  Abra a MetaMask e clique no seletor de redes (geralmente no topo).
-2.  Clique em "Adicionar Rede" (Add Network).
-3.  Preencha os seguintes detalhes:
-    - **Nome da Rede:** BSC Testnet
-    - **Nova URL RPC:** `https://data-seed-prebsc-1-s1.binance.org:8545/`
-    - **ID da Cadeia:** `97`
-    - **Símbolo da Moeda:** `tBNB`
-    - **URL do Block Explorer:** `https://testnet.bscscan.com`
-4.  Salve a rede.
+## Troubleshooting
 
-### 2.1. Obtendo tBNB (BNB de Teste)
-
-Você precisará de `tBNB` para pagar as taxas de gás (gas fees) na Testnet. Você pode obtê-lo gratuitamente em "faucets":
-
-- **Faucet Oficial da BSC:** [https://testnet.binance.org/faucet-smart](https://testnet.binance.org/faucet-smart)
-- **Faucet da Chainlink:** [https://faucets.chain.link/bnb-chain-testnet](https://faucets.chain.link/bnb-chain-testnet)
-
-## 3. Deploy dos Smart Contracts
-
-Com o arquivo `.env` configurado e sua carteira com `tBNB`, você pode implantar os contratos na BSC Testnet.
-
-Execute o seguinte comando na raiz do projeto:
-
-```bash
-npx hardhat run scripts/deploy.js --network bscTestnet
-```
-
-Após a execução, o script irá imprimir os endereços dos contratos implantados e **atualizará automaticamente o seu arquivo `.env`** com todos os endereços necessários. Não é necessário copiar e colar manualmente.
-
-## 4. Executando o Servidor Backend
-
-O servidor backend lê as variáveis de ambiente (incluindo os endereços dos contratos) para se conectar e interagir com a blockchain.
-
-### Usando Node (Desenvolvimento)
-
-Para iniciar o servidor diretamente com Node.js:
-
-```bash
-node backend/server.js
-```
-
-### Usando Docker (Produção/Staging)
-
-O projeto inclui um `Dockerfile` e `docker-compose.yml` para facilitar o deploy em produção.
-
-1.  **Build da Imagem:**
-    ```bash
-    docker-compose build
-    ```
-2.  **Iniciar os Contêineres:**
-    ```bash
-    docker-compose up -d
-    ```
-    _Nota: Certifique-se de que o seu `docker-compose.yml` está configurado para passar as variáveis de ambiente do arquivo `.env` para o contêiner._
-
-## 5. Acessando a Aplicação
-
-- **Jogo Principal:** Abra o arquivo `index.html` em um navegador com a MetaMask instalada e conectada à BSC Testnet.
-- **Painel de Administrador:** Acesse `http://localhost:3000/admin.html` (ou o endereço do seu servidor). Você será solicitado a inserir o `ADMIN_SECRET` que você definiu no arquivo `.env`.
+*   **Database Connection Error**: Ensure you appended `?pgbouncer=true` to the `DATABASE_URL` if using Supabase Transaction Pooler (port 6543), or check if "SSL mode" is required. The backend is configured to use SSL by default when `DATABASE_URL` is present.
+*   **Oracle Errors**: Check the Vercel Function logs. If the Oracle fails to initialize, check the RPC URL and Private Key.
+*   **SIWE Errors**: Ensure `FRONTEND_DOMAIN` matches exactly where the frontend is hosted (no `https://`, just the domain).

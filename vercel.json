@@ -32,6 +32,18 @@
     {
       "path": "/api/cron/matchmaking",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/sync-staking",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/distribute-rewards",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/check-altar",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
