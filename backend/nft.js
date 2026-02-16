@@ -2,7 +2,7 @@ const { ethers } = require('ethers');
 const db = require('./database.js'); // Import the database module
 
 // The proxy address for the Bombcrypto NFT contract (BHERO)
-const NFT_CONTRACT_ADDRESS = '0x30cc0553f6fa1faf6d7847891b9b36eb559dc618';
+const _NFT_CONTRACT_ADDRESS = '0x30cc0553f6fa1faf6d7847891b9b36eb559dc618';
 // The ABI for the implementation contract
 const NFT_ABI = [
   {

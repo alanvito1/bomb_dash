@@ -1,7 +1,7 @@
 const db = require('./database');
 const fs = require('fs').promises;
 const path = require('path');
-const { Op } = require('sequelize');
+const { Op: _Op } = require('sequelize');
 
 const CONFIG_PATH = path.join(__dirname, 'game_config.json');
 

@@ -96,7 +96,7 @@ async function reportRankedMatch(matchId, winnerAddress) {
   }
 
   const {
-    bcoin: bcoinReward,
+    bcoin: _bcoinReward,
     heroXp: heroXpReward,
     accountXp: accountXpReward,
     bonusApplied,

@@ -55,10 +55,17 @@ describe('Backend Services', function () {
 
     // Before running tests, initialize an in-memory DB and create a test user
     before(async function () {
-      process.env.DB_PATH = ':memory:'; // Use in-memory SQLite database for tests
+      // process.env.DB_PATH = ':memory:'; // Use in-memory SQLite database for tests
       await db.initDb();
-      const user = await db.createUserByAddress('0xTestUserForCheckpoints');
-      testUserId = user.userId;
+      try {
+        const user = await db.createUserByAddress(
+          '0xTestUserForCheckpoints' + Date.now()
+        );
+        testUserId = user.userId;
+      } catch (e) {
+        console.error('Failed to create test user', e);
+        throw e;
+      }
     });
 
     it('should return 0 for a player with no checkpoint', async function () {
