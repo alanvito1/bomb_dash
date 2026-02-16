@@ -17,13 +17,15 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
+    "pg": "^8.18.0",
+    "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
     "siwe": "^3.0.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "axios": "^1.12.2",
-    "chai": "^6.2.0",
+    "chai": "^4.3.10",
     "chai-as-promised": "^8.0.2",
     "chai-http": "^5.1.2",
     "dotenv": "^17.2.3",

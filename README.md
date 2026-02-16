@@ -24,20 +24,21 @@
 ## 💡 Why Bomb Dash?
 
 We are transforming a casual pixel-art game into a sustainable **Web3 E-Sport**.
-*   **Skill-Based Economy**: Earn rewards by competing in PvP or mastering PvE, not just by holding assets.
-*   **Sustainable Rewards**: A "Perpetual Reward Pool" inspired by Bitcoin's difficulty adjustment ensures longevity.
-*   **True Ownership**: Heroes are NFTs. Staking, Upgrading, and Trading are fully on-chain.
-*   **Fair Play**: Critical game logic is verified server-side, and financial transactions are secured by Smart Contracts.
+
+- **Skill-Based Economy**: Earn rewards by competing in PvP or mastering PvE, not just by holding assets.
+- **Sustainable Rewards**: A "Perpetual Reward Pool" inspired by Bitcoin's difficulty adjustment ensures longevity.
+- **True Ownership**: Heroes are NFTs. Staking, Upgrading, and Trading are fully on-chain.
+- **Fair Play**: Critical game logic is verified server-side, and financial transactions are secured by Smart Contracts.
 
 ---
 
 ## ✨ Features
 
-*   **🎮 PvP Arena**: 1v1 Wagers and Tournaments with on-chain prize pools.
-*   **🤖 PvE Campaign**: Solo mode with rewards scaled by global activity.
-*   **⚔️ Hero NFTs**: Use your Bombcrypto heroes. New players get a free "Mock Hero" to start.
-*   **🔒 Secure Auth**: Sign-In with Ethereum (SIWE) for passwordless, wallet-based authentication.
-*   **⚡ Instant Action**: Built with Phaser 3 and Vite for high-performance browser gameplay.
+- **🎮 PvP Arena**: 1v1 Wagers and Tournaments with on-chain prize pools.
+- **🤖 PvE Campaign**: Solo mode with rewards scaled by global activity.
+- **⚔️ Hero NFTs**: Use your Bombcrypto heroes. New players get a free "Mock Hero" to start.
+- **🔒 Secure Auth**: Sign-In with Ethereum (SIWE) for passwordless, wallet-based authentication.
+- **⚡ Instant Action**: Built with Phaser 3 and Vite for high-performance browser gameplay.
 
 ---
 
@@ -45,10 +46,10 @@ We are transforming a casual pixel-art game into a sustainable **Web3 E-Sport**.
 
 The project uses a decoupled architecture containerized with Docker:
 
-*   **Frontend**: Vite + Phaser 3 (Game Client)
-*   **Backend**: Node.js + Express (API, Matchmaking, Oracle)
-*   **Blockchain**: Hardhat (Local) / BSC (Testnet/Mainnet)
-*   **Database**: SQLite (Dev) / MySQL (Prod)
+- **Frontend**: Vite + Phaser 3 (Game Client)
+- **Backend**: Node.js + Express (API, Matchmaking, Oracle)
+- **Blockchain**: Hardhat (Local) / BSC (Testnet/Mainnet)
+- **Database**: SQLite (Dev) / MySQL (Prod)
 
 ➡️ **[View Detailed Architecture Diagrams](./docs/ARCHITECTURE.md)**
 
@@ -59,11 +60,13 @@ The project uses a decoupled architecture containerized with Docker:
 The entire stack is Dockerized. You can spin up the blockchain, backend, and frontend with a single command.
 
 ### Prerequisites
-*   [Docker Desktop](https://www.docker.com/products/docker-desktop) installed.
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed.
 
 ### One-Command Setup
 
 1.  **Clone & Configure**:
+
     ```bash
     git clone https://github.com/alanvito1/bomb_dash.git
     cd bomb_dash
@@ -71,13 +74,14 @@ The entire stack is Dockerized. You can spin up the blockchain, backend, and fro
     ```
 
 2.  **Launch**:
+
     ```bash
     sudo docker compose up --build
     ```
 
 3.  **Play**:
-    *   **Game**: [http://localhost:5173](http://localhost:5173)
-    *   **API**: [http://localhost:3000](http://localhost:3000)
+    - **Game**: [http://localhost:5173](http://localhost:5173)
+    - **API**: [http://localhost:3000](http://localhost:3000)
 
 ---
 
@@ -85,10 +89,10 @@ The entire stack is Dockerized. You can spin up the blockchain, backend, and fro
 
 For deeper dives into the code and design:
 
-*   **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, containers, and ERD diagrams.
-*   **[Project Briefing](./docs/BRIEFING.md)**: High-level vision and economic model.
-*   **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Technical implementation details.
-*   **[Learnings](./docs/LEARNINGS.md)**: Log of architectural decisions and lessons learned.
+- **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, containers, and ERD diagrams.
+- **[Project Briefing](./docs/BRIEFING.md)**: High-level vision and economic model.
+- **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Technical implementation details.
+- **[Learnings](./docs/LEARNINGS.md)**: Log of architectural decisions and lessons learned.
 
 ---
 
@@ -105,4 +109,4 @@ We welcome contributions! Please read our **[Contributing Guide](./CONTRIBUTING.
 
 ---
 
-*Built with ❤️ by the Bomb Dash Team*
+_Built with ❤️ by the Bomb Dash Team_

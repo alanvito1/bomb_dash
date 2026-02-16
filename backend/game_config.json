@@ -1,10 +1,10 @@
 {
-    "pvpCycleOpenHours": 24,
-    "pvpCycleClosedHours": 24,
-    "xp_multiplier": 1.5,
-    "levelUpCost": 100,
-    "monsterScaleFactor": 1.2,
-    "pvpWinXp": 50,
-    "monsterXp": 10,
-    "matchmakingLevelRange": 5
+  "pvpCycleOpenHours": 24,
+  "pvpCycleClosedHours": 24,
+  "xp_multiplier": 1.5,
+  "levelUpCost": 100,
+  "monsterScaleFactor": 1.2,
+  "pvpWinXp": 50,
+  "monsterXp": 10,
+  "matchmakingLevelRange": 5
 }

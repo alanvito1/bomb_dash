@@ -90,7 +90,7 @@ async function createRankedMatch(player1, player2, tier, entryFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     })
@@ -150,7 +150,7 @@ async function verifyPvpEntryFee(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     })
@@ -195,7 +195,7 @@ async function verifyLevelUpTransaction(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     })
@@ -230,7 +230,7 @@ async function verifyUpgradeTransaction(txHash, expectedPlayer, expectedCost) {
           return tournamentControllerContract.interface.parseLog(log);
         }
         return null;
-      } catch (e) {
+      } catch (_e) {
         return null; // Ignore logs that are not from the target contract
       }
     })
@@ -410,7 +410,7 @@ async function verifyTournamentCreation(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     })
@@ -470,7 +470,7 @@ async function verifyTournamentJoin(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     })

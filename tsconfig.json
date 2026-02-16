@@ -12,6 +12,10 @@
     "sourceMap": true,
     "outDir": "dist"
   },
-  "include": ["./scripts/**/*.ts", "./test/**/*.ts", "./typechain-types/**/*.ts"],
+  "include": [
+    "./scripts/**/*.ts",
+    "./test/**/*.ts",
+    "./typechain-types/**/*.ts"
+  ],
   "files": ["./hardhat.config.ts"]
 }

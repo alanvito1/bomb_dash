@@ -1,5 +1,8 @@
 const { test, expect } = require('@playwright/test');
-const { getExperienceForLevel } = require('../backend/rpg');
+const {
+  getExperienceForLevel,
+  getLevelFromExperience,
+} = require('../backend/rpg'); // Importing getLevelFromExperience
 
 // --- Mock Data & Config ---
 const LOSER_ADDRESS = '0x2222222222222222222222222222222222222222';

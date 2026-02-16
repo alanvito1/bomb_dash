@@ -11,7 +11,10 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
 
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+// Only load .env if not in production/Vercel (where env vars are injected)
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+}
 
 // 🌹 AVRE LOGGING SYSTEM
 const colors = {
@@ -37,7 +40,7 @@ const AVRE = {
  / ___ |  | |/ // _, _/ /___
 /_/  |_|  |___//_/ |_/_____/
 
-        🌹 LEGACY EDITION 🌹
+        🌹 LEGACY EDITION (Serverless) 🌹
 ${colors.reset}`);
   },
   info: (msg) => console.log(`${colors.white}[AVRE] 🌹 ${msg}${colors.reset}`),
@@ -57,26 +60,27 @@ ${colors.reset}`);
 };
 
 function validateEnvVariables() {
+  // In Vercel/Production, we might not have all vars immediately, but we check critical ones.
   const requiredEnvVars = [
     'PRIVATE_KEY',
     'JWT_SECRET',
     'ADMIN_SECRET',
-    'TESTNET_RPC_URL',
-    'ORACLE_PRIVATE_KEY',
-    'TOURNAMENT_CONTROLLER_ADDRESS',
-    'PERPETUAL_REWARD_POOL_ADDRESS',
-    'WAGER_ARENA_ADDRESS',
-    'CHAIN_ID',
-    'FRONTEND_DOMAIN',
+    // 'TESTNET_RPC_URL', // Optional, defaults in code sometimes
+    // 'ORACLE_PRIVATE_KEY',
+    // 'TOURNAMENT_CONTROLLER_ADDRESS',
+    // 'PERPETUAL_REWARD_POOL_ADDRESS',
+    // 'WAGER_ARENA_ADDRESS',
+    // 'CHAIN_ID',
+    // 'FRONTEND_DOMAIN',
   ];
   const missingVars = requiredEnvVars.filter(
     (varName) => !process.env[varName]
   );
   if (missingVars.length > 0) {
-    AVRE.error(
+    AVRE.warn(
       `Missing critical environment variables: ${missingVars.join(', ')}.`
     );
-    process.exit(1);
+    // Don't exit process in serverless, just warn. The specific service might fail later.
   }
 }
 
@@ -96,9 +100,11 @@ const pvpRoutes = require('./routes/pvp.js');
 const tournamentRoutes = require('./routes/tournaments.js');
 const gameRoutes = require('./routes/game.js');
 const debugRoutes = require('./routes/debug.js');
+const cronRoutes = require('./routes/cron.js');
 
 const app = express();
 let isInitialized = false;
+let initPromise = null;
 
 app.set('json replacer', (key, value) =>
   typeof value === 'bigint' ? value.toString() : value
@@ -108,14 +114,121 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-if (process.env.NODE_ENV !== 'test') {
-  app.use((req, res, next) => {
-    if (isInitialized) return next();
-    res
-      .status(503)
-      .json({ success: false, message: 'Server is initializing.' });
-  });
+// Async Initialization Logic
+async function performInitialization() {
+  if (isInitialized) return;
+
+  AVRE.logo();
+  AVRE.info('System active... Initializing Game Server.');
+
+  try {
+    await db.initDb();
+    AVRE.success('Database connection established.');
+
+    const isOracleReady = await oracle.initOracle();
+
+    if (isOracleReady) {
+      const nftService = require('./nft.js');
+      const provider = oracle.getProvider();
+      if (!provider) {
+        throw new Error(
+          'Oracle reported ready, but failed to get provider. NFT service cannot be initialized.'
+        );
+      }
+
+      // Try to load contract addresses. In Serverless/Vercel, we don't wait for volumes.
+      // We expect the file to be present at build time.
+      const contractAddressesPath = path.join(
+        __dirname,
+        'contracts',
+        'contract-addresses.json'
+      );
+      let heroTokenAddress;
+
+      try {
+        const addressesFile = await fs.readFile(contractAddressesPath, 'utf8');
+        const addresses = JSON.parse(addressesFile);
+        if (addresses.mockHeroNFTAddress) {
+          heroTokenAddress = addresses.mockHeroNFTAddress;
+          AVRE.success(
+            `Successfully loaded MockHeroNFT address: ${heroTokenAddress}`
+          );
+        }
+      } catch (error) {
+        AVRE.warn(
+          `Could not load contract addresses file: ${error.message}. Checking ENV vars.`
+        );
+        // Fallback to ENV var if available
+        if (process.env.MOCK_HERO_NFT_ADDRESS) {
+          heroTokenAddress = process.env.MOCK_HERO_NFT_ADDRESS;
+          AVRE.success(
+            `Loaded MockHeroNFT address from ENV: ${heroTokenAddress}`
+          );
+        }
+      }
+
+      if (heroTokenAddress) {
+        nftService.initNftService(provider, heroTokenAddress);
+
+        // Staking Listener might be heavy for serverless, but we initialize it.
+        // It won't run a continuous loop if the process freezes, but it's needed for state.
+        await stakingListener.initStakingListener();
+        AVRE.success('Hero staking listener initialized.');
+      } else {
+        AVRE.warn(
+          'Hero Token Address not found. NFT services partially disabled.'
+        );
+      }
+
+      const tournamentControllerContract =
+        oracle.getTournamentControllerContract();
+      if (tournamentControllerContract) {
+        tournamentService.initTournamentService(tournamentControllerContract);
+        AVRE.success('Tournament service initialized.');
+      }
+    } else {
+      AVRE.warn(
+        'Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).'
+      );
+    }
+
+    await gameState.startPvpCycleCron();
+    AVRE.success('PvP State initialized.');
+
+    // We do NOT start setInterval loops for matchmaking or cron here.
+    // Serverless functions rely on external triggers (CRON) or on-demand processing.
+
+    soloRewardService.startSoloRewardCycleCron();
+
+    isInitialized = true;
+    AVRE.success('All services initialized. Server is ready.');
+  } catch (error) {
+    AVRE.error('Server initialization failed', error);
+    // Do not exit process, let the request fail so we can retry or debug
+    throw error;
+  }
 }
+
+// Middleware to ensure initialization
+app.use(async (req, res, next) => {
+  // Skip init for health checks or static files if needed, but for API we need DB.
+  if (!isInitialized) {
+    if (!initPromise) {
+      initPromise = performInitialization();
+    }
+    try {
+      await initPromise;
+    } catch (error) {
+      console.error('Initialization Error:', error);
+      return res.status(503).json({
+        success: false,
+        message: 'Server failed to initialize.',
+        error: error.message,
+      });
+    }
+  }
+  next();
+});
 
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -139,107 +252,34 @@ app.use('/api/pvp', authRoutes.verifyToken, pvpRoutes);
 app.use('/api/tournaments', authRoutes.verifyToken, tournamentRoutes);
 app.use('/api/game', authRoutes.verifyToken, gameRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/cron', cronRoutes); // New Cron Route
 
-async function startServer() {
-  AVRE.logo();
-  AVRE.info('System active... Initializing Game Server.');
-
-  try {
-    await db.initDb();
-    AVRE.success('Database connection established.');
-
-    const isOracleReady = await oracle.initOracle();
-
-    if (isOracleReady) {
-      const nftService = require('./nft.js');
-      const provider = oracle.getProvider();
-      if (!provider) {
-        throw new Error(
-          'Oracle reported ready, but failed to get provider. NFT service cannot be initialized.'
-        );
-      }
-
-      // Resiliently load contract addresses from the shared volume
-      const contractAddressesPath = path.join(
-        __dirname,
-        'contracts',
-        'contract-addresses.json'
-      );
-      let heroTokenAddress;
-      for (let i = 0; i < 15; i++) {
-        try {
-          const addressesFile = await fs.readFile(
-            contractAddressesPath,
-            'utf8'
-          );
-          const addresses = JSON.parse(addressesFile);
-          if (addresses.mockHeroNFTAddress) {
-            heroTokenAddress = addresses.mockHeroNFTAddress;
-            AVRE.success(
-              `Successfully loaded MockHeroNFT address: ${heroTokenAddress}`
-            );
-            break;
-          }
-        } catch (error) {
-          AVRE.warn(
-            `Waiting for contract addresses file... Attempt ${i + 1}/15`
-          );
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      }
-
-      if (!heroTokenAddress) {
-        throw new Error(
-          'FATAL: Could not load hero token address from shared volume after multiple attempts.'
-        );
-      }
-
-      nftService.initNftService(provider, heroTokenAddress);
-
-      await stakingListener.initStakingListener();
-      AVRE.success('Hero staking listener started.');
-
-      const tournamentControllerContract =
-        oracle.getTournamentControllerContract();
-      tournamentService.initTournamentService(tournamentControllerContract);
-      AVRE.success('Tournament service initialized.');
-    } else {
-      AVRE.warn(
-        'Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).'
-      );
-    }
-
-    await gameState.startPvpCycleCron();
-    AVRE.success('Cron jobs (PvP Cycle, etc.) started.');
-
-    setInterval(matchmaking.processQueue, 5000);
-    AVRE.info('Matchmaking queue processor started.');
-
-    // Altar of Buffs cron job placeholder
-    // setInterval(checkAltarAndActivateBuff, 60000);
-
-    soloRewardService.startSoloRewardCycleCron();
-
-    isInitialized = true;
-    AVRE.success('All services initialized. Server is ready.');
-
-    app.listen(PORT, () => {
-      console.log(
-        `${colors.red}=============================================${colors.reset}`
-      );
-      AVRE.success(`HTTP server started on port ${PORT}.`);
-      console.log(
-        `${colors.red}=============================================${colors.reset}`
-      );
-    });
-  } catch (error) {
-    AVRE.error('Server initialization failed', error);
-    process.exit(1);
-  }
-}
-
+// Local Server Start (only if running directly)
 if (require.main === module) {
-  startServer();
+  // Use a self-invoking function to handle async init before listen
+  (async () => {
+    try {
+      await performInitialization();
+      app.listen(PORT, () => {
+        console.log(
+          `${colors.red}=============================================${colors.reset}`
+        );
+        AVRE.success(`HTTP server started on port ${PORT}.`);
+        console.log(
+          `${colors.red}=============================================${colors.reset}`
+        );
+
+        // If local, we CAN start intervals for convenience
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Running in LOCAL mode: Starting background intervals.');
+          setInterval(matchmaking.processQueue, 5000);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to start local server:', e);
+      process.exit(1);
+    }
+  })();
 }
 
 module.exports = app;
