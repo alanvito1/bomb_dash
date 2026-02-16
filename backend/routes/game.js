@@ -4,7 +4,8 @@ const router = express.Router();
 const db = require('../database.js');
 const admin = require('../admin.js');
 const oracle = require('../oracle.js');
-const soloRewardService = require('../solo_reward_service.js');
+const { ethers } = require('ethers');
+// const soloRewardService = require('../solo_reward_service.js'); // Removed
 
 // Define hero upgrades logic (moved from external or previous inline)
 const heroUpgrades = {
@@ -178,6 +179,90 @@ router.post('/user/stats', async (req, res) => {
       success: false,
       message: 'Internal server error during hero upgrade.',
     });
+  }
+});
+
+router.post('/altar/donate', async (req, res) => {
+  const { txHash, amount } = req.body;
+  if (!txHash || !amount) {
+    return res.status(400).json({
+      success: false,
+      message: 'txHash and amount are required',
+    });
+  }
+
+  try {
+    let provider = oracle.getProvider();
+    if (!provider) {
+      await oracle.initOracle();
+      provider = oracle.getProvider();
+    }
+
+    if (!provider) {
+       throw new Error('Blockchain provider not available');
+    }
+
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt || receipt.status !== 1) {
+      throw new Error('Transaction failed or not found');
+    }
+
+    // BCOIN Transfer Event Signature: Transfer(address indexed from, address indexed to, uint256 value)
+    // Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+    const TRANSFER_TOPIC =
+      '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+    const ALTAR_ADDRESS = process.env.ALTAR_WALLET_ADDRESS;
+
+    if (!ALTAR_ADDRESS) throw new Error('ALTAR_WALLET_ADDRESS not configured');
+
+    // Normalize addresses for comparison (remove 0x, lowercase)
+    const altarLower = ALTAR_ADDRESS.toLowerCase().replace('0x', '');
+    const userLower = req.user.address.toLowerCase().replace('0x', '');
+
+    // Find relevant log: Transfer to Altar
+    // Topics: [Signature, From, To] (To is index 2)
+    const log = receipt.logs.find(
+      (l) =>
+        l.topics[0] === TRANSFER_TOPIC &&
+        l.topics[2].toLowerCase().includes(altarLower)
+    );
+
+    if (!log) {
+      throw new Error('No transfer to Altar found in this transaction');
+    }
+
+    // Verify 'from' (topic 1) matches user
+    if (!log.topics[1].toLowerCase().includes(userLower)) {
+      throw new Error('Transaction sender does not match user address');
+    }
+
+    // Verify amount (data is hex)
+    const value = BigInt(log.data);
+    // Assume input 'amount' is sent as string representing Wei/Raw units
+    // or verify logic based on game design. Let's assume input is BCOIN float for now?
+    // User input is usually what they claimed to send.
+    // If we expect "10" BCOIN, we check 10 * 10^18.
+
+    const expectedWei = ethers.parseEther(amount.toString());
+
+    if (value < expectedWei) {
+      throw new Error(
+        `Transfer amount ${ethers.formatEther(value)} is less than declared ${amount}`
+      );
+    }
+
+    // Update DB (storing as Integer BCOIN)
+    const bcoinAmount = Math.floor(parseFloat(ethers.formatEther(value)));
+    await db.addDonationToAltar(bcoinAmount, txHash);
+
+    res.json({
+      success: true,
+      message: 'Donation verified',
+      donated: bcoinAmount,
+    });
+  } catch (error) {
+    console.error('Altar donation error:', error);
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

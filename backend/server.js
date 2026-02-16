@@ -91,8 +91,8 @@ const oracle = require('./oracle.js');
 const tournamentService = require('./tournament_service.js');
 const gameState = require('./game_state.js');
 const matchmaking = require('./matchmaking.js');
-const soloRewardService = require('./solo_reward_service.js');
-const stakingListener = require('./staking_listener.js');
+// const soloRewardService = require('./solo_reward_service.js'); // Removed for Serverless
+// const stakingListener = require('./staking_listener.js'); // Removed for Serverless
 
 const authRoutes = require('./routes/auth.js');
 const heroRoutes = require('./routes/heroes.js');
@@ -172,8 +172,8 @@ async function performInitialization() {
 
         // Staking Listener might be heavy for serverless, but we initialize it.
         // It won't run a continuous loop if the process freezes, but it's needed for state.
-        await stakingListener.initStakingListener();
-        AVRE.success('Hero staking listener initialized.');
+        // await stakingListener.initStakingListener(); // Disabled for Serverless - Moved to /api/cron/sync-staking
+        // AVRE.success('Hero staking listener initialized.');
       } else {
         AVRE.warn(
           'Hero Token Address not found. NFT services partially disabled.'
@@ -198,7 +198,7 @@ async function performInitialization() {
     // We do NOT start setInterval loops for matchmaking or cron here.
     // Serverless functions rely on external triggers (CRON) or on-demand processing.
 
-    soloRewardService.startSoloRewardCycleCron();
+    // soloRewardService.startSoloRewardCycleCron(); // Disabled for Serverless - Moved to /api/cron/distribute-rewards
 
     isInitialized = true;
     AVRE.success('All services initialized. Server is ready.');
