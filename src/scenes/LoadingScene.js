@@ -3,6 +3,8 @@ import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import { CST } from '../CST.js';
+import assetManifest from '../config/asset-manifest.json';
+
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
     super('LoadingScene');
@@ -14,10 +16,6 @@ export default class LoadingScene extends Phaser.Scene {
     console.log('🔄 LoadingScene: Preload is starting...');
     // --- E2E Test Reliability Fix ---
     // Initialize LanguageManager immediately to prevent test timeouts.
-    // The i18nReady flag will be set as soon as the JSON is fetched,
-    // decoupling it from the potentially slow WebFont download.
-    // We call this without `await` because `preload` is not designed for blocking async operations.
-    // The test script will poll the `window.i18nReady` flag to wait for completion.
     LanguageManager.init(this);
     this.contractsInitializedPromise = contractProvider.initialize();
     // -----------------------------
@@ -55,79 +53,14 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // --- Asset Loading Logic ---
-    this.load.json('asset-manifest', 'src/config/asset-manifest.json');
+    // CRITICAL FIX: Load assets directly from imported manifest, avoiding HTTP 404 on asset-manifest.json
     this.load.script(
       'webfont',
       'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
     );
 
-    this.load.on('filecomplete-json-asset-manifest', (key, type, data) => {
-      console.log('🔄 Asset manifest loaded. Enqueuing game assets...');
-      const { assets, sounds } = data;
-
-      if (assets) {
-        for (const categoryKey in assets) {
-          const category = assets[categoryKey];
-          for (const assetKey in category) {
-            const assetData = category[assetKey];
-            // Handle sprite animations (objects with a 'frames' array)
-            if (
-              typeof assetData === 'object' &&
-              assetData !== null &&
-              Array.isArray(assetData.frames)
-            ) {
-              console.log(
-                `[AssetLoader] Enqueuing assets for hero '${assetKey}'...`
-              );
-
-              // 1. Load the static preview image (the first frame) for UI scenes.
-              // This uses the naming convention the backend provides (e.g., 'ninja_hero').
-              const previewKey = `${assetKey}_hero`;
-              const previewFramePath = assetData.frames[0];
-              if (previewFramePath) {
-                this.load.image(previewKey, previewFramePath);
-                console.log(
-                  `[AssetLoader]  - Loading preview image with key '${previewKey}'.`
-                );
-              }
-
-              // 2. Load all individual frames for the animation in the game.
-              assetData.frames.forEach((framePath, index) => {
-                const frameKey = `${assetKey}_frame_${index}`;
-                this.load.image(frameKey, framePath);
-              });
-            }
-            // Handle single images (strings)
-            else if (typeof assetData === 'string' && assetData.length > 0) {
-              this.load.image(assetKey, assetData);
-            }
-            // Log warning for any other invalid format
-            else {
-              console.warn(
-                `[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid format. Skipping.`
-              );
-            }
-          }
-        }
-      }
-
-      if (sounds) {
-        for (const categoryKey in sounds) {
-          const category = sounds[categoryKey];
-          for (const assetKey in category) {
-            const path = category[assetKey];
-            // Defensive check: Ensure the path is a valid string before loading
-            if (typeof path === 'string' && path.length > 0) {
-              this.load.audio(assetKey, path);
-            } else {
-              console.warn(
-                `[AssetLoader] Warning: Sound asset with key '${assetKey}' has an invalid path. Skipping.`
-              );
-            }
-          }
-        }
-      }
-    });
+    // Call the direct loading function
+    this.queueAssets(assetManifest);
 
     this.load.on('complete', () => {
       console.log(
@@ -206,6 +139,69 @@ export default class LoadingScene extends Phaser.Scene {
       }
     });
     console.log('✅ LoadingScene: Preload has completed setup!');
+  }
+
+  queueAssets(manifest) {
+    console.log('🔄 Enqueuing game assets from imported manifest...');
+    const { assets, sounds } = manifest;
+
+    if (assets) {
+      for (const categoryKey in assets) {
+        const category = assets[categoryKey];
+        for (const assetKey in category) {
+          const assetData = category[assetKey];
+          // Handle sprite animations (objects with a 'frames' array)
+          if (
+            typeof assetData === 'object' &&
+            assetData !== null &&
+            Array.isArray(assetData.frames)
+          ) {
+            console.log(
+              `[AssetLoader] Enqueuing assets for hero '${assetKey}'...`
+            );
+
+            // 1. Load the static preview image (the first frame) for UI scenes.
+            const previewKey = `${assetKey}_hero`;
+            const previewFramePath = assetData.frames[0];
+            if (previewFramePath) {
+              this.load.image(previewKey, previewFramePath);
+            }
+
+            // 2. Load all individual frames for the animation in the game.
+            assetData.frames.forEach((framePath, index) => {
+              const frameKey = `${assetKey}_frame_${index}`;
+              this.load.image(frameKey, framePath);
+            });
+          }
+          // Handle single images (strings)
+          else if (typeof assetData === 'string' && assetData.length > 0) {
+            this.load.image(assetKey, assetData);
+          }
+          // Log warning for any other invalid format
+          else {
+            console.warn(
+              `[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid format. Skipping.`
+            );
+          }
+        }
+      }
+    }
+
+    if (sounds) {
+      for (const categoryKey in sounds) {
+        const category = sounds[categoryKey];
+        for (const assetKey in category) {
+          const path = category[assetKey];
+          if (typeof path === 'string' && path.length > 0) {
+            this.load.audio(assetKey, path);
+          } else {
+            console.warn(
+              `[AssetLoader] Warning: Sound asset with key '${assetKey}' has an invalid path. Skipping.`
+            );
+          }
+        }
+      }
+    }
   }
 
   create() {

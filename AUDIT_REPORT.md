@@ -2,23 +2,21 @@
 
 Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localhost:5173)
 
-
 ## 1. Single Player Flow Audit
 
 ### Creating Player: Player A (0x3e814613733E2C48DB32723a837ad1EAB77d0A48)
 
-* Minting Common Hero for Player A...
+- Minting Common Hero for Player A...
 
   - Minted Hero ID: 169 (Common)
 
   - Initial XP: 0
 
-* Simulating Solo Game Match...
+- Simulating Solo Game Match...
 
   - Final XP: 10
 
   [SUCCESS] XP increased correctly.
-
 
 ## 2. PvP Flow (Serverless Polling)
 
@@ -26,46 +24,43 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ### Creating Player: Player C (0xBaf2bcBc5058DeC57E23f63295fa990911BA783d)
 
-* Setting up Player B...
+- Setting up Player B...
 
   - Added XP and BCOIN. Hero ID: 174
 
-* Setting up Player C...
+- Setting up Player C...
 
   - Added XP and BCOIN. Hero ID: 175
 
-* Both players joining Wager Queue (Tier 1)...
+- Both players joining Wager Queue (Tier 1)...
 
   - Player B join result: 200 Entered Bronze wager queue!
 
   - Player C join result: 200 Match found for Bronze wager!
 
-* Polling for Match...
+- Polling for Match...
 
   - Polling attempt 1: Status = found
 
   [SUCCESS] Match Found! Opponent: Ninja Hero
 
-
 ## 3. Rarity Gating Test
 
 ### Creating Player: Player D (0xEC11889C30DADEb987313a0BC8c5E232A501A9f0)
 
-* Minting LEGENDARY Hero for Player D...
+- Minting LEGENDARY Hero for Player D...
 
-* Attempting to join PvP Queue with Legendary Hero...
+- Attempting to join PvP Queue with Legendary Hero...
 
   [SUCCESS] Blocked with 403: BETA RESTRICTION: Only Common Heroes allowed (You tried: Legend)
 
-
 ## 4. House Gating Test
 
-* Minting HOUSE NFT for Player D...
+- Minting HOUSE NFT for Player D...
 
-* Attempting to join PvP Queue with House...
+- Attempting to join PvP Queue with House...
 
   [SUCCESS] Blocked as expected: BETA RESTRICTION: Houses cannot join PvP.
-
 
 ## 5. Tournament Lobby Flow
 
@@ -77,7 +72,7 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ### Creating Player: TourneyPlayer 4 (0x02d04f930ba59BaEB08EA2E57693738799D510dC)
 
-* All 4 players joining Tournament Lobby...
+- All 4 players joining Tournament Lobby...
 
   - TourneyPlayer 1 registered.
 
