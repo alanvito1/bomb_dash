@@ -1,14 +1,18 @@
-# Bomb Dash - Web3 Edition (Vercel Native)
+# Bomb Dash - Web3 Edition (Hybrid Architecture)
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-2.0.0-orange)
-![Vercel](https://img.shields.io/badge/vercel-deployed-black?logo=vercel)
-![Supabase](https://img.shields.io/badge/supabase-postgres-green?logo=supabase)
+![Version](https://img.shields.io/badge/version-2.1.0-orange)
+![Vercel](https://img.shields.io/badge/frontend-vercel-black?logo=vercel)
+![Cloud Run](https://img.shields.io/badge/backend-google_cloud_run-blue?logo=google-cloud)
+![Supabase](https://img.shields.io/badge/database-supabase-green?logo=supabase)
 
 **Bomb Dash** is a competitive 2D action game evolved into a Web3 E-Sports platform on the BNB Smart Chain (BSC). It features a client-server architecture where player skill is rewarded with BCOIN tokens through a secure, transparent, and sustainable economy.
 
-This version is optimized for **Serverless Deployment** on Vercel with a managed PostgreSQL database via Supabase.
+This version uses a **Hybrid Architecture**:
+*   **Frontend**: Hosted on Vercel (React/Vite)
+*   **Backend**: Hosted on Google Cloud Run (Node.js/Docker)
+*   **Database**: Managed PostgreSQL via Supabase
 
 ---
 
@@ -47,12 +51,12 @@ We are transforming a casual pixel-art game into a sustainable **Web3 E-Sport**.
 
 ## 🏗 Architecture
 
-The project uses a modern Serverless architecture:
+The project uses a robust Hybrid Architecture:
 
-- **Frontend**: Next.js / Vite (React) hosted on Vercel Edge.
-- **Backend**: Node.js Serverless Functions (Vercel API Routes).
+- **Frontend**: Vite (React) Single Page Application on Vercel.
+- **Backend**: Node.js Express Server running on Google Cloud Run (Dockerized).
 - **Database**: Supabase (PostgreSQL) with connection pooling.
-- **Background Tasks**: Vercel Cron Jobs for matchmaking and blockchain syncing.
+- **Background Tasks**: Google Cloud Scheduler triggers backend endpoints.
 - **Blockchain**: BSC Testnet/Mainnet via Ethers.js.
 
 ➡️ **[View Detailed Architecture Diagrams](./docs/ARCHITECTURE.md)**
@@ -61,13 +65,11 @@ The project uses a modern Serverless architecture:
 
 ## 🚀 Deployment
 
-This project is designed to be "Zero DevOps". You can deploy it directly to Vercel and Supabase in minutes.
+The deployment is split into three phases:
 
-### Quick Start Guide
-
-1.  **Database**: Create a Supabase project and run the provided SQL schema (`supabase_schema.sql`).
-2.  **Deploy**: Connect this repository to Vercel.
-3.  **Configure**: Add the required Environment Variables.
+1.  **Database**: Setup Supabase project.
+2.  **Backend**: Deploy Docker container to Google Cloud Run.
+3.  **Frontend**: Deploy to Vercel and connect to Backend URL.
 
 ➡️ **[Read the Full Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**
 
@@ -77,8 +79,8 @@ This project is designed to be "Zero DevOps". You can deploy it directly to Verc
 
 For deeper dives into the code and design:
 
-- **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, serverless flows, and ERD.
-- **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**: Step-by-step setup guide.
+- **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, hybrid flows, and ERD.
+- **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**: Step-by-step setup guide (V2.1).
 - **[Project Briefing](./docs/BRIEFING.md)**: High-level vision and economic model.
 - **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Technical implementation details.
 

@@ -1,27 +1,34 @@
-# Architecture & Design (Serverless Edition)
+# Architecture & Design (Hybrid Edition)
 
 ## System Context (C4 Level 1)
 
-This diagram illustrates the high-level interaction between the User, the Bomb Dash Game System (Serverless), and external Blockchain components.
+This diagram illustrates the high-level interaction between the User, the Bomb Dash Hybrid System, and external components.
 
 ```mermaid
 C4Context
-    title System Context Diagram for Bomb Dash Web3 (Vercel Native)
+    title System Context Diagram for Bomb Dash Web3 (Hybrid Architecture)
 
     Person(player, "Player", "A web3 gamer playing via browser")
-    System(bombDash, "Bomb Dash System", "Full-stack Next.js/Express app on Vercel")
+
+    Boundary(hybridSystem, "Bomb Dash Hybrid System") {
+        System(frontend, "Frontend", "React app hosted on Vercel")
+        System(backend, "Backend", "Node.js app hosted on Cloud Run")
+    }
 
     System_Ext(bsc, "BNB Smart Chain", "Blockchain network for assets (Heroes, BCOIN)")
     System_Ext(supabase, "Supabase", "Managed PostgreSQL Database & Auth")
+    System_Ext(scheduler, "Cloud Scheduler", "Triggers periodic tasks")
 
-    Rel(player, bombDash, "Plays game, manages heroes", "HTTPS")
-    Rel(bombDash, supabase, "Stores user/game state", "PostgreSQL Connection")
-    Rel(bombDash, bsc, "Reads state, Oracle signs transactions", "JSON-RPC")
+    Rel(player, frontend, "Plays game", "HTTPS")
+    Rel(frontend, backend, "API Calls", "HTTPS / JSON")
+    Rel(backend, supabase, "Stores user/game state", "PostgreSQL Connection")
+    Rel(backend, bsc, "Reads state, Oracle signs transactions", "JSON-RPC")
+    Rel(scheduler, backend, "Triggers Cron Jobs", "HTTPS")
 ```
 
 ## Container Diagram (C4 Level 2)
 
-The system is deployed as a Serverless application on Vercel.
+The system uses a **Hybrid Architecture** leveraging the best of Vercel and Google Cloud.
 
 ```mermaid
 C4Container
@@ -29,20 +36,23 @@ C4Container
 
     Person(player, "Player", "Browser-based user")
 
-    Container_Boundary(app, "Vercel Deployment") {
-        Container(frontend, "Frontend", "React / Phaser 3", "Game client served via Vercel Edge")
-        Container(backend, "Backend API (Serverless)", "Node.js / Express", "Stateless functions executing game logic")
-        Container(cron, "Cron Jobs", "Vercel Cron", "Scheduled tasks for matchmaking & sync")
+    Container_Boundary(vercel, "Vercel") {
+        Container(frontend, "Frontend SPA", "React / Phaser 3", "Game client served via Vercel CDN")
+    }
+
+    Container_Boundary(gcp, "Google Cloud Platform") {
+        Container(backend, "Backend API", "Cloud Run (Node.js 20)", "Scalable container executing game logic")
+        Container(scheduler, "Cloud Scheduler", "Cron Jobs", "Triggers matchmaking & sync via HTTP")
     }
 
     ContainerDb(db, "Supabase Database", "PostgreSQL", "Persistent storage for user profiles and match history")
     System_Ext(bsc, "Smart Contracts", "BSC Testnet: HeroNFT, BCOIN, RewardPool")
 
     Rel(player, frontend, "Interacts with", "HTTPS")
-    Rel(frontend, backend, "API Calls (/api/*)", "JSON/HTTPS")
+    Rel(frontend, backend, "API Calls (/api/*)", "HTTPS")
     Rel(backend, db, "Reads/Writes State", "Sequelize / pg")
     Rel(backend, bsc, "Oracle Operations (Sign/Verify)", "Ethers.js")
-    Rel(cron, backend, "Triggers Periodic Tasks", "HTTP GET")
+    Rel(scheduler, backend, "Triggers Periodic Tasks", "HTTP GET /api/cron/*")
 ```
 
 ## Database Schema (ERD)
@@ -62,6 +72,7 @@ erDiagram
         int coins
         int account_level
         int account_xp
+        boolean flagged_cheater
     }
 
     Hero {
@@ -121,27 +132,27 @@ erDiagram
 
 ## Key Flows & Processes
 
-### 1. Serverless "Oracle" Operations
+### 1. Oracle Operations (Cloud Run)
 
-Unlike a persistent server, the Oracle runs on-demand within Vercel Functions.
+The Oracle logic runs within the Cloud Run container.
 
-- **Trigger**: User requests a withdrawal or reward claim.
-- **Action**: Backend function spins up, initializes `ethers.Wallet` from env vars, checks logic, signs message, and returns signature.
-- **Shutdown**: Function terminates immediately after response.
+- **Trigger**: User requests a withdrawal or reward claim via API.
+- **Action**: Backend initializes `ethers.Wallet`, validates request against DB state, signs message, and returns signature.
+- **Scaling**: Cloud Run automatically scales instances based on load (0 to N).
 
-### 2. Scheduled Sync (Cron Jobs)
+### 2. Scheduled Sync (Cloud Scheduler)
 
-Since there is no long-running process to listen for blockchain events, we use polling via Vercel Crons.
+We use Google Cloud Scheduler to trigger maintenance tasks.
 
 ```mermaid
 sequenceDiagram
-    participant Cron as Vercel Cron
+    participant Scheduler as Cloud Scheduler
     participant API as Backend API (/api/cron/*)
     participant DB as Supabase
     participant BSC as Smart Contract
 
-    Note over Cron, BSC: Syncing Staking Status (Every Minute)
-    Cron->>API: GET /api/cron/sync-staking
+    Note over Scheduler, BSC: Syncing Staking Status (Every Minute)
+    Scheduler->>API: GET /api/cron/sync-staking
     API->>DB: Get last_processed_block
     API->>BSC: queryFilter(HeroDeposited, fromBlock, toBlock)
     BSC-->>API: List of Events
@@ -151,14 +162,16 @@ sequenceDiagram
     API->>DB: Update last_processed_block
 ```
 
-### 3. Degraded Mode (No Blockchain)
+### 3. PvP Validation (Anti-Cheat)
+
+- **Submission**: Frontend posts match results to `/api/pvp/submit`.
+- **Validation**: Backend calculates `MaxDamage = Duration * DPS * 1.2`.
+- **Action**: If `ReportedDamage > MaxDamage`, `User.flagged_cheater` is set to `true`.
+
+### 4. Degraded Mode (No Blockchain)
 
 If `ORACLE_PRIVATE_KEY` or `BSC_RPC_URL` are missing:
 
 - **Initialization**: `oracle.initOracle()` returns `false`.
 - **Gameplay**: Users can still play with "Mock Heroes".
-- **Restrictions**:
-  - No NFT verification.
-  - No On-Chain rewards (BCOIN).
-  - No PvP Wagers (since they require on-chain escrow).
-- **Purpose**: Allows development and testing of the game loop without blockchain dependencies.
+- **Restrictions**: No NFT verification, On-Chain rewards, or Wagers.
