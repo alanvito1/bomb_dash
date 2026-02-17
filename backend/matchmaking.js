@@ -202,7 +202,11 @@ async function getQueueStatus(userId) {
     if (dbStatus.match_data) {
       try {
         matchData = JSON.parse(dbStatus.match_data);
-        return { status: dbStatus.status, match: matchData };
+        return {
+          status: dbStatus.status,
+          match: matchData,
+          opponent: matchData.opponent,
+        };
       } catch (e) {
         console.error('Error parsing match data', e);
       }
