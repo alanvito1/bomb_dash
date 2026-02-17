@@ -652,9 +652,17 @@ async function getHeroesByUserId(userId) {
   const heroes = await Hero.findAll({ where: { user_id: userId } });
   return heroes.map((hero) => {
     const data = hero.toJSON();
-    if (data.hero_type === 'mock' && !data.name) {
-      data.name =
-        data.sprite_name.charAt(0).toUpperCase() + data.sprite_name.slice(1);
+    // Ensure name is always present (critical for PvP opponent display)
+    if (!data.name) {
+      if (data.sprite_name) {
+        // Formats "ninja_hero" to "Ninja Hero"
+        data.name = data.sprite_name
+          .split('_')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      } else {
+        data.name = 'Unknown Hero';
+      }
     }
     return data;
   });
