@@ -1,0 +1,148 @@
+/* 🌹 AVRE Cyber-Bomber Theme for Wiki */
+:root {
+  --primary-color: #DC143C; /* Crimson */
+  --secondary-color: #B22222; /* Firebrick */
+  --background-color: #000000; /* Void */
+  --text-color: #FFFFFF; /* White */
+  --glass-bg: rgba(20, 0, 0, 0.9); /* Deep Burgundy */
+  --font-main: 'Press Start 2P', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-main);
+  line-height: 1.6;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+.wiki-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.4);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(5px);
+}
+
+h1, h2, h3 {
+  color: var(--primary-color);
+  text-shadow: 0 0 10px var(--primary-color);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+h1 {
+  text-align: center;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+}
+
+.section {
+  margin-bottom: 40px;
+  padding: 20px;
+  border: 1px solid var(--secondary-color);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Hero Grid */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.hero-card {
+  border: 1px solid var(--primary-color);
+  padding: 15px;
+  text-align: center;
+  background-color: #1a0505;
+  transition: transform 0.3s ease;
+}
+
+.hero-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(220, 20, 60, 0.6);
+}
+
+.hero-name {
+  color: var(--text-color);
+  margin-bottom: 10px;
+}
+
+.hero-stats {
+  font-size: 0.8em;
+  color: #cccccc;
+  text-align: left;
+}
+
+/* Calculator Form */
+.calculator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  color: var(--primary-color);
+  font-size: 0.8em;
+  margin-bottom: 5px;
+}
+
+input, select {
+  padding: 10px;
+  background-color: #1a0505;
+  border: 1px solid var(--primary-color);
+  color: var(--text-color);
+  font-family: var(--font-main);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+  padding: 15px;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
+}
+
+#roi-result {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px dashed var(--primary-color);
+  text-align: center;
+  font-size: 1.2em;
+}
+
+.nav-link {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  color: var(--text-color);
+  text-decoration: none;
+  border: 1px solid var(--text-color);
+  padding: 10px;
+}
+
+.nav-link:hover {
+  background-color: var(--text-color);
+  color: var(--background-color);
+}

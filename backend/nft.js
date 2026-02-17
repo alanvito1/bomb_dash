@@ -973,6 +973,11 @@ function decodeHeroDetails(detailsBI) {
  * @returns {Promise<Array<object>>} A promise that resolves to an array of decoded hero objects.
  */
 async function getNftsForPlayer(playerAddress) {
+  if (!nftContract) {
+    console.warn('NFT Contract not initialized. Returning empty list.');
+    return [];
+  }
+
   try {
     console.log(`Fetching NFT details for owner: ${playerAddress}`);
     const packedDetailsArray = await nftContract.getTokenDetailsByOwner(

@@ -312,12 +312,20 @@ async function runMigrations(queryInterface) {
 
 async function initDb() {
   // For test env, we can force sync. For prod, we run migrations first.
-  if (!isTestEnv) {
+  if (!isTestEnv && process.env.NODE_ENV !== 'production') {
     await runMigrations(sequelize.getQueryInterface());
   }
-  await sequelize.sync({ force: isTestEnv });
-  await seedDatabase();
-  console.log('Database & tables created!');
+
+  // In production (Serverless/Supabase), we skip sync() to avoid startup latency and locks.
+  // The schema is managed via migrations or SQL scripts (supabase_schema.sql).
+  if (process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true') {
+    await sequelize.sync({ force: isTestEnv });
+    await seedDatabase();
+    console.log('Database & tables created!');
+  } else {
+    console.log('Production mode: Skipping sequelize.sync() and seeding.');
+  }
+
   return sequelize;
 }
 

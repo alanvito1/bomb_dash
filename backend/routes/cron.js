@@ -32,7 +32,25 @@ function verifyCron(req, res, next) {
 // 1. Matchmaking Cron (Existing)
 router.get('/matchmaking', verifyCron, async (req, res) => {
   try {
-    await matchmaking.processQueue();
+    // Wrap processQueue in a timeout to prevent Vercel 504 errors (limit is usually 10s)
+    const timeoutPromise = new Promise((resolve) =>
+      setTimeout(() => resolve('TIMEOUT'), 9000)
+    );
+
+    const result = await Promise.race([
+      matchmaking.processQueue(),
+      timeoutPromise,
+    ]);
+
+    if (result === 'TIMEOUT') {
+      console.warn('Matchmaking timed out (9s limit). Returning early.');
+      return res.status(200).json({
+        success: true,
+        status: 'timeout',
+        message: 'Matchmaking timed out, try again next cycle.',
+      });
+    }
+
     res.json({ success: true, message: 'Matchmaking processed' });
   } catch (error) {
     console.error('Matchmaking Cron failed:', error);
@@ -147,6 +165,24 @@ router.get('/sync-staking', verifyCron, async (req, res) => {
 // 3. Perpetual Rewards Cron
 router.get('/distribute-rewards', verifyCron, async (req, res) => {
   try {
+    // Check for Idempotency using DB lock/timestamp
+    const lastDistTimeStr = await db.getGameSetting('last_reward_dist_time');
+    if (lastDistTimeStr) {
+      const lastDistTime = new Date(lastDistTimeStr);
+      const now = new Date();
+      // If processed less than 50 minutes ago, skip (assuming hourly cron)
+      if (now - lastDistTime < 50 * 60 * 1000) {
+        console.log(
+          `[Cron] Rewards already distributed recently (${lastDistTime.toISOString()}). Skipping.`
+        );
+        return res.json({
+          success: true,
+          message: 'Already processed recently',
+          lastDistTime,
+        });
+      }
+    }
+
     const isOracleReady = await oracle.initOracle();
     if (!isOracleReady) {
       // Log and return specific message so cron doesn't look like a hard crash
@@ -185,6 +221,12 @@ router.get('/distribute-rewards', verifyCron, async (req, res) => {
 
     // 4. Report Games (Transaction)
     await oracle.reportSoloGames(gamesCount);
+
+    // Update Idempotency Timestamp
+    await db.updateGameSetting(
+      'last_reward_dist_time',
+      new Date().toISOString()
+    );
 
     res.json({
       success: true,
