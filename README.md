@@ -1,11 +1,14 @@
-# Bomb Dash - Web3 Edition (Dockerized)
+# Bomb Dash - Web3 Edition (Vercel Native)
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
-![Docker](https://img.shields.io/badge/docker-enabled-blue?logo=docker)
+![Version](https://img.shields.io/badge/version-2.0.0-orange)
+![Vercel](https://img.shields.io/badge/vercel-deployed-black?logo=vercel)
+![Supabase](https://img.shields.io/badge/supabase-postgres-green?logo=supabase)
 
 **Bomb Dash** is a competitive 2D action game evolved into a Web3 E-Sports platform on the BNB Smart Chain (BSC). It features a client-server architecture where player skill is rewarded with BCOIN tokens through a secure, transparent, and sustainable economy.
+
+This version is optimized for **Serverless Deployment** on Vercel with a managed PostgreSQL database via Supabase.
 
 ---
 
@@ -14,7 +17,7 @@
 - [Why Bomb Dash?](#-why-bomb-dash)
 - [Features](#-features)
 - [Architecture](#-architecture)
-- [Quick Start](#-quick-start)
+- [Deployment](#-deployment)
 - [Documentation](#-documentation)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
@@ -44,44 +47,29 @@ We are transforming a casual pixel-art game into a sustainable **Web3 E-Sport**.
 
 ## 🏗 Architecture
 
-The project uses a decoupled architecture containerized with Docker:
+The project uses a modern Serverless architecture:
 
-- **Frontend**: Vite + Phaser 3 (Game Client)
-- **Backend**: Node.js + Express (API, Matchmaking, Oracle)
-- **Blockchain**: Hardhat (Local) / BSC (Testnet/Mainnet)
-- **Database**: SQLite (Dev) / MySQL (Prod)
+- **Frontend**: Next.js / Vite (React) hosted on Vercel Edge.
+- **Backend**: Node.js Serverless Functions (Vercel API Routes).
+- **Database**: Supabase (PostgreSQL) with connection pooling.
+- **Background Tasks**: Vercel Cron Jobs for matchmaking and blockchain syncing.
+- **Blockchain**: BSC Testnet/Mainnet via Ethers.js.
 
 ➡️ **[View Detailed Architecture Diagrams](./docs/ARCHITECTURE.md)**
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Deployment
 
-The entire stack is Dockerized. You can spin up the blockchain, backend, and frontend with a single command.
+This project is designed to be "Zero DevOps". You can deploy it directly to Vercel and Supabase in minutes.
 
-### Prerequisites
+### Quick Start Guide
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed.
+1.  **Database**: Create a Supabase project and run the provided SQL schema (`supabase_schema.sql`).
+2.  **Deploy**: Connect this repository to Vercel.
+3.  **Configure**: Add the required Environment Variables.
 
-### One-Command Setup
-
-1.  **Clone & Configure**:
-
-    ```bash
-    git clone https://github.com/alanvito1/bomb_dash.git
-    cd bomb_dash
-    cp .env.example .env
-    ```
-
-2.  **Launch**:
-
-    ```bash
-    sudo docker compose up --build
-    ```
-
-3.  **Play**:
-    - **Game**: [http://localhost:5173](http://localhost:5173)
-    - **API**: [http://localhost:3000](http://localhost:3000)
+➡️ **[Read the Full Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**
 
 ---
 
@@ -89,10 +77,10 @@ The entire stack is Dockerized. You can spin up the blockchain, backend, and fro
 
 For deeper dives into the code and design:
 
-- **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, containers, and ERD diagrams.
+- **[Architecture Guide](./docs/ARCHITECTURE.md)**: System context, serverless flows, and ERD.
+- **[Deployment Manual](./docs/DEPLOYMENT_MANUAL.md)**: Step-by-step setup guide.
 - **[Project Briefing](./docs/BRIEFING.md)**: High-level vision and economic model.
 - **[Technical Briefing](./docs/TECHNICAL_BRIEFING.md)**: Technical implementation details.
-- **[Learnings](./docs/LEARNINGS.md)**: Log of architectural decisions and lessons learned.
 
 ---
 
