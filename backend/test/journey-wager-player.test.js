@@ -1,11 +1,11 @@
 const chai = require('chai');
 const { expect } = chai;
-const sinon = require('sinon');
+// const sinon = require('sinon');
 
 const {
-  sequelize,
+  // sequelize,
   initDb,
-  closeDb,
+  // closeDb,
   User,
   Hero,
   processHeroWagerResult,

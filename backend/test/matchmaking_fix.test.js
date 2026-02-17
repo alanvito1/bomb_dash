@@ -15,7 +15,9 @@ describe('Matchmaking Fix Verification', function () {
 
   it('getQueueStatus should return opponent object at top level', async function () {
     // 1. Create User and Hero
-    const user = await db.User.create({ wallet_address: 'test_user_fix_' + Date.now() });
+    const user = await db.User.create({
+      wallet_address: 'test_user_fix_' + Date.now(),
+    });
     const hero = await db.Hero.create({
       user_id: user.id,
       hero_type: 'mock',
@@ -24,11 +26,13 @@ describe('Matchmaking Fix Verification', function () {
       nft_type: 'HERO',
       level: 1,
       hp: 100,
-      damage: 10
+      damage: 10,
     });
 
     // 2. Create Opponent
-    const opponentUser = await db.User.create({ wallet_address: 'opponent_fix_' + Date.now() });
+    const opponentUser = await db.User.create({
+      wallet_address: 'opponent_fix_' + Date.now(),
+    });
     const opponentHero = await db.Hero.create({
       user_id: opponentUser.id,
       hero_type: 'mock',
@@ -37,23 +41,23 @@ describe('Matchmaking Fix Verification', function () {
       nft_type: 'HERO',
       level: 1,
       hp: 90,
-      damage: 12
+      damage: 12,
     });
 
     // 3. Simulate Match Found
     const matchData = {
       opponent: {
         userId: opponentUser.id,
-        hero: opponentHero.toJSON()
+        hero: opponentHero.toJSON(),
       },
-      tier: 'default'
+      tier: 'default',
     };
 
     await db.MatchmakingQueue.create({
       user_id: user.id,
       hero_id: hero.id,
       status: 'found',
-      match_data: JSON.stringify(matchData)
+      match_data: JSON.stringify(matchData),
     });
 
     // 4. Call getQueueStatus
