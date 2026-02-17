@@ -13,6 +13,7 @@ import nftService from './src/web3/nft-service.js';
 import bcoinService from './src/web3/bcoin-service.js';
 import GameEventEmitter from './src/utils/GameEventEmitter.js';
 import TermsScene from './src/scenes/TermsScene.js';
+import HomeScene from './src/scenes/HomeScene.js';
 import LoadingScene from './src/scenes/LoadingScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
@@ -58,9 +59,9 @@ const config = {
     parent: 'phaser-dom-container', // Especifica o contêiner pai
   },
   scene: [
-    // CRITICAL FIX: LoadingScene must be the first scene. It handles all asset
-    // pre-loading, including the i18n language files, before any other
-    // scene is displayed. This prevents race conditions.
+    // NEW ENTRY POINT: HomeScene provides a lightweight landing page.
+    HomeScene,
+    // LoadingScene follows, handling heavy asset loading and initialization.
     LoadingScene,
     TermsScene,
     StartScene,

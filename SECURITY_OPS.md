@@ -20,32 +20,34 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 function generateSecureWallet() {
-    console.log("🔐 Gerando Nova Carteira Segura...");
+  console.log('🔐 Gerando Nova Carteira Segura...');
 
-    // 1. Entropia Adicional (Opcional, mas recomendado)
-    const extraEntropy = crypto.randomBytes(32);
+  // 1. Entropia Adicional (Opcional, mas recomendado)
+  const extraEntropy = crypto.randomBytes(32);
 
-    // 2. Criação da Carteira
-    const wallet = ethers.Wallet.createRandom(extraEntropy);
+  // 2. Criação da Carteira
+  const wallet = ethers.Wallet.createRandom(extraEntropy);
 
-    console.log("\n✅ Carteira Gerada com Sucesso!");
-    console.log("---------------------------------------------------");
-    console.log(`📍 Endereço (Público): ${wallet.address}`);
-    console.log("---------------------------------------------------");
-    console.log("⚠️  ATENÇÃO: A CHAVE PRIVADA ABAIXO DÁ ACESSO TOTAL AOS FUNDOS E PODERES DESTA CONTA.");
-    console.log("⚠️  NUNCA A COMPARTILHE, NEM COM A EQUIPE DE SUPORTE.");
-    console.log("---------------------------------------------------");
-    console.log(`🔑 Chave Privada:      ${wallet.privateKey}`);
-    console.log("---------------------------------------------------");
-    console.log(`📝 Mnemonic (Seed):    ${wallet.mnemonic.phrase}`);
-    console.log("---------------------------------------------------");
+  console.log('\n✅ Carteira Gerada com Sucesso!');
+  console.log('---------------------------------------------------');
+  console.log(`📍 Endereço (Público): ${wallet.address}`);
+  console.log('---------------------------------------------------');
+  console.log(
+    '⚠️  ATENÇÃO: A CHAVE PRIVADA ABAIXO DÁ ACESSO TOTAL AOS FUNDOS E PODERES DESTA CONTA.'
+  );
+  console.log('⚠️  NUNCA A COMPARTILHE, NEM COM A EQUIPE DE SUPORTE.');
+  console.log('---------------------------------------------------');
+  console.log(`🔑 Chave Privada:      ${wallet.privateKey}`);
+  console.log('---------------------------------------------------');
+  console.log(`📝 Mnemonic (Seed):    ${wallet.mnemonic.phrase}`);
+  console.log('---------------------------------------------------');
 
-    // 3. Salvar (Opcional - Cuidado com permissões de arquivo!)
-    // fs.writeFileSync('oracle_wallet.json', JSON.stringify({
-    //     address: wallet.address,
-    //     privateKey: wallet.privateKey,
-    //     mnemonic: wallet.mnemonic.phrase
-    // }, null, 2));
+  // 3. Salvar (Opcional - Cuidado com permissões de arquivo!)
+  // fs.writeFileSync('oracle_wallet.json', JSON.stringify({
+  //     address: wallet.address,
+  //     privateKey: wallet.privateKey,
+  //     mnemonic: wallet.mnemonic.phrase
+  // }, null, 2));
 }
 
 generateSecureWallet();
@@ -79,10 +81,11 @@ Recomenda-se rotacionar a chave do Oráculo a cada **90 dias** ou imediatamente 
 
 ## 🔒 3. Boas Práticas de Variáveis de Ambiente
 
-*   **Nunca faça commit do arquivo `.env`**. Use `.gitignore`.
-*   Na Vercel, use a feature de **Environment Variables** encriptadas.
-*   Para desenvolvimento local, use um `.env.local` que não é versionado.
-*   Evite logs que imprimam `process.env` ou chaves privadas. O Logger AVRE remove segredos conhecidos, mas cuidado redobrado é necessário.
+- **Nunca faça commit do arquivo `.env`**. Use `.gitignore`.
+- Na Vercel, use a feature de **Environment Variables** encriptadas.
+- Para desenvolvimento local, use um `.env.local` que não é versionado.
+- Evite logs que imprimam `process.env` ou chaves privadas. O Logger AVRE remove segredos conhecidos, mas cuidado redobrado é necessário.
 
 ---
-*Assinado: Jules, Eng. de Software Sênior.*
+
+_Assinado: Jules, Eng. de Software Sênior._

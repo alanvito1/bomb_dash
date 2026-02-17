@@ -10,9 +10,10 @@
 **Bomb Dash** is a competitive 2D action game evolved into a Web3 E-Sports platform on the BNB Smart Chain (BSC). It features a client-server architecture where player skill is rewarded with BCOIN tokens through a secure, transparent, and sustainable economy.
 
 This version uses a **Hybrid Architecture**:
-*   **Frontend**: Hosted on Vercel (React/Vite)
-*   **Backend**: Hosted on Google Cloud Run (Node.js/Docker)
-*   **Database**: Managed PostgreSQL via Supabase
+
+- **Frontend**: Hosted on Vercel (React/Vite)
+- **Backend**: Hosted on Google Cloud Run (Node.js/Docker)
+- **Database**: Managed PostgreSQL via Supabase
 
 ---
 
