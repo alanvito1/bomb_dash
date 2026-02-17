@@ -4,6 +4,7 @@ const router = express.Router();
 const db = require('../database.js');
 const pvpService = require('../pvp_service.js');
 const gameState = require('../game_state.js');
+const matchmaking = require('../matchmaking.js');
 
 function verifyOracle(req, res, next) {
   const oracleSecret = req.headers['x-oracle-secret'];
@@ -19,6 +20,18 @@ function verifyOracle(req, res, next) {
 
 router.get('/status', (req, res) => {
   res.json({ success: true, status: gameState.getPvpStatus() });
+});
+
+router.get('/queue/status', async (req, res) => {
+  try {
+    const status = await matchmaking.getQueueStatus(req.user.userId);
+    res.json({ success: true, ...status });
+  } catch (error) {
+    console.error('Error fetching queue status:', error);
+    res
+      .status(500)
+      .json({ success: false, message: 'Failed to get queue status' });
+  }
 });
 
 router.get('/wager/tiers', async (req, res) => {
@@ -53,7 +66,10 @@ router.post('/wager/enter', async (req, res) => {
       `Error entering wager queue for user ${req.user.userId}:`,
       error
     );
-    if (error.message.includes('does not have enough XP')) {
+    if (
+      error.message.includes('does not have enough XP') ||
+      error.message.includes('BETA RESTRICTION')
+    ) {
       return res.status(403).json({ success: false, message: error.message });
     }
     res.status(500).json({

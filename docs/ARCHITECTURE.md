@@ -122,12 +122,15 @@ erDiagram
 ## Key Flows & Processes
 
 ### 1. Serverless "Oracle" Operations
+
 Unlike a persistent server, the Oracle runs on-demand within Vercel Functions.
+
 - **Trigger**: User requests a withdrawal or reward claim.
 - **Action**: Backend function spins up, initializes `ethers.Wallet` from env vars, checks logic, signs message, and returns signature.
 - **Shutdown**: Function terminates immediately after response.
 
 ### 2. Scheduled Sync (Cron Jobs)
+
 Since there is no long-running process to listen for blockchain events, we use polling via Vercel Crons.
 
 ```mermaid
@@ -149,11 +152,13 @@ sequenceDiagram
 ```
 
 ### 3. Degraded Mode (No Blockchain)
+
 If `ORACLE_PRIVATE_KEY` or `BSC_RPC_URL` are missing:
+
 - **Initialization**: `oracle.initOracle()` returns `false`.
 - **Gameplay**: Users can still play with "Mock Heroes".
 - **Restrictions**:
-    - No NFT verification.
-    - No On-Chain rewards (BCOIN).
-    - No PvP Wagers (since they require on-chain escrow).
+  - No NFT verification.
+  - No On-Chain rewards (BCOIN).
+  - No PvP Wagers (since they require on-chain escrow).
 - **Purpose**: Allows development and testing of the game loop without blockchain dependencies.

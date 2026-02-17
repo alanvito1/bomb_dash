@@ -392,7 +392,27 @@ class ApiClient {
    * @returns {Promise<any>} A promise that resolves with the matchmaking status.
    */
   async getMatchmakingStatus() {
-    return this.fetch('/matchmaking/status');
+    return this.fetch('/pvp/queue/status');
+  }
+
+  /**
+   * Mints a test hero for the authenticated user (Testnet only).
+   * @param {string} [rarity] - Forced rarity (optional).
+   * @returns {Promise<any>} Response with the minted hero.
+   */
+  async mintTestHero(rarity) {
+    return this.fetch('/testnet/mint-hero', {
+      method: 'POST',
+      body: JSON.stringify({ forcedRarity: rarity }),
+    });
+  }
+
+  /**
+   * Mints test BCOIN for the authenticated user (Testnet only).
+   * @returns {Promise<any>} Response with amount.
+   */
+  async mintTestBcoin() {
+    return this.fetch('/testnet/mint-bcoin', { method: 'POST' });
   }
 
   /**

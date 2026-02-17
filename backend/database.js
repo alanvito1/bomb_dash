@@ -66,6 +66,18 @@ const Hero = sequelize.define(
     bombSize: { type: DataTypes.FLOAT, defaultValue: 1.0 },
     multiShot: { type: DataTypes.INTEGER, defaultValue: 0 },
     sprite_name: { type: DataTypes.STRING },
+    rarity: {
+      type: DataTypes.STRING,
+      defaultValue: 'Common',
+      allowNull: false,
+      validate: { isIn: [['Common', 'Rare', 'Super Rare', 'Legend', 'House']] },
+    },
+    nft_type: {
+      type: DataTypes.STRING,
+      defaultValue: 'HERO',
+      allowNull: false,
+      validate: { isIn: [['HERO', 'HOUSE']] },
+    },
     status: {
       type: DataTypes.STRING,
       defaultValue: 'in_wallet',
@@ -286,6 +298,30 @@ async function runMigrations(queryInterface) {
       console.log(
         "MIGRATION: 'sprite_name' column already exists in 'heroes' table."
       );
+    }
+
+    if (!heroTableInfo.rarity) {
+      console.log(
+        "MIGRATION: 'rarity' column not found in 'heroes' table. Adding it now..."
+      );
+      await queryInterface.addColumn('heroes', 'rarity', {
+        type: DataTypes.STRING,
+        defaultValue: 'Common',
+        allowNull: false,
+      });
+      console.log("MIGRATION: 'rarity' column added successfully.");
+    }
+
+    if (!heroTableInfo.nft_type) {
+      console.log(
+        "MIGRATION: 'nft_type' column not found in 'heroes' table. Adding it now..."
+      );
+      await queryInterface.addColumn('heroes', 'nft_type', {
+        type: DataTypes.STRING,
+        defaultValue: 'HERO',
+        allowNull: false,
+      });
+      console.log("MIGRATION: 'nft_type' column added successfully.");
     }
   }
 
@@ -651,6 +687,8 @@ async function updateHeroStats(heroId, stats) {
     'bombSize',
     'multiShot',
     'status',
+    'rarity',
+    'nft_type',
   ];
   const updateData = {};
   for (const key in stats) {

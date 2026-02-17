@@ -1,9 +1,9 @@
 /* 🌹 AVRE Cyber-Bomber Theme for Wiki */
 :root {
-  --primary-color: #DC143C; /* Crimson */
-  --secondary-color: #B22222; /* Firebrick */
+  --primary-color: #dc143c; /* Crimson */
+  --secondary-color: #b22222; /* Firebrick */
   --background-color: #000000; /* Void */
-  --text-color: #FFFFFF; /* White */
+  --text-color: #ffffff; /* White */
   --glass-bg: rgba(20, 0, 0, 0.9); /* Deep Burgundy */
   --font-main: 'Press Start 2P', monospace;
 }
@@ -33,7 +33,9 @@ body {
   backdrop-filter: blur(5px);
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   color: var(--primary-color);
   text-shadow: 0 0 10px var(--primary-color);
   margin-bottom: 20px;
@@ -102,7 +104,8 @@ label {
   margin-bottom: 5px;
 }
 
-input, select {
+input,
+select {
   padding: 10px;
   background-color: #1a0505;
   border: 1px solid var(--primary-color);

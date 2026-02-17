@@ -84,6 +84,11 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       }
     );
 
+    // TESTNET MINT BUTTON
+    this.mintButton = createButton(this, x, y - 120, 'MINT FREE HERO', () => {
+      this.handleMintHero();
+    });
+
     this.disableActionButtons();
   }
 
@@ -106,6 +111,46 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       this.playButton.setInteractive({ useHandCursor: true }).setAlpha(1);
     } else {
       this.playButton.disableInteractive().setAlpha(0.5);
+    }
+  }
+
+  async handleMintHero() {
+    SoundManager.play(this, 'click');
+    const loadingText = this.add
+      .text(this.cameras.main.centerX, this.centerY, 'MINTING...', {
+        fontSize: '20px',
+        fill: '#ffffff',
+        fontFamily: '"Press Start 2P"',
+      })
+      .setOrigin(0.5)
+      .setDepth(100);
+
+    try {
+      const response = await api.mintTestHero();
+      if (response.success) {
+        SoundManager.play(this, 'powerup');
+        // Give some BCOIN too for testing
+        await api.mintTestBcoin();
+
+        loadingText.destroy();
+        this.scene.launch('PopupScene', {
+          title: 'MINT SUCCESS!',
+          message: `You got a ${response.hero.rarity} ${response.hero.sprite_name}!`,
+          onClose: () => {
+            // Refresh hero list
+            this.scene.restart();
+          },
+        });
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      loadingText.destroy();
+      SoundManager.play(this, 'error');
+      this.scene.launch('PopupScene', {
+        title: 'Mint Failed',
+        message: error.message || 'Unknown error',
+      });
     }
   }
 
@@ -150,14 +195,21 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       const background = this.add.graphics();
       card.add(background);
 
+      // Check Rarity/Type Gating
+      const isLocked =
+        (hero.rarity && hero.rarity !== 'Common') ||
+        (hero.nft_type && hero.nft_type === 'HOUSE');
+
       const heroSprite = this.add
         .sprite(0, -80, hero.sprite_name)
         .setScale(3.5);
+      if (isLocked) heroSprite.setTint(0x555555); // Darken sprite
       card.add(heroSprite);
+
       const heroNameText = this.add
         .text(0, 40, hero.name, {
           fontSize: '16px',
-          fill: '#FFD700',
+          fill: isLocked ? '#888888' : '#FFD700',
           fontFamily: '"Press Start 2P"',
           align: 'center',
         })
@@ -311,36 +363,60 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         .setOrigin(0.5);
       card.add(nftIndicator);
 
+      if (isLocked) {
+        const lockOverlay = this.add.graphics();
+        lockOverlay
+          .fillStyle(0x000000, 0.6)
+          .fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        card.add(lockOverlay);
+
+        const lockText = this.add
+          .text(0, 0, 'LOCKED\n(BETA)', {
+            fontSize: '18px',
+            fill: '#FF0000',
+            fontFamily: '"Press Start 2P"',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 4,
+          })
+          .setOrigin(0.5);
+        card.add(lockText);
+      }
+
       card.setSize(cardWidth, cardHeight);
-      card
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.selectHero(hero, card, index))
-        .on('pointerover', () => {
-          if (this.selectedHero?.id !== hero.id) {
-            background
-              .lineStyle(3, '#FFD700', 1)
-              .strokeRoundedRect(
-                -cardWidth / 2,
-                -cardHeight / 2,
-                cardWidth,
-                cardHeight,
-                15
-              );
-          }
-        })
-        .on('pointerout', () => {
-          if (this.selectedHero?.id !== hero.id) {
-            background
-              .lineStyle(2, '#00ffff', 0.8)
-              .strokeRoundedRect(
-                -cardWidth / 2,
-                -cardHeight / 2,
-                cardWidth,
-                cardHeight,
-                15
-              );
-          }
-        });
+
+      // Only allow selection if not locked
+      if (!isLocked) {
+        card
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.selectHero(hero, card, index))
+          .on('pointerover', () => {
+            if (this.selectedHero?.id !== hero.id) {
+              background
+                .lineStyle(3, '#FFD700', 1)
+                .strokeRoundedRect(
+                  -cardWidth / 2,
+                  -cardHeight / 2,
+                  cardWidth,
+                  cardHeight,
+                  15
+                );
+            }
+          })
+          .on('pointerout', () => {
+            if (this.selectedHero?.id !== hero.id) {
+              background
+                .lineStyle(2, '#00ffff', 0.8)
+                .strokeRoundedRect(
+                  -cardWidth / 2,
+                  -cardHeight / 2,
+                  cardWidth,
+                  cardHeight,
+                  15
+                );
+            }
+          });
+      }
 
       background
         .fillStyle(0x000000, 0.7)

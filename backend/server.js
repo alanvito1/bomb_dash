@@ -101,6 +101,7 @@ const tournamentRoutes = require('./routes/tournaments.js');
 const gameRoutes = require('./routes/game.js');
 const debugRoutes = require('./routes/debug.js');
 const cronRoutes = require('./routes/cron.js');
+const testnetRoutes = require('./routes/testnet.js');
 
 const app = express();
 let isInitialized = false;
@@ -253,6 +254,7 @@ app.use('/api/tournaments', authRoutes.verifyToken, tournamentRoutes);
 app.use('/api/game', authRoutes.verifyToken, gameRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/cron', cronRoutes); // New Cron Route
+app.use('/api/testnet', testnetRoutes);
 
 // Local Server Start (only if running directly)
 if (require.main === module) {
