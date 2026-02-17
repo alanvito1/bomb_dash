@@ -38,6 +38,8 @@ CREATE TABLE "heroes" (
     "bombSize" REAL DEFAULT 1.0,
     "multiShot" INTEGER DEFAULT 0,
     "sprite_name" VARCHAR(255),
+    "rarity" VARCHAR(50) DEFAULT 'Common' NOT NULL,
+    "nft_type" VARCHAR(50) DEFAULT 'HERO' NOT NULL CHECK (nft_type IN ('HERO', 'HOUSE')),
     "status" VARCHAR(50) DEFAULT 'in_wallet' NOT NULL CHECK (status IN ('in_wallet', 'staked')),
     "last_updated" TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE ("user_id", "nft_id") -- Ensure unique NFT per user if nft_id is set
