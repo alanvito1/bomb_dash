@@ -1,9 +1,23 @@
 // 🌹 AVRE Wiki Logic
 
 const heroData = [
-  { name: 'Mock Hero', type: 'Free', hp: 100, speed: 200, damage: 1, bombSize: 1.0 },
+  {
+    name: 'Mock Hero',
+    type: 'Free',
+    hp: 100,
+    speed: 200,
+    damage: 1,
+    bombSize: 1.0,
+  },
   { name: 'Ninja', type: 'NFT', hp: 120, speed: 250, damage: 2, bombSize: 1.2 },
-  { name: 'Knight', type: 'NFT', hp: 150, speed: 180, damage: 3, bombSize: 1.5 },
+  {
+    name: 'Knight',
+    type: 'NFT',
+    hp: 150,
+    speed: 180,
+    damage: 3,
+    bombSize: 1.5,
+  },
   { name: 'Mage', type: 'NFT', hp: 90, speed: 220, damage: 4, bombSize: 2.0 },
 ];
 
@@ -22,7 +36,7 @@ function renderHeroes() {
   const container = document.getElementById('hero-list');
   if (!container) return;
 
-  heroData.forEach(hero => {
+  heroData.forEach((hero) => {
     const card = document.createElement('div');
     card.className = 'hero-card';
     card.innerHTML = `
@@ -46,7 +60,8 @@ function setupCalculator() {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const matches = parseInt(document.getElementById('daily-matches').value) || 0;
+    const matches =
+      parseInt(document.getElementById('daily-matches').value) || 0;
     const winRate = parseInt(document.getElementById('win-rate').value) || 50;
     const tierId = parseInt(document.getElementById('wager-tier').value) || 1;
 
@@ -59,15 +74,15 @@ function setupCalculator() {
     // Assuming simple wager mechanics where loser pays winner via the pot.
     // If I wager 10 and win, I get my 10 back + 10 (profit 10).
     // If I lose, I lose my 10 (profit -10).
-    const profit = (wins * tier.reward) - (losses * tier.cost);
+    const profit = wins * tier.reward - losses * tier.cost;
 
     let message = `Estimated Daily Profit: ${profit} BCOIN`;
     if (profit > 0) {
-        message += ` 🚀 (Stonks!)`;
-        resultDiv.style.color = '#00ff00';
+      message += ` 🚀 (Stonks!)`;
+      resultDiv.style.color = '#00ff00';
     } else {
-        message += ` 📉 (Needs Practice)`;
-        resultDiv.style.color = '#ff4444';
+      message += ` 📉 (Needs Practice)`;
+      resultDiv.style.color = '#ff4444';
     }
 
     // Sunday Bonus Note
