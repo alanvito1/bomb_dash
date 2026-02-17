@@ -207,7 +207,8 @@ app.get('/health', (req, res) => {
 
 // Middleware to ensure initialization for all other routes
 app.use(async (req, res, next) => {
-  if (!isReady) {
+  // Allow tests to bypass the ready check, as they manage their own DB initialization
+  if (!isReady && process.env.NODE_ENV !== 'test') {
     // Trigger init if not already triggered (failsafe)
     if (!initPromise) {
       initPromise = performInitialization();
