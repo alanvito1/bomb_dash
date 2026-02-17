@@ -299,7 +299,9 @@ async function runMigrations(queryInterface) {
 
   // --- WagerMatches Table Migration ---
   if (tables.includes('wager_matches')) {
-    const matchesTableInfo = await queryInterface.describeTable('wager_matches');
+    const matchesTableInfo = await queryInterface.describeTable(
+      'wager_matches'
+    );
 
     if (!matchesTableInfo.player1_score) {
       console.log(

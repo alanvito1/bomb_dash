@@ -292,13 +292,15 @@ async function submitMatchResult(
   score,
   damageDealt,
   durationSeconds,
-  enemiesKilled
+  _enemiesKilled
 ) {
   // 1. Fetch user and match
   const user = await db.User.findByPk(userId);
   if (!user) throw new Error('User not found');
   if (user.flagged_cheater) {
-    throw new Error('Account flagged for suspicious activity. Submission rejected.');
+    throw new Error(
+      'Account flagged for suspicious activity. Submission rejected.'
+    );
   }
 
   const match = await db.getWagerMatch(matchId);
@@ -308,10 +310,14 @@ async function submitMatchResult(
   let isPlayer1 = false;
   let opponentAddress = '';
 
-  if (match.player1_address.toLowerCase() === user.wallet_address.toLowerCase()) {
+  if (
+    match.player1_address.toLowerCase() === user.wallet_address.toLowerCase()
+  ) {
     isPlayer1 = true;
     opponentAddress = match.player2_address;
-  } else if (match.player2_address.toLowerCase() === user.wallet_address.toLowerCase()) {
+  } else if (
+    match.player2_address.toLowerCase() === user.wallet_address.toLowerCase()
+  ) {
     isPlayer1 = false;
     opponentAddress = match.player1_address;
   } else {
@@ -319,12 +325,15 @@ async function submitMatchResult(
   }
 
   // Check if already submitted
-  if (isPlayer1 && match.player1_score !== null) throw new Error('Result already submitted');
-  if (!isPlayer1 && match.player2_score !== null) throw new Error('Result already submitted');
+  if (isPlayer1 && match.player1_score !== null)
+    throw new Error('Result already submitted');
+  if (!isPlayer1 && match.player2_score !== null)
+    throw new Error('Result already submitted');
 
   // 3. Anti-Exploit Validation
   const hero = await db.Hero.findByPk(heroId);
-  if (!hero || hero.user_id !== userId) throw new Error('Hero validation failed');
+  if (!hero || hero.user_id !== userId)
+    throw new Error('Hero validation failed');
 
   const fireRateMs = hero.fireRate || 600; // Default 600ms
   const damage = hero.damage || 10;
@@ -340,10 +349,14 @@ async function submitMatchResult(
 
   if (damageDealt > maxAllowedDamage) {
     // Flag Cheater
-    console.warn(`[ANTI-EXPLOIT] User ${userId} flagged. Dealt ${damageDealt}, Max Allowed ${maxAllowedDamage}`);
+    console.warn(
+      `[ANTI-EXPLOIT] User ${userId} flagged. Dealt ${damageDealt}, Max Allowed ${maxAllowedDamage}`
+    );
     user.flagged_cheater = true;
     await user.save();
-    throw new Error('Security Violation: Abnormal damage detected. Account flagged.');
+    throw new Error(
+      'Security Violation: Abnormal damage detected. Account flagged.'
+    );
   }
 
   // 4. Update Stats & Match Record
@@ -366,7 +379,9 @@ async function submitMatchResult(
 
   // 5. Check if Opponent has submitted (Match Completion Logic)
   const opponentScore = isPlayer1 ? match.player2_score : match.player1_score;
-  const opponentHeroId = isPlayer1 ? match.player2_hero_id : match.player1_hero_id;
+  const opponentHeroId = isPlayer1
+    ? match.player2_hero_id
+    : match.player1_hero_id;
 
   if (opponentScore !== null) {
     // Both players have submitted. Determine winner.
@@ -388,14 +403,14 @@ async function submitMatchResult(
       loserAddress = user.wallet_address;
       loserHeroId = heroId;
     } else {
-        // Draw: Refund? Or P1 wins?
-        // Let's implement P1 wins on draw for now as per "Score Attack" usually having tie-breakers.
-        // Better: Refund or Split?
-        // User didn't specify. I will assume standard "Higher Score Wins", tie = P1 (Host) advantage.
-        winnerAddress = isPlayer1 ? user.wallet_address : opponentAddress;
-        winnerHeroId = isPlayer1 ? heroId : opponentHeroId;
-        loserAddress = isPlayer1 ? opponentAddress : user.wallet_address;
-        loserHeroId = isPlayer1 ? opponentHeroId : heroId;
+      // Draw: Refund? Or P1 wins?
+      // Let's implement P1 wins on draw for now as per "Score Attack" usually having tie-breakers.
+      // Better: Refund or Split?
+      // User didn't specify. I will assume standard "Higher Score Wins", tie = P1 (Host) advantage.
+      winnerAddress = isPlayer1 ? user.wallet_address : opponentAddress;
+      winnerHeroId = isPlayer1 ? heroId : opponentHeroId;
+      loserAddress = isPlayer1 ? opponentAddress : user.wallet_address;
+      loserHeroId = isPlayer1 ? opponentHeroId : heroId;
     }
 
     console.log(`[PvP] Match ${matchId} Complete. Winner: ${winnerAddress}`);
@@ -419,15 +434,14 @@ async function submitMatchResult(
       success: true,
       status: 'completed',
       message: 'Match complete. Results processed.',
-      result: result
+      result: result,
     };
-
   } else {
     // Waiting for opponent
     return {
       success: true,
       status: 'waiting_for_opponent',
-      message: 'Score submitted. Waiting for opponent result.'
+      message: 'Score submitted. Waiting for opponent result.',
     };
   }
 }

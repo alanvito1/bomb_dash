@@ -62,7 +62,9 @@ async function initOracle() {
         oracleWallet
       );
     } else {
-      console.warn('[WARN] WAGER_ARENA_ADDRESS não configurado. Funcionalidades de Wager indisponíveis.');
+      console.warn(
+        '[WARN] WAGER_ARENA_ADDRESS não configurado. Funcionalidades de Wager indisponíveis.'
+      );
     }
 
     isOracleInitialized = true;
@@ -103,7 +105,7 @@ async function createRankedMatch(player1, player2, tier, entryFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -152,7 +154,8 @@ async function reportRankedMatchResult(matchId, winnerAddress) {
  */
 async function reportWagerMatchResult(matchId, winnerAddress) {
   if (!isOracleInitialized) throw new Error('O Oráculo não está inicializado.');
-  if (!wagerArenaContract) throw new Error('Contrato WagerArena não configurado.');
+  if (!wagerArenaContract)
+    throw new Error('Contrato WagerArena não configurado.');
 
   console.log(
     `[Oracle] Reportando resultado de Wager para a partida ${matchId}. Vencedor: ${winnerAddress}`
@@ -190,7 +193,7 @@ async function verifyPvpEntryFee(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -235,7 +238,7 @@ async function verifyLevelUpTransaction(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -270,7 +273,7 @@ async function verifyUpgradeTransaction(txHash, expectedPlayer, expectedCost) {
           return tournamentControllerContract.interface.parseLog(log);
         }
         return null;
-      } catch (_e) {
+      } catch {
         return null; // Ignore logs that are not from the target contract
       }
     })
@@ -450,7 +453,7 @@ async function verifyTournamentCreation(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -510,7 +513,7 @@ async function verifyTournamentJoin(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })

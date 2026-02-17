@@ -17,7 +17,9 @@ describe('PvP Service - Submit Result', () => {
   });
 
   it('should reject submission if user is flagged as cheater', async () => {
-    sandbox.stub(db.User, 'findByPk').resolves({ id: 1, flagged_cheater: true });
+    sandbox
+      .stub(db.User, 'findByPk')
+      .resolves({ id: 1, flagged_cheater: true });
 
     try {
       await pvpService.submitMatchResult(1, 1, 1, 100, 100, 10, 5);
@@ -28,13 +30,18 @@ describe('PvP Service - Submit Result', () => {
   });
 
   it('should flag user as cheater if damage is excessive', async () => {
-    const user = { id: 1, wallet_address: '0xUser', flagged_cheater: false, save: sandbox.stub() };
+    const user = {
+      id: 1,
+      wallet_address: '0xUser',
+      flagged_cheater: false,
+      save: sandbox.stub(),
+    };
     const match = {
       match_id: 1,
       player1_address: '0xUser',
       player2_address: '0xOpponent',
       player1_score: null,
-      save: sandbox.stub()
+      save: sandbox.stub(),
     };
     const hero = { id: 1, user_id: 1, damage: 10, fireRate: 1000 }; // 1 shot/sec -> 10 DPS
 
@@ -55,14 +62,20 @@ describe('PvP Service - Submit Result', () => {
   });
 
   it('should accept valid submission and wait for opponent', async () => {
-    const user = { id: 1, wallet_address: '0xUser', flagged_cheater: false, max_score: 0, save: sandbox.stub() };
+    const user = {
+      id: 1,
+      wallet_address: '0xUser',
+      flagged_cheater: false,
+      max_score: 0,
+      save: sandbox.stub(),
+    };
     const match = {
       match_id: 1,
       player1_address: '0xUser',
       player2_address: '0xOpponent',
       player1_score: null,
       player2_score: null,
-      save: sandbox.stub()
+      save: sandbox.stub(),
     };
     const hero = { id: 1, user_id: 1, damage: 10, fireRate: 1000 }; // 10 DPS
 
@@ -81,7 +94,13 @@ describe('PvP Service - Submit Result', () => {
   });
 
   it('should complete match when second player submits', async () => {
-    const user = { id: 2, wallet_address: '0xOpponent', flagged_cheater: false, max_score: 0, save: sandbox.stub() };
+    const user = {
+      id: 2,
+      wallet_address: '0xOpponent',
+      flagged_cheater: false,
+      max_score: 0,
+      save: sandbox.stub(),
+    };
     const match = {
       match_id: 1,
       tier_id: 1,
@@ -90,7 +109,7 @@ describe('PvP Service - Submit Result', () => {
       player1_score: 500,
       player1_hero_id: 1,
       player2_score: null, // Will be set by this call
-      save: sandbox.stub()
+      save: sandbox.stub(),
     };
     const hero = { id: 2, user_id: 2, damage: 10, fireRate: 1000 };
 
