@@ -22,7 +22,9 @@ function getActiveTournament() {
 }
 
 async function registerPlayer(tournamentId, userAddress, heroId) {
-  console.log(`[TournamentService] Registering player ${userAddress} to lobby ${activeLobby.id} (Current: ${activeLobby.participants.length})`);
+  console.log(
+    `[TournamentService] Registering player ${userAddress} to lobby ${activeLobby.id} (Current: ${activeLobby.participants.length})`
+  );
 
   // For MVP/Testnet, we ignore tournamentId check or verify against 'test-lobby-1'
   if (activeLobby.status !== 'Waiting') {
@@ -31,12 +33,16 @@ async function registerPlayer(tournamentId, userAddress, heroId) {
 
   // Check if already registered
   if (activeLobby.participants.some((p) => p.address === userAddress)) {
-    console.warn(`[TournamentService] Player ${userAddress} already registered.`);
+    console.warn(
+      `[TournamentService] Player ${userAddress} already registered.`
+    );
     throw new Error('Player already registered.');
   }
 
   activeLobby.participants.push({ address: userAddress, heroId });
-  console.log(`[TournamentService] Player registered. New count: ${activeLobby.participants.length}`);
+  console.log(
+    `[TournamentService] Player registered. New count: ${activeLobby.participants.length}`
+  );
 
   if (activeLobby.participants.length >= activeLobby.capacity) {
     console.log(`[TournamentService] Lobby full! Starting tournament...`);
@@ -49,7 +55,11 @@ async function registerPlayer(tournamentId, userAddress, heroId) {
     });
   }
 
-  return { success: true, message: 'Registered for tournament.', lobby: activeLobby };
+  return {
+    success: true,
+    message: 'Registered for tournament.',
+    lobby: activeLobby,
+  };
 }
 
 /**

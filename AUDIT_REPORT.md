@@ -5,11 +5,11 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ## 1. Single Player Flow Audit
 
-### Creating Player: Player A (0x2002aD584D57b2799A060ca328029F523D75F1DF)
+### Creating Player: Player A (0xA8fb11B020b2C872bb7be0de585983Dd70895F46)
 
 * Minting Common Hero for Player A...
 
-  - Minted Hero ID: 94 (Common)
+  - Minted Hero ID: 119 (Common)
 
   - Initial XP: 0
 
@@ -22,17 +22,17 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ## 2. PvP Flow (Serverless Polling)
 
-### Creating Player: Player B (0x701F5D3c9DeDE5013F9264dbC9af047A75bFA7C0)
+### Creating Player: Player B (0x9eEf7E5B7bcB2Db5EdEfe8a028BdCC519AB326DD)
 
-### Creating Player: Player C (0xD865bc3043362957E6F2914c34502e0C1b8843bE)
+### Creating Player: Player C (0x851E54A8a1204d74691a586Cb3c7837c693B7f1F)
 
 * Setting up Player B...
 
-  - Added XP and BCOIN. Hero ID: 99
+  - Added XP and BCOIN. Hero ID: 124
 
 * Setting up Player C...
 
-  - Added XP and BCOIN. Hero ID: 100
+  - Added XP and BCOIN. Hero ID: 125
 
 * Both players joining Wager Queue (Tier 1)...
 
@@ -49,7 +49,7 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ## 3. Rarity Gating Test
 
-### Creating Player: Player D (0x66E1290Ae45acad76DC6bEC0bE531cf15E4e87Ba)
+### Creating Player: Player D (0x9A8Fc428B2D722aA156705e78BA966d3d8f26d07)
 
 * Minting LEGENDARY Hero for Player D...
 
@@ -69,13 +69,13 @@ Starting Audit... (Target: http://localhost:3000/api, Chain: 97, Domain: localho
 
 ## 5. Tournament Lobby Flow
 
-### Creating Player: TourneyPlayer 1 (0x314e8849dDd435c8AeffF0bC908B1a1610ff7dA7)
+### Creating Player: TourneyPlayer 1 (0x5b50abc45cE86Fef48046207FC563d0E711C6aC2)
 
-### Creating Player: TourneyPlayer 2 (0x7aF1F289900782e11b7FCFC1a07d4547059a8A1e)
+### Creating Player: TourneyPlayer 2 (0x76dAD310C6a6e333920DB0f290fEcdf52E6A30f7)
 
-### Creating Player: TourneyPlayer 3 (0xA4f4a0A201CD399c6DaE21285AEB08602ca33Aa2)
+### Creating Player: TourneyPlayer 3 (0x1676eC4E486cc855f39507eF56222E48846AF61A)
 
-### Creating Player: TourneyPlayer 4 (0x38ad856dA4439C0B0323db7dD3d4bb6D919e4f17)
+### Creating Player: TourneyPlayer 4 (0xFC5B236B41C3b43C935d32138f74E6e72e560051)
 
 * All 4 players joining Tournament Lobby...
 

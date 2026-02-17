@@ -28,7 +28,7 @@ function generateHeroStats(rarity) {
       sprite = 'knight_hero';
       break;
     default:
-        sprite = 'ninja_hero';
+      sprite = 'ninja_hero';
   }
 
   // Basic stat generation logic
@@ -41,76 +41,75 @@ function generateHeroStats(rarity) {
     hp: Math.floor(100 * multiplier),
     maxHp: Math.floor(100 * multiplier),
     damage: Math.floor(5 * multiplier), // Base damage 5
-    speed: Math.floor(200 + (multiplier * 10)),
+    speed: Math.floor(200 + multiplier * 10),
     sprite_name: sprite,
-    status: 'in_wallet' // Mimic fresh mint state
+    status: 'in_wallet', // Mimic fresh mint state
   };
 }
 
 router.post('/mint-hero', verifyToken, async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const { forcedRarity, forcedType } = req.body; // Allow forcing for testing purposes
+  try {
+    const { userId } = req.user;
+    const { forcedRarity, forcedType } = req.body; // Allow forcing for testing purposes
 
-        let rarity = 'Common';
+    let rarity = 'Common';
 
-        // RNG Logic
-        if (!forcedRarity) {
-            const rand = Math.random();
-            if (rand > 0.98) rarity = 'Legend';      // 2%
-            else if (rand > 0.90) rarity = 'Super Rare'; // 8%
-            else if (rand > 0.70) rarity = 'Rare';       // 20%
-            // else Common (70%)
-        } else {
-            rarity = forcedRarity;
-        }
-
-        let nftType = 'HERO';
-        if (forcedType) nftType = forcedType;
-
-        const stats = generateHeroStats(rarity);
-        stats.nft_type = nftType;
-
-        // Override sprite for House or specific types if needed
-        if (nftType === 'HOUSE') {
-            stats.sprite_name = 'house_blue'; // Example asset
-            stats.rarity = 'Common'; // Houses might have rarities too, but let's keep it simple
-        }
-
-        // Create hero in DB
-        const result = await db.createHeroForUser(userId, stats);
-
-        // Fetch the created hero to return full object
-        const hero = await db.Hero.findByPk(result.heroId);
-
-        res.json({
-            success: true,
-            message: `Successfully minted a ${rarity} ${nftType}!`,
-            hero: hero
-        });
-
-    } catch (error) {
-        console.error('Minting error:', error);
-        res.status(500).json({ success: false, message: 'Minting failed' });
+    // RNG Logic
+    if (!forcedRarity) {
+      const rand = Math.random();
+      if (rand > 0.98) rarity = 'Legend'; // 2%
+      else if (rand > 0.9) rarity = 'Super Rare'; // 8%
+      else if (rand > 0.7) rarity = 'Rare'; // 20%
+      // else Common (70%)
+    } else {
+      rarity = forcedRarity;
     }
+
+    let nftType = 'HERO';
+    if (forcedType) nftType = forcedType;
+
+    const stats = generateHeroStats(rarity);
+    stats.nft_type = nftType;
+
+    // Override sprite for House or specific types if needed
+    if (nftType === 'HOUSE') {
+      stats.sprite_name = 'house_blue'; // Example asset
+      stats.rarity = 'Common'; // Houses might have rarities too, but let's keep it simple
+    }
+
+    // Create hero in DB
+    const result = await db.createHeroForUser(userId, stats);
+
+    // Fetch the created hero to return full object
+    const hero = await db.Hero.findByPk(result.heroId);
+
+    res.json({
+      success: true,
+      message: `Successfully minted a ${rarity} ${nftType}!`,
+      hero: hero,
+    });
+  } catch (error) {
+    console.error('Minting error:', error);
+    res.status(500).json({ success: false, message: 'Minting failed' });
+  }
 });
 
 router.post('/mint-bcoin', verifyToken, async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const amount = 100;
+  try {
+    const { userId } = req.user;
+    const amount = 100;
 
-        await db.grantRewards(userId, amount, 0); // Grant 100 BCOIN, 0 XP
+    await db.grantRewards(userId, amount, 0); // Grant 100 BCOIN, 0 XP
 
-        res.json({
-            success: true,
-            message: `Minted ${amount} BCOIN!`,
-            amount: amount
-        });
-    } catch (error) {
-        console.error('Mint BCOIN error:', error);
-        res.status(500).json({ success: false, message: 'Failed to mint BCOIN' });
-    }
+    res.json({
+      success: true,
+      message: `Minted ${amount} BCOIN!`,
+      amount: amount,
+    });
+  } catch (error) {
+    console.error('Mint BCOIN error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mint BCOIN' });
+  }
 });
 
 module.exports = router;

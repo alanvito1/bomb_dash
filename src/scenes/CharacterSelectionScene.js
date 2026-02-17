@@ -85,15 +85,9 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     );
 
     // TESTNET MINT BUTTON
-    this.mintButton = createButton(
-      this,
-      x,
-      y - 120,
-      'MINT FREE HERO',
-      () => {
-        this.handleMintHero();
-      }
-    );
+    this.mintButton = createButton(this, x, y - 120, 'MINT FREE HERO', () => {
+      this.handleMintHero();
+    });
 
     this.disableActionButtons();
   }
@@ -123,12 +117,11 @@ export default class CharacterSelectionScene extends Phaser.Scene {
   async handleMintHero() {
     SoundManager.play(this, 'click');
     const loadingText = this.add
-      .text(
-        this.cameras.main.centerX,
-        this.centerY,
-        'MINTING...',
-        { fontSize: '20px', fill: '#ffffff', fontFamily: '"Press Start 2P"' }
-      )
+      .text(this.cameras.main.centerX, this.centerY, 'MINTING...', {
+        fontSize: '20px',
+        fill: '#ffffff',
+        fontFamily: '"Press Start 2P"',
+      })
       .setOrigin(0.5)
       .setDepth(100);
 
@@ -144,9 +137,9 @@ export default class CharacterSelectionScene extends Phaser.Scene {
           title: 'MINT SUCCESS!',
           message: `You got a ${response.hero.rarity} ${response.hero.sprite_name}!`,
           onClose: () => {
-             // Refresh hero list
-             this.scene.restart();
-          }
+            // Refresh hero list
+            this.scene.restart();
+          },
         });
       } else {
         throw new Error(response.message);
@@ -203,7 +196,9 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       card.add(background);
 
       // Check Rarity/Type Gating
-      const isLocked = (hero.rarity && hero.rarity !== 'Common') || (hero.nft_type && hero.nft_type === 'HOUSE');
+      const isLocked =
+        (hero.rarity && hero.rarity !== 'Common') ||
+        (hero.nft_type && hero.nft_type === 'HOUSE');
 
       const heroSprite = this.add
         .sprite(0, -80, hero.sprite_name)
@@ -369,19 +364,23 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       card.add(nftIndicator);
 
       if (isLocked) {
-           const lockOverlay = this.add.graphics();
-           lockOverlay.fillStyle(0x000000, 0.6).fillRect(-cardWidth/2, -cardHeight/2, cardWidth, cardHeight);
-           card.add(lockOverlay);
+        const lockOverlay = this.add.graphics();
+        lockOverlay
+          .fillStyle(0x000000, 0.6)
+          .fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        card.add(lockOverlay);
 
-           const lockText = this.add.text(0, 0, 'LOCKED\n(BETA)', {
-               fontSize: '18px',
-               fill: '#FF0000',
-               fontFamily: '"Press Start 2P"',
-               align: 'center',
-               stroke: '#000000',
-               strokeThickness: 4
-           }).setOrigin(0.5);
-           card.add(lockText);
+        const lockText = this.add
+          .text(0, 0, 'LOCKED\n(BETA)', {
+            fontSize: '18px',
+            fill: '#FF0000',
+            fontFamily: '"Press Start 2P"',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 4,
+          })
+          .setOrigin(0.5);
+        card.add(lockText);
       }
 
       card.setSize(cardWidth, cardHeight);
@@ -389,34 +388,34 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       // Only allow selection if not locked
       if (!isLocked) {
         card
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.selectHero(hero, card, index))
-            .on('pointerover', () => {
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.selectHero(hero, card, index))
+          .on('pointerover', () => {
             if (this.selectedHero?.id !== hero.id) {
-                background
+              background
                 .lineStyle(3, '#FFD700', 1)
                 .strokeRoundedRect(
-                    -cardWidth / 2,
-                    -cardHeight / 2,
-                    cardWidth,
-                    cardHeight,
-                    15
+                  -cardWidth / 2,
+                  -cardHeight / 2,
+                  cardWidth,
+                  cardHeight,
+                  15
                 );
             }
-            })
-            .on('pointerout', () => {
+          })
+          .on('pointerout', () => {
             if (this.selectedHero?.id !== hero.id) {
-                background
+              background
                 .lineStyle(2, '#00ffff', 0.8)
                 .strokeRoundedRect(
-                    -cardWidth / 2,
-                    -cardHeight / 2,
-                    cardWidth,
-                    cardHeight,
-                    15
+                  -cardWidth / 2,
+                  -cardHeight / 2,
+                  cardWidth,
+                  cardHeight,
+                  15
                 );
             }
-            });
+          });
       }
 
       background
