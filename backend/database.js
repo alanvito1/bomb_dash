@@ -41,6 +41,7 @@ const User = sequelize.define(
     account_xp: { type: DataTypes.INTEGER, defaultValue: 0 },
     coins: { type: DataTypes.INTEGER, defaultValue: 1000 },
     last_score_timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    flagged_cheater: { type: DataTypes.BOOLEAN, defaultValue: false },
   },
   { tableName: 'users', timestamps: false }
 );
@@ -133,6 +134,10 @@ const WagerMatch = sequelize.define(
       defaultValue: 'pending',
     },
     winner_address: { type: DataTypes.STRING },
+    player1_score: { type: DataTypes.INTEGER, allowNull: true },
+    player2_score: { type: DataTypes.INTEGER, allowNull: true },
+    player1_hero_id: { type: DataTypes.INTEGER, allowNull: true },
+    player2_hero_id: { type: DataTypes.INTEGER, allowNull: true },
   },
   {
     tableName: 'wager_matches',
@@ -278,6 +283,68 @@ async function runMigrations(queryInterface) {
       console.log("MIGRATION: 'coins' column added successfully.");
     } else {
       console.log("MIGRATION: 'coins' column already exists in 'users' table.");
+    }
+
+    if (!userTableInfo.flagged_cheater) {
+      console.log(
+        "MIGRATION: 'flagged_cheater' column not found in 'users' table. Adding it now..."
+      );
+      await queryInterface.addColumn('users', 'flagged_cheater', {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      });
+      console.log("MIGRATION: 'flagged_cheater' column added successfully.");
+    }
+  }
+
+  // --- WagerMatches Table Migration ---
+  if (tables.includes('wager_matches')) {
+    const matchesTableInfo = await queryInterface.describeTable(
+      'wager_matches'
+    );
+
+    if (!matchesTableInfo.player1_score) {
+      console.log(
+        "MIGRATION: 'player1_score' column not found in 'wager_matches' table. Adding it now..."
+      );
+      await queryInterface.addColumn('wager_matches', 'player1_score', {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      });
+      console.log("MIGRATION: 'player1_score' column added successfully.");
+    }
+
+    if (!matchesTableInfo.player2_score) {
+      console.log(
+        "MIGRATION: 'player2_score' column not found in 'wager_matches' table. Adding it now..."
+      );
+      await queryInterface.addColumn('wager_matches', 'player2_score', {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      });
+      console.log("MIGRATION: 'player2_score' column added successfully.");
+    }
+
+    if (!matchesTableInfo.player1_hero_id) {
+      console.log(
+        "MIGRATION: 'player1_hero_id' column not found in 'wager_matches' table. Adding it now..."
+      );
+      await queryInterface.addColumn('wager_matches', 'player1_hero_id', {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      });
+      console.log("MIGRATION: 'player1_hero_id' column added successfully.");
+    }
+
+    if (!matchesTableInfo.player2_hero_id) {
+      console.log(
+        "MIGRATION: 'player2_hero_id' column not found in 'wager_matches' table. Adding it now..."
+      );
+      await queryInterface.addColumn('wager_matches', 'player2_hero_id', {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      });
+      console.log("MIGRATION: 'player2_hero_id' column added successfully.");
     }
   }
 

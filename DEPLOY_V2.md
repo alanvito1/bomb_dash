@@ -1,140 +1,137 @@
-# MANUAL FINAL DE DEPLOY (V2.0) - VERCEL + SUPABASE
+# MANUAL FINAL DE DEPLOY (V2.1 - HÍBRIDO) - VERCEL + CLOUD RUN + SUPABASE
 
-Este guia detalha o processo completo de deploy da arquitetura **Bomb Dash Web3** em ambiente de produção Serverless, utilizando **Vercel** para o Backend e **Supabase** para o Banco de Dados.
+Este guia detalha o processo completo de deploy da arquitetura **Híbrida** do Bomb Dash Web3.
+Nesta versão, migramos o Backend para **Google Cloud Run** para superar limitações de tempo de execução da Vercel, mantendo o Frontend na Vercel e o Banco no Supabase.
+
+---
+
+## 🏗️ Arquitetura
+
+*   **Frontend:** Vercel (React/Vite)
+*   **Backend:** Google Cloud Run (Node.js 20 / Docker)
+*   **Banco de Dados:** Supabase (PostgreSQL)
+*   **Blockchain:** BSC Testnet (Smart Contracts)
+*   **Cron Jobs:** Google Cloud Scheduler
 
 ---
 
 ## 📋 Pré-requisitos
 
-1.  **Node.js v18+** instalado.
-2.  **Vercel CLI** instalado (`npm i -g vercel`).
-3.  **Conta no Supabase** (Plano Free ou Pro).
-4.  **Conta na Vercel** (Hobby ou Pro).
-5.  **Carteira Ethereum** com chaves privadas para Deploy (Oráculo e Admin).
+1.  **Google Cloud SDK (gcloud CLI)** instalado e autenticado.
+2.  **Docker** instalado e rodando.
+3.  **Conta no Supabase** (com projeto criado).
+4.  **Conta na Vercel** (para o Frontend).
 
 ---
 
 ## 🚀 Fase 1: Configuração do Banco de Dados (Supabase)
 
-O Supabase substitui o arquivo SQLite local e oferece um PostgreSQL robusto.
+*(Mesmo processo da V2.0)*
 
-1.  **Criar Projeto no Supabase:**
-    *   Acesse [app.supabase.com](https://app.supabase.com) e crie um novo projeto.
-    *   Anote a senha do banco de dados (você precisará dela para a URL de conexão).
-    *   Aguarde a inicialização do banco.
-
-2.  **Configurar o Schema:**
-    *   No painel do Supabase, vá até **SQL Editor**.
-    *   Clique em **New Query**.
-    *   Copie o conteúdo do arquivo `supabase_schema.sql` (na raiz deste repositório).
-    *   Cole no editor e clique em **Run**.
-    *   *Verifique se todas as tabelas foram criadas com sucesso.*
-
-3.  **Obter a Connection String:**
-    *   Vá em **Project Settings** > **Database**.
-    *   Em **Connection string**, selecione **URI**.
-    *   Copie a string. Ela se parece com:
-        `postgresql://postgres:[YOUR-PASSWORD]@db.project.supabase.co:5432/postgres`
-    *   Substitua `[YOUR-PASSWORD]` pela senha criada no passo 1.
-    *   **Guarde esta URL.** Ela será sua variável `DATABASE_URL`.
+1.  Acesse [app.supabase.com](https://app.supabase.com).
+2.  Vá em **SQL Editor** > **New Query**.
+3.  Execute o conteúdo de `supabase_schema.sql` (na raiz do repo).
+4.  Obtenha a `DATABASE_URL` em **Project Settings** > **Database** > **Connection string (URI)**.
+    *   *Exemplo:* `postgresql://postgres:[SENHA]@db.project.supabase.co:5432/postgres`
 
 ---
 
-## ⚡ Fase 2: Deploy do Backend (Vercel)
+## ☁️ Fase 2: Deploy do Backend (Google Cloud Run)
 
-A Vercel hospedará as Serverless Functions do backend.
+### 1. Preparação e Build
 
-1.  **Preparar o Projeto:**
-    *   Certifique-se de estar na raiz do projeto.
-    *   O arquivo `vercel.json` já está configurado para rotear `/api/*` para o backend.
+O Dockerfile do backend foi otimizado para rodar a partir da raiz do repositório para resolver dependências corretamente.
 
-2.  **Login na Vercel:**
+1.  **Login no Google Cloud:**
     ```bash
-    vercel login
+    gcloud auth login
+    gcloud config set project [SEU_PROJECT_ID]
     ```
 
-3.  **Deploy Inicial:**
+2.  **Build da Imagem Docker:**
+    Execute este comando na **raiz** do projeto:
     ```bash
-    vercel
+    # Substitua [SEU_PROJECT_ID] pelo ID do seu projeto no GCP
+    gcloud builds submit --tag gcr.io/[SEU_PROJECT_ID]/bomb-dash-backend backend/
     ```
-    *   Siga as instruções interativas:
-        *   Set up and deploy? **Yes**
-        *   Scope? **(Seu usuário/time)**
-        *   Link to existing project? **No**
-        *   Project name? **bomb-dash-backend**
-        *   Directory? **.** (Raiz)
+    *Isso usa a pasta `backend/` como contexto de build, garantindo que o `Dockerfile` (que está dentro dela) encontre os arquivos nos caminhos esperados.*
 
-4.  **Configurar Variáveis de Ambiente (Environment Variables):**
-    *   Vá ao painel da Vercel > Seu Projeto > **Settings** > **Environment Variables**.
-    *   Adicione as seguintes variáveis (use os valores de produção/testnet):
+### 2. Deploy no Cloud Run
 
-    | Variável | Descrição | Exemplo |
-    | :--- | :--- | :--- |
-    | `DATABASE_URL` | URL do Supabase (Fase 1) | `postgresql://postgres:...` |
-    | `NODE_ENV` | Ambiente | `production` |
-    | `CHAIN_ID` | ID da Blockchain (BSC Testnet) | `97` |
-    | `FRONTEND_DOMAIN` | Domínio do Frontend (sem http) | `bomb-dash.vercel.app` |
-    | `JWT_SECRET` | Segredo para Tokens JWT | (Gere um Hash Forte) |
-    | `ADMIN_SECRET` | Senha para painel Admin | (Senha Forte) |
-    | `PRIVATE_KEY` | Chave Privada do Deployer | `0x...` |
-    | `ORACLE_PRIVATE_KEY` | Chave Privada do Oráculo | `0x...` |
-    | `TESTNET_RPC_URL` | RPC da BSC Testnet | `https://data-seed-prebsc-1-s1.binance.org:8545/` |
+1.  **Criar o Serviço:**
+    Vá ao Console do GCP > Cloud Run > **Criar Serviço**.
+    *   **Imagem:** Selecione `gcr.io/[SEU_PROJECT_ID]/bomb-dash-backend:latest`.
+    *   **Nome do Serviço:** `bomb-dash-backend`.
+    *   **Região:** `us-central1` (ou a mais próxima).
+    *   **Autenticação:** Permitir invocações não autenticadas (público) - *A segurança é feita via JWT/App*.
 
-    *   *Nota: Não precisamos de `DB_SYNC=true` em produção, pois usamos o schema SQL direto.*
+2.  **Variáveis de Ambiente:**
+    Na aba **Contêiner, Variáveis e Segredos**, adicione:
 
-5.  **Redeploy:**
-    *   Após salvar as variáveis, force um novo deploy para que elas tenham efeito:
-    ```bash
-    vercel --prod
-    ```
-    *   Anote a URL de produção (ex: `https://bomb-dash-backend.vercel.app`).
+    | Variável | Valor |
+    | :--- | :--- |
+    | `DATABASE_URL` | URL do Supabase (Fase 1) |
+    | `NODE_ENV` | `production` |
+    | `CHAIN_ID` | `97` (BSC Testnet) |
+    | `FRONTEND_DOMAIN` | Domínio do Frontend (ex: `bomb-dash.vercel.app`) |
+    | `JWT_SECRET` | (Seu Hash Seguro) |
+    | `ADMIN_SECRET` | (Sua Senha de Admin/Oráculo) |
+    | `CRON_SECRET` | (Uma nova senha forte para proteger os Crons) |
+    | `PRIVATE_KEY` | Chave Privada do Deployer |
+    | `ORACLE_PRIVATE_KEY` | Chave Privada do Oráculo |
+
+    *Dica: Você pode usar o Secret Manager do GCP para maior segurança.*
+
+3.  **Deploy:**
+    Clique em **Criar**. Aguarde a URL final (ex: `https://bomb-dash-backend-xyz.a.run.app`).
+
+### 3. Configurar Cloud Scheduler (Cron Jobs)
+
+Como o Cloud Run escala a zero, precisamos de "pings" externos para rodar as tarefas agendadas.
+
+1.  Vá ao Console do GCP > **Cloud Scheduler**.
+2.  **Job 1: Matchmaking (Minuto a Minuto)**
+    *   **Nome:** `bomb-dash-matchmaking`
+    *   **Frequência:** `* * * * *` (A cada minuto)
+    *   **Target:** HTTP
+    *   **URL:** `[SUA_URL_CLOUD_RUN]/api/cron/matchmaking`
+    *   **Método:** GET
+    *   **Headers:**
+        *   `Authorization`: `Bearer [SEU_CRON_SECRET]`
+
+3.  **Job 2: Sync Staking (Minuto a Minuto)**
+    *   **Nome:** `bomb-dash-sync-staking`
+    *   **Frequência:** `* * * * *`
+    *   **URL:** `[SUA_URL_CLOUD_RUN]/api/cron/sync-staking`
+    *   **Headers:** `Authorization: Bearer [SEU_CRON_SECRET]`
+
+4.  **Job 3: Recompensas (Hora em Hora)**
+    *   **Nome:** `bomb-dash-rewards`
+    *   **Frequência:** `0 * * * *`
+    *   **URL:** `[SUA_URL_CLOUD_RUN]/api/cron/distribute-rewards`
+    *   **Headers:** `Authorization: Bearer [SEU_CRON_SECRET]`
 
 ---
 
-## 🌐 Fase 3: Deploy do Frontend
+## 🌐 Fase 3: Atualizar Frontend (Vercel)
 
-O Frontend também pode ser hospedado na Vercel (no mesmo projeto ou separado) ou Netlify.
+Agora que o backend mudou de endereço, precisamos apontar o frontend para ele.
 
-1.  **Build Local (Teste):**
-    ```bash
-    npm run build
-    ```
-    *   Verifique se a pasta `dist/` foi gerada corretamente.
-
-2.  **Deploy na Vercel (Recomendado):**
-    *   Se estiver no mesmo repositório, a Vercel detectará o Vite automaticamente.
-    *   Em **Build & Development Settings**:
-        *   Build Command: `vite build` (ou `npm run build`)
-        *   Output Directory: `dist`
-    *   **Variáveis de Ambiente do Frontend:**
-        *   `VITE_API_URL`: A URL do Backend (Fase 2). Ex: `https://bomb-dash-backend.vercel.app/api`
-        *   `VITE_CHAIN_ID`: `97`
-
-3.  **Atualizar o Backend:**
-    *   Pegue o domínio final do Frontend (ex: `bomb-dash-frontend.vercel.app`).
-    *   Volte nas configurações do Backend na Vercel.
-    *   Atualize a variável `FRONTEND_DOMAIN` com este novo valor (sem `https://`).
-    *   Isso é crucial para que o Login SIWE funcione e evite erros de CORS/Phishing.
+1.  Vá ao painel da **Vercel** > Seu Projeto Frontend.
+2.  Vá em **Settings** > **Environment Variables**.
+3.  Edite a variável `VITE_API_URL`:
+    *   **Novo Valor:** `https://bomb-dash-backend-xyz.a.run.app/api` (URL do Cloud Run + `/api`)
+4.  Faça um **Redeploy** do Frontend para aplicar a mudança.
 
 ---
 
-## 🛡️ Segurança & Cron Jobs
+## 🛡️ Segurança PvP (Anti-Exploit)
 
-1.  **Cron Jobs:**
-    *   O arquivo `vercel.json` configura Cron Jobs automáticos para Matchmaking e Recompensas.
-    *   Verifique na aba **Logs** da Vercel se os crons estão rodando (ex: `/api/cron/matchmaking`).
+O novo backend inclui validação de **Dano Máximo Teórico** no endpoint `/api/pvp/submit`.
 
-2.  **Oráculo:**
-    *   Certifique-se de que a `ORACLE_PRIVATE_KEY` corresponda ao endereço registrado no contrato `HeroStaking`.
-    *   Se precisar gerar uma nova carteira segura, consulte `SECURITY_OPS.md`.
-
----
-
-## 🚑 Solução de Problemas Comuns
-
-*   **Erro 500 no Login:** Verifique se `FRONTEND_DOMAIN` no backend corresponde exatamente ao domínio de origem da requisição.
-*   **Erro "Database Connection":** Verifique a `DATABASE_URL`. Se estiver usando pooler (Supabase Transaction Pooler), adicione `?pgbouncer=true` ao final da URL.
-*   **PvP Matchmaking infinito:** Verifique os logs do Cron Job `/api/cron/matchmaking`. Se o Cron falhar, o pareamento não ocorre automaticamente.
+*   **Funcionamento:** O servidor calcula `(Duração * DPS Máximo do Herói) * 1.2`. Se o dano reportado for maior, o usuário é marcado como `flagged_cheater = true`.
+*   **Consequência:** Usuários flaggados não conseguem submeter novos resultados nem entrar em filas.
+*   **Monitoramento:** Verifique a tabela `users` no Supabase periodicamente por `flagged_cheater = true`.
 
 ---
 *Assinado: Jules, Eng. de Software Sênior.*

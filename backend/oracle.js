@@ -6,9 +6,11 @@ const BSC_RPC_URL = process.env.TESTNET_RPC_URL;
 const TOURNAMENT_CONTROLLER_ADDRESS = process.env.TOURNAMENT_CONTROLLER_ADDRESS;
 const PERPETUAL_REWARD_POOL_ADDRESS = process.env.PERPETUAL_REWARD_POOL_ADDRESS;
 const HERO_STAKING_ADDRESS = process.env.HERO_STAKING_ADDRESS;
+const WAGER_ARENA_ADDRESS = process.env.WAGER_ARENA_ADDRESS;
 
 const PERPETUAL_REWARD_POOL_ABI = require('./contracts/PerpetualRewardPool.json');
 const HERO_STAKING_ABI = require('./contracts/HeroStaking.json');
+const WAGER_ARENA_ABI = require('./contracts/WagerArena.json');
 
 const TOURNAMENT_CONTROLLER_ABI = require('./contracts/TournamentController.json');
 
@@ -17,6 +19,7 @@ let oracleWallet;
 let tournamentControllerContract;
 let perpetualRewardPoolContract;
 let heroStakingContract;
+let wagerArenaContract;
 let isOracleInitialized = false;
 
 async function initOracle() {
@@ -51,6 +54,19 @@ async function initOracle() {
       HERO_STAKING_ABI,
       oracleWallet
     );
+
+    if (WAGER_ARENA_ADDRESS) {
+      wagerArenaContract = new ethers.Contract(
+        WAGER_ARENA_ADDRESS,
+        WAGER_ARENA_ABI,
+        oracleWallet
+      );
+    } else {
+      console.warn(
+        '[WARN] WAGER_ARENA_ADDRESS não configurado. Funcionalidades de Wager indisponíveis.'
+      );
+    }
+
     isOracleInitialized = true;
     console.log(
       '[OK] Oráculo da blockchain inicializado para PvP e Recompensas.'
@@ -89,7 +105,7 @@ async function createRankedMatch(player1, player2, tier, entryFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -131,6 +147,34 @@ async function reportRankedMatchResult(matchId, winnerAddress) {
 }
 
 /**
+ * Reports the result of a wager match to the WagerArena smart contract.
+ * @param {string|number} matchId The ID of the match.
+ * @param {string} winnerAddress The address of the winner.
+ * @returns {Promise<object>} The transaction result.
+ */
+async function reportWagerMatchResult(matchId, winnerAddress) {
+  if (!isOracleInitialized) throw new Error('O Oráculo não está inicializado.');
+  if (!wagerArenaContract)
+    throw new Error('Contrato WagerArena não configurado.');
+
+  console.log(
+    `[Oracle] Reportando resultado de Wager para a partida ${matchId}. Vencedor: ${winnerAddress}`
+  );
+
+  const tx = await wagerArenaContract.reportWagerMatchResult(
+    matchId,
+    winnerAddress,
+    { gasLimit: 300000 }
+  );
+  await tx.wait();
+
+  console.log(
+    `[Oracle] Resultado da partida Wager ${matchId} reportado com sucesso. Tx: ${tx.hash}`
+  );
+  return { success: true, txHash: tx.hash };
+}
+
+/**
  * Verifica a transação de pagamento da taxa de entrada do PvP.
  * @param {string} txHash O hash da transação.
  * @param {string} expectedPlayer O endereço do jogador esperado.
@@ -149,7 +193,7 @@ async function verifyPvpEntryFee(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -194,7 +238,7 @@ async function verifyLevelUpTransaction(txHash, expectedPlayer, expectedFee) {
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -229,7 +273,7 @@ async function verifyUpgradeTransaction(txHash, expectedPlayer, expectedCost) {
           return tournamentControllerContract.interface.parseLog(log);
         }
         return null;
-      } catch (_e) {
+      } catch {
         return null; // Ignore logs that are not from the target contract
       }
     })
@@ -409,7 +453,7 @@ async function verifyTournamentCreation(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -469,7 +513,7 @@ async function verifyTournamentJoin(
     .map((log) => {
       try {
         return tournamentControllerContract.interface.parseLog(log);
-      } catch (_e) {
+      } catch {
         return null;
       }
     })
@@ -511,6 +555,7 @@ module.exports = {
   getTournamentControllerContract,
   createRankedMatch,
   reportRankedMatchResult,
+  reportWagerMatchResult,
   verifyPvpEntryFee,
   verifyLevelUpTransaction,
   verifyUpgradeTransaction,
