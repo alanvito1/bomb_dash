@@ -11,7 +11,7 @@ async function setupAPIMocks(page) {
         authenticated: true,
         address: '0xMockAddress123',
         success: true,
-        user: { address: '0xMockAddress123' } // Ensure 'user' object is present for MenuScene
+        user: { address: '0xMockAddress123' }, // Ensure 'user' object is present for MenuScene
       }),
     });
   });
@@ -38,15 +38,15 @@ async function setupAPIMocks(page) {
         tournaments: [
           {
             id: 1,
-            name: "Test Tournament Alpha",
+            name: 'Test Tournament Alpha',
             entryFee: 10,
-            status: "open",
+            status: 'open',
             capacity: 8,
             participantCount: 1,
-            prizePool: 36
-          }
-        ]
-      })
+            prizePool: 36,
+          },
+        ],
+      }),
     });
   });
 }
@@ -62,7 +62,9 @@ test.describe('Game Flow Integration', () => {
   // is preventing Phaser from fully initializing the scene state in time for the test hook.
   // Skipping this specific UI transition test to unblock deployment, as the underlying
   // logic (session resume) has been manually verified and the backend routes are tested.
-  test.skip('should navigate from menu to tournament lobby', async ({ page }) => {
+  test.skip('should navigate from menu to tournament lobby', async ({
+    page,
+  }) => {
     await page.goto('http://localhost:5173/');
 
     // 1. Wait for MenuScene to be active (Session Resumed)
@@ -76,21 +78,26 @@ test.describe('Game Flow Integration', () => {
 
     // 2. FORCE Navigation via global game instance (Bypassing UI Input)
     await page.evaluate(() => {
-        const menuScene = window.game.scene.keys['MenuScene'];
-        if (menuScene) {
-            console.log('Forcing transition to TournamentLobbyScene...');
-            menuScene.scene.start('TournamentLobbyScene');
-        } else {
-            throw new Error('MenuScene not found in scene keys');
-        }
+      const menuScene = window.game.scene.keys['MenuScene'];
+      if (menuScene) {
+        console.log('Forcing transition to TournamentLobbyScene...');
+        menuScene.scene.start('TournamentLobbyScene');
+      } else {
+        throw new Error('MenuScene not found in scene keys');
+      }
     });
 
     // 3. Verify transition
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        const lobby = window.game.scene.getScene('TournamentLobbyScene');
-        return lobby && window.game.scene.isActive('TournamentLobbyScene');
-      });
-    }, { timeout: 10000 }).toBeTruthy();
+    await expect
+      .poll(
+        async () => {
+          return await page.evaluate(() => {
+            const lobby = window.game.scene.getScene('TournamentLobbyScene');
+            return lobby && window.game.scene.isActive('TournamentLobbyScene');
+          });
+        },
+        { timeout: 10000 }
+      )
+      .toBeTruthy();
   });
 });
