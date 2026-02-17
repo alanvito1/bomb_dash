@@ -7,27 +7,6 @@
  * "Code is poetry written in logic."
  */
 
-import * as Sentry from '@sentry/browser';
-
-// Initialize Sentry for error reporting and session replay
-Sentry.init({
-  dsn: 'https://examplePublicKey@o0.ingest.sentry.io/0', // Placeholder DSN
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration({
-      // Mask all text content to protect user privacy
-      maskAllText: true,
-      // Block all media to reduce replay size
-      blockAllMedia: true,
-    }),
-  ],
-  // Performance Monitoring
-  tracesSampleRate: 1.0, // Capture 100% of the transactions
-  // Session Replay
-  replaysSessionSampleRate: 1.0, // This sets the sample rate at 100%. You may want to change it in production
-  replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, sample the session when an error occurs.
-});
-
 // 🎬 Importação das cenas principais do jogo
 import api from './src/api.js';
 import nftService from './src/web3/nft-service.js';

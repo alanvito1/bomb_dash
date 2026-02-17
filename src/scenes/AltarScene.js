@@ -2,7 +2,7 @@ import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js';
 import { ethers } from 'ethers';
-import * as contracts from '../config/contracts.js';
+import contracts from '../config/contracts.js';
 
 export default class AltarScene extends Phaser.Scene {
   constructor() {
