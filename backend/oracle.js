@@ -1,5 +1,4 @@
 const { ethers } = require('ethers');
-const db = require('./database');
 
 // --- Configuração do Oráculo ---
 const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY;

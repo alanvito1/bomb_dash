@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bomb Dash - Knowledge Base</title>
+    <!-- 🌹 AVRE Signature -->
+    <meta name="author" content="Alan Victor Rocha Evangelista">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/wiki.css">
+</head>
+<body>
+    <div class="wiki-container">
+        <h1>💣 BOMB WIKI</h1>
+
+        <!-- Navigation -->
+        <a href="/" class="nav-link">⬅ BACK TO GAME</a>
+
+        <!-- 1. Hero Database -->
+        <div class="section">
+            <h2>HERO DATABASE</h2>
+            <div id="hero-list" class="hero-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- 2. Interactive Tutorial -->
+        <div class="section">
+            <h2>TUTORIAL</h2>
+            <div class="tutorial-step">
+                <h3>STEP 1: CONNECT WALLET</h3>
+                <p>Click "Connect Wallet" on the main screen. Use MetaMask or WalletConnect. Ensure you are on the correct network (Testnet/Mainnet).</p>
+            </div>
+            <div class="tutorial-step">
+                <h3>STEP 2: GET A HERO</h3>
+                <p>New players start with a "Mock Hero". To earn real BCOIN, you need an NFT Hero. Mint one in the Shop or buy on the Marketplace.</p>
+            </div>
+            <div class="tutorial-step">
+                <h3>STEP 3: PVP ARENA</h3>
+                <p>Enter the Arena. Choose your Wager Tier (Bronze, Silver, Gold). Defeat your opponent to claim their BCOIN!</p>
+            </div>
+        </div>
+
+        <!-- 3. ROI Calculator -->
+        <div class="section">
+            <h2>ROI CALCULATOR</h2>
+            <p>Estimate your BCOIN earnings in the Wager Arena.</p>
+            <form id="roi-form" class="calculator-form">
+                <div class="form-group">
+                    <label for="daily-matches">Daily Matches:</label>
+                    <input type="number" id="daily-matches" min="1" max="100" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="win-rate">Win Rate (%):</label>
+                    <input type="number" id="win-rate" min="0" max="100" value="50">
+                </div>
+                <div class="form-group">
+                    <label for="wager-tier">Wager Tier:</label>
+                    <select id="wager-tier">
+                        <option value="1">Bronze (10 BCOIN)</option>
+                        <option value="2">Silver (50 BCOIN)</option>
+                        <option value="3">Gold (200 BCOIN)</option>
+                    </select>
+                </div>
+                <button type="submit">CALCULATE</button>
+            </form>
+            <div id="roi-result"></div>
+        </div>
+
+        <div class="section">
+            <p style="text-align: center; font-size: 0.7em; color: #666;">
+                DISCLAIMER: Estimates are for reference only. Gas fees and network conditions may apply.
+                <br>Created with 🌹 by AVRE.
+            </p>
+        </div>
+    </div>
+
+    <script src="assets/js/wiki.js"></script>
+</body>
+</html>

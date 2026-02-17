@@ -1,9 +1,7 @@
 /* eslint-disable no-undef */
 const express = require('express');
 const router = express.Router();
-const ethers = require('ethers'); // Added missing require
 const tournamentService = require('../tournament_service');
-const { User, Hero } = require('../database');
 
 router.get('/active', async (req, res) => {
   try {
