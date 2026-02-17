@@ -210,4 +210,47 @@ router.post('/ranked/report', verifyOracle, async (req, res) => {
   }
 });
 
+router.post('/submit', async (req, res) => {
+  const {
+    matchId,
+    score,
+    damageDealt,
+    durationSeconds,
+    enemiesKilled,
+    heroId,
+  } = req.body;
+
+  if (
+    !matchId ||
+    typeof score !== 'number' ||
+    typeof damageDealt !== 'number' ||
+    typeof durationSeconds !== 'number' ||
+    typeof heroId === 'undefined'
+  ) {
+    return res.status(400).json({ success: false, message: 'Invalid payload' });
+  }
+
+  try {
+    const result = await pvpService.submitMatchResult(
+      matchId,
+      req.user.userId,
+      heroId,
+      score,
+      damageDealt,
+      durationSeconds,
+      enemiesKilled
+    );
+    res.json(result);
+  } catch (error) {
+    console.error(`PvP Submit Error: ${error.message}`);
+    if (
+      error.message.includes('Security Violation') ||
+      error.message.includes('flagged')
+    ) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

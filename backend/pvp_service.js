@@ -274,6 +274,164 @@ async function reportBotMatch(userId, heroId, tier) {
   throw new Error(`Invalid mode "${mode}" specified for bot match report.`);
 }
 
+/**
+ * Submits the result of a PvP match, performing anti-exploit validation.
+ * @param {string|number} matchId - The ID of the match.
+ * @param {number} userId - The ID of the user submitting the result.
+ * @param {number} heroId - The ID of the hero used.
+ * @param {number} score - The score achieved.
+ * @param {number} damageDealt - The damage dealt.
+ * @param {number} durationSeconds - The duration of the match in seconds.
+ * @param {number} enemiesKilled - The number of enemies killed.
+ * @returns {Promise<object>} The result of the submission.
+ */
+async function submitMatchResult(
+  matchId,
+  userId,
+  heroId,
+  score,
+  damageDealt,
+  durationSeconds,
+  enemiesKilled
+) {
+  // 1. Fetch user and match
+  const user = await db.User.findByPk(userId);
+  if (!user) throw new Error('User not found');
+  if (user.flagged_cheater) {
+    throw new Error('Account flagged for suspicious activity. Submission rejected.');
+  }
+
+  const match = await db.getWagerMatch(matchId);
+  if (!match) throw new Error('Match not found');
+
+  // 2. Identify Player Role (Player 1 or Player 2)
+  let isPlayer1 = false;
+  let opponentAddress = '';
+
+  if (match.player1_address.toLowerCase() === user.wallet_address.toLowerCase()) {
+    isPlayer1 = true;
+    opponentAddress = match.player2_address;
+  } else if (match.player2_address.toLowerCase() === user.wallet_address.toLowerCase()) {
+    isPlayer1 = false;
+    opponentAddress = match.player1_address;
+  } else {
+    throw new Error('User is not a participant in this match');
+  }
+
+  // Check if already submitted
+  if (isPlayer1 && match.player1_score !== null) throw new Error('Result already submitted');
+  if (!isPlayer1 && match.player2_score !== null) throw new Error('Result already submitted');
+
+  // 3. Anti-Exploit Validation
+  const hero = await db.Hero.findByPk(heroId);
+  if (!hero || hero.user_id !== userId) throw new Error('Hero validation failed');
+
+  const fireRateMs = hero.fireRate || 600; // Default 600ms
+  const damage = hero.damage || 10;
+
+  // Formula: Max Damage = (Duration * 1000 / FireRate) * Damage
+  // If FireRate is 0 (impossible but safe), default to 1 shot
+  const shotsPerSecond = fireRateMs > 0 ? 1000 / fireRateMs : 1;
+  const theoreticalMaxShots = Math.ceil(durationSeconds * shotsPerSecond);
+  const theoreticalMaxDamage = theoreticalMaxShots * damage;
+
+  // Add 20% Buffer
+  const maxAllowedDamage = theoreticalMaxDamage * 1.2;
+
+  if (damageDealt > maxAllowedDamage) {
+    // Flag Cheater
+    console.warn(`[ANTI-EXPLOIT] User ${userId} flagged. Dealt ${damageDealt}, Max Allowed ${maxAllowedDamage}`);
+    user.flagged_cheater = true;
+    await user.save();
+    throw new Error('Security Violation: Abnormal damage detected. Account flagged.');
+  }
+
+  // 4. Update Stats & Match Record
+  // Update High Score
+  if (score > user.max_score) {
+    user.max_score = score;
+    user.last_score_timestamp = new Date();
+    await user.save();
+  }
+
+  // Update Match
+  if (isPlayer1) {
+    match.player1_score = score;
+    match.player1_hero_id = heroId;
+  } else {
+    match.player2_score = score;
+    match.player2_hero_id = heroId;
+  }
+  await match.save();
+
+  // 5. Check if Opponent has submitted (Match Completion Logic)
+  const opponentScore = isPlayer1 ? match.player2_score : match.player1_score;
+  const opponentHeroId = isPlayer1 ? match.player2_hero_id : match.player1_hero_id;
+
+  if (opponentScore !== null) {
+    // Both players have submitted. Determine winner.
+    let winnerAddress = '';
+    let loserAddress = '';
+    let winnerHeroId = 0;
+    let loserHeroId = 0;
+
+    // Tie-breaker: If scores are equal, P1 wins (or use time/random? let's stick to P1 priority or random)
+    // For simplicity: P1 wins ties.
+    if (score > opponentScore) {
+      winnerAddress = user.wallet_address;
+      winnerHeroId = heroId;
+      loserAddress = opponentAddress;
+      loserHeroId = opponentHeroId;
+    } else if (opponentScore > score) {
+      winnerAddress = opponentAddress;
+      winnerHeroId = opponentHeroId;
+      loserAddress = user.wallet_address;
+      loserHeroId = heroId;
+    } else {
+        // Draw: Refund? Or P1 wins?
+        // Let's implement P1 wins on draw for now as per "Score Attack" usually having tie-breakers.
+        // Better: Refund or Split?
+        // User didn't specify. I will assume standard "Higher Score Wins", tie = P1 (Host) advantage.
+        winnerAddress = isPlayer1 ? user.wallet_address : opponentAddress;
+        winnerHeroId = isPlayer1 ? heroId : opponentHeroId;
+        loserAddress = isPlayer1 ? opponentAddress : user.wallet_address;
+        loserHeroId = isPlayer1 ? opponentHeroId : heroId;
+    }
+
+    console.log(`[PvP] Match ${matchId} Complete. Winner: ${winnerAddress}`);
+
+    // Call existing report logic
+    const result = await reportWagerMatch(
+      matchId,
+      winnerAddress,
+      loserAddress,
+      winnerHeroId,
+      loserHeroId,
+      match.tier_id
+    );
+
+    // Update Match Status Final
+    match.status = 'completed';
+    match.winner_address = winnerAddress;
+    await match.save();
+
+    return {
+      success: true,
+      status: 'completed',
+      message: 'Match complete. Results processed.',
+      result: result
+    };
+
+  } else {
+    // Waiting for opponent
+    return {
+      success: true,
+      status: 'waiting_for_opponent',
+      message: 'Score submitted. Waiting for opponent result.'
+    };
+  }
+}
+
 module.exports = {
   isSunday,
   calculateRewards,
@@ -282,5 +440,6 @@ module.exports = {
   enterWagerQueue,
   reportWagerMatch,
   reportBotMatch,
+  submitMatchResult,
   PVP_ENTRY_FEE,
 };
