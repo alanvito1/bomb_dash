@@ -14,7 +14,7 @@ router.get('/active', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   const { tournamentId, heroId } = req.body;
-  const userAddress = req.user.wallet_address;
+  const userAddress = req.user.address;
 
   try {
     const result = await tournamentService.registerPlayer(

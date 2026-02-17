@@ -12,6 +12,25 @@ const CONFIG_PATH = path.join(__dirname, 'game_config.json');
  * @returns {Promise<object>} The result of the operation.
  */
 async function joinQueue(userId, heroId, tier = 'default') {
+  // 1. Fetch hero to check rarity/type for Beta Restrictions
+  const heroes = await db.getHeroesByUserId(userId);
+  const hero = heroes.find((h) => h.id == heroId);
+
+  if (!hero) {
+    throw new Error('Hero not found.');
+  }
+
+  // BETA RESTRICTION: Only Common Heroes allowed. No Houses.
+  if (hero.rarity !== 'Common') {
+    throw new Error(
+      `BETA RESTRICTION: Only Common Heroes allowed (You tried: ${hero.rarity})`
+    );
+  }
+
+  if (hero.nft_type === 'HOUSE') {
+    throw new Error('BETA RESTRICTION: Houses cannot join PvP.');
+  }
+
   // Add to the database
   const dbResult = await db.addToMatchmakingQueue(userId, heroId, tier);
 

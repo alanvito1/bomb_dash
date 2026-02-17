@@ -4,6 +4,54 @@ const { ethers } = require('ethers');
 // In a production environment, this should be a persistent store like Redis or a database table.
 const activeTournaments = new Map();
 
+const instanceId = Math.random();
+console.log(`[TournamentService] Loaded instance: ${instanceId}`);
+
+// In-memory lobby for MVP simulation (Testnet Flow)
+let activeLobby = {
+  id: 'test-lobby-1',
+  participants: [],
+  capacity: 4,
+  status: 'Waiting',
+  entryFee: 100,
+  isActive: true,
+};
+
+function getActiveTournament() {
+  return activeLobby;
+}
+
+async function registerPlayer(tournamentId, userAddress, heroId) {
+  console.log(`[TournamentService] Registering player ${userAddress} to lobby ${activeLobby.id} (Current: ${activeLobby.participants.length})`);
+
+  // For MVP/Testnet, we ignore tournamentId check or verify against 'test-lobby-1'
+  if (activeLobby.status !== 'Waiting') {
+    throw new Error('Tournament is full or already started.');
+  }
+
+  // Check if already registered
+  if (activeLobby.participants.some((p) => p.address === userAddress)) {
+    console.warn(`[TournamentService] Player ${userAddress} already registered.`);
+    throw new Error('Player already registered.');
+  }
+
+  activeLobby.participants.push({ address: userAddress, heroId });
+  console.log(`[TournamentService] Player registered. New count: ${activeLobby.participants.length}`);
+
+  if (activeLobby.participants.length >= activeLobby.capacity) {
+    console.log(`[TournamentService] Lobby full! Starting tournament...`);
+    activeLobby.status = 'Ready';
+    // Simulate start immediately by creating bracket
+    createTournamentBracket({
+      id: activeLobby.id,
+      participants: activeLobby.participants.map((p) => p.address),
+      capacity: activeLobby.capacity,
+    });
+  }
+
+  return { success: true, message: 'Registered for tournament.', lobby: activeLobby };
+}
+
 /**
  * Initializes the tournament service and sets up the listener for contract events.
  * @param {ethers.Contract} tournamentControllerContract - The ethers contract instance.
@@ -209,4 +257,6 @@ module.exports = {
   createTournamentBracket, // Exported for testing purposes
   reportTournamentMatchWinner,
   getTournamentState,
+  registerPlayer,
+  getActiveTournament,
 };
