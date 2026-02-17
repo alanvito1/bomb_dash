@@ -1,38 +1,30 @@
-# Use a modern Node.js LTS version that includes build tools and browsers for Playwright.
-FROM mcr.microsoft.com/playwright:v1.44.0-jammy
+# Use a lightweight Node.js image suitable for production
+FROM node:20-alpine
 
-# Set the working directory in the container.
+# Set working directory
 WORKDIR /app
 
-# --- Corrected Build Order ---
-
-# 1. Copy all package manifests first to leverage Docker layer caching.
+# Copy package files (root and backend)
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package-lock.json ./backend/
 
-# 2. Copy the entire application source code.
-# This ensures that scripts like `install:all` have access to all necessary files.
+# Remove local "file:.." dependency from backend/package.json
+# This allows installing backend dependencies without needing the root package as a dependency
+RUN cd backend && sed -i '/"app": "file:.."/d' package.json
+
+# Install dependencies in the backend directory
+# We only need production dependencies for running the server
+RUN cd backend && npm install --production
+
+# Copy source code
 COPY . .
 
-# 3. Now, with all files in place, install all dependencies.
-RUN npm run install:all
+# Set environment variables
+ENV PORT=8080
+ENV NODE_ENV=production
 
-# 4. Install Playwright's browser dependencies to be certain.
-# The base image is good, but this guarantees all system libs are linked.
-RUN npx playwright install --with-deps
+# Expose the port
+EXPOSE 8080
 
-# --- Entrypoint Configuration ---
-
-# Copy the entrypoint script that orchestrates the test run.
-COPY e2e-entrypoint.sh .
-
-# Make the entrypoint script executable.
-RUN chmod +x e2e-entrypoint.sh
-
-# The ENTRYPOINT is the main command that will be executed when the container starts.
-# It will run our custom script to start servers and run tests.
-ENTRYPOINT ["./e2e-entrypoint.sh"]
-
-# Expose the ports for the Vite frontend and the Node.js backend.
-# This makes them accessible from the host machine for debugging.
-EXPOSE 5173 3000
+# Start the backend server
+CMD ["node", "backend/server.js"]

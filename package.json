@@ -58,9 +58,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
-    "@sentry/browser": "^10.17.0",
-    "@sentry/replay": "^7.116.0",
-    "@sentry/tracing": "^7.120.4",
     "axios": "^1.13.5",
     "ethers": "^6.15.0",
     "playwright": "^1.58.2",
