@@ -57,8 +57,8 @@ async function runSimulation() {
   console.log(`\n2️⃣  Requesting Nonce...`);
   const nonceRes = await request('GET', '/auth/nonce');
   if (!nonceRes.body.success) {
-      console.error('❌ Failed to get nonce:', nonceRes.body);
-      process.exit(1);
+    console.error('❌ Failed to get nonce:', nonceRes.body);
+    process.exit(1);
   }
   const nonce = nonceRes.body.nonce;
   console.log(`   Nonce: ${nonce}`);
@@ -66,13 +66,13 @@ async function runSimulation() {
   // 3. Create SIWE Message & Sign
   console.log(`\n3️⃣  Signing Message...`);
   const message = new SiweMessage({
-      domain: DOMAIN,
-      address: wallet.address,
-      statement: 'Sign in with Ethereum to the app.',
-      uri: `http://${DOMAIN}`,
-      version: '1',
-      chainId: CHAIN_ID,
-      nonce: nonce
+    domain: DOMAIN,
+    address: wallet.address,
+    statement: 'Sign in with Ethereum to the app.',
+    uri: `http://${DOMAIN}`,
+    version: '1',
+    chainId: CHAIN_ID,
+    nonce: nonce,
   });
   const messageString = message.prepareMessage();
   const signature = await wallet.signMessage(messageString);
@@ -80,13 +80,13 @@ async function runSimulation() {
   // 4. Verify / Login
   console.log(`\n4️⃣  Verifying Signature (Login)...`);
   const loginRes = await request('POST', '/auth/verify', {
-      message: messageString,
-      signature: signature
+    message: messageString,
+    signature: signature,
   });
 
   if (!loginRes.body.success) {
-      console.error('❌ Login failed:', loginRes.body);
-      process.exit(1);
+    console.error('❌ Login failed:', loginRes.body);
+    process.exit(1);
   }
   const token = loginRes.body.token;
   console.log('✅ Logged in. Token received.');
@@ -95,8 +95,8 @@ async function runSimulation() {
   console.log(`\n5️⃣  Checking Initial Balance (/auth/me)...`);
   const meRes = await request('GET', '/auth/me', null, token);
   if (!meRes.body.success) {
-      console.error('❌ Failed to fetch profile:', meRes.body);
-      process.exit(1);
+    console.error('❌ Failed to fetch profile:', meRes.body);
+    process.exit(1);
   }
   console.log(`   Balance: ${meRes.body.user.coins} BCOIN`);
   console.log(`   XP: ${meRes.body.user.account_xp}`);
@@ -106,20 +106,20 @@ async function runSimulation() {
   const heroesRes = await request('GET', '/heroes', null, token);
   const heroes = heroesRes.body;
   if (!Array.isArray(heroes)) {
-     // If backend returns object { success: true, heroes: [...] } check that
-     if (heroesRes.body.success && Array.isArray(heroesRes.body.heroes)) {
-         // It might be wrapped
-         const list = heroesRes.body.heroes;
-         if (list.length === 0) console.warn('⚠️ No heroes found.');
-         else console.log(`✅ Found ${list.length} heroes.`);
-     } else {
-         console.error('❌ Unexpected heroes response:', heroesRes.body);
-         // Don't exit, might be empty
-     }
+    // If backend returns object { success: true, heroes: [...] } check that
+    if (heroesRes.body.success && Array.isArray(heroesRes.body.heroes)) {
+      // It might be wrapped
+      const list = heroesRes.body.heroes;
+      if (list.length === 0) console.warn('⚠️ No heroes found.');
+      else console.log(`✅ Found ${list.length} heroes.`);
+    } else {
+      console.error('❌ Unexpected heroes response:', heroesRes.body);
+      // Don't exit, might be empty
+    }
   } else {
-     // Direct array
-     if (heroes.length === 0) console.warn('⚠️ No heroes found.');
-     else console.log(`✅ Found ${heroes.length} heroes.`);
+    // Direct array
+    if (heroes.length === 0) console.warn('⚠️ No heroes found.');
+    else console.log(`✅ Found ${heroes.length} heroes.`);
   }
 
   // Note: Since this is a fresh random wallet, it might NOT have a mock hero unless the backend assigns one on login.
@@ -128,55 +128,66 @@ async function runSimulation() {
 
   let mockHeroId = null;
   if (Array.isArray(heroes)) {
-      const mock = heroes.find(h => h.hero_type === 'mock');
-      if (mock) mockHeroId = mock.id;
+    const mock = heroes.find((h) => h.hero_type === 'mock');
+    if (mock) mockHeroId = mock.id;
   } else if (heroesRes.body.heroes) {
-      const mock = heroesRes.body.heroes.find(h => h.hero_type === 'mock');
-      if (mock) mockHeroId = mock.id;
+    const mock = heroesRes.body.heroes.find((h) => h.hero_type === 'mock');
+    if (mock) mockHeroId = mock.id;
   }
 
   if (mockHeroId) {
-      console.log(`   Using Mock Hero ID: ${mockHeroId}`);
+    console.log(`   Using Mock Hero ID: ${mockHeroId}`);
 
-      // 7. Simulate Match Win (Add XP)
-      console.log(`\n7️⃣  Simulating Match Win (Adding 50 XP)...`);
-      const winRes = await request('POST', '/game/matches/complete', {
+    // 7. Simulate Match Win (Add XP)
+    console.log(`\n7️⃣  Simulating Match Win (Adding 50 XP)...`);
+    const winRes = await request(
+      'POST',
+      '/game/matches/complete',
+      {
         heroId: mockHeroId,
-        xpGained: 50
-      }, token);
+        xpGained: 50,
+      },
+      token
+    );
 
-      if (!winRes.body.success) {
-          console.error('❌ Match completion failed:', winRes.body);
-      } else {
-          console.log('✅ Match recorded. XP added.');
-      }
+    if (!winRes.body.success) {
+      console.error('❌ Match completion failed:', winRes.body);
+    } else {
+      console.log('✅ Match recorded. XP added.');
+    }
 
-      // 8. Check updated stats
-      console.log(`\n8️⃣  Verifying Updated Stats...`);
-      const meRes2 = await request('GET', '/auth/me', null, token);
-      console.log(`   New XP: ${meRes2.body.user.account_xp}`);
+    // 8. Check updated stats
+    console.log(`\n8️⃣  Verifying Updated Stats...`);
+    const meRes2 = await request('GET', '/auth/me', null, token);
+    console.log(`   New XP: ${meRes2.body.user.account_xp}`);
 
-      if (meRes2.body.user.account_xp > meRes.body.user.account_xp) {
-          console.log('✅ XP increased successfully.');
-      } else {
-          console.error('❌ XP did not increase.');
-      }
+    if (meRes2.body.user.account_xp > meRes.body.user.account_xp) {
+      console.log('✅ XP increased successfully.');
+    } else {
+      console.error('❌ XP did not increase.');
+    }
   } else {
-      console.warn('⚠️ Could not find mock hero to simulate match.');
+    console.warn('⚠️ Could not find mock hero to simulate match.');
   }
 
   console.log('\n✨ Simulation Completed Successfully!');
 }
 
 // Check if server is up
-const checkServer = http.get('http://localhost:3000/api/contracts', (res) => {
+const checkServer = http
+  .get('http://localhost:3000/api/contracts', (res) => {
     if (res.statusCode === 200) {
-        runSimulation();
+      runSimulation();
     } else {
-        console.error(`❌ Backend server responded with status ${res.statusCode}.`);
-        process.exit(1);
+      console.error(
+        `❌ Backend server responded with status ${res.statusCode}.`
+      );
+      process.exit(1);
     }
-}).on('error', (e) => {
-    console.error('❌ Backend server is not running on port 3000. Please start it with `npm run start:backend`.');
+  })
+  .on('error', (e) => {
+    console.error(
+      '❌ Backend server is not running on port 3000. Please start it with `npm run start:backend`.'
+    );
     process.exit(1);
-});
+  });
