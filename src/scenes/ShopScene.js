@@ -232,6 +232,9 @@ export default class ShopScene extends Phaser.Scene {
   }
 
   handleBalanceUpdate({ balance, error }) {
+    if (!this.scene || !this.sys || !this.active) return;
+    if (!this.coinsText || !this.coinsText.active) return;
+
     if (error) {
       this.coinsText.setText(
         LanguageManager.get('shop_coins', { coins: 'Error' })

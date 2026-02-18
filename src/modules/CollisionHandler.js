@@ -82,34 +82,20 @@ export default class CollisionHandler {
 
       // ✨ DEATH PARTICLES (Digital Disintegration)
       if (this.scene.textures.exists('particle_pixel')) {
-        // Support both Phaser < 3.60 (Manager) and 3.60+ (Emitter)
-        const particles = this.scene.add.particles('particle_pixel');
-
-        if (typeof particles.createEmitter === 'function') {
-          // Legacy Phaser
-          particles.createEmitter({
-            x: enemy.x,
-            y: enemy.y,
-            speed: { min: 50, max: 150 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 2, end: 0 },
-            lifespan: 600,
-            quantity: 15,
-            blendMode: 'ADD',
-          });
-        } else {
-          // Modern Phaser (3.60+)
-          particles.setPosition(enemy.x, enemy.y);
-          particles.setConfig({
+        const particles = this.scene.add.particles(
+          enemy.x,
+          enemy.y,
+          'particle_pixel',
+          {
             speed: { min: 50, max: 150 },
             angle: { min: 0, max: 360 },
             scale: { start: 2, end: 0 },
             lifespan: 600,
             blendMode: 'ADD',
             emitting: false,
-          });
-          particles.explode(15);
-        }
+          }
+        );
+        particles.explode(15);
 
         this.scene.time.delayedCall(700, () => particles.destroy());
       }

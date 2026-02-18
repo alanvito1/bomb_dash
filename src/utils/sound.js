@@ -96,15 +96,16 @@ export default class SoundManager {
 
     // Guard clause: if audio not in cache, fallback to synthetic to prevent crash
     if (!scene.cache.audio.exists(key)) {
-      console.warn(
-        `[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`
-      );
+      // console.warn(
+      //   `[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`
+      // );
       this.generateSyntheticSound(scene, key);
       return;
     }
 
     const sfxConfig = { ...config, volume: this.sfxVolume };
     const sfx = scene.sound.add(key, sfxConfig);
+    if (!sfx) return;
 
     const playAction = () => sfx?.play();
 
@@ -210,7 +211,7 @@ export default class SoundManager {
       }
 
       if (!scene.cache.audio.exists(key)) {
-        console.warn(`[SoundManager] Music key "${key}" not found. Skipping.`);
+        // console.warn(`[SoundManager] Music key "${key}" not found. Skipping.`);
         // Don't reject, just resolve null to allow flow to continue
         return resolve(null);
       }
