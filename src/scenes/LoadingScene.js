@@ -4,6 +4,7 @@ import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import { createButton } from '../modules/UIGenerator.js';
 import AssetLoader from '../utils/AssetLoader.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -89,25 +90,31 @@ export default class LoadingScene extends Phaser.Scene {
 
     console.log('🔄 Loading critical assets explicitly...');
 
-    // Heroes
-    this.load.image('ninja', '/assets/img/hero/ninja.png');
-    this.load.image('ninja_hero', '/assets/img/hero/ninja.png');
-    this.load.image('witch', '/assets/img/hero/witch.png');
-    this.load.image('witch_hero', '/assets/img/hero/witch.png');
+    // Heroes (Commented out to force Procedural Generation for Phase 2)
+    // this.load.image('ninja', '/assets/img/hero/ninja.png');
+    // this.load.image('ninja_hero', '/assets/img/hero/ninja.png');
+    // this.load.image('witch', '/assets/img/hero/witch.png');
+    // this.load.image('witch_hero', '/assets/img/hero/witch.png');
 
     // Backgrounds
-    this.load.image('bg1', '/assets/img/bg/bg1.png');
+    // this.load.image('bg1', '/assets/img/bg/bg1.png');
 
     // Audio
-    this.load.audio('menu_music', '/assets/audio/menu.mp3');
+    // this.load.audio('menu_music', '/assets/audio/menu.mp3');
     // Explicit click audio load as requested
-    this.load.audio('click', '/assets/audio/click.mp3');
+    // this.load.audio('click', '/assets/audio/click.mp3');
 
     this.load.on('complete', () => {
       console.log('✅ All assets finished loading.');
 
+      // --- TASK FORCE: FASE 2 - ASSETS PROCEDURAIS ---
+      // Generate new Neon/Minimalist assets if files are missing.
+      // This runs BEFORE AssetLoader to prioritize the new designs.
+      TextureGenerator.generate(this);
+
       // --- ASSET RECOVERY SYSTEM ---
       // If any asset failed to load (404), generate a procedural fallback.
+      // (This will handle remaining assets like particles/hearts using the old generator)
       AssetLoader.ensureAssets(this);
 
       // Font handling

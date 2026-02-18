@@ -96,10 +96,7 @@ export default class SoundManager {
 
     // Guard clause: if audio not in cache, fallback to synthetic to prevent crash
     if (!scene.cache.audio.exists(key)) {
-      // console.warn(
-      //   `[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`
-      // );
-      this.generateSyntheticSound(scene, key);
+      this.playSynthetic(scene, key);
       return;
     }
 
@@ -118,73 +115,114 @@ export default class SoundManager {
 
   /**
    * Generates a synthetic sound using Web Audio API to prevent crashes when assets are missing.
+   * Implements 8-bit arcade style synthesis.
    * @param {Phaser.Scene} scene - The scene context.
    * @param {string} key - The type of sound to emulate (key name).
    */
-  static generateSyntheticSound(scene, key) {
+  static playSynthetic(scene, key) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
 
       const ctx = scene?.sound?.context || new AudioContext();
-      const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       const now = ctx.currentTime;
-      const vol = 0.1 * this.sfxVolume;
+      const vol = 0.3 * this.sfxVolume; // Slightly lower volume for synthetic sounds
 
-      // Connect graph
-      osc.connect(gain);
       gain.connect(ctx.destination);
 
-      // Determine sound type based on key string
+      // --- BOMB FIRE (Explosion): White Noise Decaying ---
       if (
         key.includes('explosion') ||
         key.includes('bomb') ||
         key.includes('fire')
       ) {
-        // White Noise Approximation (using random frequency modulation for chaos)
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, now);
-        osc.frequency.linearRampToValueAtTime(10, now + 0.2);
-        gain.gain.setValueAtTime(vol * 0.5, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.start(now);
-        osc.stop(now + 0.3);
-      } else if (
+        // Create White Noise Buffer
+        const bufferSize = ctx.sampleRate * 0.5; // 0.5 seconds duration
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        // Apply Lowpass Filter for "Boom" effect
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, now);
+        filter.frequency.linearRampToValueAtTime(100, now + 0.4);
+
+        noise.connect(filter);
+        filter.connect(gain);
+
+        // Decay Envelope
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+        noise.start(now);
+        noise.stop(now + 0.5);
+      }
+      // --- CLICK (UI/Menu): Square Wave Blip ---
+      else if (
         key.includes('click') ||
         key.includes('menu') ||
         key.includes('ui')
       ) {
-        // High Blip
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+
         osc.type = 'square';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+
+        gain.gain.setValueAtTime(vol * 0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
         osc.start(now);
         osc.stop(now + 0.1);
-      } else if (key.includes('wave') || key.includes('powerup')) {
-        // Rising Tone
+      }
+      // --- POWERUP (Bonus): Sine Wave Rising ---
+      else if (key.includes('powerup') || key.includes('wave') || key.includes('coin')) {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, now);
-        osc.frequency.linearRampToValueAtTime(600, now + 0.5);
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+
         gain.gain.setValueAtTime(vol, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+
         osc.start(now);
-        osc.stop(now + 0.5);
-      } else {
-        // Default Generic Blip
+        osc.stop(now + 0.3);
+      }
+      // --- DEFAULT FALLBACK ---
+      else {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(440, now);
         gain.gain.setValueAtTime(vol, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
         osc.start(now);
         osc.stop(now + 0.1);
       }
+
+      // console.log(`[SoundManager] Played synthetic sound for: ${key}`);
     } catch (e) {
       console.warn('[SoundManager] Failed to generate synthetic audio', e);
     }
+  }
+
+  // Alias for backward compatibility if used elsewhere
+  static generateSyntheticSound(scene, key) {
+    this.playSynthetic(scene, key);
   }
 
   /**
