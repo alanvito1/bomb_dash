@@ -379,7 +379,7 @@ export default class GameScene extends Phaser.Scene {
         scaleY: bomb.scaleY * 1.2,
         duration: 200,
         yoyo: true,
-        repeat: -1
+        repeat: -1,
       });
       // Pulse Tint (Red Warning)
       this.tweens.addCounter({
@@ -396,12 +396,12 @@ export default class GameScene extends Phaser.Scene {
           // To make it redder, we want 0xff0000.
           // Let's just flash it red.
           if (val > 50) {
-             bomb.setTint(0xff4444);
+            bomb.setTint(0xff4444);
           } else {
-             bomb.clearTint();
-             if (isOpponent) bomb.setTint(0xff8080);
+            bomb.clearTint();
+            if (isOpponent) bomb.setTint(0xff8080);
           }
-        }
+        },
       });
 
       if (isOpponent) bomb.setTint(0xff8080);

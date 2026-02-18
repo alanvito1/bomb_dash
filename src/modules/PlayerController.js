@@ -41,44 +41,48 @@ export default class PlayerController {
 
     // 🌑 SHADOW
     if (this.scene.textures.exists('shadow')) {
-        this.shadow = this.scene.add.image(this.player.x, this.player.y + 20, 'shadow');
-        this.shadow.setAlpha(0.5);
-        this.shadow.setDepth(this.player.depth - 1);
+      this.shadow = this.scene.add.image(
+        this.player.x,
+        this.player.y + 20,
+        'shadow'
+      );
+      this.shadow.setAlpha(0.5);
+      this.shadow.setDepth(this.player.depth - 1);
     }
 
     // 💨 SMOKE TRAIL
     if (this.scene.textures.exists('particle_smoke')) {
-        const p = this.scene.add.particles('particle_smoke');
-        if (typeof p.createEmitter === 'function') {
-             // Legacy
-             this.trailEmitter = p.createEmitter({
-                 speed: { min: 10, max: 20 },
-                 scale: { start: 0.5, end: 0 },
-                 lifespan: 200,
-                 alpha: { start: 0.5, end: 0 },
-                 frequency: -1 // Manual emit
-             });
-        } else {
-             // Modern
-             p.setConfig({
-                 speed: { min: 10, max: 20 },
-                 scale: { start: 0.5, end: 0 },
-                 lifespan: 200,
-                 alpha: { start: 0.5, end: 0 },
-                 emitting: false
-             });
-             this.trailEmitter = p;
-        }
+      const p = this.scene.add.particles('particle_smoke');
+      if (typeof p.createEmitter === 'function') {
+        // Legacy
+        this.trailEmitter = p.createEmitter({
+          speed: { min: 10, max: 20 },
+          scale: { start: 0.5, end: 0 },
+          lifespan: 200,
+          alpha: { start: 0.5, end: 0 },
+          frequency: -1, // Manual emit
+        });
+      } else {
+        // Modern
+        p.setConfig({
+          speed: { min: 10, max: 20 },
+          scale: { start: 0.5, end: 0 },
+          lifespan: 200,
+          alpha: { start: 0.5, end: 0 },
+          emitting: false,
+        });
+        this.trailEmitter = p;
+      }
     }
 
     // 🏃 WALK ANIMATION (Bobbing)
     this.walkTween = this.scene.tweens.add({
-        targets: this.player,
-        y: '+=2',
-        duration: 150,
-        yoyo: true,
-        repeat: -1,
-        paused: true
+      targets: this.player,
+      y: '+=2',
+      duration: 150,
+      yoyo: true,
+      repeat: -1,
+      paused: true,
     });
 
     return this.player;
@@ -89,7 +93,7 @@ export default class PlayerController {
 
     // Sync Shadow
     if (this.shadow) {
-        this.shadow.setPosition(this.player.x, this.player.y + 20);
+      this.shadow.setPosition(this.player.x, this.player.y + 20);
     }
 
     const isMoving = cursors.left.isDown || cursors.right.isDown;
@@ -107,20 +111,21 @@ export default class PlayerController {
 
     // Handle Effects
     if (isMoving) {
-        if (this.walkTween && this.walkTween.isPaused()) this.walkTween.resume();
+      if (this.walkTween && this.walkTween.isPaused()) this.walkTween.resume();
 
-        // Emit smoke
-        if (this.trailEmitter) {
-            this.trailEmitter.setPosition(this.player.x, this.player.y + 18);
-            if (this.scene.time.now % 100 < 20) { // Limit emission rate manually roughly
-                this.trailEmitter.emitParticle(1);
-            }
+      // Emit smoke
+      if (this.trailEmitter) {
+        this.trailEmitter.setPosition(this.player.x, this.player.y + 18);
+        if (this.scene.time.now % 100 < 20) {
+          // Limit emission rate manually roughly
+          this.trailEmitter.emitParticle(1);
         }
+      }
     } else {
-        if (this.walkTween && this.walkTween.isPlaying()) {
-            this.walkTween.pause();
-            this.player.y = Math.round(this.player.y); // Reset pixel snap?
-        }
+      if (this.walkTween && this.walkTween.isPlaying()) {
+        this.walkTween.pause();
+        this.player.y = Math.round(this.player.y); // Reset pixel snap?
+      }
     }
   }
 }

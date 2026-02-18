@@ -1,5 +1,4 @@
-let API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // Normalize URL: Ensure no trailing slash before appending /api logic
 if (API_BASE_URL.endsWith('/')) {
