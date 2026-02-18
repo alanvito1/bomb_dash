@@ -372,11 +372,14 @@ async function seedDatabase() {
 
   // Seed Items
   const items = [
-    { name: 'Wooden Sword', type: 'weapon', rarity: 'Common', stats: JSON.stringify({ damage: 5 }) },
-    { name: 'Iron Sword', type: 'weapon', rarity: 'Common', stats: JSON.stringify({ damage: 10 }) },
-    { name: 'Steel Sword', type: 'weapon', rarity: 'Rare', stats: JSON.stringify({ damage: 20 }) },
-    { name: 'Golden Sword', type: 'weapon', rarity: 'Legendary', stats: JSON.stringify({ damage: 50 }) },
-    { name: 'Health Potion', type: 'consumable', rarity: 'Common', stats: JSON.stringify({ heal: 50 }) },
+    { name: 'Rusty Sword', type: 'weapon', rarity: 'Common', stats: JSON.stringify({ damage: 5 }), image_url: 'item_rusty_sword' },
+    { name: 'Iron Katana', type: 'weapon', rarity: 'Rare', stats: JSON.stringify({ damage: 12 }), image_url: 'item_iron_katana' },
+    { name: 'Leather Vest', type: 'armor', rarity: 'Common', stats: JSON.stringify({ hp: 50 }), image_url: 'item_leather_vest' },
+    { name: 'Nano Vest', type: 'armor', rarity: 'Rare', stats: JSON.stringify({ hp: 120 }), image_url: 'item_nano_vest' },
+    { name: 'Neon Boots', type: 'armor', rarity: 'Rare', stats: JSON.stringify({ speed: 5 }), image_url: 'item_neon_boots' },
+    { name: 'Health Potion', type: 'consumable', rarity: 'Common', stats: JSON.stringify({ heal: 50 }), image_url: 'item_health_potion' },
+    { name: 'Scrap Metal', type: 'material', rarity: 'Common', stats: JSON.stringify({}), image_url: 'item_scrap' },
+    { name: 'Cyber Core', type: 'material', rarity: 'Rare', stats: JSON.stringify({}), image_url: 'item_cyber_core' },
   ];
 
   for (const item of items) {
