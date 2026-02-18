@@ -158,6 +158,14 @@ class ApiClient {
   }
 
   /**
+   * Checks if a user session exists (either JWT or Guest mode).
+   * @returns {boolean} True if a session exists.
+   */
+  hasSession() {
+    return !!(this.jwtToken || localStorage.getItem('guest_pk'));
+  }
+
+  /**
    * Checks the validity of the current JWT with the backend.
    * @returns {Promise<object>} A promise that resolves with user data if the token is valid.
    * @throws {Error} Throws an error if no token is found or if the token is invalid.
@@ -300,8 +308,32 @@ class ApiClient {
    * @returns {Promise<Array<object>>} A promise that resolves with the ranking data.
    */
   async getRanking() {
-    const data = await this.fetch('/ranking');
-    return data.success ? data.ranking : [];
+    try {
+      const data = await this.fetch('/ranking');
+      if (!data.success) throw new Error(data.message || 'Ranking fetch failed');
+      return data.ranking;
+    } catch (error) {
+      console.warn('⚠️ API Error: getRanking failed. Using Mock Data.', error);
+      return [
+        { name: 'Player1', score: 9999 },
+        { name: 'You', score: 0 },
+      ];
+    }
+  }
+
+  /**
+   * Fetches the latest news.
+   * @returns {Promise<Array<object>>} A promise that resolves with the news data.
+   */
+  async getNews() {
+    try {
+      const data = await this.fetch('/news');
+      if (!data.success) throw new Error(data.message || 'News fetch failed');
+      return data.news;
+    } catch (error) {
+      console.warn('⚠️ API Error: getNews failed. Using Mock Data.', error);
+      return [{ title: 'Welcome to Beta', content: 'System online. Fight!' }];
+    }
   }
 
   /**

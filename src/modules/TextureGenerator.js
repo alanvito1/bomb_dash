@@ -264,6 +264,7 @@ export default class TextureGenerator {
 
     // Backgrounds
     this.createGridBackground(scene, 'bg1');
+    this.createGridBackground(scene, 'floor_grid');
 
     // Additional assets needed for full game functionality
     this.createHearts(scene);
