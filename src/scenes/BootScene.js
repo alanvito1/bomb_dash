@@ -1,4 +1,5 @@
 import SoundManager from '../utils/sound.js';
+import TextureGenerator from '../utils/TextureGenerator.js';
 
 // A minimal scene for absolute baseline testing.
 export default class BootScene extends Phaser.Scene {
@@ -11,6 +12,9 @@ export default class BootScene extends Phaser.Scene {
 
     // Initialize SoundManager to load settings from localStorage
     SoundManager.init(this);
+
+    // Generate procedural textures (Explosions, UI, Particles)
+    TextureGenerator.generate(this);
 
     // Add a bright, obvious shape to confirm the renderer is working.
     const { width, height } = this.scale;
