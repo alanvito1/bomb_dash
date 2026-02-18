@@ -18,10 +18,7 @@ import LoadingScene from './src/scenes/LoadingScene.js';
 import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
 import GameScene from './src/scenes/GameScene.js';
-import ShopScene from './src/scenes/ShopScene.js';
-import RankingScene from './src/scenes/RankingScene.js';
 import GameOverScene from './src/scenes/GameOverScene.js';
-import ConfigScene from './src/scenes/ConfigScene.js';
 import ProfileScene from './src/scenes/ProfileScene.js';
 import CharacterSelectionScene from './src/scenes/CharacterSelectionScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
@@ -70,10 +67,7 @@ const config = {
     AuthChoiceScene,
     MenuScene,
     GameScene,
-    ShopScene,
-    RankingScene,
     GameOverScene,
-    ConfigScene,
     ProfileScene,
     CharacterSelectionScene,
     HUDScene,

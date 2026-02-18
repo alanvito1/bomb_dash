@@ -5,9 +5,12 @@ import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import TextureGenerator from '../modules/TextureGenerator.js';
+import { addJuice } from '../modules/UIGenerator.js';
 import ShopModal from '../ui/ShopModal.js';
 import HeroesModal from '../ui/HeroesModal.js';
 import RankingModal from '../ui/RankingModal.js';
+import SettingsModal from '../ui/SettingsModal.js';
+import WalletModal from '../ui/WalletModal.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -64,6 +67,8 @@ export default class MenuScene extends Phaser.Scene {
     this.shopModal = new ShopModal(this);
     this.heroesModal = new HeroesModal(this);
     this.rankingModal = new RankingModal(this);
+    this.settingsModal = new SettingsModal(this);
+    this.walletModal = new WalletModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -181,7 +186,14 @@ export default class MenuScene extends Phaser.Scene {
     // Darker background for BCOIN
     const bcoinBg = this.add
       .rectangle(resStartX, bcoinY, 110, 24, 0x000033)
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setInteractive({ useHandCursor: true });
+
+    bcoinBg.on('pointerup', () => {
+      SoundManager.playClick(this);
+      this.walletModal.open();
+    });
+
     const bcoinIcon = this.add
       .image(resStartX, bcoinY, 'icon_bcoin')
       .setScale(0.8);
@@ -203,21 +215,21 @@ export default class MenuScene extends Phaser.Scene {
     // Wallet
     const walletBtn = this.add
       .image(width - 65, 30, 'icon_wallet')
-      .setScale(0.8)
-      .setInteractive({ useHandCursor: true });
-    walletBtn.on('pointerdown', () => {
-      SoundManager.playClick(this);
-      console.log('Wallet clicked');
+      .setScale(0.8);
+
+    addJuice(walletBtn, this);
+    walletBtn.on('pointerup', () => {
+      this.walletModal.open();
     });
 
     // Settings
     const settingsBtn = this.add
       .image(width - 25, 30, 'icon_settings')
-      .setScale(0.8)
-      .setInteractive({ useHandCursor: true });
-    settingsBtn.on('pointerdown', () => {
-      SoundManager.playClick(this);
-      this.scene.launch(CST.SCENES.CONFIG);
+      .setScale(0.8);
+
+    addJuice(settingsBtn, this);
+    settingsBtn.on('pointerup', () => {
+      this.settingsModal.open();
     });
 
     container.add([walletBtn, settingsBtn]);
@@ -345,10 +357,10 @@ export default class MenuScene extends Phaser.Scene {
 
         btnContainer.add([icon, text]);
         btnContainer.setSize(60, 60);
-        btnContainer.setInteractive({ useHandCursor: true });
 
-        btnContainer.on('pointerdown', () => {
-          SoundManager.playClick(this);
+        addJuice(btnContainer, this);
+
+        btnContainer.on('pointerup', () => {
           if (btn.action) btn.action();
           if (btn.scene) {
             this.scene.start(btn.scene, { userData: this.userData });

@@ -91,7 +91,6 @@ export default class UIModal extends Phaser.GameObjects.Container {
     });
 
     closeBtn.on('pointerdown', () => {
-        SoundManager.playClick(scene);
         this.close();
     });
 
@@ -126,6 +125,8 @@ export default class UIModal extends Phaser.GameObjects.Container {
   }
 
   close() {
+      SoundManager.play(this.scene, 'soft_click');
+
       // Animation: Pop Out
       this.scene.tweens.add({
           targets: this.windowContainer,
