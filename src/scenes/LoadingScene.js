@@ -187,11 +187,11 @@ export default class LoadingScene extends Phaser.Scene {
         return;
       }
 
-      // Only if NO session exists at all, go to AuthChoice
+      // Only if NO session exists at all, show prompt
       console.log(
-        '[LoadingScene] No session found. Redirecting to AuthChoice.'
+        '[LoadingScene] No session found. Showing Overlay Prompt.'
       );
-      this.scene.start('AuthChoiceScene');
+      this.showLoginOverlayPrompt(loadingText);
     } catch (error) {
       console.error('[LoadingScene] Critical Initialization Error:', error);
       // Even in critical error, if we have session, try to enter menu?
@@ -203,9 +203,39 @@ export default class LoadingScene extends Phaser.Scene {
         this.registry.set('loggedInUser', mockUser);
         this.scene.start('MenuScene');
       } else {
-        this.scene.start('AuthChoiceScene');
+        // If we crashed and have no session, just show the prompt.
+        // We can't really do much else.
+        this.showLoginOverlayPrompt(loadingText);
       }
     }
+  }
+
+  showLoginOverlayPrompt(loadingText) {
+    if (loadingText) loadingText.destroy();
+
+    const centerX = this.cameras.main.centerX;
+    const centerY = this.cameras.main.centerY;
+
+    // Dark Overlay
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.9);
+    overlay.fillRect(0, 0, this.scale.width, this.scale.height);
+
+    // Warning Text
+    this.add.text(centerX, centerY - 20, 'SESSION NOT FOUND', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '16px',
+      color: '#ff0000',
+      align: 'center'
+    }).setOrigin(0.5);
+
+    this.add.text(centerX, centerY + 20, 'Please Login via the HTML Overlay\nand Reload the Page.', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '10px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 10
+    }).setOrigin(0.5);
   }
 
   create() {

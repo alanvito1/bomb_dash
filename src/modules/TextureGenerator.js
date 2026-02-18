@@ -484,6 +484,121 @@ export default class TextureGenerator {
     g.generateTexture(key, 32, 32);
   }
 
+  // --- NEW RPG ITEMS ---
+
+  static createRustySword(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Blade (Grey Line)
+    g.lineStyle(4, 0x888888);
+    g.beginPath();
+    g.moveTo(8, 24);
+    g.lineTo(24, 8);
+    g.stroke();
+    // Handle (Brown)
+    g.lineStyle(4, 0x8B4513);
+    g.beginPath();
+    g.moveTo(6, 26);
+    g.lineTo(10, 22);
+    g.stroke();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIronKatana(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Blade (Silver/White)
+    g.lineStyle(2, 0xCCCCCC);
+    g.beginPath();
+    g.moveTo(8, 24);
+    g.quadraticBezierTo(16, 16, 28, 4);
+    g.stroke();
+    // Handle (Black)
+    g.lineStyle(4, 0x000000);
+    g.beginPath();
+    g.moveTo(6, 26);
+    g.lineTo(10, 22);
+    g.stroke();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createLeatherVest(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x8B4513); // Brown
+    g.fillRect(8, 8, 16, 20);
+    // Neck cutout
+    g.fillStyle(0x000000, 0); // Transparent erase not easy, so draw over if bg known? No, just draw shape.
+    // Simpler: Just a brown shape
+    g.fillStyle(0xA0522D);
+    g.fillRect(10, 10, 12, 16);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createNanoVest(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x00FFFF); // Cyan
+    g.fillRect(8, 8, 16, 20);
+    g.lineStyle(2, 0xFFFFFF);
+    g.strokeRect(8, 8, 16, 20);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createNeonBoots(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xFF00FF); // Neon Pink
+    // Left Boot
+    g.fillRect(8, 16, 6, 12);
+    g.fillRect(8, 28, 8, 4);
+    // Right Boot
+    g.fillRect(20, 16, 6, 12);
+    g.fillRect(20, 28, 8, 4);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createHealthPotion(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Flask
+    g.fillStyle(0xFF0000); // Red
+    g.fillCircle(16, 20, 8);
+    // Neck
+    g.fillRect(14, 8, 4, 6);
+    g.fillStyle(0xFFFFFF); // Shine
+    g.fillCircle(14, 18, 2);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createScrap(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x555555); // Grey
+    // Random jagged shapes
+    g.beginPath();
+    g.moveTo(10, 10);
+    g.lineTo(20, 8);
+    g.lineTo(24, 16);
+    g.lineTo(18, 24);
+    g.lineTo(8, 20);
+    g.closePath();
+    g.fill();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createCyberCore(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x0000FF); // Blue Core
+    g.fillCircle(16, 16, 10);
+    g.lineStyle(2, 0x00FFFF); // Cyan Glow
+    g.strokeCircle(16, 16, 10);
+    g.lineStyle(1, 0xFFFFFF);
+    g.strokeCircle(16, 16, 6);
+    g.generateTexture(key, 32, 32);
+  }
+
   /**
    * Helper to generate all common missing assets.
    * @param {Phaser.Scene} scene
