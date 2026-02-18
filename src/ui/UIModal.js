@@ -21,7 +21,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
 
     // 1. Overlay (Full screen dimmer)
     const { width: screenW, height: screenH } = scene.scale;
-    this.overlay = scene.add.rectangle(screenW / 2, screenH / 2, screenW, screenH, 0x000000, 0.8);
+    this.overlay = scene.add.rectangle(screenW / 2, screenH / 2, screenW, screenH, 0x000000, 0.95);
     this.overlay.setInteractive(); // Block clicks below
     this.add(this.overlay);
 
@@ -82,7 +82,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
 
     closeBtn.add([btnBg, xText]);
     // Larger interactive area
-    closeBtn.setInteractive(new Phaser.Geom.Rectangle(-25, -25, 50, 50), Phaser.Geom.Rectangle.Contains);
+    closeBtn.setInteractive(new Phaser.Geom.Rectangle(-40, -40, 80, 80), Phaser.Geom.Rectangle.Contains);
 
     closeBtn.on('pointerover', () => {
         btnBg.setFillStyle(0xff0000, 0.5);
@@ -114,7 +114,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
 
     this.scene.tweens.add({
         targets: this.overlay,
-        alpha: 0.8,
+        alpha: 0.95,
         duration: 200
     });
 
@@ -130,7 +130,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
     // Auto-Close Logic (Delay to prevent ghost clicks)
     // Remove any existing listener first
     this.overlay.off('pointerdown');
-    this.scene.time.delayedCall(100, () => {
+    this.scene.time.delayedCall(250, () => {
         if (!this.visible) return; // Prevent race condition
         this.overlay.once('pointerdown', () => this.close());
     });

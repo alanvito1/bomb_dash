@@ -104,6 +104,7 @@ export default class MenuScene extends Phaser.Scene {
 
     try {
       const res = await api.getHeroes();
+      if (!this.sys || !this.scene) return; // Prevent crash if scene destroyed
       if (res.success && res.heroes.length > 0) {
         const hero = res.heroes[0];
         this.registry.set('selectedHero', hero);
@@ -158,6 +159,7 @@ export default class MenuScene extends Phaser.Scene {
       if (!this.poolText || !this.poolText.active) return;
       try {
           const res = await api.getRewardPool();
+          if (!this.sys || !this.scene) return; // Prevent crash if scene destroyed
           if (res.success) {
               const val = res.pool;
               this.poolText.setText(`${val} BCOIN`);
