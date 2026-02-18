@@ -1,8 +1,18 @@
 import { SiweMessage } from 'siwe';
 import * as contracts from './config/contracts.js';
 
-const API_BASE_URL =
+let API_BASE_URL =
   import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
+// Normalize URL: Ensure no trailing slash before appending /api logic
+if (API_BASE_URL.endsWith('/')) {
+  API_BASE_URL = API_BASE_URL.slice(0, -1);
+}
+
+// Ensure it ends with /api
+if (!API_BASE_URL.endsWith('/api')) {
+  API_BASE_URL += '/api';
+}
 
 console.log('🔗 API URL:', API_BASE_URL);
 
