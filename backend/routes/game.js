@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database.js');
+const { Item, UserItem } = require('../database.js');
 const admin = require('../admin.js');
 const oracle = require('../oracle.js');
 const { ethers } = require('ethers');
@@ -80,7 +81,7 @@ router.get('/bestiary', async (req, res) => {
 });
 
 router.post('/matches/complete', async (req, res) => {
-  const { heroId, xpGained, coinsCollected, bestiary, proficiency } = req.body;
+  const { heroId, xpGained, coinsCollected, bestiary, proficiency, droppedItems } = req.body;
 
   if (!heroId || typeof xpGained === 'undefined' || xpGained < 0) {
     return res.status(400).json({
@@ -116,6 +117,31 @@ router.post('/matches/complete', async (req, res) => {
     // Award User XP and Coins (Session Loot)
     // Note: grantRewards handles level-ups internally
     await db.grantRewards(req.user.userId, coins, xpGained);
+
+    // --- Dropped Items Processing ---
+    // If client sends dropped items (Option A: Client-Side Loot), verify and add them.
+    // In a production secure env, we would validate RNG seeds here.
+    if (droppedItems && Array.isArray(droppedItems) && droppedItems.length > 0) {
+      for (const itemName of droppedItems) {
+        // Find item by name (Client sends names like "Rusty Sword", "Scrap Metal")
+        const itemDef = await Item.findOne({ where: { name: itemName } });
+        if (itemDef) {
+           const existingStack = await UserItem.findOne({
+             where: { user_id: req.user.userId, item_id: itemDef.id }
+           });
+           if (existingStack) {
+             existingStack.quantity += 1;
+             await existingStack.save();
+           } else {
+             await UserItem.create({
+               user_id: req.user.userId,
+               item_id: itemDef.id,
+               quantity: 1
+             });
+           }
+        }
+      }
+    }
 
     // --- Phase 2: Infinite Grind ---
     // 1. Update Bestiary

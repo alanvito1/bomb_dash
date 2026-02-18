@@ -229,7 +229,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossDefeated = false;
     this.bossSpawned = false;
     this.activePowerups = {};
-    this.sessionLoot = { coins: 0, xp: 0 }; // Risk Mechanics
+    this.sessionLoot = { coins: 0, xp: 0, items: [] }; // Risk Mechanics + Items
     this.sessionBestiary = {}; // Phase 2: Bestiary
     this.sessionBombHits = 0; // Phase 2: Proficiency
     this.sessionDistance = 0; // Phase 2: Proficiency
@@ -258,6 +258,7 @@ export default class GameScene extends Phaser.Scene {
     this.bombs = this.physics.add.group();
     this.enemies = this.physics.add.group();
     this.powerups = this.physics.add.group();
+    this.lootGroup = this.physics.add.group(); // Loot Drop System
     this.powerupLogic = new PowerupLogic(this);
     this.collisionHandler = new CollisionHandler(
       this,
@@ -393,6 +394,15 @@ export default class GameScene extends Phaser.Scene {
         });
         if (this.playerStats.hp <= 0) this.handleGameOver();
       }
+    );
+
+    // Loot Pickup Collider
+    this.physics.add.overlap(
+      this.player,
+      this.lootGroup,
+      this.handleLootPickup,
+      null,
+      this
     );
   }
 
@@ -541,11 +551,13 @@ export default class GameScene extends Phaser.Scene {
     // Risk Mechanic: Lose Loot on Defeat
     let finalCoins = 0;
     let finalXp = 0;
+    let finalItems = [];
 
     if (isVictory) {
       SoundManager.play(this, 'level_up'); // Or victory sound
       finalCoins = this.sessionLoot.coins;
       finalXp = this.sessionLoot.xp; // Or stick to score-based XP? Using Score for XP for now.
+      finalItems = this.sessionLoot.items || [];
     } else {
       SoundManager.play(this, 'gameover');
       finalCoins = 0; // Lost everything
@@ -554,6 +566,7 @@ export default class GameScene extends Phaser.Scene {
       // Let's assume XP is safe (Account progression) but Coins are lost (Loot).
       // Actually, usually in Roguelites, you keep XP.
       finalXp = this.score;
+      finalItems = []; // Lost items
     }
 
     const heroId = this.playerStats.id;
@@ -562,7 +575,7 @@ export default class GameScene extends Phaser.Scene {
     if (heroId) {
       try {
         console.log(
-          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${finalXp}, Coins: ${finalCoins}`
+          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${finalXp}, Coins: ${finalCoins}, Items: ${finalItems.length}`
         );
         // Phase 2: Submit Bestiary and Proficiency Data
         const bestiary = this.sessionBestiary || {};
@@ -572,7 +585,7 @@ export default class GameScene extends Phaser.Scene {
         };
 
         // Use the new, correct method on the api client.
-        const response = await api.completeMatch(heroId, finalXp, finalCoins, bestiary, proficiency);
+        const response = await api.completeMatch(heroId, finalXp, finalCoins, bestiary, proficiency, finalItems);
         if (response.success) {
           console.log('[GameScene] XP/Coins/Proficiency awarded successfully by the server.');
         } else {
@@ -706,6 +719,16 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
+    // Loot Drop Logic (20% Chance on Death)
+    // We hook here because we iterate enemies and destroy them here.
+    enemiesToProcess.forEach(enemy => {
+        if (!enemy.active && enemy.dropped === undefined) {
+             // Flag to prevent double drops if multiple things kill it
+             enemy.dropped = true;
+             this.trySpawnLoot(enemy.x, enemy.y);
+        }
+    });
+
     // LP-05: Check if the current non-boss wave is complete, then advance.
     if (
       this.enemiesSpawned > 0 &&
@@ -721,5 +744,94 @@ export default class GameScene extends Phaser.Scene {
 
   togglePause() {
     this.pauseManager.pause();
+  }
+
+  trySpawnLoot(x, y) {
+    if (Math.random() > 0.2) return; // 20% Global Drop Rate
+
+    const roll = Math.random() * 100;
+    let itemKey = '';
+    let itemName = '';
+    let isBcoin = false;
+
+    // Drop Table
+    if (roll < 50) {
+        // 50% Gold (BCOIN)
+        itemKey = 'icon_bcoin'; // or 'icon_gold'
+        itemName = 'BCOIN';
+        isBcoin = true;
+    } else if (roll < 80) {
+        // 30% Scrap
+        itemKey = 'item_scrap';
+        itemName = 'Scrap Metal';
+    } else if (roll < 95) {
+        // 15% Potion
+        itemKey = 'item_health_potion';
+        itemName = 'Health Potion';
+    } else {
+        // 5% Equipment (Rare/Common)
+        const equipRoll = Math.random();
+        if (equipRoll < 0.25) { itemKey = 'item_rusty_sword'; itemName = 'Rusty Sword'; }
+        else if (equipRoll < 0.50) { itemKey = 'item_leather_vest'; itemName = 'Leather Vest'; }
+        else if (equipRoll < 0.75) { itemKey = 'item_neon_boots'; itemName = 'Neon Boots'; }
+        else { itemKey = 'item_iron_katana'; itemName = 'Iron Katana'; }
+    }
+
+    // Spawn Sprite
+    const loot = this.lootGroup.create(x, y, itemKey);
+    loot.setDisplaySize(24, 24);
+    loot.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
+    loot.setDrag(100);
+    loot.itemName = itemName;
+    loot.isBcoin = isBcoin;
+
+    // Float Animation
+    this.tweens.add({
+        targets: loot,
+        y: y - 5,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1
+    });
+
+    // Auto-destroy after 15s to save memory
+    this.time.delayedCall(15000, () => {
+        if (loot.active) loot.destroy();
+    });
+  }
+
+  handleLootPickup(player, loot) {
+      if (!loot.active) return;
+
+      // Add to session
+      if (loot.isBcoin) {
+          const amount = Phaser.Math.Between(1, 5);
+          this.sessionLoot.coins += amount;
+          this.showFloatingText(player.x, player.y - 20, `+${amount} BCOIN`, '#00ffff');
+      } else {
+          this.sessionLoot.items.push(loot.itemName);
+          this.showFloatingText(player.x, player.y - 20, loot.itemName, '#ffffff');
+      }
+
+      SoundManager.play(this, 'coin_collect'); // Use generic collect sound
+      loot.destroy();
+  }
+
+  showFloatingText(x, y, message, color) {
+      const text = this.add.text(x, y, message, {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '10px',
+          color: color,
+          stroke: '#000000',
+          strokeThickness: 2
+      }).setOrigin(0.5);
+
+      this.tweens.add({
+          targets: text,
+          y: y - 30,
+          alpha: 0,
+          duration: 1000,
+          onComplete: () => text.destroy()
+      });
   }
 }

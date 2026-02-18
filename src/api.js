@@ -551,12 +551,13 @@ class ApiClient {
    * @param {number} coinsCollected - The amount of coins collected (Session Loot).
    * @param {object} bestiary - The session bestiary updates { enemyType: count }.
    * @param {object} proficiency - The session proficiency updates { bombHits: number, distance: number }.
+   * @param {Array<string>} droppedItems - List of item names dropped in session (Client-Side Loot).
    * @returns {Promise<any>} A promise that resolves with the backend's response.
    */
-  async completeMatch(heroId, xpGained, coinsCollected = 0, bestiary = {}, proficiency = {}) {
+  async completeMatch(heroId, xpGained, coinsCollected = 0, bestiary = {}, proficiency = {}, droppedItems = []) {
     return this.fetch('/game/matches/complete', {
       method: 'POST',
-      body: JSON.stringify({ heroId, xpGained, coinsCollected, bestiary, proficiency }),
+      body: JSON.stringify({ heroId, xpGained, coinsCollected, bestiary, proficiency, droppedItems }),
     });
   }
 

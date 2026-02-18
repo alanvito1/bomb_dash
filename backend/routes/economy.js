@@ -5,12 +5,13 @@ const { verifyToken } = require('./auth');
 const supabaseService = require('../supabase_service');
 
 const RECIPES = {
-  'Wooden Sword': 'Iron Sword',
-  'Iron Sword': 'Steel Sword',
-  'Steel Sword': 'Golden Sword',
+  'Rusty Sword': 'Iron Katana',
+  'Leather Vest': 'Nano Vest',
+  // Future: Iron Katana -> Titanium Blade
+  // Future: Nano Vest -> Cyber Armor
 };
 
-const CRAFT_COST = 50;
+const CRAFT_COST = 50; // BCOIN or Gold
 
 router.get('/inventory', verifyToken, async (req, res) => {
   try {
@@ -135,7 +136,27 @@ router.post('/craft', verifyToken, async (req, res) => {
 
       res.json({ success: true, result: 'success', itemName: targetItem.name, message: `Success! Crafted ${targetItem.name}` });
     } else {
-      res.json({ success: true, result: 'failure', message: 'Critical Failure! Items lost.' });
+      // Failure (Bricking) - Grant Scrap Metal
+      const scrapItem = await Item.findOne({ where: { name: 'Scrap Metal' } });
+
+      if (scrapItem) {
+        const existingScrap = await UserItem.findOne({
+            where: { user_id: userId, item_id: scrapItem.id }
+        });
+
+        if (existingScrap) {
+            existingScrap.quantity += 1;
+            await existingScrap.save();
+        } else {
+            await UserItem.create({
+                user_id: userId,
+                item_id: scrapItem.id,
+                quantity: 1
+            });
+        }
+      }
+
+      res.json({ success: true, result: 'failure', message: 'Critical Failure! Items lost, but you salvaged some Scrap Metal.' });
     }
 
   } catch (error) {

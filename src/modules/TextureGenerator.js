@@ -522,6 +522,16 @@ export default class TextureGenerator {
     this.createPotion(scene, 'item_potion');
     this.createGemPack(scene, 'item_gems');
 
+    // New RPG Items
+    this.createRustySword(scene, 'item_rusty_sword');
+    this.createIronKatana(scene, 'item_iron_katana');
+    this.createLeatherVest(scene, 'item_leather_vest');
+    this.createNanoVest(scene, 'item_nano_vest');
+    this.createNeonBoots(scene, 'item_neon_boots');
+    this.createHealthPotion(scene, 'item_health_potion');
+    this.createScrap(scene, 'item_scrap');
+    this.createCyberCore(scene, 'item_cyber_core');
+
     // Additional assets needed for full game functionality
     this.createHearts(scene);
     this.createShadow(scene);
