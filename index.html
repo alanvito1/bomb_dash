@@ -447,8 +447,7 @@
           newsItems.forEach((item) => {
             const card = document.createElement('div');
             card.className = 'news-card';
-            const imageUrl =
-              item.image_url || 'assets/img/bg/default-news.png';
+            const imageUrl = item.image_url || 'assets/img/bg/default-news.png';
 
             // Use a simpler date format
             const dateStr = new Date(item.created_at).toLocaleDateString();

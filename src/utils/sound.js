@@ -94,9 +94,12 @@ export default class SoundManager {
       return;
     }
 
-    // Guard clause: if audio not in cache, warn and return to avoid crash
+    // Guard clause: if audio not in cache, fallback to synthetic to prevent crash
     if (!scene.cache.audio.exists(key)) {
-      console.warn(`[SoundManager] Audio key "${key}" missing from cache.`);
+      console.warn(
+        `[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`
+      );
+      this.generateSyntheticSound(scene, key);
       return;
     }
 
@@ -113,49 +116,82 @@ export default class SoundManager {
   }
 
   /**
-   * Generates a synthetic 8-bit beep using Web Audio API.
-   * Used as a fallback or primary click sound to avoid missing asset crashes.
-   * @param {Phaser.Scene} scene - The scene context (used to access AudioContext if available).
+   * Generates a synthetic sound using Web Audio API to prevent crashes when assets are missing.
+   * @param {Phaser.Scene} scene - The scene context.
+   * @param {string} key - The type of sound to emulate (key name).
    */
-  static playClick(scene) {
-    // 1. Try playing from cache if available
-    if (scene?.cache?.audio?.exists('click')) {
-      this.play(scene, 'click');
-      return;
-    }
-
-    // 2. Fallback: Generate Synthetic Sound
+  static generateSyntheticSound(scene, key) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
 
-      // Reuse Phaser's context if possible, or create new
       const ctx = scene?.sound?.context || new AudioContext();
-
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      // Retro 8-bit Square Wave
-      osc.type = 'square';
-
-      // Pitch Sweep (High to Low for a "blip" effect)
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
-
-      // Volume Envelope (Quick fade out)
-      // Apply SFX volume scaling
+      const now = ctx.currentTime;
       const vol = 0.1 * this.sfxVolume;
-      gain.gain.setValueAtTime(vol, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
 
+      // Connect graph
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
+      // Determine sound type based on key string
+      if (
+        key.includes('explosion') ||
+        key.includes('bomb') ||
+        key.includes('fire')
+      ) {
+        // White Noise Approximation (using random frequency modulation for chaos)
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.linearRampToValueAtTime(10, now + 0.2);
+        gain.gain.setValueAtTime(vol * 0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (
+        key.includes('click') ||
+        key.includes('menu') ||
+        key.includes('ui')
+      ) {
+        // High Blip
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (key.includes('wave') || key.includes('powerup')) {
+        // Rising Tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(600, now + 0.5);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else {
+        // Default Generic Blip
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
     } catch (e) {
       console.warn('[SoundManager] Failed to generate synthetic audio', e);
     }
+  }
+
+  /**
+   * Generates a synthetic 8-bit beep using Web Audio API.
+   * Legacy wrapper for backward compatibility.
+   */
+  static playClick(scene) {
+    this.play(scene, 'click'); // Will use fallback if 'click' is missing
   }
 
   /**
@@ -170,13 +206,13 @@ export default class SoundManager {
       if (!scene?.sound) {
         const errorMsg = `[SoundManager] Invalid scene for playing music: ${key}`;
         console.error(errorMsg);
-        return reject(new Error(errorMsg));
+        return resolve(null); // Resolve null instead of reject to prevent crash
       }
 
       if (!scene.cache.audio.exists(key)) {
-        const errorMsg = `[SoundManager] Audio key "${key}" not found in cache.`;
-        console.error(errorMsg);
-        return reject(new Error(errorMsg));
+        console.warn(`[SoundManager] Music key "${key}" not found. Skipping.`);
+        // Don't reject, just resolve null to allow flow to continue
+        return resolve(null);
       }
 
       this.stopAllMusic();
@@ -250,13 +286,6 @@ export default class SoundManager {
   static async playWorldMusic(scene, worldNumber) {
     if (!scene?.sound) return;
     const musicKey = `world${Math.min(worldNumber, 5)}_music`;
-    try {
-      await this.playMusic(scene, musicKey);
-    } catch (error) {
-      console.error(
-        `[SoundManager] Could not play world music for world ${worldNumber}.`,
-        error
-      );
-    }
+    await this.playMusic(scene, musicKey); // Try to play, but don't catch error as we now resolve null
   }
 }
