@@ -1,12 +1,8 @@
-
-> app@1.0.0 dev
-> vite
-
 [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
 
-  VITE v5.4.20  ready in 379 ms
+  VITE v5.4.20  ready in 303 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-5:21:45 PM [vite] page reload src/scenes/LoadingScene.js
-5:21:57 PM [vite] page reload src/modules/TextureGenerator.js
+6:49:36 PM [vite] ✨ optimized dependencies changed. reloading
+6:56:36 PM [vite] page reload src/locales/en.json

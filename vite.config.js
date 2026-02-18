@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { resolve } from 'path';
 
