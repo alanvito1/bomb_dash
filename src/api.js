@@ -314,10 +314,7 @@ class ApiClient {
       return data.ranking;
     } catch (error) {
       console.warn('⚠️ API Error: getRanking failed. Using Mock Data.', error);
-      return [
-        { name: 'Player1', score: 9999 },
-        { name: 'You', score: 0 },
-      ];
+      return [{ name: 'Jules', score: 9999 }];
     }
   }
 
@@ -332,7 +329,7 @@ class ApiClient {
       return data.news;
     } catch (error) {
       console.warn('⚠️ API Error: getNews failed. Using Mock Data.', error);
-      return [{ title: 'Welcome to Beta', content: 'System online. Fight!' }];
+      return [{ title: 'Alpha Test', content: 'Systems Online' }];
     }
   }
 
