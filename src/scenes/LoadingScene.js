@@ -147,85 +147,65 @@ export default class LoadingScene extends Phaser.Scene {
 
       loadingText.setText('VERIFYING SESSION...');
 
-      console.log('[LoadingScene] Checking session via API...');
-      let loginStatus = { success: false };
-      try {
-        loginStatus = await api.checkLoginStatus();
-      } catch (e) {
-        console.warn('[LoadingScene] API Session Check failed:', e);
-      }
+      // --- TASK FORCE: UNIFIED LOGIN FLOW ---
+      // Check if session exists (Local Token or Guest PK)
+      if (api.hasSession()) {
+        console.log('[LoadingScene] Session detected. Attempting to validate...');
 
-      if (loginStatus.success) {
+        try {
+          // Try to validate with Backend
+          const loginStatus = await api.checkLoginStatus();
+          if (loginStatus.success) {
+            console.log(
+              `[LoadingScene] Session validated: ${loginStatus.user.address}`
+            );
+            this.registry.set('loggedInUser', loginStatus.user);
+            this.scene.start('MenuScene');
+            return;
+          }
+        } catch (e) {
+          console.warn(
+            '[LoadingScene] API Validation failed, but session exists. Entering Offline/Guest Mode.',
+            e
+          );
+        }
+
+        // --- FALLBACK / OFFLINE MODE ---
+        // If validation failed (API Error) but we have a session, we let them in.
+        // This prevents the user from being kicked back to AuthChoice if backend is down.
         console.log(
-          `[LoadingScene] Session validated: ${loginStatus.user.address}`
+          '[LoadingScene] Bypassing AuthChoice due to existing session (Fail-Safe).'
         );
-        this.registry.set('loggedInUser', loginStatus.user);
-        this.scene.start('MenuScene');
-        return;
-      }
 
-      // --- FALLBACK CHECK (Overlay Bypass) ---
-      // If API check fails but user has local credentials (e.g., from Overlay login),
-      // force entry to MenuScene to avoid redundant AuthChoice.
-      console.warn(
-        '[LoadingScene] API Check failed. Checking local session indicators...'
-      );
-      const guestPk = localStorage.getItem('guest_pk');
-      // Simple check for any potential session indicator
-      const hasLocalSession =
-        guestPk || document.cookie.includes('sb-') || localStorage.length > 0;
-
-      if (guestPk) {
-        console.log(
-          '[LoadingScene] Local Guest Session found! Bypassing AuthChoice.'
-        );
-        // Construct minimal user data to satisfy MenuScene requirements
         const mockUser = {
-          walletAddress: 'GUEST-MODE-ACTIVE',
+          walletAddress: 'OFFLINE-MODE',
           isGuest: true,
+          isOffline: true,
         };
         this.registry.set('loggedInUser', mockUser);
         this.scene.start('MenuScene');
         return;
       }
 
-      // If no session found at all, go to AuthChoice (or throw if strict)
-      // Original logic threw error, but correct flow for unauthenticated user is AuthChoice.
-      // However, to respect the "Emergency" prompt:
-      // "Fluxo Redundante: O usuário loga no Overlay, mas depois cai na AuthChoiceScene de novo."
-      // If we are here, it means we really couldn't find a session.
+      // Only if NO session exists at all, go to AuthChoice
       console.log(
         '[LoadingScene] No session found. Redirecting to AuthChoice.'
       );
       this.scene.start('AuthChoiceScene');
     } catch (error) {
       console.error('[LoadingScene] Critical Initialization Error:', error);
-      this.handleInitializationError(error, loadingText);
+      // Even in critical error, if we have session, try to enter menu?
+      // checkSessionAndProceed catches its own errors mostly.
+      // If we are here, something really bad happened (e.g. ContractProvider failed).
+      // If we have session, let's try to enter anyway.
+      if (api.hasSession()) {
+        const mockUser = { walletAddress: 'EMERGENCY-MODE', isGuest: true };
+        this.registry.set('loggedInUser', mockUser);
+        this.scene.start('MenuScene');
+      } else {
+        this.scene.start('AuthChoiceScene');
+      }
     }
-  }
-
-  handleInitializationError(error, loadingText) {
-    const centerX = this.cameras.main.centerX;
-    const centerY = this.cameras.main.centerY;
-
-    // Update Text
-    loadingText.setText('CONNECTION FAILED').setStyle({ fill: '#ff0000' });
-
-    this.add
-      .text(centerX, centerY + 60, error.message.toUpperCase(), {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '10px',
-        fill: '#ff4444',
-        align: 'center',
-        wordWrap: { width: 400 },
-      })
-      .setOrigin(0.5);
-
-    // Create Retry Button using UIGenerator
-    createButton(this, centerX, centerY + 120, 'RETRY CONNECTION', () => {
-      // Simple scene restart to try again
-      this.scene.restart();
-    });
   }
 
   create() {

@@ -7,7 +7,7 @@ import bcoinService from '../web3/bcoin-service.js';
 import {
   createButton,
   createTitle,
-  drawCyberpunkGrid,
+  createPanel,
 } from '../modules/UIGenerator.js';
 
 export default class MenuScene extends Phaser.Scene {
@@ -16,6 +16,7 @@ export default class MenuScene extends Phaser.Scene {
     this.bcoinBalanceText = null;
     this.userAddressText = null;
     this.userData = null;
+    this.grid = null;
   }
 
   init(data) {
@@ -29,10 +30,6 @@ export default class MenuScene extends Phaser.Scene {
     if (window.DEBUG_MODE) {
       console.log('[DEBUG] MenuScene: preload() started...');
     }
-    // Nothing to preload for this specific scene, but the hook is here.
-    if (window.DEBUG_MODE) {
-      console.log('[DEBUG] MenuScene: preload() finished.');
-    }
   }
 
   create() {
@@ -40,31 +37,30 @@ export default class MenuScene extends Phaser.Scene {
       console.log('[DEBUG] MenuScene: create() started...');
     }
 
-    // Garante que os dados do usuário sejam carregados do registro global.
-    // Isso corrige o bug onde os dados não eram passados para a ProfileScene.
     this.userData = this.registry.get('loggedInUser');
 
     // --- GUARD CLAUSE ---
-    // If the scene is started without user data, it cannot function.
     if (!this.userData) {
       console.error(
         'CRITICAL: MenuScene started without loggedInUser data. Returning to AuthChoiceScene.'
       );
       this.scene.start(CST.SCENES.AUTH_CHOICE);
-      return; // Stop execution of create()
+      return;
     }
 
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    this.createBackground(centerX, centerY);
+    // --- BACKGROUND ---
+    // Procedural Grid Animation (Neon Grid)
+    // Uses the 'floor_grid' texture generated in LoadingScene
+    this.grid = this.add.tileSprite(centerX, centerY, 480, 800, 'floor_grid');
 
+    // --- CONTENT ---
     this.createMenuContent(centerX, centerY);
+    this.createDashboard(centerX);
+
     this.playMenuMusic();
-    // The BCOIN listener is removed from here. The balance is now displayed
-    // by the HUDScene, which runs in parallel with the GameScene. This MenuScene
-    // should not be listening to global game events.
-    // this.setupBcoinListener();
     this.displayUserData();
 
     // Trigger an initial balance update safely
@@ -79,19 +75,21 @@ export default class MenuScene extends Phaser.Scene {
     }
   }
 
-  createBackground(centerX, centerY) {
-    // Replaced static image with procedural cyberpunk grid
-    drawCyberpunkGrid(this);
+  update() {
+    // Animate Grid ("Hyperspace Travel" effect)
+    if (this.grid) {
+      this.grid.tilePositionY -= 0.5;
+    }
   }
 
   createMenuContent(centerX, centerY) {
-    // 🎮 Título do jogo
-    createTitle(this, centerX, 80, LanguageManager.get('game_title'));
+    // 🎮 Game Title (Centered at top)
+    createTitle(this, centerX, 50, LanguageManager.get('game_title'));
 
-    this.createMenu(centerX, centerY);
+    // Menu Buttons (Stacked at Bottom)
+    // 480x800 layout: Buttons start lower to make room for widgets
+    this.createMenu(centerX, 450);
   }
-
-  // Removed setupBcoinListener as it caused a crash. HUDScene is responsible for this now.
 
   displayUserData() {
     if (this.userData && this.userData.walletAddress) {
@@ -99,8 +97,12 @@ export default class MenuScene extends Phaser.Scene {
       const shortAddress = `${address.substring(0, 6)}...${address.substring(
         address.length - 4
       )}`;
+
+      let label = `Player: ${shortAddress}`;
+      if (this.userData.isGuest) label += ' (GUEST)';
+
       this.userAddressText = this.add
-        .text(20, 20, `Player: ${shortAddress}`, {
+        .text(20, 20, label, {
           fontFamily: '"Press Start 2P"',
           fontSize: '12px',
           fill: '#FFFFFF',
@@ -109,7 +111,7 @@ export default class MenuScene extends Phaser.Scene {
     }
   }
 
-  createMenu(centerX, centerY) {
+  createMenu(x, startY) {
     const menuItems = [
       {
         name: 'solo_button',
@@ -132,7 +134,6 @@ export default class MenuScene extends Phaser.Scene {
         label: LanguageManager.get('profile_title'),
         scene: CST.SCENES.PROFILE,
       },
-      { name: 'ranking_button', label: 'Ranking', scene: CST.SCENES.RANKING },
       { name: 'config_button', label: 'Settings', scene: CST.SCENES.CONFIG },
       {
         name: 'logout_button',
@@ -141,11 +142,10 @@ export default class MenuScene extends Phaser.Scene {
       },
     ];
 
-    const buttonStartY = centerY - 150; // Adjusted for more items
-    const buttonSpacing = 60; // Adjusted for more items
+    const buttonSpacing = 50;
 
     menuItems.forEach((item, i) => {
-      const buttonY = buttonStartY + i * buttonSpacing;
+      const buttonY = startY + i * buttonSpacing;
       const onClick = () => {
         if (item.action === 'logout') {
           api.logout();
@@ -159,34 +159,141 @@ export default class MenuScene extends Phaser.Scene {
           this.scene.start(item.scene, { userData: this.userData });
         }
       };
-      createButton(this, centerX, buttonY, item.label, onClick).setName(
-        item.name
-      );
+      createButton(this, x, buttonY, item.label, onClick).setName(item.name);
     });
   }
 
-  // The claimSoloRewards function is removed as it's not part of the core navigation task.
-  // It can be re-added or moved to a more appropriate scene (like Profile) later if needed.
+  // --- DASHBOARD (Ranking & News) ---
+  createDashboard(centerX) {
+    const panelWidth = 400;
+    const panelX = centerX - panelWidth / 2; // Center the panel
+
+    // 1. Ranking Panel (Top Widget)
+    this.createRankingPanel(panelX, 100, panelWidth, 160);
+
+    // 2. News Panel (Middle Widget)
+    this.createNewsPanel(panelX, 280, panelWidth, 120);
+  }
+
+  async createRankingPanel(x, y, w, h) {
+    // Container
+    createPanel(this, x, y, w, h);
+
+    // Header
+    this.add.text(x + 10, y + 10, '🏆 TOP RANKING', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '14px',
+      fill: '#FFD700'
+    });
+
+    // Loading Text
+    const loadingText = this.add.text(x + w/2, y + h/2, 'Loading...', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '10px',
+      fill: '#aaaaaa'
+    }).setOrigin(0.5);
+
+    try {
+      const ranking = await api.getRanking(); // Handles mock data internally
+      if (!this.scene || !this.sys) return;
+
+      loadingText.destroy();
+
+      // Display Top 5
+      const top5 = ranking.slice(0, 5);
+      let yPos = y + 40;
+
+      top5.forEach((p, i) => {
+        const name = p.name || p.username || 'Unknown'; // Adjust based on API response
+        const score = p.score || p.xp || 0;
+        const color = i === 0 ? '#FFFF00' : '#FFFFFF';
+
+        this.add.text(x + 20, yPos, `${i+1}. ${name}`, {
+           fontFamily: '"Press Start 2P"', fontSize: '10px', fill: color
+        });
+
+        this.add.text(x + w - 20, yPos, `${score}`, {
+           fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#00ffff'
+        }).setOrigin(1, 0);
+
+        yPos += 30;
+      });
+
+      // View All Button (Small) inside panel?
+      // Or just assume the dashboard is enough.
+      // Maybe make the panel clickable to go to full ranking scene?
+      const hitArea = this.add.rectangle(x + w/2, y + h/2, w, h).setInteractive({ useHandCursor: true });
+      hitArea.on('pointerdown', () => {
+         this.scene.start(CST.SCENES.RANKING, { userData: this.userData });
+      });
+      // Tooltip instruction
+      this.add.text(x + w - 10, y + h - 15, '(Click for details)', {
+          fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#666'
+      }).setOrigin(1, 0.5);
+
+    } catch (e) {
+      loadingText.setText('Failed to load.');
+    }
+  }
+
+  async createNewsPanel(x, y, w, h) {
+    // Container
+    createPanel(this, x, y, w, h);
+
+    // Header
+    this.add.text(x + 10, y + 10, '📰 LATEST NEWS', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '14px',
+      fill: '#00ff00'
+    });
+
+    // Loading Text
+    const loadingText = this.add.text(x + w/2, y + h/2, 'Loading...', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '10px',
+      fill: '#aaaaaa'
+    }).setOrigin(0.5);
+
+    try {
+      const news = await api.getNews(); // Handles mock data
+      if (!this.scene || !this.sys) return;
+
+      loadingText.destroy();
+
+      const latest = news[0]; // Show latest news
+      if (latest) {
+         this.add.text(x + 20, y + 40, latest.title, {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#ffffff',
+            wordWrap: { width: w - 40 }
+         });
+
+         this.add.text(x + 20, y + 70, latest.content, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#cccccc',
+            wordWrap: { width: w - 40 }
+         });
+      } else {
+         this.add.text(x + w/2, y + h/2, 'No news available.', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#666'
+         }).setOrigin(0.5);
+      }
+
+    } catch (e) {
+      loadingText.setText('Failed to load.');
+    }
+  }
 
   playMenuMusic() {
     const musicEnabled = this.registry.get('musicEnabled') ?? true;
-
-    // 🎵 Para qualquer música que possa estar tocando (ex: mundo anterior)
     SoundManager.stopAll(this);
-
-    // ▶ Toca música do menu se ativada
     if (musicEnabled) {
       SoundManager.playMusic(this, 'menu_music');
     }
   }
 
-  // Ensure to clean up the event listener when the scene is destroyed
   shutdown() {
     if (window.DEBUG_MODE) {
       console.log('[DEBUG] MenuScene: shutdown() called.');
     }
-    // No need to turn off the bcoin listener as it has been removed.
-    // Destroy all children to prevent them from leaking into the next scene
     this.children.removeAll(true);
   }
 }
