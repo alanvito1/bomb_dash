@@ -1,5 +1,5 @@
 import SoundManager from '../utils/sound.js';
-import TextureGenerator from '../utils/TextureGenerator.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 // A minimal scene for absolute baseline testing.
 export default class BootScene extends Phaser.Scene {

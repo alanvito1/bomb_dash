@@ -1,4 +1,4 @@
-import TextureGenerator from './TextureGenerator.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 /**
  * @class AssetLoader
