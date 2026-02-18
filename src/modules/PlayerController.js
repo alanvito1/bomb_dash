@@ -1,3 +1,6 @@
+import { createFloatingText } from './FloatingText.js';
+import SoundManager from '../utils/sound.js';
+
 // Disparo de bombas com tamanho ajustado por upgrades e power-ups
 export function fireBomb(scene) {
   if (scene.gamePaused) return;
@@ -74,7 +77,7 @@ export default class PlayerController {
     return this.player;
   }
 
-  update(cursors, speed) {
+  update(cursors, speed, delta = 16.6) {
     if (!this.player) return;
 
     // Sync Shadow
@@ -90,6 +93,30 @@ export default class PlayerController {
       this.player.setVelocityX(speed);
     } else {
       this.player.setVelocityX(0);
+    }
+
+    // Proficiency: Agility
+    if (isMoving) {
+        // Distance = speed (pixels/sec) * delta (ms) / 1000
+        const distance = speed * (delta / 1000);
+        this.scene.sessionDistance = (this.scene.sessionDistance || 0) + distance;
+
+        // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
+        const startXp = this.scene.playerStats.agility_xp || 0;
+        const currentDistance = this.scene.sessionDistance;
+        const currentXp = startXp + Math.floor(currentDistance / 100); // 100 distance = 1 XP
+
+        const prevDistance = currentDistance - distance;
+        const prevXp = startXp + Math.floor(prevDistance / 100);
+
+        // Calculate Levels
+        const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
+        const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
+
+        if (currentLevel > prevLevel) {
+            createFloatingText(this.scene, this.player.x, this.player.y - 40, 'AGILITY UP!', '#00ff00');
+            SoundManager.play(this.scene, 'powerup_collect');
+        }
     }
 
     // Impede movimento vertical

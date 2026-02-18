@@ -144,6 +144,31 @@ export default class GameScene extends Phaser.Scene {
       account_xp: userAccountData.account_xp,
       bcoin: userAccountData.coins,
     };
+
+    // Apply Proficiency Bonuses
+    // Bomb Mastery: +0.1% Radius per level (Logarithmic Growth)
+    // Formula: Level = Math.floor(Math.sqrt(XP) / 2)
+    const bombXp = selectedHero.bomb_mastery_xp || 0;
+    const agilityXp = selectedHero.agility_xp || 0;
+
+    const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
+    this.playerStats.bombSize = (this.playerStats.bombSize || 1) * (1 + bombLevel * 0.001); // +0.1% per level (nerfed for balance)
+
+    // Agility: +0.1% Speed per level
+    const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
+    this.playerStats.speed *= (1 + agilityLevel * 0.001); // +0.1% per level
+
+    // Load Bestiary Data for Bonuses
+    try {
+      const bestiaryRes = await api.getBestiary();
+      if (bestiaryRes.success) {
+        this.bestiaryData = bestiaryRes.bestiary;
+      }
+    } catch (e) {
+      console.warn('Failed to load bestiary data', e);
+      this.bestiaryData = {};
+    }
+
     this.registry.remove('selectedHero');
 
     this.bg = this.add
@@ -198,6 +223,9 @@ export default class GameScene extends Phaser.Scene {
     this.bossSpawned = false;
     this.activePowerups = {};
     this.sessionLoot = { coins: 0, xp: 0 }; // Risk Mechanics
+    this.sessionBestiary = {}; // Phase 2: Bestiary
+    this.sessionBombHits = 0; // Phase 2: Proficiency
+    this.sessionDistance = 0; // Phase 2: Proficiency
     this.coinsEarned = 0; // Legacy, kept for compatibility if needed
     this.baseEnemyHp = 1;
     this.baseBossHp = 100;
@@ -529,10 +557,17 @@ export default class GameScene extends Phaser.Scene {
         console.log(
           `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${finalXp}, Coins: ${finalCoins}`
         );
+        // Phase 2: Submit Bestiary and Proficiency Data
+        const bestiary = this.sessionBestiary || {};
+        const proficiency = {
+            bombHits: this.sessionBombHits || 0,
+            distance: this.sessionDistance || 0
+        };
+
         // Use the new, correct method on the api client.
-        const response = await api.completeMatch(heroId, finalXp, finalCoins);
+        const response = await api.completeMatch(heroId, finalXp, finalCoins, bestiary, proficiency);
         if (response.success) {
-          console.log('[GameScene] XP/Coins awarded successfully by the server.');
+          console.log('[GameScene] XP/Coins/Proficiency awarded successfully by the server.');
         } else {
           console.warn(
             '[GameScene] Server failed to award rewards:',
@@ -556,7 +591,7 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  update() {
+  update(time, delta) {
     // FURIA-FS-01: Add guard clause to prevent update loop from running before async create() is complete.
     if (
       !this.isInitialized ||
@@ -564,7 +599,7 @@ export default class GameScene extends Phaser.Scene {
       !this.player?.active
     )
       return;
-    this.playerController.update(this.cursors, this.playerStats.speed);
+    this.playerController.update(this.cursors, this.playerStats.speed, delta);
 
     if (this.gameMode !== 'ranked') {
       this.updatePve();
