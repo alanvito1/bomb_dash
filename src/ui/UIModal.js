@@ -130,7 +130,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
     // Auto-Close Logic (Delay to prevent ghost clicks)
     // Remove any existing listener first
     this.overlay.off('pointerdown');
-    this.scene.time.delayedCall(250, () => {
+    this.scene.time.delayedCall(200, () => {
         if (!this.visible) return; // Prevent race condition
         this.overlay.once('pointerdown', () => this.close());
     });

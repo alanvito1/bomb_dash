@@ -16,6 +16,7 @@ import BestiaryModal from '../ui/BestiaryModal.js';
 import SocialModal from '../ui/SocialModal.js';
 import ForgeModal from '../ui/ForgeModal.js';
 import ChatWidget from '../ui/ChatWidget.js';
+import BattleModal from '../ui/BattleModal.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -79,6 +80,7 @@ export default class MenuScene extends Phaser.Scene {
     this.bestiaryModal = new BestiaryModal(this);
     this.socialModal = new SocialModal(this);
     this.forgeModal = new ForgeModal(this);
+    this.battleModal = new BattleModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -480,8 +482,7 @@ export default class MenuScene extends Phaser.Scene {
           }
           SoundManager.playClick(this);
           console.log('Battle Button Clicked');
-          if (btn.scene)
-            this.scene.start(btn.scene, { userData: this.userData });
+          this.battleModal.open();
         });
 
         container.add(battleContainer);
