@@ -8,7 +8,7 @@ export default class ToSManager {
     this.checkbox = document.getElementById('tos-checkbox');
     this.btn = document.getElementById('tos-btn');
 
-    this.fullText = "";
+    this.fullText = '';
     this.typingSpeed = 5; // ms per char
     this.isTyping = false;
   }
@@ -19,11 +19,12 @@ export default class ToSManager {
     // Load text from LanguageManager (or fallback)
     // We assume LanguageManager is already initialized by main.js or OverlayManager
     const termsText = LanguageManager.get('terms.text');
-    this.fullText = (termsText && termsText !== 'terms.text')
+    this.fullText =
+      termsText && termsText !== 'terms.text'
         ? termsText
-        : "TERMS OF SERVICE\n\n1. NO CHEATING.\n2. HAVE FUN.\n3. PROTOCOL 88 IS ACTIVE.";
+        : 'TERMS OF SERVICE\n\n1. NO CHEATING.\n2. HAVE FUN.\n3. PROTOCOL 88 IS ACTIVE.';
 
-    this.content.innerHTML = "";
+    this.content.innerHTML = '';
     this.checkbox.checked = false;
     this.btn.classList.add('disabled');
     this.btn.disabled = true;
@@ -39,7 +40,9 @@ export default class ToSManager {
 
     const typeChar = () => {
       if (i < this.fullText.length) {
-        this.content.innerHTML = this.fullText.substring(0, i + 1) + '<span class="typing-cursor"></span>';
+        this.content.innerHTML =
+          this.fullText.substring(0, i + 1) +
+          '<span class="typing-cursor"></span>';
         this.content.scrollTop = this.content.scrollHeight; // Auto-scroll
         i++;
         setTimeout(typeChar, this.typingSpeed);

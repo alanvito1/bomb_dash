@@ -23,45 +23,47 @@ export default class OverlayManager {
     // We pass a mock scene because LanguageManager expects one to set registry
     const mockScene = { registry: { set: () => {} } };
 
-    LanguageManager.init(mockScene).then(() => {
+    LanguageManager.init(mockScene)
+      .then(() => {
         this.tosManager.init();
-    }).catch(e => {
-        console.warn("Language Init Failed", e);
+      })
+      .catch((e) => {
+        console.warn('Language Init Failed', e);
         this.tosManager.init(); // Proceed anyway
-    });
+      });
   }
 
   playSound(type) {
     // Simple synth click if no file, or play specific file
     if (type === 'click') {
-        // Create a short beep for "mechanical click"
-        this.playSynthClick();
+      // Create a short beep for "mechanical click"
+      this.playSynthClick();
     }
   }
 
   playSynthClick() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
 
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(150, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
 
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
 
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
     } catch (e) {
-        console.warn("Audio Context Error", e);
+      console.warn('Audio Context Error', e);
     }
   }
 
@@ -76,17 +78,17 @@ export default class OverlayManager {
     // Show Game Container
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) {
-        gameContainer.style.display = 'block';
+      gameContainer.style.display = 'block';
     }
 
     // Launch Game
     if (window.launchGame) {
-        // Wait for DOM reflow
-        requestAnimationFrame(() => {
-            window.launchGame();
-        });
+      // Wait for DOM reflow
+      requestAnimationFrame(() => {
+        window.launchGame();
+      });
     } else {
-        console.error("Game Launcher not found!");
+      console.error('Game Launcher not found!');
     }
   }
 }
