@@ -153,7 +153,6 @@ export default class SoundManager {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
-
     } catch (e) {
       console.warn('[SoundManager] Failed to generate synthetic audio', e);
     }

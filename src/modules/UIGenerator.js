@@ -28,12 +28,18 @@ export function createButton(scene, x, y, text, onClick) {
   const drawButton = (isHovered = false, isPressed = false) => {
     bg.clear();
 
-    const fillColor = isPressed ? 0x000022 : (isHovered ? hoverColor : baseColor);
+    const fillColor = isPressed ? 0x000022 : isHovered ? hoverColor : baseColor;
 
     // Glow effect (outer stroke with low alpha)
     if (isHovered) {
       bg.lineStyle(4, glowColor, 0.3);
-      bg.strokeRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, 12);
+      bg.strokeRoundedRect(
+        -width / 2 - 2,
+        -height / 2 - 2,
+        width + 4,
+        height + 4,
+        12
+      );
     }
 
     // Main Border
