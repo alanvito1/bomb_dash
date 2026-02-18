@@ -246,6 +246,159 @@ export default class TextureGenerator {
     smokeGraphics.generateTexture('particle_smoke', 6, 6);
   }
 
+  static createIconBase(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff);
+    // House shape
+    g.beginPath();
+    g.moveTo(16, 6);
+    g.lineTo(28, 16);
+    g.lineTo(28, 28);
+    g.lineTo(4, 28);
+    g.lineTo(4, 16);
+    g.closePath();
+    g.fill();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconHeroes(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff);
+    // Backpack shape
+    g.fillRoundedRect(6, 8, 20, 20, 4);
+    // Flap
+    g.fillStyle(0xcccccc);
+    g.fillRoundedRect(6, 8, 20, 8, 2);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconBattle(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.lineStyle(3, 0xffffff);
+    // Sword 1
+    g.beginPath();
+    g.moveTo(8, 24);
+    g.lineTo(24, 8);
+    g.stroke();
+    // Sword 2
+    g.beginPath();
+    g.moveTo(24, 24);
+    g.lineTo(8, 8);
+    g.stroke();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconShop(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff);
+    // Cart body
+    g.fillRect(8, 10, 18, 12);
+    // Wheels
+    g.fillCircle(10, 24, 2);
+    g.fillCircle(24, 24, 2);
+    // Handle
+    g.lineStyle(2, 0xffffff);
+    g.beginPath();
+    g.moveTo(4, 8);
+    g.lineTo(8, 10);
+    g.stroke();
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconRanking(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffd700); // Gold
+    // Trophy cup
+    g.beginPath();
+    g.moveTo(8, 8);
+    g.lineTo(24, 8);
+    g.lineTo(20, 20);
+    g.lineTo(16, 20);
+    g.lineTo(12, 20);
+    g.lineTo(8, 8);
+    g.fill();
+    // Base
+    g.fillRect(14, 20, 4, 4);
+    g.fillRect(10, 24, 12, 2);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconGold(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffd700);
+    g.fillCircle(16, 16, 12);
+    g.fillStyle(0xffaa00);
+    g.fillCircle(16, 16, 8);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconBcoin(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x00ffff); // Cyan/Neon
+    g.fillCircle(16, 16, 12);
+    g.fillStyle(0x000033);
+    g.fillCircle(16, 16, 8);
+    // B letter (simplified)
+    g.fillStyle(0xffffff);
+    g.fillRect(14, 10, 2, 12);
+    g.fillRect(14, 10, 6, 2);
+    g.fillRect(14, 15, 6, 2);
+    g.fillRect(14, 20, 6, 2);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconSettings(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.lineStyle(3, 0xffffff);
+    g.strokeCircle(16, 16, 8);
+    // Cogs
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const x1 = 16 + Math.cos(angle) * 8;
+        const y1 = 16 + Math.sin(angle) * 8;
+        const x2 = 16 + Math.cos(angle) * 12;
+        const y2 = 16 + Math.sin(angle) * 12;
+        g.beginPath();
+        g.moveTo(x1, y1);
+        g.lineTo(x2, y2);
+        g.stroke();
+    }
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createIconWallet(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x8B4513); // Brown leather
+    g.fillRoundedRect(4, 8, 24, 16, 2);
+    // Flap
+    g.fillStyle(0xA0522D);
+    g.fillRoundedRect(4, 10, 12, 12, 2);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createAvatar(scene, key) {
+     if (scene.textures.exists(key)) return;
+     const g = scene.make.graphics({ x: 0, y: 0, add: false });
+     g.fillStyle(0x333333);
+     g.fillCircle(16, 16, 16);
+     g.fillStyle(0xcccccc);
+     g.fillCircle(16, 12, 6); // Head
+     // Shoulders
+     g.beginPath();
+     g.arc(16, 32, 12, Math.PI, 0);
+     g.fill();
+     g.generateTexture(key, 32, 32);
+  }
+
   /**
    * Helper to generate all common missing assets.
    * @param {Phaser.Scene} scene
@@ -265,6 +418,18 @@ export default class TextureGenerator {
     // Backgrounds
     this.createGridBackground(scene, 'bg1');
     this.createGridBackground(scene, 'floor_grid');
+
+    // UI Icons
+    this.createIconBase(scene, 'icon_base');
+    this.createIconHeroes(scene, 'icon_heroes');
+    this.createIconBattle(scene, 'icon_battle');
+    this.createIconShop(scene, 'icon_shop');
+    this.createIconRanking(scene, 'icon_ranking');
+    this.createIconGold(scene, 'icon_gold');
+    this.createIconBcoin(scene, 'icon_bcoin');
+    this.createIconSettings(scene, 'icon_settings');
+    this.createIconWallet(scene, 'icon_wallet');
+    this.createAvatar(scene, 'icon_avatar');
 
     // Additional assets needed for full game functionality
     this.createHearts(scene);
