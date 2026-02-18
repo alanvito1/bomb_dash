@@ -5,6 +5,7 @@ import bcoinService from '../web3/bcoin-service.js';
 import tournamentService from '../web3/tournament-service.js';
 import contracts from '../config/contracts.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
+import { createButton, drawCyberpunkGrid } from '../modules/UIGenerator.js';
 
 export default class ShopScene extends Phaser.Scene {
   constructor() {
@@ -28,10 +29,9 @@ export default class ShopScene extends Phaser.Scene {
     const centerY = this.cameras.main.centerY;
 
     // --- Visual Polish: Background and Data Window ---
-    this.add
-      .image(centerX, centerY, 'menu_bg_vertical')
-      .setOrigin(0.5)
-      .setDisplaySize(this.scale.width, this.scale.height);
+    // Replaced image with procedural cyberpunk grid
+    drawCyberpunkGrid(this);
+
     this.add
       .graphics()
       .fillStyle(0x000000, 0.8)
@@ -225,21 +225,10 @@ export default class ShopScene extends Phaser.Scene {
   }
 
   createBackButton(x, y, style) {
-    const backButton = this.add
-      .text(x, y, LanguageManager.get('shop_back_to_menu'), style)
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    backButton.on('pointerdown', () => {
-      SoundManager.play(this, 'click');
-      this.scene.start('MenuScene');
+    // Replaced with standard UIGenerator button
+    createButton(this, x, y, LanguageManager.get('shop_back_to_menu'), () => {
+        this.scene.start('MenuScene');
     });
-
-    // Visual Polish: Hover Effect
-    backButton.on('pointerover', () =>
-      backButton.setStyle({ fill: '#ffffff' })
-    );
-    backButton.on('pointerout', () => backButton.setStyle({ fill: '#00ffff' }));
   }
 
   handleBalanceUpdate({ balance, error }) {
@@ -257,8 +246,13 @@ export default class ShopScene extends Phaser.Scene {
   }
 
   async updateBcoinBalanceDisplay() {
-    const { balance, error } = await bcoinService.getBalance();
-    this.handleBalanceUpdate({ balance, error });
+    try {
+        const { balance, error } = await bcoinService.getBalance();
+        this.handleBalanceUpdate({ balance, error });
+    } catch(e) {
+        console.warn("Failed to update balance display:", e);
+        this.handleBalanceUpdate({ balance: "0", error: true });
+    }
   }
 
   refreshUI() {

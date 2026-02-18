@@ -165,3 +165,42 @@ export function createPanel(scene, x, y, width, height) {
 
   return panel;
 }
+
+/**
+ * Draws a procedural Cyberpunk Grid background.
+ * @param {Phaser.Scene} scene - The scene to draw the grid on.
+ * @returns {Phaser.GameObjects.Graphics} The graphics object containing the grid.
+ */
+export function drawCyberpunkGrid(scene) {
+  const width = scene.scale.width;
+  const height = scene.scale.height;
+
+  const bg = scene.add.graphics();
+
+  // 1. Solid Dark Background
+  bg.fillStyle(0x050010, 1); // Very dark purple/blue
+  bg.fillRect(0, 0, width, height);
+
+  // 2. Grid Lines
+  bg.lineStyle(1, 0x9900ff, 0.2); // Purple, low opacity
+
+  const gridSize = 50;
+
+  // Vertical Lines
+  for (let x = 0; x <= width; x += gridSize) {
+    bg.beginPath();
+    bg.moveTo(x, 0);
+    bg.lineTo(x, height);
+    bg.strokePath();
+  }
+
+  // Horizontal Lines
+  for (let y = 0; y <= height; y += gridSize) {
+    bg.beginPath();
+    bg.moveTo(0, y);
+    bg.lineTo(width, y);
+    bg.strokePath();
+  }
+
+  return bg;
+}

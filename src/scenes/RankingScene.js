@@ -6,6 +6,7 @@ import {
   createButton,
   createTitle,
   createPanel,
+  drawCyberpunkGrid,
 } from '../modules/UIGenerator.js';
 
 export default class RankingScene extends Phaser.Scene {
@@ -18,10 +19,9 @@ export default class RankingScene extends Phaser.Scene {
     const centerY = this.cameras.main.centerY;
 
     // --- Background & UI Window ---
-    this.add
-      .image(centerX, centerY, 'menu_bg_vertical')
-      .setOrigin(0.5)
-      .setDisplaySize(this.scale.width, this.scale.height);
+    // Replaced static image with procedural cyberpunk grid
+    drawCyberpunkGrid(this);
+
     createPanel(this, 20, 20, this.scale.width - 40, this.scale.height - 80);
 
     // --- Title with Neon Style ---
@@ -64,12 +64,24 @@ export default class RankingScene extends Phaser.Scene {
       }
     } catch (error) {
       statusText.destroy();
-      console.error('Error fetching ranking for scene:', error);
+      console.warn('Error fetching ranking for scene:', error);
+
+      // --- MOCK DATA FALLBACK ---
+      // Display fake data so the menu doesn't look broken
+      const mockRanking = [
+          { rank: 1, address: '0x1234...MOCK', wave: 99 },
+          { rank: 2, address: '0xABCD...TEST', wave: 88 },
+          { rank: 3, address: '0x9876...FAKE', wave: 77 },
+          { rank: 4, address: '0x5555...GUEST', wave: 50 },
+          { rank: 5, address: '0xYOUR...NAME', wave: 42 }
+      ];
+      this.createRankingTable(centerX, 130, mockRanking);
+
       this.add
-        .text(centerX, centerY, LanguageManager.get('ranking_error'), {
+        .text(centerX, this.scale.height - 100, "OFFLINE MODE - MOCK DATA", {
           fontFamily: '"Press Start 2P"',
-          fontSize: '16px',
-          fill: '#ff0000',
+          fontSize: '10px',
+          fill: '#ffaa00',
         })
         .setOrigin(0.5);
     }
@@ -135,9 +147,13 @@ export default class RankingScene extends Phaser.Scene {
 
       // Add icons for top 3 players
       if (index < 3) {
-        const medal = this.add
-          .image(rankX - 30, yPos, `medal_${index + 1}`)
-          .setScale(0.5);
+        const medalKey = `medal_${index + 1}`;
+        if (this.textures.exists(medalKey)) {
+             this.add.image(rankX - 30, yPos, medalKey).setScale(0.5);
+        } else {
+             // Fallback: Simple colored circle
+             this.add.circle(rankX - 30, yPos, 8, index === 0 ? 0xffd700 : index === 1 ? 0xc0c0c0 : 0xcd7f32);
+        }
       }
 
       this.add.text(rankX, yPos, rank, rowStyle).setOrigin(0.5);

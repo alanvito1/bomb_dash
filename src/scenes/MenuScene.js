@@ -4,7 +4,7 @@ import { CST } from '../CST.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import bcoinService from '../web3/bcoin-service.js';
-import { createButton, createTitle } from '../modules/UIGenerator.js';
+import { createButton, createTitle, drawCyberpunkGrid } from '../modules/UIGenerator.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -63,8 +63,12 @@ export default class MenuScene extends Phaser.Scene {
     // this.setupBcoinListener();
     this.displayUserData();
 
-    // Trigger an initial balance update
-    bcoinService.updateBalance();
+    // Trigger an initial balance update safely
+    try {
+      bcoinService.updateBalance();
+    } catch (e) {
+      console.warn('Failed to update balance in Menu', e);
+    }
 
     if (window.DEBUG_MODE) {
       console.log('[DEBUG] MenuScene: create() finished.');
@@ -72,10 +76,8 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createBackground(centerX, centerY) {
-    this.add
-      .image(centerX, centerY, 'menu_bg_vertical')
-      .setOrigin(0.5)
-      .setDisplaySize(this.scale.width, this.scale.height);
+    // Replaced static image with procedural cyberpunk grid
+    drawCyberpunkGrid(this);
   }
 
   createMenuContent(centerX, centerY) {

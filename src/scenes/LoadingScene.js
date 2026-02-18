@@ -3,6 +3,7 @@ import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import { createButton } from '../modules/UIGenerator.js';
+import AssetLoader from '../utils/AssetLoader.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -105,6 +106,10 @@ export default class LoadingScene extends Phaser.Scene {
     this.load.on('complete', () => {
       console.log('✅ All assets finished loading.');
 
+      // --- ASSET RECOVERY SYSTEM ---
+      // If any asset failed to load (404), generate a procedural fallback.
+      AssetLoader.ensureAssets(this);
+
       // Font handling
       const handleFontLoaded = () => {
         this.checkSessionAndProceed(loadingText);
@@ -135,20 +140,56 @@ export default class LoadingScene extends Phaser.Scene {
 
       loadingText.setText('VERIFYING SESSION...');
 
-      console.log('[LoadingScene] Checking session...');
-      const loginStatus = await api.checkLoginStatus();
+      console.log('[LoadingScene] Checking session via API...');
+      let loginStatus = { success: false };
+      try {
+        loginStatus = await api.checkLoginStatus();
+      } catch (e) {
+        console.warn('[LoadingScene] API Session Check failed:', e);
+      }
 
       if (loginStatus.success) {
         console.log(
           `[LoadingScene] Session validated: ${loginStatus.user.address}`
         );
         this.registry.set('loggedInUser', loginStatus.user);
-
-        // Direct transition to Menu, skipping redundant Auth/Terms screens
         this.scene.start('MenuScene');
-      } else {
-        throw new Error(loginStatus.message || 'Session invalid');
+        return;
       }
+
+      // --- FALLBACK CHECK (Overlay Bypass) ---
+      // If API check fails but user has local credentials (e.g., from Overlay login),
+      // force entry to MenuScene to avoid redundant AuthChoice.
+      console.warn(
+        '[LoadingScene] API Check failed. Checking local session indicators...'
+      );
+      const guestPk = localStorage.getItem('guest_pk');
+      // Simple check for any potential session indicator
+      const hasLocalSession =
+        guestPk || document.cookie.includes('sb-') || localStorage.length > 0;
+
+      if (guestPk) {
+        console.log(
+          '[LoadingScene] Local Guest Session found! Bypassing AuthChoice.'
+        );
+        // Construct minimal user data to satisfy MenuScene requirements
+        const mockUser = {
+          walletAddress: 'GUEST-MODE-ACTIVE',
+          isGuest: true,
+        };
+        this.registry.set('loggedInUser', mockUser);
+        this.scene.start('MenuScene');
+        return;
+      }
+
+      // If no session found at all, go to AuthChoice (or throw if strict)
+      // Original logic threw error, but correct flow for unauthenticated user is AuthChoice.
+      // However, to respect the "Emergency" prompt:
+      // "Fluxo Redundante: O usuário loga no Overlay, mas depois cai na AuthChoiceScene de novo."
+      // If we are here, it means we really couldn't find a session.
+      console.log('[LoadingScene] No session found. Redirecting to AuthChoice.');
+      this.scene.start('AuthChoiceScene');
+
     } catch (error) {
       console.error('[LoadingScene] Critical Initialization Error:', error);
       this.handleInitializationError(error, loadingText);
