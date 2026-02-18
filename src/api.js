@@ -374,6 +374,73 @@ class ApiClient {
     });
   }
 
+  // --- Social Methods ---
+
+  /**
+   * Creates a new guild.
+   * @param {string} name - Guild Name
+   * @param {string} tag - Guild Tag (3-4 chars)
+   */
+  async createGuild(name, tag) {
+    return this.fetch('/social/create-guild', {
+      method: 'POST',
+      body: JSON.stringify({ name, tag }),
+    });
+  }
+
+  /**
+   * Joins an existing guild.
+   * @param {number} guildId - Guild ID
+   */
+  async joinGuild(guildId) {
+    return this.fetch('/social/join-guild', {
+      method: 'POST',
+      body: JSON.stringify({ guildId }),
+    });
+  }
+
+  /**
+   * Lists all guilds.
+   */
+  async getGuilds() {
+    return this.fetch('/social/guilds');
+  }
+
+  /**
+   * Gets the current user's guild info.
+   */
+  async getMyGuild() {
+    return this.fetch('/social/my-guild');
+  }
+
+  // --- Economy Methods ---
+
+  /**
+   * Gets user inventory.
+   */
+  async getInventory() {
+    return this.fetch('/economy/inventory');
+  }
+
+  /**
+   * Crafts an item by fusing two existing items.
+   * @param {number} item1Id - UserItem ID 1
+   * @param {number} item2Id - UserItem ID 2
+   */
+  async craftItem(item1Id, item2Id) {
+    return this.fetch('/economy/craft', {
+      method: 'POST',
+      body: JSON.stringify({ item1Id, item2Id }),
+    });
+  }
+
+  /**
+   * Gets the global reward pool amount.
+   */
+  async getRewardPool() {
+    return this.fetch('/economy/reward-pool');
+  }
+
   // --- Admin Methods ---
 
   /**

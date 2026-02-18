@@ -11,6 +11,7 @@ import { createUIButtons } from '../modules/UIMenuButtons.js';
 import PauseManager from '../utils/PauseManager.js';
 import SoundManager from '../utils/sound.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
+import ChatWidget from '../ui/ChatWidget.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -65,7 +66,13 @@ export default class GameScene extends Phaser.Scene {
     // This is the correct lifecycle location for scene initialization.
     // The previous use of load.on('complete') here was incorrect and
     // likely caused the scene to hang silently.
+    this.events.on('shutdown', this.shutdown, this);
+    this.chatWidget = new ChatWidget(this);
     this.initializeScene();
+  }
+
+  shutdown() {
+    if (this.chatWidget) this.chatWidget.destroy();
   }
 
   async initializeScene() {
