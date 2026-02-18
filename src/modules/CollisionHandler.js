@@ -71,8 +71,49 @@ export default class CollisionHandler {
     createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, '#ff4d4d');
     SoundManager.play(this.scene, 'hit_enemy');
 
+    // ⚪ HIT FLASH
+    enemy.setTint(0xffffff);
+    this.scene.time.delayedCall(100, () => {
+      if (enemy.active) enemy.clearTint();
+    });
+
     if (enemy.hp <= 0) {
       ExplosionEffect(this.scene, enemy.x, enemy.y);
+
+      // ✨ DEATH PARTICLES (Digital Disintegration)
+      if (this.scene.textures.exists('particle_pixel')) {
+        // Support both Phaser < 3.60 (Manager) and 3.60+ (Emitter)
+        const particles = this.scene.add.particles('particle_pixel');
+
+        if (typeof particles.createEmitter === 'function') {
+           // Legacy Phaser
+           particles.createEmitter({
+              x: enemy.x,
+              y: enemy.y,
+              speed: { min: 50, max: 150 },
+              angle: { min: 0, max: 360 },
+              scale: { start: 2, end: 0 },
+              lifespan: 600,
+              quantity: 15,
+              blendMode: 'ADD'
+           });
+        } else {
+           // Modern Phaser (3.60+)
+           particles.setPosition(enemy.x, enemy.y);
+           particles.setConfig({
+              speed: { min: 50, max: 150 },
+              angle: { min: 0, max: 360 },
+              scale: { start: 2, end: 0 },
+              lifespan: 600,
+              blendMode: 'ADD',
+              emitting: false
+           });
+           particles.explode(15);
+        }
+
+        this.scene.time.delayedCall(700, () => particles.destroy());
+      }
+
       SoundManager.play(
         this.scene,
         enemy.isBoss ? 'boss_death' : 'enemy_death'
@@ -120,6 +161,13 @@ export default class CollisionHandler {
    */
   onHit(player, enemy) {
     if (this.scene.gamePaused || this.scene.transitioning) return;
+
+    // 🔴 PLAYER HIT FX
+    player.setTint(0xff0000);
+    this.scene.time.delayedCall(200, () => {
+      if (player.active) player.clearTint();
+    });
+    this.scene.cameras.main.shake(200, 0.02);
 
     const stats = this.scene.playerStats;
     stats.hp -= 100;

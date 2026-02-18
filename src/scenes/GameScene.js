@@ -232,6 +232,28 @@ export default class GameScene extends Phaser.Scene {
       phase: this.phase,
       isBoss: this.phase === 7,
     });
+
+    // ⏱️ TIMER: 3 Minutes Survival Limit
+    this.matchTime = 180;
+    if (this.matchTimerEvent) this.matchTimerEvent.remove();
+    this.matchTimerEvent = this.time.addEvent({
+      delay: 1000,
+      callback: this.updateMatchTimer,
+      callbackScope: this,
+      loop: true,
+    });
+    this.events.emit('update-timer', { time: this.matchTime });
+  }
+
+  updateMatchTimer() {
+    if (this.gamePaused || this.transitioning) return;
+
+    this.matchTime--;
+    this.events.emit('update-timer', { time: this.matchTime });
+
+    if (this.matchTime <= 0) {
+      this.handleGameOver();
+    }
   }
 
   initializePvpMatch() {
@@ -348,6 +370,40 @@ export default class GameScene extends Phaser.Scene {
       bomb
         .setDisplaySize(bombDisplaySize, bombDisplaySize)
         .setVelocityY(velocityY);
+
+      // 💣 BOMB PULSE (Visual Overhaul)
+      // Pulse scale
+      this.tweens.add({
+        targets: bomb,
+        scaleX: bomb.scaleX * 1.2,
+        scaleY: bomb.scaleY * 1.2,
+        duration: 200,
+        yoyo: true,
+        repeat: -1
+      });
+      // Pulse Tint (Red Warning)
+      this.tweens.addCounter({
+        from: 0,
+        to: 100,
+        duration: 200,
+        yoyo: true,
+        repeat: -1,
+        onUpdate: (tween) => {
+          const val = Math.floor(tween.getValue());
+          // Interpolate towards red (tint reduces green/blue channels)
+          // Start: 0xffffff (No tint) -> End: 0xffcccc (Reddish)
+          // Actually, setTint works by multiplying.
+          // To make it redder, we want 0xff0000.
+          // Let's just flash it red.
+          if (val > 50) {
+             bomb.setTint(0xff4444);
+          } else {
+             bomb.clearTint();
+             if (isOpponent) bomb.setTint(0xff8080);
+          }
+        }
+      });
+
       if (isOpponent) bomb.setTint(0xff8080);
     }
     if (!isOpponent) SoundManager.play(this, 'bomb_fire');
