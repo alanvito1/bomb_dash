@@ -108,7 +108,8 @@ export default class AuthManager {
       // Extract a user-friendly message
       let errorMsg = e.message || 'Unknown Error';
       if (errorMsg.includes('User rejected')) errorMsg = 'Signature Rejected';
-      if (errorMsg.includes('MetaMask not detected')) errorMsg = 'Install MetaMask';
+      if (errorMsg.includes('MetaMask not detected'))
+        errorMsg = 'Install MetaMask';
 
       this.setError(errorMsg);
       // Ensure we do NOT call onSuccess() here.

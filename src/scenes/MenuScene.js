@@ -3,7 +3,6 @@ import SoundManager from '../utils/sound.js';
 import { CST } from '../CST.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
-import GameEventEmitter from '../utils/GameEventEmitter.js';
 import bcoinService from '../web3/bcoin-service.js';
 import { createButton, createTitle } from '../modules/UIGenerator.js';
 

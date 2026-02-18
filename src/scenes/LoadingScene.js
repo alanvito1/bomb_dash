@@ -2,7 +2,6 @@
 import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
-import { CST } from '../CST.js';
 import { createButton } from '../modules/UIGenerator.js';
 
 export default class LoadingScene extends Phaser.Scene {
@@ -28,25 +27,32 @@ export default class LoadingScene extends Phaser.Scene {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '14px',
       fill: '#00ffff',
-      align: 'center'
+      align: 'center',
     };
 
     // Title
-    this.add.text(centerX, centerY - 80, 'ESTABLISHING LINK...', textStyle).setOrigin(0.5);
+    this.add
+      .text(centerX, centerY - 80, 'ESTABLISHING LINK...', textStyle)
+      .setOrigin(0.5);
 
     // Random RPG Loading Messages
     const loadingMessages = [
-      "Calibrating Bombs...",
-      "Mining BCOIN...",
-      "Summoning Heroes...",
-      "Synchronizing Blockchain...",
-      "Loading Pixel Assets...",
-      "Generating World..."
+      'Calibrating Bombs...',
+      'Mining BCOIN...',
+      'Summoning Heroes...',
+      'Synchronizing Blockchain...',
+      'Loading Pixel Assets...',
+      'Generating World...',
     ];
-    const randomMsg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    const randomMsg =
+      loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
 
     const loadingText = this.add
-      .text(centerX, centerY + 40, randomMsg, { ...textStyle, fontSize: '10px', color: '#aaaaaa' })
+      .text(centerX, centerY + 40, randomMsg, {
+        ...textStyle,
+        fontSize: '10px',
+        color: '#aaaaaa',
+      })
       .setOrigin(0.5);
 
     // Progress Bar Background
@@ -61,7 +67,13 @@ export default class LoadingScene extends Phaser.Scene {
     this.load.on('progress', (value) => {
       progressBar.clear();
       progressBar.fillStyle(0x00ffff, 1);
-      progressBar.fillRoundedRect(centerX - 148, centerY - 8, 296 * value, 16, 2);
+      progressBar.fillRoundedRect(
+        centerX - 148,
+        centerY - 8,
+        296 * value,
+        16,
+        2
+      );
     });
 
     this.load.on('loaderror', (file) => {
@@ -95,7 +107,7 @@ export default class LoadingScene extends Phaser.Scene {
 
       // Font handling
       const handleFontLoaded = () => {
-         this.checkSessionAndProceed(loadingText);
+        this.checkSessionAndProceed(loadingText);
       };
 
       if (window.WebFont) {
@@ -108,7 +120,7 @@ export default class LoadingScene extends Phaser.Scene {
           inactive: () => {
             console.error('🔥 Failed to load custom font.');
             handleFontLoaded();
-          }
+          },
         });
       } else {
         handleFontLoaded();
@@ -121,13 +133,15 @@ export default class LoadingScene extends Phaser.Scene {
       console.log('Waiting for ContractProvider...');
       await this.contractsInitializedPromise;
 
-      loadingText.setText("VERIFYING SESSION...");
+      loadingText.setText('VERIFYING SESSION...');
 
       console.log('[LoadingScene] Checking session...');
       const loginStatus = await api.checkLoginStatus();
 
       if (loginStatus.success) {
-        console.log(`[LoadingScene] Session validated: ${loginStatus.user.address}`);
+        console.log(
+          `[LoadingScene] Session validated: ${loginStatus.user.address}`
+        );
         this.registry.set('loggedInUser', loginStatus.user);
 
         // Direct transition to Menu, skipping redundant Auth/Terms screens
@@ -148,18 +162,20 @@ export default class LoadingScene extends Phaser.Scene {
     // Update Text
     loadingText.setText('CONNECTION FAILED').setStyle({ fill: '#ff0000' });
 
-    this.add.text(centerX, centerY + 60, error.message.toUpperCase(), {
-       fontFamily: '"Press Start 2P"',
-       fontSize: '10px',
-       fill: '#ff4444',
-       align: 'center',
-       wordWrap: { width: 400 }
-    }).setOrigin(0.5);
+    this.add
+      .text(centerX, centerY + 60, error.message.toUpperCase(), {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#ff4444',
+        align: 'center',
+        wordWrap: { width: 400 },
+      })
+      .setOrigin(0.5);
 
     // Create Retry Button using UIGenerator
     createButton(this, centerX, centerY + 120, 'RETRY CONNECTION', () => {
-        // Simple scene restart to try again
-        this.scene.restart();
+      // Simple scene restart to try again
+      this.scene.restart();
     });
   }
 
