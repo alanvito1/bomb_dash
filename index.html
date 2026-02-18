@@ -28,9 +28,50 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 
     <link rel="stylesheet" href="assets/css/landing.css" />
+    <link rel="stylesheet" href="assets/css/arcade-ui.css" />
   </head>
 
   <body>
+    <!-- 🕹️ Arcade UI Layer (Overlay) -->
+    <div id="ui-layer" style="display: none;">
+       <!-- Retro Backgrounds -->
+       <div class="retro-grid"></div>
+       <div class="scanlines"></div>
+
+       <!-- ToS Modal -->
+       <div id="tos-modal" class="ui-panel">
+          <h2 class="neon-text glitch" data-text="TERMINAL ACCESS">TERMINAL ACCESS</h2>
+          <div id="tos-content" style="text-align: left; font-size: 10px; color: #ccc; max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px dashed #555; padding: 10px; font-family: monospace;">
+             LOADING PROTOCOLS...
+          </div>
+          <div class="cyber-checkbox-container">
+             <input type="checkbox" id="tos-checkbox" class="cyber-checkbox">
+             <label for="tos-checkbox">I ACCEPT THE PROTOCOLS</label>
+          </div>
+          <button id="tos-btn" class="cyber-btn disabled">INITIALIZE SYSTEM</button>
+       </div>
+
+       <!-- Auth Menu -->
+       <div id="auth-menu" class="ui-panel">
+          <h2 class="neon-text glitch" data-text="IDENTIFICATION">IDENTIFICATION</h2>
+          <p style="font-size: 10px; margin-bottom: 20px; color: #aaa;">SELECT LOGIN METHOD</p>
+
+          <button id="btn-login-web3" class="cyber-btn">
+             <span class="btn-icon">🦊</span> CONNECT WALLET
+          </button>
+
+          <button id="btn-login-google" class="cyber-btn">
+             <span class="btn-icon">G</span> GOOGLE ACCESS
+          </button>
+
+          <button id="btn-login-guest" class="cyber-btn" style="border-color: #ffd700; color: #ffd700;">
+             <span class="btn-icon">👻</span> PLAY AS GUEST
+          </button>
+
+          <div id="auth-status" style="margin-top: 15px; font-size: 10px; color: var(--neon-cyan); min-height: 20px;"></div>
+       </div>
+    </div>
+
     <!-- 🌹 Landing Page (Renamed ID from app-root to landing-page to match main.js) -->
     <div id="landing-page">
       <!-- Sidebar (Tibia Style) -->

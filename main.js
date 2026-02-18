@@ -32,6 +32,7 @@ import AltarScene from './src/scenes/AltarScene.js';
 import PvpScene from './src/scenes/PvpScene.js';
 import TournamentLobbyScene from './src/scenes/TournamentLobbyScene.js';
 import TournamentBracketScene from './src/scenes/TournamentBracketScene.js';
+import OverlayManager from './src/ui/OverlayManager.js';
 
 // --- Hardcoded Debug Mode ---
 // This constant provides a simple, reliable way to toggle debug features
@@ -124,30 +125,22 @@ window.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('start-game-btn');
   if (startBtn) {
     startBtn.addEventListener('click', () => {
+      console.log('🚀 Entering Arcade Mode...');
       const landingPage = document.getElementById('landing-page');
-      const gameContainer = document.getElementById('game-container');
 
-      if (landingPage && gameContainer) {
+      // Hide Landing Page
+      if (landingPage) {
         landingPage.style.display = 'none';
-        gameContainer.style.display = 'block';
+      }
 
-        // Wait for DOM reflow to ensure container has dimensions
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            try {
-              window.launchGame();
-            } catch (error) {
-              console.error('CRITICAL: Failed to launch game.', error);
-              alert(
-                'Failed to start game. Check console for details.\n' +
-                  error.message
-              );
-              // Recover landing page visibility if launch fails
-              landingPage.style.display = 'flex';
-              gameContainer.style.display = 'none';
-            }
-          });
-        });
+      // Initialize Overlay Manager
+      try {
+        const overlayManager = new OverlayManager();
+        overlayManager.init();
+      } catch (error) {
+        console.error('CRITICAL: Failed to initialize Overlay.', error);
+        alert('System Error: Overlay failed to load. Checking console.');
+        // Fallback or recovery could go here
       }
     });
   }

@@ -1,0 +1,35 @@
+
+> app@1.0.0 start:backend
+> node backend/server.js
+
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[31m[2m[AVRE] 🥀 Missing critical environment variables: PRIVATE_KEY, JWT_SECRET, ADMIN_SECRET.[0m
+[TournamentService] Loaded instance: 0.4136680790965739
+[31m=============================================[0m
+[31m[1m[AVRE] ❤️  HTTP server started on port 8080.[0m
+[31m=============================================[0m
+[31m[1m
+    ___    _    __ ____  ______
+   /   |  | |  / // __ \/ ____/
+  / /| |  | | / // /_/ / __/
+ / ___ |  | |/ // _, _/ /___
+/_/  |_|  |___//_/ |_/_____/
+
+        🌹 LEGACY EDITION (Serverless) 🌹
+[0m
+[37m[AVRE] 🌹 System active... Initializing Game Server.[0m
+MIGRATION: Starting database schema check...
+MIGRATION: 'coins' column already exists in 'users' table.
+MIGRATION: 'sprite_name' column already exists in 'heroes' table.
+MIGRATION: Database schema check complete.
+Database & tables created!
+[31m[1m[AVRE] ❤️  Database connection established.[0m
+Variáveis de ambiente essenciais do Oráculo não estão configuradas. O serviço do Oráculo está desativado.
+[31m[2m[AVRE] 🥀 Oracle not initialized. Skipping blockchain-dependent services (NFT, Staking, Tournaments).[0m
+[Game State] Inicializando o serviço de estado do PvP...
+[Game State] O status do PvP está permanentemente definido como: OPEN
+[31m[1m[AVRE] ❤️  PvP State initialized.[0m
+[31m[1m[AVRE] ❤️  All services initialized. Server is ready to process requests.[0m
+Running in LOCAL mode: Starting background intervals.
+[Security] Blocked login attempt from invalid domain: localhost:5173 (Expected: undefined)
+[Security] Blocked login attempt from invalid domain: localhost:5173 (Expected: undefined)
