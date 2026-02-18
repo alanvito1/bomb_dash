@@ -52,27 +52,13 @@ export default class PlayerController {
 
     // 💨 SMOKE TRAIL
     if (this.scene.textures.exists('particle_smoke')) {
-      const p = this.scene.add.particles('particle_smoke');
-      if (typeof p.createEmitter === 'function') {
-        // Legacy
-        this.trailEmitter = p.createEmitter({
-          speed: { min: 10, max: 20 },
-          scale: { start: 0.5, end: 0 },
-          lifespan: 200,
-          alpha: { start: 0.5, end: 0 },
-          frequency: -1, // Manual emit
-        });
-      } else {
-        // Modern
-        p.setConfig({
-          speed: { min: 10, max: 20 },
-          scale: { start: 0.5, end: 0 },
-          lifespan: 200,
-          alpha: { start: 0.5, end: 0 },
-          emitting: false,
-        });
-        this.trailEmitter = p;
-      }
+      this.trailEmitter = this.scene.add.particles(0, 0, 'particle_smoke', {
+        speed: { min: 10, max: 20 },
+        scale: { start: 0.5, end: 0 },
+        lifespan: 200,
+        alpha: { start: 0.5, end: 0 },
+        emitting: false,
+      });
     }
 
     // 🏃 WALK ANIMATION (Bobbing)

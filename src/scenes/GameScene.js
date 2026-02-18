@@ -51,6 +51,7 @@ export default class GameScene extends Phaser.Scene {
     this.gameMode = data.gameMode || 'solo';
     this.opponent = data.opponent || null;
     this.matchId = data.matchId || null;
+    this.lastBombSoundTime = 0;
     console.log(
       `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}`
     );
@@ -406,7 +407,14 @@ export default class GameScene extends Phaser.Scene {
 
       if (isOpponent) bomb.setTint(0xff8080);
     }
-    if (!isOpponent) SoundManager.play(this, 'bomb_fire');
+
+    if (!isOpponent) {
+      const now = Date.now();
+      if (now - this.lastBombSoundTime > 100) {
+        SoundManager.play(this, 'bomb_fire');
+        this.lastBombSoundTime = now;
+      }
+    }
   }
 
   resetWaveState() {

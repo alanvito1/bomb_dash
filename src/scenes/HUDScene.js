@@ -213,6 +213,9 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   handleBalanceUpdate({ balance, error }) {
+    if (!this.scene || !this.sys || !this.active) return;
+    if (!this.bcoinText || !this.bcoinText.active) return;
+
     if (error) {
       this.bcoinText.setText(LanguageManager.get('hud_bcoin_error'));
     } else {
