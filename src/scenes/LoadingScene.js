@@ -123,13 +123,18 @@ export default class LoadingScene extends Phaser.Scene {
 
             // Add a Retry Button
             const retryButton = this.add
-              .text(this.cameras.main.centerX, this.cameras.main.centerY + 50, 'RETRY', {
-                fontFamily: 'monospace',
-                fontSize: '20px',
-                fill: '#ffffff',
-                backgroundColor: '#dc143c',
-                padding: { x: 10, y: 5 },
-              })
+              .text(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY + 50,
+                'RETRY',
+                {
+                  fontFamily: 'monospace',
+                  fontSize: '20px',
+                  fill: '#ffffff',
+                  backgroundColor: '#dc143c',
+                  padding: { x: 10, y: 5 },
+                }
+              )
               .setOrigin(0.5)
               .setInteractive({ useHandCursor: true });
 
