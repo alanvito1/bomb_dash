@@ -433,30 +433,27 @@
 
       // Fetch News
       async function loadNews() {
-        try {
-          const response = await fetch('/api/news');
-          const data = await response.json();
-          if (data.success) {
-            const container = document.getElementById('news-grid');
-            if (!container) return;
-            container.innerHTML = '';
+        const renderNews = (newsItems) => {
+          const container = document.getElementById('news-grid');
+          if (!container) return;
+          container.innerHTML = '';
 
-            if (data.news.length === 0) {
-              container.innerHTML =
-                '<p style="color: #666;">No news available.</p>';
-              return;
-            }
+          if (!newsItems || newsItems.length === 0) {
+            container.innerHTML =
+              '<p style="color: #666;">No news available.</p>';
+            return;
+          }
 
-            data.news.forEach((item) => {
-              const card = document.createElement('div');
-              card.className = 'news-card';
-              const imageUrl =
-                item.image_url || '/assets/img/bg/default-news.png';
+          newsItems.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = 'news-card';
+            const imageUrl =
+              item.image_url || 'assets/img/bg/default-news.png';
 
-              // Use a simpler date format
-              const dateStr = new Date(item.created_at).toLocaleDateString();
+            // Use a simpler date format
+            const dateStr = new Date(item.created_at).toLocaleDateString();
 
-              card.innerHTML = `
+            card.innerHTML = `
                  <div class="news-image" style="background-image: url('${imageUrl}'); background-size: cover; background-position: center;"></div>
                  <div class="news-content">
                    <div class="news-date">${dateStr}</div>
@@ -467,15 +464,50 @@
                    )}...</p>
                  </div>
                `;
-              container.appendChild(card);
-            });
+            container.appendChild(card);
+          });
+        };
+
+        const staticNews = [
+          {
+            title: 'Season 1: Genesis Launch',
+            content:
+              'The first official season of Bomb Dash is here! Compete for the top spot in the leaderboard and earn exclusive NFT rewards.',
+            created_at: new Date().toISOString(),
+            image_url: 'assets/img/bg/season1.png',
+          },
+          {
+            title: 'New Hero: Bomber King',
+            content:
+              "The legendary Bomber King has arrived. Mint now to access his devastating 'Mega Bomb' ability.",
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            image_url: 'assets/img/bg/hero-king.png',
+          },
+          {
+            title: 'Community Update v1.2',
+            content:
+              "We've listened to your feedback! Patch v1.2 brings improved matchmaking and bug fixes for the collision system.",
+            created_at: new Date(Date.now() - 172800000).toISOString(),
+            image_url: 'assets/img/bg/update.png',
+          },
+        ];
+
+        try {
+          const response = await fetch('/api/news');
+          if (!response.ok) throw new Error('Network response was not ok');
+          const data = await response.json();
+          if (data.success && data.news) {
+            renderNews(data.news);
+          } else {
+            console.warn('API returned success: false, using static news.');
+            renderNews(staticNews);
           }
         } catch (e) {
-          console.error('Failed to load news', e);
-          const container = document.getElementById('news-grid');
-          if (container)
-            container.innerHTML =
-              '<p style="color: #f00;">Failed to load news.</p>';
+          console.warn(
+            'Failed to load news (API likely offline), using static fallback.',
+            e
+          );
+          renderNews(staticNews);
         }
       }
 

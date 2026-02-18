@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [
@@ -41,6 +42,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: ['@sentry/browser'],
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        whitepaper: resolve(__dirname, 'whitepaper.html'),
+        lore: resolve(__dirname, 'lore.html'),
+        wiki: resolve(__dirname, 'wiki.html'),
+      },
     },
   },
   test: {
