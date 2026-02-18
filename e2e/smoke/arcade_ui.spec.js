@@ -1,6 +1,46 @@
 const { test, expect } = require('@playwright/test');
 
 test('Arcade UI Overlay Flow', async ({ page }) => {
+  // Mock API responses for Auth/Login
+  await page.route('**/api/auth/**', async (route) => {
+    // Mock Nonce
+    if (route.request().url().includes('nonce')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ nonce: '12345678' }),
+      });
+    }
+    // Mock Verify
+    if (route.request().url().includes('verify')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ token: 'mock-jwt-token', success: true }),
+      });
+    }
+    // Mock Me
+    if (route.request().url().includes('me')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: { address: '0xMockGuest', heroes: [] },
+        }),
+      });
+    }
+    return route.continue();
+  });
+
+  // Mock Contracts/News to prevent other errors
+  await page.route('**/api/contracts', (route) =>
+    route.fulfill({ status: 200, body: '{}' })
+  );
+  await page.route('**/api/news', (route) =>
+    route.fulfill({ status: 200, body: '{"success":true,"news":[]}' })
+  );
+
   // Go to localhost
   await page.goto('http://localhost:5173/');
 
