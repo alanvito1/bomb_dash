@@ -123,9 +123,31 @@ window.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('start-game-btn');
   if (startBtn) {
     startBtn.addEventListener('click', () => {
-      document.getElementById('landing-page').style.display = 'none';
-      document.getElementById('game-container').style.display = 'block';
-      window.launchGame();
+      const landingPage = document.getElementById('landing-page');
+      const gameContainer = document.getElementById('game-container');
+
+      if (landingPage && gameContainer) {
+        landingPage.style.display = 'none';
+        gameContainer.style.display = 'block';
+
+        // Wait for DOM reflow to ensure container has dimensions
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            try {
+              window.launchGame();
+            } catch (error) {
+              console.error('CRITICAL: Failed to launch game.', error);
+              alert(
+                'Failed to start game. Check console for details.\n' +
+                  error.message
+              );
+              // Recover landing page visibility if launch fails
+              landingPage.style.display = 'flex';
+              gameContainer.style.display = 'none';
+            }
+          });
+        });
+      }
     });
   }
 
