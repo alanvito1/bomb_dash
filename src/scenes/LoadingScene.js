@@ -142,8 +142,14 @@ export default class LoadingScene extends Phaser.Scene {
 
   async checkSessionAndProceed(loadingText) {
     try {
-      console.log('Waiting for ContractProvider...');
-      await this.contractsInitializedPromise;
+      console.log('⏳ LoadingScene: Waiting for ContractProvider...');
+      try {
+        await this.contractsInitializedPromise;
+        console.log('✅ LoadingScene: Contracts Initialized.');
+      } catch (e) {
+        console.error('⚠️ LoadingScene: Contract Initialization Failed/Timed Out.', e);
+        // We continue anyway, as we might be in Offline Mode or just need basic UI
+      }
 
       loadingText.setText('VERIFYING SESSION...');
 
