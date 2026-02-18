@@ -87,6 +87,8 @@ const gameRoutes = require('./routes/game.js');
 const debugRoutes = require('./routes/debug.js');
 const cronRoutes = require('./routes/cron.js');
 const testnetRoutes = require('./routes/testnet.js');
+const adminRoutes = require('./routes/admin.js');
+const newsRoutes = require('./routes/news.js');
 
 const app = express();
 // CRITICAL FIX: Fallback to 8080 strictly for Cloud Run
@@ -229,6 +231,8 @@ app.use('/api/game', authRoutes.verifyToken, gameRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/cron', cronRoutes);
 app.use('/api/testnet', testnetRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/news', newsRoutes);
 
 // Additional route for contracts (outside specific modules but under /api logic via app.get)
 // Note: app.use('/api', ...) middleware above applies to this too since it starts with /api
