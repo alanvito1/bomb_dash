@@ -93,7 +93,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 let isSystemReady = false;
-let initPromise = null;
+// let initPromise = null;
 
 app.set('json replacer', (key, value) =>
   typeof value === 'bigint' ? value.toString() : value
@@ -200,7 +200,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     db: isSystemReady ? 'connected' : 'connecting',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -212,7 +212,7 @@ app.use('/api', (req, res, next) => {
     return res.status(503).json({
       success: false,
       message: 'Server is initializing. Please try again shortly.',
-      retry_after: 5
+      retry_after: 5,
     });
   }
   next();
@@ -245,7 +245,6 @@ app.get('/api/contracts', (req, res) => {
   }
 });
 
-
 // Local Server Start (Cloud Run executes this directly)
 if (require.main === module) {
   // CRITICAL FIX: Immediate Listen Pattern
@@ -261,7 +260,8 @@ if (require.main === module) {
 
     // Start initialization in background
     // We don't await this here, allowing the event loop to proceed
-    initPromise = performInitialization();
+    // initPromise = performInitialization();
+    performInitialization();
   });
 }
 
