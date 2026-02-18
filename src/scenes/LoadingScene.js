@@ -3,7 +3,6 @@ import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import { CST } from '../CST.js';
-import assetManifest from '../config/asset-manifest.json';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -53,14 +52,26 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // --- Asset Loading Logic ---
-    // CRITICAL FIX: Load assets directly from imported manifest, avoiding HTTP 404 on asset-manifest.json
     this.load.script(
       'webfont',
       'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
     );
 
-    // Call the direct loading function
-    this.queueAssets(assetManifest);
+    // CRITICAL FIX: Explicit manual loading of assets to avoid manifest 404s
+    // and ensure critical assets are available.
+    console.log('🔄 Loading critical assets explicitly...');
+
+    // Heroes (Both 'ninja' and 'ninja_hero' keys for compatibility)
+    this.load.image('ninja', '/assets/img/hero/ninja.png');
+    this.load.image('ninja_hero', '/assets/img/hero/ninja.png');
+    this.load.image('witch', '/assets/img/hero/witch.png');
+    this.load.image('witch_hero', '/assets/img/hero/witch.png');
+
+    // Backgrounds
+    this.load.image('bg1', '/assets/img/bg/bg1.png');
+
+    // Audio
+    this.load.audio('menu_music', '/assets/audio/menu.mp3');
 
     this.load.on('complete', () => {
       console.log(
@@ -139,69 +150,6 @@ export default class LoadingScene extends Phaser.Scene {
       }
     });
     console.log('✅ LoadingScene: Preload has completed setup!');
-  }
-
-  queueAssets(manifest) {
-    console.log('🔄 Enqueuing game assets from imported manifest...');
-    const { assets, sounds } = manifest;
-
-    if (assets) {
-      for (const categoryKey in assets) {
-        const category = assets[categoryKey];
-        for (const assetKey in category) {
-          const assetData = category[assetKey];
-          // Handle sprite animations (objects with a 'frames' array)
-          if (
-            typeof assetData === 'object' &&
-            assetData !== null &&
-            Array.isArray(assetData.frames)
-          ) {
-            console.log(
-              `[AssetLoader] Enqueuing assets for hero '${assetKey}'...`
-            );
-
-            // 1. Load the static preview image (the first frame) for UI scenes.
-            const previewKey = `${assetKey}_hero`;
-            const previewFramePath = assetData.frames[0];
-            if (previewFramePath) {
-              this.load.image(previewKey, previewFramePath);
-            }
-
-            // 2. Load all individual frames for the animation in the game.
-            assetData.frames.forEach((framePath, index) => {
-              const frameKey = `${assetKey}_frame_${index}`;
-              this.load.image(frameKey, framePath);
-            });
-          }
-          // Handle single images (strings)
-          else if (typeof assetData === 'string' && assetData.length > 0) {
-            this.load.image(assetKey, assetData);
-          }
-          // Log warning for any other invalid format
-          else {
-            console.warn(
-              `[AssetLoader] Warning: Asset with key '${assetKey}' has an invalid format. Skipping.`
-            );
-          }
-        }
-      }
-    }
-
-    if (sounds) {
-      for (const categoryKey in sounds) {
-        const category = sounds[categoryKey];
-        for (const assetKey in category) {
-          const path = category[assetKey];
-          if (typeof path === 'string' && path.length > 0) {
-            this.load.audio(assetKey, path);
-          } else {
-            console.warn(
-              `[AssetLoader] Warning: Sound asset with key '${assetKey}' has an invalid path. Skipping.`
-            );
-          }
-        }
-      }
-    }
   }
 
   create() {
