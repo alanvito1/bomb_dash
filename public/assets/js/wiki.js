@@ -19,6 +19,46 @@ const heroData = [
     bombSize: 1.5,
   },
   { name: 'Mage', type: 'NFT', hp: 90, speed: 220, damage: 4, bombSize: 2.0 },
+  {
+    name: 'Samurai',
+    type: 'NFT',
+    hp: 130,
+    speed: 240,
+    damage: 3,
+    bombSize: 1.2,
+  },
+  {
+    name: 'Cyborg',
+    type: 'NFT',
+    hp: 160,
+    speed: 190,
+    damage: 3,
+    bombSize: 1.8,
+  },
+  {
+    name: 'Gladiator',
+    type: 'NFT',
+    hp: 180,
+    speed: 160,
+    damage: 4,
+    bombSize: 1.5,
+  },
+  {
+    name: 'Viking',
+    type: 'NFT',
+    hp: 170,
+    speed: 170,
+    damage: 5,
+    bombSize: 1.5,
+  },
+  {
+    name: 'Bomber King',
+    type: 'LEGEND',
+    hp: 200,
+    speed: 300,
+    damage: 5,
+    bombSize: 3.0,
+  },
 ];
 
 const wagerTiers = {
