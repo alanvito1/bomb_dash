@@ -86,29 +86,29 @@ export default class CollisionHandler {
         const particles = this.scene.add.particles('particle_pixel');
 
         if (typeof particles.createEmitter === 'function') {
-           // Legacy Phaser
-           particles.createEmitter({
-              x: enemy.x,
-              y: enemy.y,
-              speed: { min: 50, max: 150 },
-              angle: { min: 0, max: 360 },
-              scale: { start: 2, end: 0 },
-              lifespan: 600,
-              quantity: 15,
-              blendMode: 'ADD'
-           });
+          // Legacy Phaser
+          particles.createEmitter({
+            x: enemy.x,
+            y: enemy.y,
+            speed: { min: 50, max: 150 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 2, end: 0 },
+            lifespan: 600,
+            quantity: 15,
+            blendMode: 'ADD',
+          });
         } else {
-           // Modern Phaser (3.60+)
-           particles.setPosition(enemy.x, enemy.y);
-           particles.setConfig({
-              speed: { min: 50, max: 150 },
-              angle: { min: 0, max: 360 },
-              scale: { start: 2, end: 0 },
-              lifespan: 600,
-              blendMode: 'ADD',
-              emitting: false
-           });
-           particles.explode(15);
+          // Modern Phaser (3.60+)
+          particles.setPosition(enemy.x, enemy.y);
+          particles.setConfig({
+            speed: { min: 50, max: 150 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 2, end: 0 },
+            lifespan: 600,
+            blendMode: 'ADD',
+            emitting: false,
+          });
+          particles.explode(15);
         }
 
         this.scene.time.delayedCall(700, () => particles.destroy());

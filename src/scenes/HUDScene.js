@@ -41,18 +41,21 @@ export default class HUDScene extends Phaser.Scene {
     // Pixel Art Hearts Group
     this.heartsGroup = this.add.group();
     // Create 5 hearts placeholders
-    for(let i = 0; i < 5; i++) {
-        this.heartsGroup.create(margin + 40 + (i * 18), margin + 8, 'heart_empty');
+    for (let i = 0; i < 5; i++) {
+      this.heartsGroup.create(margin + 40 + i * 18, margin + 8, 'heart_empty');
     }
 
     // XP Bar
     this.levelText = this.add.text(margin, margin + 35, `Lvl: 1`, {
       ...textStyle,
       fill: '#00ff00',
-      fontSize: '10px'
+      fontSize: '10px',
     });
     this.xpBar = this.add.graphics();
-    this.xpText = this.add.text(margin + 40, margin + 50, '', { ...valueStyle, fontSize: '10px' });
+    this.xpText = this.add.text(margin + 40, margin + 50, '', {
+      ...valueStyle,
+      fontSize: '10px',
+    });
 
     // --- Right Side (Currency & Buffs) ---
     this.bcoinText = this.add
@@ -64,7 +67,10 @@ export default class HUDScene extends Phaser.Scene {
       .setOrigin(1, 0);
 
     // Buff Icons Container
-    this.buffContainer = this.add.container(this.scale.width - margin, margin + 30);
+    this.buffContainer = this.add.container(
+      this.scale.width - margin,
+      margin + 30
+    );
 
     // --- Center (Wave Info & Timer) ---
     this.waveText = this.add
@@ -72,16 +78,18 @@ export default class HUDScene extends Phaser.Scene {
         ...textStyle,
         fill: '#ffffff',
         align: 'center',
-        fontSize: '12px'
+        fontSize: '12px',
       })
       .setOrigin(0.5, 0);
 
-    this.timerText = this.add.text(this.scale.width / 2, margin + 20, '', {
+    this.timerText = this.add
+      .text(this.scale.width / 2, margin + 20, '', {
         fontFamily: '"Press Start 2P"',
         fontSize: '16px',
         fill: '#ffffff',
-        align: 'center'
-    }).setOrigin(0.5, 0);
+        align: 'center',
+      })
+      .setOrigin(0.5, 0);
 
     // Initial population
     this.updateHealth({ health: 0, maxHealth: 0 });
@@ -100,70 +108,76 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateTimer({ time }) {
-      const minutes = Math.floor(time / 60);
-      const seconds = time % 60;
-      this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
 
-      if (time <= 10) {
-          this.timerText.setColor('#ff0000');
-          // Simple pulse effect via font size or scale
-          this.timerText.setScale(time % 2 === 0 ? 1.2 : 1.0);
-      } else {
-          this.timerText.setColor('#ffffff');
-          this.timerText.setScale(1);
-      }
+    if (time <= 10) {
+      this.timerText.setColor('#ff0000');
+      // Simple pulse effect via font size or scale
+      this.timerText.setScale(time % 2 === 0 ? 1.2 : 1.0);
+    } else {
+      this.timerText.setColor('#ffffff');
+      this.timerText.setScale(1);
+    }
   }
 
   showPowerup(id, duration) {
-      // Add icon to container if not exists
-      let icon = this.buffContainer.getByName(id);
-      if (!icon) {
-          // Use the texture id directly
-          if (this.textures.exists(id)) {
-             icon = this.add.image(0, 0, id).setDisplaySize(16, 16).setName(id);
-             this.buffContainer.add(icon);
-             this.layoutBuffs();
-          } else {
-             // Fallback text
-             icon = this.add.text(0, 0, id[0].toUpperCase(), { fontSize: '10px', color: '#00ffff' }).setName(id);
-             this.buffContainer.add(icon);
-             this.layoutBuffs();
-          }
+    // Add icon to container if not exists
+    let icon = this.buffContainer.getByName(id);
+    if (!icon) {
+      // Use the texture id directly
+      if (this.textures.exists(id)) {
+        icon = this.add.image(0, 0, id).setDisplaySize(16, 16).setName(id);
+        this.buffContainer.add(icon);
+        this.layoutBuffs();
+      } else {
+        // Fallback text
+        icon = this.add
+          .text(0, 0, id[0].toUpperCase(), {
+            fontSize: '10px',
+            color: '#00ffff',
+          })
+          .setName(id);
+        this.buffContainer.add(icon);
+        this.layoutBuffs();
       }
+    }
   }
 
   removePowerup(id) {
-      const icon = this.buffContainer.getByName(id);
-      if (icon) {
-          icon.destroy();
-          this.layoutBuffs();
-      }
+    const icon = this.buffContainer.getByName(id);
+    if (icon) {
+      icon.destroy();
+      this.layoutBuffs();
+    }
   }
 
   layoutBuffs() {
-      let x = 0;
-      this.buffContainer.each((child) => {
-          child.x = x;
-          x -= 20; // Stack to the left
-      });
+    let x = 0;
+    this.buffContainer.each((child) => {
+      child.x = x;
+      x -= 20; // Stack to the left
+    });
   }
 
   updateHealth({ health, maxHealth }) {
     if (!this.heartsGroup) return;
 
     // Logic: 5 Hearts total.
-    const healthPercentage = maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
+    const healthPercentage =
+      maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
     const heartsToFill = Math.ceil(healthPercentage * 5);
 
     const hearts = this.heartsGroup.getChildren();
     hearts.forEach((heart, index) => {
-        if (index < heartsToFill) {
-            heart.setTexture('heart_full');
-            heart.setVisible(true);
-        } else {
-            heart.setTexture('heart_empty');
-            heart.setVisible(true);
-        }
+      if (index < heartsToFill) {
+        heart.setTexture('heart_full');
+        heart.setVisible(true);
+      } else {
+        heart.setTexture('heart_empty');
+        heart.setVisible(true);
+      }
     });
   }
 

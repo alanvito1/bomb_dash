@@ -30,12 +30,12 @@ export default class PowerupLogic {
 
         // 💫 FLOAT ANIMATION (Scale Pulse)
         this.scene.tweens.add({
-            targets: powerup,
-            scaleX: powerup.scaleX * 1.2,
-            scaleY: powerup.scaleY * 1.2,
-            duration: 500,
-            yoyo: true,
-            repeat: -1
+          targets: powerup,
+          scaleX: powerup.scaleX * 1.2,
+          scaleY: powerup.scaleY * 1.2,
+          duration: 500,
+          yoyo: true,
+          repeat: -1,
         });
       } else {
         console.warn(
@@ -56,27 +56,40 @@ export default class PowerupLogic {
 
     // ✨ PICKUP FX
     const buffName = this.powerupConfig[id]?.name || 'BUFF';
-    createFloatingText(this.scene, player.x, player.y - 40, `+${buffName}`, '#00ffff');
+    createFloatingText(
+      this.scene,
+      player.x,
+      player.y - 40,
+      `+${buffName}`,
+      '#00ffff'
+    );
 
     if (this.scene.textures.exists('particle_pixel')) {
-         const p = this.scene.add.particles('particle_pixel');
-         if (typeof p.createEmitter === 'function') {
-             // Legacy
-             p.createEmitter({
-                 x: player.x, y: player.y,
-                 speed: 100, scale: { start: 1, end: 0 },
-                 lifespan: 500, blendMode: 'ADD', quantity: 10
-             });
-         } else {
-             // Modern
-             p.setPosition(player.x, player.y);
-             p.setConfig({
-                 speed: 100, scale: { start: 1, end: 0 },
-                 lifespan: 500, blendMode: 'ADD', emitting: false
-             });
-             p.explode(10);
-         }
-         this.scene.time.delayedCall(600, () => p.destroy());
+      const p = this.scene.add.particles('particle_pixel');
+      if (typeof p.createEmitter === 'function') {
+        // Legacy
+        p.createEmitter({
+          x: player.x,
+          y: player.y,
+          speed: 100,
+          scale: { start: 1, end: 0 },
+          lifespan: 500,
+          blendMode: 'ADD',
+          quantity: 10,
+        });
+      } else {
+        // Modern
+        p.setPosition(player.x, player.y);
+        p.setConfig({
+          speed: 100,
+          scale: { start: 1, end: 0 },
+          lifespan: 500,
+          blendMode: 'ADD',
+          emitting: false,
+        });
+        p.explode(10);
+      }
+      this.scene.time.delayedCall(600, () => p.destroy());
     }
 
     powerup.destroy();

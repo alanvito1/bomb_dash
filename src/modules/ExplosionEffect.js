@@ -22,11 +22,11 @@ export default function ExplosionEffect(scene, x, y) {
         { key: 'explosion_sheet', frame: 0 },
         { key: 'explosion_sheet', frame: 1 },
         { key: 'explosion_sheet', frame: 2 },
-        { key: 'explosion_sheet', frame: 3 }
+        { key: 'explosion_sheet', frame: 3 },
       ],
       frameRate: 15,
       repeat: 0,
-      hideOnComplete: true
+      hideOnComplete: true,
     });
   }
 
@@ -45,7 +45,7 @@ export default function ExplosionEffect(scene, x, y) {
   // 5. Screen Shake
   // Only shake if configured or reasonable default
   if (scene.cameras && scene.cameras.main) {
-      scene.cameras.main.shake(200, 0.01);
+    scene.cameras.main.shake(200, 0.01);
   }
 
   // 6. Sound
