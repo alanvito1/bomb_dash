@@ -96,7 +96,7 @@ export default class ShopModal extends UIModal {
         btnContainer.setInteractive({ useHandCursor: true });
 
         btnContainer.on('pointerdown', () => {
-            SoundManager.playClick(this.scene);
+            SoundManager.play(this.scene, 'cash');
             // Mock Purchase Logic
             console.log(`Bought ${item.title} for ${item.price}`);
 

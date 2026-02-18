@@ -94,7 +94,7 @@ export function createButton(scene, x, y, text, onClick) {
 
   container.on('pointerdown', () => {
     drawButton(true, true);
-    container.setScale(0.98); // Press effect
+    container.setScale(0.95); // Press effect
   });
 
   container.on('pointerup', () => {
@@ -110,6 +110,34 @@ export function createButton(scene, x, y, text, onClick) {
   });
 
   return container;
+}
+
+/**
+ * Applies global "Game Juice" (scale effect and sound) to any interactive GameObject.
+ * Captures the object's initial scale to restore it correctly.
+ * @param {Phaser.GameObjects.GameObject} target - The object to make juicy.
+ * @param {Phaser.Scene} scene - The scene reference (for sound).
+ */
+export function addJuice(target, scene) {
+  const startScaleX = target.scaleX;
+  const startScaleY = target.scaleY;
+
+  if (!target.input) {
+    target.setInteractive({ useHandCursor: true });
+  }
+
+  target.on('pointerdown', () => {
+    target.setScale(startScaleX * 0.95, startScaleY * 0.95);
+  });
+
+  target.on('pointerup', () => {
+    target.setScale(startScaleX, startScaleY);
+    SoundManager.playClick(scene);
+  });
+
+  target.on('pointerout', () => {
+    target.setScale(startScaleX, startScaleY);
+  });
 }
 
 /**

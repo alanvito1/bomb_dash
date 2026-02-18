@@ -185,6 +185,63 @@ export default class SoundManager {
         osc.start(now);
         osc.stop(now + 0.1);
       }
+      // --- SOFT CLICK (Close Modal): Gentle Triangle Wave ---
+      else if (key.includes('soft_click') || key.includes('close')) {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+
+        gain.gain.setValueAtTime(vol * 0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
+      // --- CASH (Buy/Ka-ching): Rapid Arpeggio ---
+      else if (key.includes('cash') || key.includes('buy')) {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.connect(gain);
+        osc2.connect(gain);
+
+        osc1.type = 'sine';
+        osc2.type = 'square'; // Add sparkle
+
+        // First ping
+        osc1.frequency.setValueAtTime(800, now);
+        osc1.frequency.linearRampToValueAtTime(1200, now + 0.1);
+
+        // Second ping (layered)
+        osc2.frequency.setValueAtTime(1200, now + 0.1);
+        osc2.frequency.linearRampToValueAtTime(1600, now + 0.2);
+
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.linearRampToValueAtTime(vol, now + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+        osc1.start(now);
+        osc1.stop(now + 0.4);
+        osc2.start(now + 0.1);
+        osc2.stop(now + 0.4);
+      }
+      // --- ERROR (Locked/Buzz): Low Sawtooth ---
+      else if (key.includes('error') || key.includes('buzz') || key.includes('locked')) {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+
+        gain.gain.setValueAtTime(vol * 0.8, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
       // --- POWERUP (Bonus): Sine Wave Rising ---
       else if (key.includes('powerup') || key.includes('wave') || key.includes('coin')) {
         const osc = ctx.createOscillator();
