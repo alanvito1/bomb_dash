@@ -25,6 +25,10 @@ ranking.sqlite
 ranking.sqlite-journal
 backend/ranking.sqlite
 backend/ranking.sqlite-journal
+game.sqlite
+game.sqlite-journal
+backend/game.sqlite
+backend/game.sqlite-journal
 
 # Build artifacts
 /dist
