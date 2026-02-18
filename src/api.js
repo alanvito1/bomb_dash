@@ -74,25 +74,15 @@ class ApiClient {
   // --- Authentication Methods ---
 
   /**
-   * Handles the entire Sign-In with Ethereum (SIWE) authentication flow.
-   * 1. Connects to the user's wallet.
-   * 2. Fetches a unique nonce from the backend.
-   * 3. Prompts the user to sign a SIWE message.
-   * 4. Sends the message and signature to the backend for verification.
-   * 5. On success, stores the received JWT.
+   * Handles the entire Sign-In with Ethereum (SIWE) authentication flow using a specific signer.
+   * This allows using any signer (MetaMask, Burner Wallet, etc.) to login.
+   * @param {object} signer - The ethers.js signer instance.
+   * @param {string} address - The wallet address.
+   * @param {number|string} chainId - The chain ID.
    * @returns {Promise<object>} A promise that resolves with the verification data, including the JWT.
-   * @throws {Error} Throws an error if any step of the SIWE process fails.
    */
-  async web3Login() {
-    if (!window.ethereum) throw new Error('MetaMask not detected.');
-
+  async loginWithSigner(signer, address, chainId) {
     try {
-      const { ethers } = await import('ethers');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
-      const chainId = (await provider.getNetwork()).chainId;
-
       const { nonce } = await this.fetch('/auth/nonce', {}, false);
 
       if (!nonce || typeof nonce !== 'string' || nonce.length < 8) {
@@ -134,6 +124,26 @@ class ApiClient {
       }
     } catch (error) {
       console.error('Authentication failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Wrapper for web3Login using the browser's Ethereum provider (e.g., MetaMask).
+   */
+  async web3Login() {
+    if (!window.ethereum) throw new Error('MetaMask not detected.');
+
+    try {
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const chainId = (await provider.getNetwork()).chainId;
+
+      return this.loginWithSigner(signer, address, chainId);
+    } catch (error) {
+      console.error('Web3 Login failed:', error);
       throw error;
     }
   }
