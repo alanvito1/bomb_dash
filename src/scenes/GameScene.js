@@ -197,9 +197,28 @@ export default class GameScene extends Phaser.Scene {
     this.bossDefeated = false;
     this.bossSpawned = false;
     this.activePowerups = {};
-    this.coinsEarned = 0;
+    this.sessionLoot = { coins: 0, xp: 0 }; // Risk Mechanics
+    this.coinsEarned = 0; // Legacy, kept for compatibility if needed
     this.baseEnemyHp = 1;
     this.baseBossHp = 100;
+
+    // ⚠️ RISK ZONE UI
+    const riskText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 100, '⚠️ RISK ZONE ⚠️\nSurvive to Keep Loot!', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '24px',
+      fill: '#ff0000',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(1000);
+
+    this.tweens.add({
+      targets: riskText,
+      alpha: 0,
+      duration: 500,
+      delay: 2000,
+      onComplete: () => riskText.destroy()
+    });
 
     this.bombs = this.physics.add.group();
     this.enemies = this.physics.add.group();
@@ -253,7 +272,8 @@ export default class GameScene extends Phaser.Scene {
     this.events.emit('update-timer', { time: this.matchTime });
 
     if (this.matchTime <= 0) {
-      this.handleGameOver();
+      // Time Up = Extraction/Victory
+      this.handleGameOver(true);
     }
   }
 
@@ -475,32 +495,47 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  async handleGameOver() {
+  async handleGameOver(isVictory = false) {
     if (this.gamePaused || this.transitioning) return;
     this.transitioning = true; // Use transitioning to prevent double calls
     this.gamePaused = true;
     this.player?.setActive(false);
     this.setPlayerState('CANNOT_SHOOT', 'Game over');
     SoundManager.stopAll(this);
-    SoundManager.play(this, 'gameover');
 
-    const xpGained = this.score; // Assuming 1 score point = 1 XP
+    // Risk Mechanic: Lose Loot on Defeat
+    let finalCoins = 0;
+    let finalXp = 0;
+
+    if (isVictory) {
+      SoundManager.play(this, 'level_up'); // Or victory sound
+      finalCoins = this.sessionLoot.coins;
+      finalXp = this.sessionLoot.xp; // Or stick to score-based XP? Using Score for XP for now.
+    } else {
+      SoundManager.play(this, 'gameover');
+      finalCoins = 0; // Lost everything
+      // Optional: XP penalty? For now, we keep XP based on score (kills) or maybe lose it too?
+      // Prompt said: "O jogador perde 100% do Loot Temporário". XP loss was optional.
+      // Let's assume XP is safe (Account progression) but Coins are lost (Loot).
+      // Actually, usually in Roguelites, you keep XP.
+      finalXp = this.score;
+    }
+
     const heroId = this.playerStats.id;
-    this.coinsEarned = Math.floor(this.score / 10);
 
     // This is the critical fix: report the match result to the backend to award XP.
-    if (heroId && xpGained > 0) {
+    if (heroId) {
       try {
         console.log(
-          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${xpGained}`
+          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${finalXp}, Coins: ${finalCoins}`
         );
         // Use the new, correct method on the api client.
-        const response = await api.completeMatch(heroId, xpGained);
+        const response = await api.completeMatch(heroId, finalXp, finalCoins);
         if (response.success) {
-          console.log('[GameScene] XP awarded successfully by the server.');
+          console.log('[GameScene] XP/Coins awarded successfully by the server.');
         } else {
           console.warn(
-            '[GameScene] Server failed to award XP:',
+            '[GameScene] Server failed to award rewards:',
             response.message
           );
         }
@@ -515,8 +550,9 @@ export default class GameScene extends Phaser.Scene {
       score: this.score,
       world: this.world,
       phase: this.phase,
-      coins: this.coinsEarned,
-      xpGained: this.score,
+      coins: finalCoins, // Show what was actually kept
+      xpGained: finalXp,
+      isVictory: isVictory
     });
   }
 

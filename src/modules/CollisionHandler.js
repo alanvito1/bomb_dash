@@ -80,6 +80,17 @@ export default class CollisionHandler {
     if (enemy.hp <= 0) {
       ExplosionEffect(this.scene, enemy.x, enemy.y);
 
+      // 🧃 JUICE: Hit Stop & Shake
+      this.scene.cameras.main.shake(50, 0.005);
+      if (this.scene.physics.world.isPaused === false) {
+          this.scene.physics.pause();
+          this.scene.time.delayedCall(50, () => {
+              if (this.scene && !this.scene.gamePaused) {
+                  this.scene.physics.resume();
+              }
+          });
+      }
+
       // ✨ DEATH PARTICLES (Digital Disintegration)
       if (this.scene.textures.exists('particle_pixel')) {
         const particles = this.scene.add.particles(
@@ -106,24 +117,25 @@ export default class CollisionHandler {
       );
 
       const xpGained = enemy.isBoss ? 3 : 1;
+      const coinsGained = enemy.isBoss ? 5 : 1;
       this.scene.score += xpGained;
 
-      const stats = this.scene.playerStats;
-      stats.account_xp += xpGained;
-      stats.hero_xp += xpGained;
-      stats.bcoin += enemy.isBoss ? 5 : 1;
+      // ⚠️ RISK MECHANIC: Update Session Loot (Not Persistent Stats yet)
+      if (!this.scene.sessionLoot) this.scene.sessionLoot = { coins: 0, xp: 0 };
+      this.scene.sessionLoot.coins += coinsGained;
+      this.scene.sessionLoot.xp += xpGained;
+
+      // Visual Feedback
       createFloatingText(
         this.scene,
         enemy.x,
         enemy.y - 20,
-        `+${xpGained} XP`,
+        `+${coinsGained} G`,
         '#ffd700'
       );
 
-      this.events.emit('update-xp', {
-        /* ... */
-      });
-      this.events.emit('update-bcoin', { balance: stats.bcoin });
+      // Update HUD to show SESSION LOOT (The "At Risk" Amount)
+      this.events.emit('update-bcoin', { balance: this.scene.sessionLoot.coins });
 
       this.scene.enemiesKilled++;
 

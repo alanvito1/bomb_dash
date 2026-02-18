@@ -11,6 +11,7 @@ import HeroesModal from '../ui/HeroesModal.js';
 import RankingModal from '../ui/RankingModal.js';
 import SettingsModal from '../ui/SettingsModal.js';
 import WalletModal from '../ui/WalletModal.js';
+import AltarModal from '../ui/AltarModal.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -69,6 +70,7 @@ export default class MenuScene extends Phaser.Scene {
     this.rankingModal = new RankingModal(this);
     this.settingsModal = new SettingsModal(this);
     this.walletModal = new WalletModal(this);
+    this.altarModal = new AltarModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -212,6 +214,35 @@ export default class MenuScene extends Phaser.Scene {
     ]);
 
     // --- RIGHT CORNER: BUTTONS ---
+    // Altar Widget
+    if (this.textures.exists('icon_altar')) {
+        const altarBtn = this.add
+          .image(width - 105, 30, 'icon_altar')
+          .setScale(0.8);
+
+        addJuice(altarBtn, this);
+        altarBtn.on('pointerup', () => {
+          this.altarModal.open();
+        });
+        container.add(altarBtn);
+    } else {
+        // Placeholder if texture missing
+        const gfx = this.add.graphics();
+        gfx.fillStyle(0xffd700, 1);
+        gfx.fillCircle(0, 0, 12);
+        const icon = this.add.container(width - 105, 30);
+        icon.add(gfx);
+        icon.add(this.add.text(0, 0, 'A', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
+
+        container.add(icon);
+        icon.setSize(24, 24);
+        icon.setInteractive({ useHandCursor: true });
+        addJuice(icon, this);
+        icon.on('pointerup', () => {
+            this.altarModal.open();
+        });
+    }
+
     // Wallet
     const walletBtn = this.add
       .image(width - 65, 30, 'icon_wallet')

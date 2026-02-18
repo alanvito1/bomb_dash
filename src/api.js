@@ -473,12 +473,13 @@ class ApiClient {
    * Reports the completion of a match to the backend, including XP gained.
    * @param {number} heroId - The ID of the hero used in the match.
    * @param {number} xpGained - The amount of XP (score) gained.
+   * @param {number} coinsCollected - The amount of coins collected (Session Loot).
    * @returns {Promise<any>} A promise that resolves with the backend's response.
    */
-  async completeMatch(heroId, xpGained) {
+  async completeMatch(heroId, xpGained, coinsCollected = 0) {
     return this.fetch('/matches/complete', {
       method: 'POST',
-      body: JSON.stringify({ heroId, xpGained }),
+      body: JSON.stringify({ heroId, xpGained, coinsCollected }),
     });
   }
 

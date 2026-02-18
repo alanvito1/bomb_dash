@@ -70,13 +70,21 @@ router.post('/checkpoint', async (req, res) => {
 });
 
 router.post('/matches/complete', async (req, res) => {
-  const { heroId, xpGained } = req.body;
+  const { heroId, xpGained, coinsCollected } = req.body;
 
   if (!heroId || typeof xpGained === 'undefined' || xpGained < 0) {
     return res.status(400).json({
       success: false,
       message:
         'Request must include a valid heroId and a non-negative xpGained.',
+    });
+  }
+
+  const coins = coinsCollected || 0;
+  if (coins < 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Coins collected cannot be negative.',
     });
   }
 
@@ -92,16 +100,21 @@ router.post('/matches/complete', async (req, res) => {
       });
     }
 
+    // Award Hero XP
     await db.addXpToHero(heroId, xpGained);
-    await db.addXpToUser(req.user.address, xpGained);
+
+    // Award User XP and Coins (Session Loot)
+    // Note: grantRewards handles level-ups internally
+    await db.grantRewards(req.user.userId, coins, xpGained);
 
     const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
     const updatedHero = updatedHeroes.find((h) => h.id === heroId);
 
     res.json({
       success: true,
-      message: `Successfully awarded ${xpGained} XP to hero ${heroId}.`,
+      message: `Successfully awarded ${xpGained} XP and ${coins} Coins to hero ${heroId}.`,
       hero: updatedHero,
+      coinsEarned: coins,
     });
   } catch (error) {
     console.error(`Error completing match for hero ${heroId}:`, error);
