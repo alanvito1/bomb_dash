@@ -93,25 +93,41 @@ const config = {
   },
 };
 
-// Esperar o DOM estar completamente carregado antes de iniciar o jogo Phaser
-window.addEventListener('DOMContentLoaded', () => {
-  // 🌹 AVRE CONSOLE WHISPER
+// 🎬 Start Game Logic
+window.launchGame = function () {
   console.log(
     '%cCreated with passion by AVRE 🌹',
     'color: #DC143C; font-weight: bold; font-size: 16px;'
   );
-  console.log('DOM completamente carregado e processado. Iniciando Phaser...');
-
-  // Set up wallet event listeners as the app starts
-  setupWalletListeners();
+  console.log('🚀 Launching Phaser...');
 
   // 🚀 Criação da instância do jogo
   const game = new Phaser.Game(config);
   window.game = game; // Expose for testing and automation
-  window.nftService = nftService; // Expose for mocking in tests
-  window.api = api; // Expose API client for mocking in tests
-  window.bcoinService = bcoinService; // Expose for E2E testing
-  window.GameEventEmitter = GameEventEmitter; // Expose for E2E testing
+};
+
+// Esperar o DOM estar completamente carregado
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM loaded. Waiting for user interaction...');
+
+  // Set up wallet event listeners as the app starts
+  setupWalletListeners();
+
+  // Expose services for E2E testing
+  window.nftService = nftService;
+  window.api = api;
+  window.bcoinService = bcoinService;
+  window.GameEventEmitter = GameEventEmitter;
+
+  // Setup Landing Page Button
+  const startBtn = document.getElementById('start-game-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      document.getElementById('landing-page').style.display = 'none';
+      document.getElementById('game-container').style.display = 'block';
+      window.launchGame();
+    });
+  }
 
   // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
   window.onerror = function (msg, url, lineNo, columnNo, error) {
