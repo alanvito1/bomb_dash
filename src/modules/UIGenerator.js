@@ -3,6 +3,8 @@ import SoundManager from '../utils/sound.js';
 
 /**
  * Creates a standardized button with interactive states and cyberpunk styling.
+ * Now fully procedural using Phaser.Graphics - No assets required!
+ *
  * @param {Phaser.Scene} scene - The scene to add the button to.
  * @param {number} x - The x-coordinate of the button.
  * @param {number} y - The y-coordinate of the button.
@@ -11,47 +13,97 @@ import SoundManager from '../utils/sound.js';
  * @returns {Phaser.GameObjects.Container} The created button container.
  */
 export function createButton(scene, x, y, text, onClick) {
-  const button = scene.add.container(x, y);
+  const width = 280;
+  const height = 50;
+  const glowColor = 0x00ffff; // Neon Cyan
+  const baseColor = 0x000033; // Dark Blue
+  const hoverColor = 0x000066; // Slightly lighter blue
 
-  const buttonBackground = scene.add.image(0, 0, 'btn_menu').setOrigin(0.5);
-  buttonBackground.setDisplaySize(280, 50);
+  const container = scene.add.container(x, y);
 
+  // 1. Create the Graphics Object for the button
+  const bg = scene.add.graphics();
+
+  // Helper to draw the button state
+  const drawButton = (isHovered = false, isPressed = false) => {
+    bg.clear();
+
+    const fillColor = isPressed ? 0x000022 : (isHovered ? hoverColor : baseColor);
+
+    // Glow effect (outer stroke with low alpha)
+    if (isHovered) {
+      bg.lineStyle(4, glowColor, 0.3);
+      bg.strokeRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, 12);
+    }
+
+    // Main Border
+    bg.lineStyle(2, glowColor, 1);
+
+    // Background
+    bg.fillStyle(fillColor, 0.9);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 10);
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 10);
+
+    // Scanlines Effect
+    bg.lineStyle(1, 0x000000, 0.3);
+    for (let i = -height / 2 + 2; i < height / 2; i += 4) {
+      bg.beginPath();
+      bg.moveTo(-width / 2 + 5, i);
+      bg.lineTo(width / 2 - 5, i);
+      bg.strokePath();
+    }
+  };
+
+  // Initial draw
+  drawButton(false);
+
+  // 2. Text
   const buttonText = scene.add
     .text(0, 0, text, {
       fontFamily: '"Press Start 2P"',
-      fontSize: '16px',
+      fontSize: '14px', // Slightly smaller to fit scanlines
       fill: '#ffffff',
       align: 'center',
     })
     .setOrigin(0.5);
 
-  button.add([buttonBackground, buttonText]);
-  button.setSize(280, 50);
-  button.setInteractive({ useHandCursor: true });
+  container.add([bg, buttonText]);
 
-  button.on('pointerover', () => {
-    buttonBackground.setTint(0xcccccc);
-    buttonText.setTint(0xffd700);
+  // 3. Interactivity
+  // Set size for hit area
+  container.setSize(width, height);
+  container.setInteractive({ useHandCursor: true });
+
+  container.on('pointerover', () => {
+    drawButton(true, false);
+    buttonText.setTint(0xffd700); // Gold text on hover
+    buttonText.setScale(1.05);
   });
 
-  button.on('pointerout', () => {
-    buttonBackground.clearTint();
+  container.on('pointerout', () => {
+    drawButton(false, false);
     buttonText.clearTint();
+    buttonText.setScale(1);
   });
 
-  button.on('pointerdown', () => {
-    buttonBackground.setTint(0xaaaaaa);
+  container.on('pointerdown', () => {
+    drawButton(true, true);
+    container.setScale(0.98); // Press effect
   });
 
-  button.on('pointerup', () => {
-    buttonBackground.clearTint();
-    SoundManager.play(scene, 'click');
+  container.on('pointerup', () => {
+    drawButton(true, false); // Return to hover state
+    container.setScale(1);
+
+    // Use the robust sound manager
+    SoundManager.playClick(scene);
+
     if (onClick) {
       onClick();
     }
   });
 
-  return button;
+  return container;
 }
 
 /**
@@ -92,9 +144,18 @@ export function createTitle(scene, x, y, text) {
  */
 export function createPanel(scene, x, y, width, height) {
   const panel = scene.add.graphics();
-  panel.fillStyle(0x000000, 0.8);
+
+  // Background
+  panel.fillStyle(0x000000, 0.85);
   panel.fillRect(x, y, width, height);
+
+  // Neon Border
   panel.lineStyle(2, 0x00ffff, 0.8);
   panel.strokeRect(x, y, width, height);
+
+  // Inner Glow
+  panel.lineStyle(4, 0x00ffff, 0.2);
+  panel.strokeRect(x - 2, y - 2, width + 4, height + 4);
+
   return panel;
 }

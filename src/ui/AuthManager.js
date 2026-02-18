@@ -34,6 +34,8 @@ export default class AuthManager {
   }
 
   attachListeners() {
+    // Remove old listeners to prevent duplicates if init called multiple times
+    // (Though simple onclick replacement handles this automatically)
     this.btnWeb3.onclick = () => this.loginWeb3();
     this.btnGoogle.onclick = () => this.loginGoogle();
     this.btnGuest.onclick = () => this.loginGuest();
@@ -42,6 +44,10 @@ export default class AuthManager {
   setLoading(isLoading, msg = 'AUTHENTICATING...') {
     if (isLoading) {
       this.status.innerHTML = `<div class="pixel-spinner"></div><br>${msg}`;
+      this.status.style.display = 'block';
+      this.status.style.background = 'transparent';
+      this.status.style.border = 'none';
+
       this.btnWeb3.classList.add('disabled');
       this.btnGoogle.classList.add('disabled');
       this.btnGuest.classList.add('disabled');
@@ -55,7 +61,32 @@ export default class AuthManager {
 
   setError(msg) {
     this.setLoading(false);
-    this.status.innerHTML = `<span style="color: #ff4444;">ERROR: ${msg}</span>`;
+
+    // UX Pro: Styled Error Toast
+    this.status.style.display = 'block';
+    this.status.style.background = 'rgba(220, 20, 60, 0.6)'; // Crimson/Red semi-transparent
+    this.status.style.border = '2px solid #ff0000';
+    this.status.style.color = '#ffffff';
+    this.status.style.padding = '10px';
+    this.status.style.marginTop = '15px';
+    this.status.style.textShadow = '2px 2px 0 #000';
+    this.status.style.fontFamily = '"Press Start 2P", monospace';
+    this.status.style.fontSize = '10px';
+
+    this.status.innerHTML = `
+      <span style="display:block; margin-bottom:5px;">⚠️ CONNECTION FAILED</span>
+      <span>${msg}</span>
+    `;
+
+    // Auto-hide error after 5 seconds
+    setTimeout(() => {
+      if (this.status.innerHTML.includes('CONNECTION FAILED')) {
+        this.status.style.display = 'none';
+        this.status.innerHTML = '';
+        this.status.style.background = 'transparent';
+        this.status.style.border = 'none';
+      }
+    }, 5000);
   }
 
   // --- Login Methods ---
@@ -63,12 +94,24 @@ export default class AuthManager {
   async loginWeb3() {
     this.overlayManager.playSound('click');
     this.setLoading(true, 'CONNECTING WALLET...');
+
     try {
+      // Explicitly await the login process
+      // If user rejects signature or network error occurs, api.web3Login throws.
       await api.web3Login();
+
+      // Only proceed if no error was thrown
       this.onSuccess();
     } catch (e) {
-      console.error(e);
-      this.setError(e.message || 'Connection Failed');
+      console.error('[AuthManager] Web3 Login Error:', e);
+
+      // Extract a user-friendly message
+      let errorMsg = e.message || 'Unknown Error';
+      if (errorMsg.includes('User rejected')) errorMsg = 'Signature Rejected';
+      if (errorMsg.includes('MetaMask not detected')) errorMsg = 'Install MetaMask';
+
+      this.setError(errorMsg);
+      // Ensure we do NOT call onSuccess() here.
     }
   }
 
@@ -89,7 +132,7 @@ export default class AuthManager {
       const address = await wallet.getAddress();
 
       // 2. Sign In using api.loginWithSigner
-      // Note: ChainId 97 (BSC Testnet) is hardcoded for Guest Mode as default if no provider
+      // Note: ChainId 97 (BSC Testnet) is hardcoded for Guest Mode as default
       const chainId = 97;
 
       await api.loginWithSigner(wallet, address, chainId);
@@ -150,7 +193,12 @@ export default class AuthManager {
   }
 
   onSuccess() {
-    this.status.innerHTML = `<span style="color: #00ff00;">ACCESS GRANTED</span>`;
+    this.status.style.background = 'transparent';
+    this.status.style.border = 'none';
+    this.status.innerHTML = `<span style="color: #00ff00; text-shadow: 0 0 5px #00ff00;">ACCESS GRANTED</span>`;
+
+    // Play a success sound if possible (optional)
+
     setTimeout(() => {
       this.menu.classList.remove('active');
       this.overlayManager.onAuthComplete();

@@ -82,24 +82,6 @@ export default class SoundManager {
   }
 
   /**
-   * Loads audio assets into a scene's loader from a manifest file.
-   * @param {Phaser.Scene} scene - The scene to load assets into.
-   * @param {object} manifest - The asset manifest containing sound definitions.
-   */
-  static loadFromManifest(scene, manifest) {
-    if (!scene || !scene.load || !manifest || !manifest.sounds) {
-      console.error(
-        '[SoundManager] Invalid scene, loader, or manifest for loading sounds'
-      );
-      return;
-    }
-
-    const { music, sfx } = manifest.sounds;
-    Object.keys(music).forEach((key) => scene.load.audio(key, music[key]));
-    Object.keys(sfx).forEach((key) => scene.load.audio(key, sfx[key]));
-  }
-
-  /**
    * Plays a sound effect, applying the current SFX volume.
    * It waits for the sound to be decoded before playing to prevent race conditions.
    * @param {Phaser.Scene} scene - The scene in which to play the sound.
@@ -111,6 +93,13 @@ export default class SoundManager {
       console.error('[SoundManager] Invalid scene for playing sound:', key);
       return;
     }
+
+    // Guard clause: if audio not in cache, warn and return to avoid crash
+    if (!scene.cache.audio.exists(key)) {
+      console.warn(`[SoundManager] Audio key "${key}" missing from cache.`);
+      return;
+    }
+
     const sfxConfig = { ...config, volume: this.sfxVolume };
     const sfx = scene.sound.add(key, sfxConfig);
 
@@ -120,6 +109,53 @@ export default class SoundManager {
       playAction();
     } else {
       sfx.once('decoded', playAction);
+    }
+  }
+
+  /**
+   * Generates a synthetic 8-bit beep using Web Audio API.
+   * Used as a fallback or primary click sound to avoid missing asset crashes.
+   * @param {Phaser.Scene} scene - The scene context (used to access AudioContext if available).
+   */
+  static playClick(scene) {
+    // 1. Try playing from cache if available
+    if (scene?.cache?.audio?.exists('click')) {
+      this.play(scene, 'click');
+      return;
+    }
+
+    // 2. Fallback: Generate Synthetic Sound
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+
+      // Reuse Phaser's context if possible, or create new
+      const ctx = scene?.sound?.context || new AudioContext();
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      // Retro 8-bit Square Wave
+      osc.type = 'square';
+
+      // Pitch Sweep (High to Low for a "blip" effect)
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
+
+      // Volume Envelope (Quick fade out)
+      // Apply SFX volume scaling
+      const vol = 0.1 * this.sfxVolume;
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+
+    } catch (e) {
+      console.warn('[SoundManager] Failed to generate synthetic audio', e);
     }
   }
 
