@@ -167,7 +167,7 @@ router.post('/craft', verifyToken, async (req, res) => {
 
 router.get('/reward-pool', async (req, res) => {
   // STUB: Return static success for UI/UX Task Force
-  res.json({ success: true, pool: 150000 });
+  res.json({ success: true, pool: 500000 });
 });
 
 module.exports = router;

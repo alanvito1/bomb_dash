@@ -18,6 +18,8 @@ export default class HeroesModal extends UIModal {
         // Fetch Heroes
         try {
             const res = await api.getHeroes();
+            if (!this.scene || !this.windowContainer) return; // Prevent crash if closed
+
             if (res.success && res.heroes) {
                 this.heroes = res.heroes;
                 this.renderGrid();
@@ -27,7 +29,9 @@ export default class HeroesModal extends UIModal {
             }
         } catch (e) {
             console.error(e);
-            this.showError('Network Error.');
+            if (this.scene && this.windowContainer) {
+                this.showError('Network Error.');
+            }
         }
     }
 

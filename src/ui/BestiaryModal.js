@@ -13,6 +13,8 @@ export default class BestiaryModal extends UIModal {
     async populate() {
         try {
             const res = await api.getBestiary();
+            if (!this.scene || !this.windowContainer) return;
+
             if (res.success) {
                 this.bestiaryData = res.bestiary;
                 this.renderGrid();
@@ -21,7 +23,9 @@ export default class BestiaryModal extends UIModal {
             }
         } catch (e) {
             console.error(e);
-            this.showError('Network Error.');
+            if (this.scene && this.windowContainer) {
+                this.showError('Network Error.');
+            }
         }
     }
 
