@@ -159,6 +159,47 @@ export default class HeroesModal extends UIModal {
             statY += 40;
         });
 
+        // --- PROFICIENCY SKILLS ---
+        const profY = statY + 20;
+        const profTitle = this.scene.add.text(0, profY, 'PROFICIENCY', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            fill: '#00ffff'
+        }).setOrigin(0.5);
+        this.detailsContainer.add(profTitle);
+
+        const profStats = [
+            { label: 'BOMB MASTERY', xp: this.selectedHero.bomb_mastery_xp || 0, color: 0xff4d4d },
+            { label: 'AGILITY', xp: this.selectedHero.agility_xp || 0, color: 0x00ff00 }
+        ];
+
+        let currentProfY = profY + 30;
+        profStats.forEach(stat => {
+            // Level Calc: Logarithmic (Level = sqrt(XP)/2)
+            const level = Math.floor(Math.sqrt(stat.xp) / 2);
+            // XP for current level start: (level * 2)^2
+            // XP for next level: ((level + 1) * 2)^2
+            const currentLevelStartXp = Math.pow(level * 2, 2);
+            const nextLevelXp = Math.pow((level + 1) * 2, 2);
+
+            const xpInLevel = stat.xp - currentLevelStartXp;
+            const xpNeeded = nextLevelXp - currentLevelStartXp;
+            const progress = xpNeeded > 0 ? Math.min(xpInLevel / xpNeeded, 1) : 0;
+
+            const labelText = this.scene.add.text(-this.modalWidth/2 + 40, currentProfY, `${stat.label} (Lvl ${level})`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '8px',
+                fill: '#ffffff'
+            });
+
+            // Bar
+            const barBg = this.scene.add.rectangle(-this.modalWidth/2 + 40, currentProfY + 15, 200, 6, 0x333333).setOrigin(0);
+            const barFill = this.scene.add.rectangle(-this.modalWidth/2 + 40, currentProfY + 15, 200 * progress, 6, stat.color).setOrigin(0);
+
+            this.detailsContainer.add([labelText, barBg, barFill]);
+            currentProfY += 35;
+        });
+
         this.windowContainer.add(this.detailsContainer);
     }
 

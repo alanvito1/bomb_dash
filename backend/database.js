@@ -85,6 +85,8 @@ const Hero = sequelize.define(
       allowNull: false,
       validate: { isIn: [['in_wallet', 'staked']] },
     },
+    bomb_mastery_xp: { type: DataTypes.INTEGER, defaultValue: 0 },
+    agility_xp: { type: DataTypes.INTEGER, defaultValue: 0 },
     last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   {
@@ -238,6 +240,28 @@ const SoloGameHistory = sequelize.define(
 );
 
 SoloGameHistory.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+
+const UserBestiary = sequelize.define(
+  'UserBestiary',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    user_id: { type: DataTypes.INTEGER, allowNull: false },
+    enemy_type: { type: DataTypes.STRING, allowNull: false },
+    kill_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+  },
+  {
+    tableName: 'user_bestiary',
+    timestamps: false,
+    indexes: [
+      {
+        unique: true,
+        fields: ['user_id', 'enemy_type'],
+      },
+    ],
+  }
+);
+
+UserBestiary.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
 
 const News = sequelize.define(
   'News',
@@ -403,6 +427,65 @@ async function runMigrations(queryInterface) {
       });
       console.log("MIGRATION: 'nft_type' column added successfully.");
     }
+
+    if (!heroTableInfo.bomb_mastery_xp) {
+      console.log(
+        "MIGRATION: 'bomb_mastery_xp' column not found in 'heroes' table. Adding it now..."
+      );
+      await queryInterface.addColumn('heroes', 'bomb_mastery_xp', {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      });
+      console.log("MIGRATION: 'bomb_mastery_xp' column added successfully.");
+    }
+
+    if (!heroTableInfo.agility_xp) {
+      console.log(
+        "MIGRATION: 'agility_xp' column not found in 'heroes' table. Adding it now..."
+      );
+      await queryInterface.addColumn('heroes', 'agility_xp', {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      });
+      console.log("MIGRATION: 'agility_xp' column added successfully.");
+    }
+  }
+
+  // --- UserBestiary Table Migration ---
+  if (!tables.includes('user_bestiary')) {
+    console.log(
+      "MIGRATION: 'user_bestiary' table not found. Creating it now..."
+    );
+    await queryInterface.createTable('user_bestiary', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
+      },
+      enemy_type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      kill_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
+    });
+    // Add unique index
+    await queryInterface.addIndex('user_bestiary', ['user_id', 'enemy_type'], {
+      unique: true,
+      name: 'user_bestiary_user_id_enemy_type_unique',
+    });
+    console.log("MIGRATION: 'user_bestiary' table created successfully.");
   }
 
   // --- MatchmakingQueue Table Migration ---
@@ -1011,6 +1094,47 @@ async function getRanking(limit = 10) {
   });
 }
 
+async function updateBestiary(userId, updates) {
+  // updates: { [enemyType]: countToAdd }
+  return sequelize.transaction(async (t) => {
+    const results = [];
+    for (const [enemyType, count] of Object.entries(updates)) {
+      if (count <= 0) continue;
+      const [entry, created] = await UserBestiary.findOrCreate({
+        where: { user_id: userId, enemy_type: enemyType },
+        defaults: { kill_count: 0 },
+        transaction: t,
+      });
+      entry.kill_count += count;
+      await entry.save({ transaction: t });
+      results.push(entry.toJSON());
+    }
+    return results;
+  });
+}
+
+async function getBestiary(userId) {
+  const entries = await UserBestiary.findAll({ where: { user_id: userId } });
+  // Convert to object for easier frontend consumption: { slime: 100, goblin: 50 }
+  const result = {};
+  entries.forEach((entry) => {
+    result[entry.enemy_type] = entry.kill_count;
+  });
+  return result;
+}
+
+async function updateHeroProficiency(heroId, updates) {
+  // updates: { bombMasteryXp: number, agilityXp: number }
+  const hero = await Hero.findByPk(heroId);
+  if (!hero) throw new Error(`Hero ${heroId} not found`);
+
+  if (updates.bombMasteryXp) hero.bomb_mastery_xp += updates.bombMasteryXp;
+  if (updates.agilityXp) hero.agility_xp += updates.agilityXp;
+
+  await hero.save();
+  return hero.toJSON();
+}
+
 module.exports = {
   initDb,
   closeDb,
@@ -1049,6 +1173,9 @@ module.exports = {
   getUnclaimedGamesForUser,
   markGamesAsClaimed,
   getRanking,
+  updateBestiary,
+  getBestiary,
+  updateHeroProficiency,
   // Export models and sequelize instance for testing or advanced usage
   sequelize,
   User,
@@ -1056,4 +1183,5 @@ module.exports = {
   MatchmakingQueue,
   AltarDonation,
   News,
+  UserBestiary,
 };

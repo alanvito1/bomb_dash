@@ -385,6 +385,24 @@ export default class TextureGenerator {
     g.generateTexture(key, 32, 32);
   }
 
+  static createIconBook(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Cover
+    g.fillStyle(0x8B0000); // Dark Red
+    g.fillRoundedRect(6, 4, 20, 24, 2);
+    // Pages
+    g.fillStyle(0xFFFFFF);
+    g.fillRect(24, 6, 4, 20);
+    // Binding
+    g.fillStyle(0x000000);
+    g.fillRect(6, 4, 4, 24);
+    // Symbol
+    g.lineStyle(2, 0xFFD700);
+    g.strokeCircle(16, 16, 6);
+    g.generateTexture(key, 32, 32);
+  }
+
   static createAvatar(scene, key) {
      if (scene.textures.exists(key)) return;
      const g = scene.make.graphics({ x: 0, y: 0, add: false });
@@ -496,6 +514,7 @@ export default class TextureGenerator {
     this.createIconBcoin(scene, 'icon_bcoin');
     this.createIconSettings(scene, 'icon_settings');
     this.createIconWallet(scene, 'icon_wallet');
+    this.createIconBook(scene, 'icon_book');
     this.createAvatar(scene, 'icon_avatar');
 
     // Shop Items

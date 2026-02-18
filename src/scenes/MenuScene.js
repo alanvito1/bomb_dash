@@ -12,6 +12,7 @@ import RankingModal from '../ui/RankingModal.js';
 import SettingsModal from '../ui/SettingsModal.js';
 import WalletModal from '../ui/WalletModal.js';
 import AltarModal from '../ui/AltarModal.js';
+import BestiaryModal from '../ui/BestiaryModal.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -71,6 +72,7 @@ export default class MenuScene extends Phaser.Scene {
     this.settingsModal = new SettingsModal(this);
     this.walletModal = new WalletModal(this);
     this.altarModal = new AltarModal(this);
+    this.bestiaryModal = new BestiaryModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -214,6 +216,14 @@ export default class MenuScene extends Phaser.Scene {
     ]);
 
     // --- RIGHT CORNER: BUTTONS ---
+    // Bestiary (The Codex)
+    const bookBtn = this.add.image(width - 145, 30, 'icon_book').setScale(0.8);
+    addJuice(bookBtn, this);
+    bookBtn.on('pointerup', () => {
+        this.bestiaryModal.open();
+    });
+    container.add(bookBtn);
+
     // Altar Widget
     if (this.textures.exists('icon_altar')) {
         const altarBtn = this.add

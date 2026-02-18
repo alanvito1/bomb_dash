@@ -417,6 +417,14 @@ class ApiClient {
     });
   }
 
+  /**
+   * Fetches the bestiary data for the current user.
+   * @returns {Promise<object>} A promise that resolves with the bestiary data.
+   */
+  async getBestiary() {
+    return this.fetch('/game/bestiary');
+  }
+
   // --- Matchmaking Methods ---
 
   /**
@@ -474,12 +482,14 @@ class ApiClient {
    * @param {number} heroId - The ID of the hero used in the match.
    * @param {number} xpGained - The amount of XP (score) gained.
    * @param {number} coinsCollected - The amount of coins collected (Session Loot).
+   * @param {object} bestiary - The session bestiary updates { enemyType: count }.
+   * @param {object} proficiency - The session proficiency updates { bombHits: number, distance: number }.
    * @returns {Promise<any>} A promise that resolves with the backend's response.
    */
-  async completeMatch(heroId, xpGained, coinsCollected = 0) {
-    return this.fetch('/matches/complete', {
+  async completeMatch(heroId, xpGained, coinsCollected = 0, bestiary = {}, proficiency = {}) {
+    return this.fetch('/game/matches/complete', {
       method: 'POST',
-      body: JSON.stringify({ heroId, xpGained, coinsCollected }),
+      body: JSON.stringify({ heroId, xpGained, coinsCollected, bestiary, proficiency }),
     });
   }
 

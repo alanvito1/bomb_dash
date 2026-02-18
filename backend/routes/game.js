@@ -69,8 +69,18 @@ router.post('/checkpoint', async (req, res) => {
   }
 });
 
+router.get('/bestiary', async (req, res) => {
+  try {
+    const bestiary = await db.getBestiary(req.user.userId);
+    res.json({ success: true, bestiary });
+  } catch (error) {
+    console.error('Error fetching bestiary:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch bestiary.' });
+  }
+});
+
 router.post('/matches/complete', async (req, res) => {
-  const { heroId, xpGained, coinsCollected } = req.body;
+  const { heroId, xpGained, coinsCollected, bestiary, proficiency } = req.body;
 
   if (!heroId || typeof xpGained === 'undefined' || xpGained < 0) {
     return res.status(400).json({
@@ -106,6 +116,30 @@ router.post('/matches/complete', async (req, res) => {
     // Award User XP and Coins (Session Loot)
     // Note: grantRewards handles level-ups internally
     await db.grantRewards(req.user.userId, coins, xpGained);
+
+    // --- Phase 2: Infinite Grind ---
+    // 1. Update Bestiary
+    if (bestiary && typeof bestiary === 'object') {
+      await db.updateBestiary(req.user.userId, bestiary);
+    }
+
+    // 2. Update Proficiency
+    if (proficiency) {
+      const { bombHits = 0, distance = 0 } = proficiency;
+
+      // Conversion Rates:
+      // 1 Hit = 1 XP
+      // 100 Distance Units = 1 XP
+      const bombXp = Math.floor(bombHits);
+      const agilityXp = Math.floor(distance / 100);
+
+      if (bombXp > 0 || agilityXp > 0) {
+         await db.updateHeroProficiency(heroId, {
+           bombMasteryXp: bombXp,
+           agilityXp: agilityXp
+         });
+      }
+    }
 
     const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
     const updatedHero = updatedHeroes.find((h) => h.id === heroId);

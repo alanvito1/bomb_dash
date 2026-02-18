@@ -66,9 +66,44 @@ export default class CollisionHandler {
     if (!enemy.active) return;
     bomb.destroy();
 
-    const damage = this.scene.playerStats?.damage ?? 1;
+    // Proficiency: Bomb Mastery
+    this.scene.sessionBombHits = (this.scene.sessionBombHits || 0) + 1;
+
+    // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
+    const startXp = this.scene.playerStats.bomb_mastery_xp || 0;
+    const currentXp = startXp + this.scene.sessionBombHits;
+
+    // Check if level changed from previous hit
+    const prevXp = currentXp - 1;
+    const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
+    const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
+
+    if (currentLevel > prevLevel) {
+        createFloatingText(this.scene, bomb.x, bomb.y - 20, 'BOMB MASTERY UP!', '#ffff00');
+        SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
+    }
+
+    let damage = this.scene.playerStats?.damage ?? 1;
+
+    // Bestiary Bonus
+    const enemyType = enemy.texture.key;
+    const kills = (this.scene.bestiaryData && this.scene.bestiaryData[enemyType]) || 0;
+
+    let bonus = 0;
+    if (kills >= 5000) bonus = 0.15;
+    else if (kills >= 1000) bonus = 0.10;
+    else if (kills >= 100) bonus = 0.05;
+
+    if (bonus > 0) {
+        damage = Math.ceil(damage * (1 + bonus));
+    }
+
     enemy.hp -= damage;
-    createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, '#ff4d4d');
+
+    // Show Critical Hit if bonus applies? Or just normal text.
+    const color = bonus > 0 ? '#ff00ff' : '#ff4d4d'; // Purple for knowledge bonus
+    createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, color);
+
     SoundManager.play(this.scene, 'hit_enemy');
 
     // ⚪ HIT FLASH
@@ -136,6 +171,20 @@ export default class CollisionHandler {
 
       // Update HUD to show SESSION LOOT (The "At Risk" Amount)
       this.events.emit('update-bcoin', { balance: this.scene.sessionLoot.coins });
+
+      // Bestiary Collection
+      const type = enemy.texture.key;
+      if (!this.scene.sessionBestiary) this.scene.sessionBestiary = {};
+      this.scene.sessionBestiary[type] = (this.scene.sessionBestiary[type] || 0) + 1;
+
+      // Floating Text Feedback
+      // Only show occasionally or if it's a new unlock (hard to track unlock here without complex state)
+      // Just show "Knowledge Up" sometimes?
+      // Prompt: "Ao matar um monstro... mostre um pequeno texto flutuante ('Bestiary Updated')"
+      // To avoid spam, maybe only every 10 kills or if it's a rare monster?
+      // For now, let's show it with a small chance or specific color.
+      // Actually, let's show "+1 Knowledge" in Blue.
+      createFloatingText(this.scene, enemy.x, enemy.y - 40, 'Bestiary +1', '#00ffff');
 
       this.scene.enemiesKilled++;
 
