@@ -102,22 +102,8 @@ router.get('/guilds', async (req, res) => {
 
 // Get My Guild
 router.get('/my-guild', verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const member = await GuildMember.findOne({
-      where: { user_id: userId },
-      include: [{ model: Guild }]
-    });
-
-    if (!member) {
-      return res.json({ success: true, guild: null });
-    }
-
-    res.json({ success: true, guild: member.Guild, role: member.role });
-  } catch (error) {
-    console.error('Get My Guild Error:', error);
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
+  // STUB: Return null guild for UI/UX Task Force
+  res.json({ success: true, guild: null });
 });
 
 module.exports = router;

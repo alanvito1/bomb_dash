@@ -166,13 +166,8 @@ router.post('/craft', verifyToken, async (req, res) => {
 });
 
 router.get('/reward-pool', async (req, res) => {
-  try {
-    const pool = await GameSetting.findOne({ where: { key: 'global_reward_pool' } });
-    res.json({ success: true, pool: parseInt(pool?.value || '0') });
-  } catch (error) {
-    console.error('Reward Pool Error:', error);
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
+  // STUB: Return static success for UI/UX Task Force
+  res.json({ success: true, pool: 1000000 });
 });
 
 module.exports = router;

@@ -92,6 +92,7 @@ const adminRoutes = require('./routes/admin.js');
 const newsRoutes = require('./routes/news.js');
 const socialRoutes = require('./routes/social.js');
 const economyRoutes = require('./routes/economy.js');
+const rankingRoutes = require('./routes/ranking.js');
 
 const app = express();
 // CRITICAL FIX: Fallback to 8080 strictly for Cloud Run
@@ -241,6 +242,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/economy', economyRoutes);
+app.use('/api/ranking', rankingRoutes);
 
 // Additional route for contracts (outside specific modules but under /api logic via app.get)
 // Note: app.use('/api', ...) middleware above applies to this too since it starts with /api

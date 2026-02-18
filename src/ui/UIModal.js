@@ -31,7 +31,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
 
     // 3. Window Background (Neon Cyberpunk Style)
     const bg = scene.add.graphics();
-    bg.fillStyle(0x000000, 0.95);
+    bg.fillStyle(0x000000, 1.0); // Solid Black
     bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
 
     // Border
@@ -41,6 +41,10 @@ export default class UIModal extends Phaser.GameObjects.Container {
     // Glow effect (simulated with multiple strokes or alpha)
     bg.lineStyle(4, 0x00ffff, 0.3);
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
+
+    // Interactive Hit Area for Background (Blocks clicks)
+    const hitArea = new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height);
+    bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
     this.windowContainer.add(bg);
 
@@ -63,7 +67,7 @@ export default class UIModal extends Phaser.GameObjects.Container {
     this.windowContainer.add([titleText, line]);
 
     // 5. Close Button (X)
-    const closeBtnSize = 30;
+    const closeBtnSize = 50; // Increased size
     const closeBtnX = width / 2 - 25;
     const closeBtnY = -height / 2 + 25;
 
@@ -77,8 +81,8 @@ export default class UIModal extends Phaser.GameObjects.Container {
     }).setOrigin(0.5);
 
     closeBtn.add([btnBg, xText]);
-    closeBtn.setSize(30, 30);
-    closeBtn.setInteractive({ useHandCursor: true });
+    // Larger interactive area
+    closeBtn.setInteractive(new Phaser.Geom.Rectangle(-25, -25, 50, 50), Phaser.Geom.Rectangle.Contains);
 
     closeBtn.on('pointerover', () => {
         btnBg.setFillStyle(0xff0000, 0.5);
@@ -122,10 +126,21 @@ export default class UIModal extends Phaser.GameObjects.Container {
         duration: 300,
         ease: 'Back.out'
     });
+
+    // Auto-Close Logic (Delay to prevent ghost clicks)
+    // Remove any existing listener first
+    this.overlay.off('pointerdown');
+    this.scene.time.delayedCall(100, () => {
+        if (!this.visible) return; // Prevent race condition
+        this.overlay.once('pointerdown', () => this.close());
+    });
   }
 
   close() {
-      SoundManager.play(this.scene, 'soft_click');
+      SoundManager.playClick(this.scene); // Requested "Click" sound
+
+      // Cleanup listener
+      this.overlay.off('pointerdown');
 
       // Animation: Pop Out
       this.scene.tweens.add({
