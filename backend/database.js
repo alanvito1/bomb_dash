@@ -276,6 +276,76 @@ const News = sequelize.define(
   { tableName: 'news', timestamps: false }
 );
 
+// --- NEW MODELS FOR SOCIETY & ECONOMY ---
+
+const Item = sequelize.define(
+  'Item',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    type: { type: DataTypes.STRING, allowNull: false }, // 'weapon', 'consumable', 'material'
+    rarity: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Common',
+      validate: { isIn: [['Common', 'Rare', 'Epic', 'Legendary', 'Mythic']] }
+    },
+    stats: { type: DataTypes.TEXT, allowNull: true }, // JSON string of stats
+    image_url: { type: DataTypes.STRING, allowNull: true },
+  },
+  { tableName: 'items', timestamps: false }
+);
+
+const UserItem = sequelize.define(
+  'UserItem',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    user_id: { type: DataTypes.INTEGER, allowNull: false },
+    item_id: { type: DataTypes.INTEGER, allowNull: false },
+    quantity: { type: DataTypes.INTEGER, defaultValue: 1 },
+    equipped: { type: DataTypes.BOOLEAN, defaultValue: false },
+  },
+  { tableName: 'user_items', timestamps: false }
+);
+
+UserItem.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+UserItem.belongsTo(Item, { foreignKey: 'item_id', onDelete: 'CASCADE' });
+User.hasMany(UserItem, { foreignKey: 'user_id' });
+
+const Guild = sequelize.define(
+  'Guild',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING, allowNull: false, unique: true },
+    tag: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: { len: [3, 4], is: /^[A-Z0-9]+$/ }
+    },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { tableName: 'guilds', timestamps: false }
+);
+
+const GuildMember = sequelize.define(
+  'GuildMember',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    guild_id: { type: DataTypes.INTEGER, allowNull: false },
+    user_id: { type: DataTypes.INTEGER, allowNull: false, unique: true }, // User can only be in one guild
+    role: { type: DataTypes.STRING, defaultValue: 'member' }, // 'leader', 'officer', 'member'
+    joined_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { tableName: 'guild_members', timestamps: false }
+);
+
+Guild.hasMany(GuildMember, { foreignKey: 'guild_id', onDelete: 'CASCADE' });
+GuildMember.belongsTo(Guild, { foreignKey: 'guild_id' });
+GuildMember.belongsTo(User, { foreignKey: 'user_id' });
+User.hasOne(GuildMember, { foreignKey: 'user_id' }); // Link User to GuildMember
+
 async function seedDatabase() {
   await WagerTier.bulkCreate(
     [
@@ -291,9 +361,30 @@ async function seedDatabase() {
     defaults: { value: '1.0' },
   });
 
+  await GameSetting.findOrCreate({
+    where: { key: 'global_reward_pool' },
+    defaults: { value: '0' },
+  });
+
   await AltarStatus.findOrCreate({
     where: { id: 1 },
   });
+
+  // Seed Items
+  const items = [
+    { name: 'Wooden Sword', type: 'weapon', rarity: 'Common', stats: JSON.stringify({ damage: 5 }) },
+    { name: 'Iron Sword', type: 'weapon', rarity: 'Common', stats: JSON.stringify({ damage: 10 }) },
+    { name: 'Steel Sword', type: 'weapon', rarity: 'Rare', stats: JSON.stringify({ damage: 20 }) },
+    { name: 'Golden Sword', type: 'weapon', rarity: 'Legendary', stats: JSON.stringify({ damage: 50 }) },
+    { name: 'Health Potion', type: 'consumable', rarity: 'Common', stats: JSON.stringify({ heal: 50 }) },
+  ];
+
+  for (const item of items) {
+    await Item.findOrCreate({
+      where: { name: item.name },
+      defaults: item,
+    });
+  }
 }
 
 /**
@@ -318,8 +409,6 @@ async function runMigrations(queryInterface) {
         defaultValue: 1000,
       });
       console.log("MIGRATION: 'coins' column added successfully.");
-    } else {
-      console.log("MIGRATION: 'coins' column already exists in 'users' table.");
     }
 
     if (!userTableInfo.flagged_cheater) {
@@ -334,6 +423,10 @@ async function runMigrations(queryInterface) {
     }
   }
 
+  // New tables check (implicit via sync() but good to log)
+  if (!tables.includes('items')) console.log("MIGRATION: 'items' table missing (will be created by sync).");
+  if (!tables.includes('guilds')) console.log("MIGRATION: 'guilds' table missing (will be created by sync).");
+
   // --- WagerMatches Table Migration ---
   if (tables.includes('wager_matches')) {
     const matchesTableInfo = await queryInterface.describeTable(
@@ -341,47 +434,16 @@ async function runMigrations(queryInterface) {
     );
 
     if (!matchesTableInfo.player1_score) {
-      console.log(
-        "MIGRATION: 'player1_score' column not found in 'wager_matches' table. Adding it now..."
-      );
-      await queryInterface.addColumn('wager_matches', 'player1_score', {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'player1_score' column added successfully.");
+      await queryInterface.addColumn('wager_matches', 'player1_score', { type: DataTypes.INTEGER, allowNull: true });
     }
-
     if (!matchesTableInfo.player2_score) {
-      console.log(
-        "MIGRATION: 'player2_score' column not found in 'wager_matches' table. Adding it now..."
-      );
-      await queryInterface.addColumn('wager_matches', 'player2_score', {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'player2_score' column added successfully.");
+      await queryInterface.addColumn('wager_matches', 'player2_score', { type: DataTypes.INTEGER, allowNull: true });
     }
-
     if (!matchesTableInfo.player1_hero_id) {
-      console.log(
-        "MIGRATION: 'player1_hero_id' column not found in 'wager_matches' table. Adding it now..."
-      );
-      await queryInterface.addColumn('wager_matches', 'player1_hero_id', {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'player1_hero_id' column added successfully.");
+      await queryInterface.addColumn('wager_matches', 'player1_hero_id', { type: DataTypes.INTEGER, allowNull: true });
     }
-
     if (!matchesTableInfo.player2_hero_id) {
-      console.log(
-        "MIGRATION: 'player2_hero_id' column not found in 'wager_matches' table. Adding it now..."
-      );
-      await queryInterface.addColumn('wager_matches', 'player2_hero_id', {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'player2_hero_id' column added successfully.");
+      await queryInterface.addColumn('wager_matches', 'player2_hero_id', { type: DataTypes.INTEGER, allowNull: true });
     }
   }
 
@@ -390,153 +452,51 @@ async function runMigrations(queryInterface) {
     const heroTableInfo = await queryInterface.describeTable('heroes');
 
     if (!heroTableInfo.sprite_name) {
-      console.log(
-        "MIGRATION: 'sprite_name' column not found in 'heroes' table. Adding it now..."
-      );
-      await queryInterface.addColumn('heroes', 'sprite_name', {
-        type: DataTypes.STRING,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'sprite_name' column added successfully.");
-    } else {
-      console.log(
-        "MIGRATION: 'sprite_name' column already exists in 'heroes' table."
-      );
+      await queryInterface.addColumn('heroes', 'sprite_name', { type: DataTypes.STRING, allowNull: true });
     }
-
     if (!heroTableInfo.rarity) {
-      console.log(
-        "MIGRATION: 'rarity' column not found in 'heroes' table. Adding it now..."
-      );
-      await queryInterface.addColumn('heroes', 'rarity', {
-        type: DataTypes.STRING,
-        defaultValue: 'Common',
-        allowNull: false,
-      });
-      console.log("MIGRATION: 'rarity' column added successfully.");
+      await queryInterface.addColumn('heroes', 'rarity', { type: DataTypes.STRING, defaultValue: 'Common', allowNull: false });
     }
-
     if (!heroTableInfo.nft_type) {
-      console.log(
-        "MIGRATION: 'nft_type' column not found in 'heroes' table. Adding it now..."
-      );
-      await queryInterface.addColumn('heroes', 'nft_type', {
-        type: DataTypes.STRING,
-        defaultValue: 'HERO',
-        allowNull: false,
-      });
-      console.log("MIGRATION: 'nft_type' column added successfully.");
+      await queryInterface.addColumn('heroes', 'nft_type', { type: DataTypes.STRING, defaultValue: 'HERO', allowNull: false });
     }
-
     if (!heroTableInfo.bomb_mastery_xp) {
-      console.log(
-        "MIGRATION: 'bomb_mastery_xp' column not found in 'heroes' table. Adding it now..."
-      );
-      await queryInterface.addColumn('heroes', 'bomb_mastery_xp', {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      });
-      console.log("MIGRATION: 'bomb_mastery_xp' column added successfully.");
+      await queryInterface.addColumn('heroes', 'bomb_mastery_xp', { type: DataTypes.INTEGER, defaultValue: 0 });
     }
-
     if (!heroTableInfo.agility_xp) {
-      console.log(
-        "MIGRATION: 'agility_xp' column not found in 'heroes' table. Adding it now..."
-      );
-      await queryInterface.addColumn('heroes', 'agility_xp', {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      });
-      console.log("MIGRATION: 'agility_xp' column added successfully.");
+      await queryInterface.addColumn('heroes', 'agility_xp', { type: DataTypes.INTEGER, defaultValue: 0 });
     }
   }
 
   // --- UserBestiary Table Migration ---
   if (!tables.includes('user_bestiary')) {
-    console.log(
-      "MIGRATION: 'user_bestiary' table not found. Creating it now..."
-    );
     await queryInterface.createTable('user_bestiary', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      enemy_type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      kill_count: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
+      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+      user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }, onDelete: 'CASCADE' },
+      enemy_type: { type: DataTypes.STRING, allowNull: false },
+      kill_count: { type: DataTypes.INTEGER, defaultValue: 0 },
     });
-    // Add unique index
-    await queryInterface.addIndex('user_bestiary', ['user_id', 'enemy_type'], {
-      unique: true,
-      name: 'user_bestiary_user_id_enemy_type_unique',
-    });
-    console.log("MIGRATION: 'user_bestiary' table created successfully.");
+    await queryInterface.addIndex('user_bestiary', ['user_id', 'enemy_type'], { unique: true, name: 'user_bestiary_user_id_enemy_type_unique' });
   }
 
   // --- MatchmakingQueue Table Migration ---
   if (tables.includes('matchmaking_queue')) {
-    const queueTableInfo = await queryInterface.describeTable(
-      'matchmaking_queue'
-    );
-
+    const queueTableInfo = await queryInterface.describeTable('matchmaking_queue');
     if (!queueTableInfo.match_data) {
-      console.log(
-        "MIGRATION: 'match_data' column not found in 'matchmaking_queue' table. Adding it now..."
-      );
-      await queryInterface.addColumn('matchmaking_queue', 'match_data', {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      });
-      console.log("MIGRATION: 'match_data' column added successfully.");
+      await queryInterface.addColumn('matchmaking_queue', 'match_data', { type: DataTypes.TEXT, allowNull: true });
     }
   }
 
   // --- News Table Migration ---
   if (!tables.includes('news')) {
-    console.log("MIGRATION: 'news' table not found. Creating it now...");
     await queryInterface.createTable('news', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      category: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      content: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      image_url: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-      },
+      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+      title: { type: DataTypes.STRING, allowNull: false },
+      category: { type: DataTypes.STRING, allowNull: false },
+      content: { type: DataTypes.TEXT, allowNull: false },
+      image_url: { type: DataTypes.STRING, allowNull: true },
+      created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     });
-    console.log("MIGRATION: 'news' table created successfully.");
   }
 
   console.log('MIGRATION: Database schema check complete.');
@@ -1088,6 +1048,10 @@ async function getRanking(limit = 10) {
         attributes: ['wallet_address'],
         required: true, // Ensures we only get checkpoints for existing users
       },
+      {
+        model: GuildMember,
+        include: [{ model: Guild, attributes: ['tag'] }]
+      }
     ],
     order: [['highest_wave_reached', 'DESC']],
     limit: limit,
@@ -1184,4 +1148,10 @@ module.exports = {
   AltarDonation,
   News,
   UserBestiary,
+  Item,
+  UserItem,
+  Guild,
+  GuildMember,
+  WagerTier,
+  GameSetting
 };

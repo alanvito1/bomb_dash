@@ -78,6 +78,7 @@ const oracle = require('./oracle.js');
 const tournamentService = require('./tournament_service.js');
 const gameState = require('./game_state.js');
 const matchmaking = require('./matchmaking.js');
+const supabaseService = require('./supabase_service.js');
 
 const authRoutes = require('./routes/auth.js');
 const heroRoutes = require('./routes/heroes.js');
@@ -89,6 +90,8 @@ const cronRoutes = require('./routes/cron.js');
 const testnetRoutes = require('./routes/testnet.js');
 const adminRoutes = require('./routes/admin.js');
 const newsRoutes = require('./routes/news.js');
+const socialRoutes = require('./routes/social.js');
+const economyRoutes = require('./routes/economy.js');
 
 const app = express();
 // CRITICAL FIX: Fallback to 8080 strictly for Cloud Run
@@ -114,6 +117,9 @@ async function performInitialization() {
   try {
     await db.initDb();
     AVRE.success('Database connection established.');
+
+    supabaseService.initSupabase();
+    AVRE.success('Supabase service initialized.');
 
     const isOracleReady = await oracle.initOracle();
 
@@ -233,6 +239,8 @@ app.use('/api/cron', cronRoutes);
 app.use('/api/testnet', testnetRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/economy', economyRoutes);
 
 // Additional route for contracts (outside specific modules but under /api logic via app.get)
 // Note: app.use('/api', ...) middleware above applies to this too since it starts with /api

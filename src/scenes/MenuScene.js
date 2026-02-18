@@ -13,6 +13,9 @@ import SettingsModal from '../ui/SettingsModal.js';
 import WalletModal from '../ui/WalletModal.js';
 import AltarModal from '../ui/AltarModal.js';
 import BestiaryModal from '../ui/BestiaryModal.js';
+import SocialModal from '../ui/SocialModal.js';
+import ForgeModal from '../ui/ForgeModal.js';
+import ChatWidget from '../ui/ChatWidget.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -63,6 +66,7 @@ export default class MenuScene extends Phaser.Scene {
     // --- LAYOUT ---
     this.createHeroShowcase(width, height);
     this.createTopBar(width);
+    this.createRewardPoolWidget(width);
     this.createBottomDock(width, height);
 
     // --- MODALS ---
@@ -73,6 +77,8 @@ export default class MenuScene extends Phaser.Scene {
     this.walletModal = new WalletModal(this);
     this.altarModal = new AltarModal(this);
     this.bestiaryModal = new BestiaryModal(this);
+    this.socialModal = new SocialModal(this);
+    this.forgeModal = new ForgeModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -83,6 +89,9 @@ export default class MenuScene extends Phaser.Scene {
     // Initial fetch
     bcoinService.updateBalance();
     this.loadUserHero();
+
+    // --- CHAT ---
+    this.chatWidget = new ChatWidget(this);
   }
 
   async loadUserHero() {
@@ -116,6 +125,57 @@ export default class MenuScene extends Phaser.Scene {
     if (this.grid) {
       this.grid.tilePositionY -= 0.5;
     }
+  }
+
+  createRewardPoolWidget(width) {
+      const container = this.add.container(width / 2, 90);
+
+      const bg = this.add.graphics();
+      bg.fillStyle(0x000000, 0.7);
+      bg.fillRoundedRect(-100, 0, 200, 30, 4);
+      bg.lineStyle(1, 0xffd700);
+      bg.strokeRoundedRect(-100, 0, 200, 30, 4);
+
+      const label = this.add.text(0, 5, 'REWARD POOL', {
+          fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffd700'
+      }).setOrigin(0.5);
+
+      this.poolText = this.add.text(0, 20, 'Loading...', {
+          fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#fff'
+      }).setOrigin(0.5);
+
+      this.trendArrow = this.add.text(85, 15, '-', {
+          fontSize: '12px', fill: '#00ff00'
+      }).setOrigin(0.5);
+
+      container.add([bg, label, this.poolText, this.trendArrow]);
+
+      this.time.addEvent({ delay: 10000, callback: this.updateRewardPool, callbackScope: this, loop: true });
+      this.updateRewardPool();
+  }
+
+  async updateRewardPool() {
+      if (!this.poolText || !this.poolText.active) return;
+      try {
+          const res = await api.getRewardPool();
+          if (res.success) {
+              const val = res.pool;
+              this.poolText.setText(`${val} BCOIN`);
+
+              const prev = this.lastPoolValue !== undefined ? this.lastPoolValue : val;
+              if (val > prev) {
+                  this.trendArrow.setText('▲').setColor('#00ff00');
+              } else if (val < prev) {
+                  this.trendArrow.setText('▼').setColor('#ff0000');
+              } else {
+                  this.trendArrow.setText('-');
+                  this.trendArrow.setColor('#888888');
+              }
+              this.lastPoolValue = val;
+          }
+      } catch (e) {
+          console.warn(e);
+      }
   }
 
   createTopBar(width) {
@@ -216,6 +276,46 @@ export default class MenuScene extends Phaser.Scene {
     ]);
 
     // --- RIGHT CORNER: BUTTONS ---
+    // Forge (Economy)
+    if (this.textures.exists('icon_forge')) {
+        const forgeBtn = this.add.image(width - 225, 30, 'icon_forge').setScale(0.8);
+        addJuice(forgeBtn, this);
+        forgeBtn.on('pointerup', () => this.forgeModal.open());
+        container.add(forgeBtn);
+    } else {
+        const gfx = this.add.graphics();
+        gfx.fillStyle(0xff4500, 1);
+        gfx.fillCircle(0, 0, 12);
+        const icon = this.add.container(width - 225, 30);
+        icon.add(gfx);
+        icon.add(this.add.text(0, 0, 'F', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
+        icon.setSize(24, 24);
+        icon.setInteractive({ useHandCursor: true });
+        addJuice(icon, this);
+        icon.on('pointerup', () => this.forgeModal.open());
+        container.add(icon);
+    }
+
+    // Guild (Social)
+    if (this.textures.exists('icon_guild')) {
+        const guildBtn = this.add.image(width - 185, 30, 'icon_guild').setScale(0.8);
+        addJuice(guildBtn, this);
+        guildBtn.on('pointerup', () => this.socialModal.open());
+        container.add(guildBtn);
+    } else {
+        const gfx = this.add.graphics();
+        gfx.fillStyle(0xff00ff, 1);
+        gfx.fillCircle(0, 0, 12);
+        const icon = this.add.container(width - 185, 30);
+        icon.add(gfx);
+        icon.add(this.add.text(0, 0, 'G', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
+        icon.setSize(24, 24);
+        icon.setInteractive({ useHandCursor: true });
+        addJuice(icon, this);
+        icon.on('pointerup', () => this.socialModal.open());
+        container.add(icon);
+    }
+
     // Bestiary (The Codex)
     const bookBtn = this.add.image(width - 145, 30, 'icon_book').setScale(0.8);
     addJuice(bookBtn, this);
@@ -416,7 +516,11 @@ export default class MenuScene extends Phaser.Scene {
   getShortName() {
     if (!this.userData || !this.userData.walletAddress) return 'Guest';
     const addr = this.userData.walletAddress;
-    return `${addr.substring(0, 6)}...`;
+    const shortAddr = `${addr.substring(0, 6)}...`;
+    if (this.userData.guildTag) {
+        return `[${this.userData.guildTag}] ${shortAddr}`;
+    }
+    return shortAddr;
   }
 
   handleBalanceUpdate(data) {
@@ -443,6 +547,7 @@ export default class MenuScene extends Phaser.Scene {
       this.handleBalanceUpdate,
       this
     );
+    if (this.chatWidget) this.chatWidget.destroy();
     this.children.removeAll(true);
   }
 }
