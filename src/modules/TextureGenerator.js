@@ -399,6 +399,73 @@ export default class TextureGenerator {
      g.generateTexture(key, 32, 32);
   }
 
+  static createChest(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Box
+    g.fillStyle(0x8B4513);
+    g.fillRect(4, 10, 24, 16);
+    // Lid (Arc)
+    g.fillStyle(0xA0522D);
+    g.beginPath();
+    g.arc(16, 10, 12, Math.PI, 0);
+    g.fill();
+    // Gold Bands
+    g.fillStyle(0xFFD700);
+    g.fillRect(14, 10, 4, 16); // Vertical lock strip
+    g.fillRect(4, 10, 24, 2); // Lid seam
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createPotion(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Flask Body (Round bottom)
+    g.fillStyle(0xFF00FF); // Pink/Purple potion
+    g.beginPath();
+    g.arc(16, 20, 10, 0, Math.PI * 2);
+    g.fill();
+    // Neck
+    g.fillRect(12, 4, 8, 8);
+    // Cork
+    g.fillStyle(0x8B4513);
+    g.fillRect(12, 2, 8, 4);
+    // Shine
+    g.fillStyle(0xFFFFFF);
+    g.fillCircle(12, 16, 3);
+    g.generateTexture(key, 32, 32);
+  }
+
+  static createGemPack(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    // Gem 1
+    g.fillStyle(0x00FFFF); // Cyan
+    g.beginPath();
+    g.moveTo(16, 4);
+    g.lineTo(24, 12);
+    g.lineTo(16, 20);
+    g.lineTo(8, 12);
+    g.fill();
+    // Gem 2 (Behind)
+    g.fillStyle(0x008888);
+    g.beginPath();
+    g.moveTo(10, 14);
+    g.lineTo(18, 22);
+    g.lineTo(10, 30);
+    g.lineTo(2, 22);
+    g.fill();
+    // Gem 3 (Behind)
+    g.fillStyle(0x00AAAA);
+    g.beginPath();
+    g.moveTo(22, 14);
+    g.lineTo(30, 22);
+    g.lineTo(22, 30);
+    g.lineTo(14, 22);
+    g.fill();
+    g.generateTexture(key, 32, 32);
+  }
+
   /**
    * Helper to generate all common missing assets.
    * @param {Phaser.Scene} scene
@@ -430,6 +497,11 @@ export default class TextureGenerator {
     this.createIconSettings(scene, 'icon_settings');
     this.createIconWallet(scene, 'icon_wallet');
     this.createAvatar(scene, 'icon_avatar');
+
+    // Shop Items
+    this.createChest(scene, 'item_chest');
+    this.createPotion(scene, 'item_potion');
+    this.createGemPack(scene, 'item_gems');
 
     // Additional assets needed for full game functionality
     this.createHearts(scene);

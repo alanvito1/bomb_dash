@@ -5,6 +5,9 @@ import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import TextureGenerator from '../modules/TextureGenerator.js';
+import ShopModal from '../ui/ShopModal.js';
+import HeroesModal from '../ui/HeroesModal.js';
+import RankingModal from '../ui/RankingModal.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -56,6 +59,11 @@ export default class MenuScene extends Phaser.Scene {
     this.createHeroShowcase(width, height);
     this.createTopBar(width);
     this.createBottomDock(width, height);
+
+    // --- MODALS ---
+    this.shopModal = new ShopModal(this);
+    this.heroesModal = new HeroesModal(this);
+    this.rankingModal = new RankingModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -257,16 +265,16 @@ export default class MenuScene extends Phaser.Scene {
 
     // Buttons
     const buttons = [
-      { icon: 'icon_base', label: 'Base', scene: null, active: true },
-      { icon: 'icon_heroes', label: 'Heroes', scene: CST.SCENES.PROFILE },
+      { icon: 'icon_base', label: 'Base', active: true },
+      { icon: 'icon_heroes', label: 'Heroes', action: () => this.heroesModal.open() },
       {
         icon: 'icon_battle',
         label: 'BATTLE',
         scene: CST.SCENES.CHARACTER_SELECTION,
         isBattle: true,
       },
-      { icon: 'icon_shop', label: 'Shop', scene: CST.SCENES.SHOP },
-      { icon: 'icon_ranking', label: 'Ranking', scene: CST.SCENES.RANKING },
+      { icon: 'icon_shop', label: 'Shop', action: () => this.shopModal.open() },
+      { icon: 'icon_ranking', label: 'Ranking', action: () => this.rankingModal.open() },
     ];
 
     const step = width / buttons.length;
@@ -341,6 +349,7 @@ export default class MenuScene extends Phaser.Scene {
 
         btnContainer.on('pointerdown', () => {
           SoundManager.playClick(this);
+          if (btn.action) btn.action();
           if (btn.scene) {
             this.scene.start(btn.scene, { userData: this.userData });
           }
