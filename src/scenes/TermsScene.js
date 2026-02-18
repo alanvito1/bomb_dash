@@ -126,7 +126,8 @@ class TermsScene extends Phaser.Scene {
 
     // Define checkScrollAndActivate as a method of the scene class.
     this.checkScrollAndActivate = () => {
-      if (!this.canAccept && this.textObject.y <= -this.maxScroll) {
+      // Allow a small buffer (e.g. 5px) to account for float precision or user getting "close enough"
+      if (!this.canAccept && this.textObject.y <= -this.maxScroll + 5) {
         this.canAccept = true;
         this.activateButton();
       }
@@ -135,8 +136,9 @@ class TermsScene extends Phaser.Scene {
     if (!this.canAccept) {
       // Use the class method for the check
       this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+        // Increased scroll speed (0.5 -> 1.0) for better UX
         this.textObject.y = Phaser.Math.Clamp(
-          this.textObject.y - deltaY * 0.5,
+          this.textObject.y - deltaY * 1.0,
           -this.maxScroll,
           0
         );
