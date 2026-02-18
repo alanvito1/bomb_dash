@@ -187,9 +187,10 @@ export default class LoadingScene extends Phaser.Scene {
       // However, to respect the "Emergency" prompt:
       // "Fluxo Redundante: O usuário loga no Overlay, mas depois cai na AuthChoiceScene de novo."
       // If we are here, it means we really couldn't find a session.
-      console.log('[LoadingScene] No session found. Redirecting to AuthChoice.');
+      console.log(
+        '[LoadingScene] No session found. Redirecting to AuthChoice.'
+      );
       this.scene.start('AuthChoiceScene');
-
     } catch (error) {
       console.error('[LoadingScene] Critical Initialization Error:', error);
       this.handleInitializationError(error, loadingText);

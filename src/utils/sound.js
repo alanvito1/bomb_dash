@@ -96,7 +96,9 @@ export default class SoundManager {
 
     // Guard clause: if audio not in cache, fallback to synthetic to prevent crash
     if (!scene.cache.audio.exists(key)) {
-      console.warn(`[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`);
+      console.warn(
+        `[SoundManager] Audio key "${key}" missing. Using synthetic fallback.`
+      );
       this.generateSyntheticSound(scene, key);
       return;
     }
@@ -135,7 +137,11 @@ export default class SoundManager {
       gain.connect(ctx.destination);
 
       // Determine sound type based on key string
-      if (key.includes('explosion') || key.includes('bomb') || key.includes('fire')) {
+      if (
+        key.includes('explosion') ||
+        key.includes('bomb') ||
+        key.includes('fire')
+      ) {
         // White Noise Approximation (using random frequency modulation for chaos)
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(100, now);
@@ -144,8 +150,11 @@ export default class SoundManager {
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
         osc.start(now);
         osc.stop(now + 0.3);
-
-      } else if (key.includes('click') || key.includes('menu') || key.includes('ui')) {
+      } else if (
+        key.includes('click') ||
+        key.includes('menu') ||
+        key.includes('ui')
+      ) {
         // High Blip
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, now);
@@ -154,7 +163,6 @@ export default class SoundManager {
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
         osc.start(now);
         osc.stop(now + 0.1);
-
       } else if (key.includes('wave') || key.includes('powerup')) {
         // Rising Tone
         osc.type = 'sine';
@@ -164,7 +172,6 @@ export default class SoundManager {
         gain.gain.linearRampToValueAtTime(0, now + 0.5);
         osc.start(now);
         osc.stop(now + 0.5);
-
       } else {
         // Default Generic Blip
         osc.type = 'triangle';
@@ -174,7 +181,6 @@ export default class SoundManager {
         osc.start(now);
         osc.stop(now + 0.1);
       }
-
     } catch (e) {
       console.warn('[SoundManager] Failed to generate synthetic audio', e);
     }

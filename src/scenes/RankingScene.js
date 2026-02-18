@@ -69,16 +69,16 @@ export default class RankingScene extends Phaser.Scene {
       // --- MOCK DATA FALLBACK ---
       // Display fake data so the menu doesn't look broken
       const mockRanking = [
-          { rank: 1, address: '0x1234...MOCK', wave: 99 },
-          { rank: 2, address: '0xABCD...TEST', wave: 88 },
-          { rank: 3, address: '0x9876...FAKE', wave: 77 },
-          { rank: 4, address: '0x5555...GUEST', wave: 50 },
-          { rank: 5, address: '0xYOUR...NAME', wave: 42 }
+        { rank: 1, address: '0x1234...MOCK', wave: 99 },
+        { rank: 2, address: '0xABCD...TEST', wave: 88 },
+        { rank: 3, address: '0x9876...FAKE', wave: 77 },
+        { rank: 4, address: '0x5555...GUEST', wave: 50 },
+        { rank: 5, address: '0xYOUR...NAME', wave: 42 },
       ];
       this.createRankingTable(centerX, 130, mockRanking);
 
       this.add
-        .text(centerX, this.scale.height - 100, "OFFLINE MODE - MOCK DATA", {
+        .text(centerX, this.scale.height - 100, 'OFFLINE MODE - MOCK DATA', {
           fontFamily: '"Press Start 2P"',
           fontSize: '10px',
           fill: '#ffaa00',
@@ -149,10 +149,15 @@ export default class RankingScene extends Phaser.Scene {
       if (index < 3) {
         const medalKey = `medal_${index + 1}`;
         if (this.textures.exists(medalKey)) {
-             this.add.image(rankX - 30, yPos, medalKey).setScale(0.5);
+          this.add.image(rankX - 30, yPos, medalKey).setScale(0.5);
         } else {
-             // Fallback: Simple colored circle
-             this.add.circle(rankX - 30, yPos, 8, index === 0 ? 0xffd700 : index === 1 ? 0xc0c0c0 : 0xcd7f32);
+          // Fallback: Simple colored circle
+          this.add.circle(
+            rankX - 30,
+            yPos,
+            8,
+            index === 0 ? 0xffd700 : index === 1 ? 0xc0c0c0 : 0xcd7f32
+          );
         }
       }
 

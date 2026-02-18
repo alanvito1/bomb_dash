@@ -4,7 +4,11 @@ import { CST } from '../CST.js';
 import LanguageManager from '../utils/LanguageManager.js';
 import api from '../api.js'; // Import the centralized api client
 import bcoinService from '../web3/bcoin-service.js';
-import { createButton, createTitle, drawCyberpunkGrid } from '../modules/UIGenerator.js';
+import {
+  createButton,
+  createTitle,
+  drawCyberpunkGrid,
+} from '../modules/UIGenerator.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {

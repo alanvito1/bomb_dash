@@ -227,7 +227,7 @@ export default class ShopScene extends Phaser.Scene {
   createBackButton(x, y, style) {
     // Replaced with standard UIGenerator button
     createButton(this, x, y, LanguageManager.get('shop_back_to_menu'), () => {
-        this.scene.start('MenuScene');
+      this.scene.start('MenuScene');
     });
   }
 
@@ -247,11 +247,11 @@ export default class ShopScene extends Phaser.Scene {
 
   async updateBcoinBalanceDisplay() {
     try {
-        const { balance, error } = await bcoinService.getBalance();
-        this.handleBalanceUpdate({ balance, error });
-    } catch(e) {
-        console.warn("Failed to update balance display:", e);
-        this.handleBalanceUpdate({ balance: "0", error: true });
+      const { balance, error } = await bcoinService.getBalance();
+      this.handleBalanceUpdate({ balance, error });
+    } catch (e) {
+      console.warn('Failed to update balance display:', e);
+      this.handleBalanceUpdate({ balance: '0', error: true });
     }
   }
 
