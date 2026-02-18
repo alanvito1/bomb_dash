@@ -249,8 +249,20 @@ export default class TextureGenerator {
   static createIconBase(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xffffff);
+
+    // Glow (Base = Cyan Neon)
+    g.fillStyle(0x00FFFF, 0.3);
+    g.beginPath();
+    g.moveTo(16, 4);
+    g.lineTo(30, 16);
+    g.lineTo(30, 30);
+    g.lineTo(2, 30);
+    g.lineTo(2, 16);
+    g.closePath();
+    g.fill();
+
     // House shape
+    g.fillStyle(0xffffff);
     g.beginPath();
     g.moveTo(16, 6);
     g.lineTo(28, 16);
@@ -265,8 +277,13 @@ export default class TextureGenerator {
   static createIconHeroes(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xffffff);
+
+    // Glow (Heroes = Cyan Neon)
+    g.fillStyle(0x00FFFF, 0.3);
+    g.fillRoundedRect(4, 6, 24, 24, 6);
+
     // Backpack shape
+    g.fillStyle(0xffffff);
     g.fillRoundedRect(6, 8, 20, 20, 4);
     // Flap
     g.fillStyle(0xcccccc);
@@ -277,6 +294,20 @@ export default class TextureGenerator {
   static createIconBattle(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Glow (Battle = Orange Neon)
+    g.lineStyle(6, 0xFFAA00, 0.4);
+    // Sword 1
+    g.beginPath();
+    g.moveTo(8, 24);
+    g.lineTo(24, 8);
+    g.stroke();
+    // Sword 2
+    g.beginPath();
+    g.moveTo(24, 24);
+    g.lineTo(8, 8);
+    g.stroke();
+
     g.lineStyle(3, 0xffffff);
     // Sword 1
     g.beginPath();
@@ -294,6 +325,13 @@ export default class TextureGenerator {
   static createIconShop(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Glow (Shop = Cyan Neon)
+    g.fillStyle(0x00FFFF, 0.3);
+    g.fillRect(6, 8, 22, 16);
+    g.fillCircle(10, 24, 4);
+    g.fillCircle(24, 24, 4);
+
     g.fillStyle(0xffffff);
     // Cart body
     g.fillRect(8, 10, 18, 12);
@@ -312,6 +350,19 @@ export default class TextureGenerator {
   static createIconRanking(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Glow (Ranking = Gold Neon)
+    g.fillStyle(0xFFD700, 0.3);
+    g.beginPath();
+    g.moveTo(8, 8);
+    g.lineTo(24, 8);
+    g.lineTo(20, 20);
+    g.lineTo(16, 20);
+    g.lineTo(12, 20);
+    g.lineTo(8, 8);
+    g.fill();
+    g.fillRect(12, 18, 8, 10);
+
     g.fillStyle(0xffd700); // Gold
     // Trophy cup
     g.beginPath();

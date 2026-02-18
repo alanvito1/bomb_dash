@@ -472,7 +472,10 @@ export default class MenuScene extends Phaser.Scene {
           repeat: -1,
         });
 
-        battleContainer.on('pointerdown', () => {
+        battleContainer.on('pointerdown', (pointer, localX, localY, event) => {
+          if (event && event.stopPropagation) {
+            event.stopPropagation();
+          }
           SoundManager.playClick(this);
           console.log('Battle Button Clicked');
           if (btn.scene)
