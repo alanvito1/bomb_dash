@@ -114,10 +114,29 @@ export default class LoadingScene extends Phaser.Scene {
           // If contract provider failed, we can't proceed to scenes that use Web3.
           // We should show an error and stop.
           if (!contractProvider.isInitialized()) {
+            console.error(
+              'CRITICAL: ContractProvider failed to initialize. Game cannot proceed reliably.'
+            );
             loadingText
-              .setText('ERROR: Cannot connect to server.')
-              .setStyle({ fill: '#ff0000' });
-            // Optionally, add a retry button or more info here.
+              .setText('SERVER ERROR: Try refreshing.')
+              .setStyle({ fill: '#ff0000', fontSize: '16px' });
+
+            // Add a Retry Button
+            const retryButton = this.add
+              .text(this.cameras.main.centerX, this.cameras.main.centerY + 50, 'RETRY', {
+                fontFamily: 'monospace',
+                fontSize: '20px',
+                fill: '#ffffff',
+                backgroundColor: '#dc143c',
+                padding: { x: 10, y: 5 },
+              })
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true });
+
+            retryButton.on('pointerdown', () => {
+              window.location.reload();
+            });
+
             return; // Halt the loading process.
           }
 
