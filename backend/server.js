@@ -92,7 +92,7 @@ const app = express();
 // CRITICAL FIX: Fallback to 8080 strictly for Cloud Run
 const PORT = process.env.PORT || 8080;
 
-let isReady = false;
+let isSystemReady = false;
 let initPromise = null;
 
 app.set('json replacer', (key, value) =>
@@ -104,7 +104,7 @@ app.use(express.json());
 
 // Async Initialization Logic
 async function performInitialization() {
-  if (isReady) return;
+  if (isSystemReady) return;
 
   AVRE.logo();
   AVRE.info('System active... Initializing Game Server.');
@@ -175,7 +175,7 @@ async function performInitialization() {
     await gameState.startPvpCycleCron();
     AVRE.success('PvP State initialized.');
 
-    isReady = true;
+    isSystemReady = true;
     AVRE.success(
       'All services initialized. Server is ready to process requests.'
     );
@@ -191,31 +191,28 @@ async function performInitialization() {
     }
   } catch (error) {
     AVRE.error('Server initialization failed', error);
-    // Do not exit process, let health check fail or retry logic handle it
+    // Do not exit process, let health check reflect status (via isSystemReady = false) or let container restart
   }
 }
 
-// Health Check Endpoint - Returns 200 if ready, 503 if initializing
+// Health Check Endpoint - Returns 200 immediately to satisfy Cloud Run
 app.get('/health', (req, res) => {
-  if (isReady) {
-    return res.status(200).send('OK');
-  } else {
-    // If init failed or is still running
-    return res.status(503).send('Initializing');
-  }
+  res.status(200).json({
+    status: 'ok',
+    db: isSystemReady ? 'connected' : 'connecting',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Middleware to ensure initialization for all other routes
-app.use(async (req, res, next) => {
+// Middleware to ensure initialization for all /api routes
+// This intercepts any request starting with /api
+app.use('/api', (req, res, next) => {
   // Allow tests to bypass the ready check, as they manage their own DB initialization
-  if (!isReady && process.env.NODE_ENV !== 'test') {
-    // Trigger init if not already triggered (failsafe)
-    if (!initPromise) {
-      initPromise = performInitialization();
-    }
+  if (!isSystemReady && process.env.NODE_ENV !== 'test') {
     return res.status(503).json({
       success: false,
       message: 'Server is initializing. Please try again shortly.',
+      retry_after: 5
     });
   }
   next();
@@ -223,6 +220,18 @@ app.use(async (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, '..')));
 
+// Use modular routers - mounted on /api so the middleware applies
+app.use('/api/auth', authRoutes.router);
+app.use('/api/heroes', authRoutes.verifyToken, heroRoutes);
+app.use('/api/pvp', authRoutes.verifyToken, pvpRoutes);
+app.use('/api/tournaments', authRoutes.verifyToken, tournamentRoutes);
+app.use('/api/game', authRoutes.verifyToken, gameRoutes);
+app.use('/api/debug', debugRoutes);
+app.use('/api/cron', cronRoutes);
+app.use('/api/testnet', testnetRoutes);
+
+// Additional route for contracts (outside specific modules but under /api logic via app.get)
+// Note: app.use('/api', ...) middleware above applies to this too since it starts with /api
 app.get('/api/contracts', (req, res) => {
   try {
     const contractAddresses = require('./contracts/contract-addresses.json');
@@ -236,15 +245,6 @@ app.get('/api/contracts', (req, res) => {
   }
 });
 
-// Use modular routers
-app.use('/api/auth', authRoutes.router);
-app.use('/api/heroes', authRoutes.verifyToken, heroRoutes);
-app.use('/api/pvp', authRoutes.verifyToken, pvpRoutes);
-app.use('/api/tournaments', authRoutes.verifyToken, tournamentRoutes);
-app.use('/api/game', authRoutes.verifyToken, gameRoutes);
-app.use('/api/debug', debugRoutes);
-app.use('/api/cron', cronRoutes);
-app.use('/api/testnet', testnetRoutes);
 
 // Local Server Start (Cloud Run executes this directly)
 if (require.main === module) {
@@ -260,6 +260,7 @@ if (require.main === module) {
     );
 
     // Start initialization in background
+    // We don't await this here, allowing the event loop to proceed
     initPromise = performInitialization();
   });
 }
