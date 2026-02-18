@@ -202,7 +202,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     db: isSystemReady ? 'connected' : 'connecting',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -214,7 +214,7 @@ app.use('/api', (req, res, next) => {
     return res.status(503).json({
       success: false,
       message: 'Server is initializing. Please try again shortly.',
-      retry_after: 5
+      retry_after: 5,
     });
   }
   next();
@@ -248,7 +248,6 @@ app.get('/api/contracts', (req, res) => {
     });
   }
 });
-
 
 // Local Server Start (Cloud Run executes this directly)
 if (require.main === module) {
