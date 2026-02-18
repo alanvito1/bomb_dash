@@ -511,7 +511,7 @@ export default class TextureGenerator {
     g.lineStyle(2, 0xCCCCCC);
     g.beginPath();
     g.moveTo(8, 24);
-    g.quadraticBezierTo(16, 16, 28, 4);
+    g.lineTo(28, 4);
     g.stroke();
     // Handle (Black)
     g.lineStyle(4, 0x000000);
@@ -604,52 +604,56 @@ export default class TextureGenerator {
    * @param {Phaser.Scene} scene
    */
   static generate(scene) {
-    // Heroes
-    this.createHero(scene, 'ninja');
-    this.createHero(scene, 'ninja_hero'); // Alias/Same style
-    this.createHero(scene, 'witch');      // Reusing hero style (or could make variation)
-    this.createHero(scene, 'witch_hero'); // Alias
+    try {
+      // Heroes
+      this.createHero(scene, 'ninja');
+      this.createHero(scene, 'ninja_hero'); // Alias/Same style
+      this.createHero(scene, 'witch');      // Reusing hero style (or could make variation)
+      this.createHero(scene, 'witch_hero'); // Alias
 
-    // Mobs/Items
-    this.createEnemy(scene, 'enemy');
-    this.createBomb(scene, 'bomb');
-    this.createExplosion(scene, 'explosion');
+      // Mobs/Items
+      this.createEnemy(scene, 'enemy');
+      this.createBomb(scene, 'bomb');
+      this.createExplosion(scene, 'explosion');
 
-    // Backgrounds
-    this.createGridBackground(scene, 'bg1');
-    this.createGridBackground(scene, 'floor_grid');
+      // Backgrounds
+      this.createGridBackground(scene, 'bg1');
+      this.createGridBackground(scene, 'floor_grid');
 
-    // UI Icons
-    this.createIconBase(scene, 'icon_base');
-    this.createIconHeroes(scene, 'icon_heroes');
-    this.createIconBattle(scene, 'icon_battle');
-    this.createIconShop(scene, 'icon_shop');
-    this.createIconRanking(scene, 'icon_ranking');
-    this.createIconGold(scene, 'icon_gold');
-    this.createIconBcoin(scene, 'icon_bcoin');
-    this.createIconSettings(scene, 'icon_settings');
-    this.createIconWallet(scene, 'icon_wallet');
-    this.createIconBook(scene, 'icon_book');
-    this.createAvatar(scene, 'icon_avatar');
+      // UI Icons
+      this.createIconBase(scene, 'icon_base');
+      this.createIconHeroes(scene, 'icon_heroes');
+      this.createIconBattle(scene, 'icon_battle');
+      this.createIconShop(scene, 'icon_shop');
+      this.createIconRanking(scene, 'icon_ranking');
+      this.createIconGold(scene, 'icon_gold');
+      this.createIconBcoin(scene, 'icon_bcoin');
+      this.createIconSettings(scene, 'icon_settings');
+      this.createIconWallet(scene, 'icon_wallet');
+      this.createIconBook(scene, 'icon_book');
+      this.createAvatar(scene, 'icon_avatar');
 
-    // Shop Items
-    this.createChest(scene, 'item_chest');
-    this.createPotion(scene, 'item_potion');
-    this.createGemPack(scene, 'item_gems');
+      // Shop Items
+      this.createChest(scene, 'item_chest');
+      this.createPotion(scene, 'item_potion');
+      this.createGemPack(scene, 'item_gems');
 
-    // New RPG Items
-    this.createRustySword(scene, 'item_rusty_sword');
-    this.createIronKatana(scene, 'item_iron_katana');
-    this.createLeatherVest(scene, 'item_leather_vest');
-    this.createNanoVest(scene, 'item_nano_vest');
-    this.createNeonBoots(scene, 'item_neon_boots');
-    this.createHealthPotion(scene, 'item_health_potion');
-    this.createScrap(scene, 'item_scrap');
-    this.createCyberCore(scene, 'item_cyber_core');
+      // New RPG Items
+      this.createRustySword(scene, 'item_rusty_sword');
+      this.createIronKatana(scene, 'item_iron_katana');
+      this.createLeatherVest(scene, 'item_leather_vest');
+      this.createNanoVest(scene, 'item_nano_vest');
+      this.createNeonBoots(scene, 'item_neon_boots');
+      this.createHealthPotion(scene, 'item_health_potion');
+      this.createScrap(scene, 'item_scrap');
+      this.createCyberCore(scene, 'item_cyber_core');
 
-    // Additional assets needed for full game functionality
-    this.createHearts(scene);
-    this.createShadow(scene);
-    this.createParticles(scene);
+      // Additional assets needed for full game functionality
+      this.createHearts(scene);
+      this.createShadow(scene);
+      this.createParticles(scene);
+    } catch (e) {
+      console.warn('⚠️ TextureGenerator: Failed to generate procedural assets.', e);
+    }
   }
 }
