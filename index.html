@@ -33,43 +33,76 @@
 
   <body>
     <!-- 🕹️ Arcade UI Layer (Overlay) -->
-    <div id="ui-layer" style="display: none;">
-       <!-- Retro Backgrounds -->
-       <div class="retro-grid"></div>
-       <div class="scanlines"></div>
+    <div id="ui-layer" style="display: none">
+      <!-- Retro Backgrounds -->
+      <div class="retro-grid"></div>
+      <div class="scanlines"></div>
 
-       <!-- ToS Modal -->
-       <div id="tos-modal" class="ui-panel">
-          <h2 class="neon-text glitch" data-text="TERMINAL ACCESS">TERMINAL ACCESS</h2>
-          <div id="tos-content" style="text-align: left; font-size: 10px; color: #ccc; max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px dashed #555; padding: 10px; font-family: monospace;">
-             LOADING PROTOCOLS...
-          </div>
-          <div class="cyber-checkbox-container">
-             <input type="checkbox" id="tos-checkbox" class="cyber-checkbox">
-             <label for="tos-checkbox">I ACCEPT THE PROTOCOLS</label>
-          </div>
-          <button id="tos-btn" class="cyber-btn disabled">INITIALIZE SYSTEM</button>
-       </div>
+      <!-- ToS Modal -->
+      <div id="tos-modal" class="ui-panel">
+        <h2 class="neon-text glitch" data-text="TERMINAL ACCESS">
+          TERMINAL ACCESS
+        </h2>
+        <div
+          id="tos-content"
+          style="
+            text-align: left;
+            font-size: 10px;
+            color: #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px dashed #555;
+            padding: 10px;
+            font-family: monospace;
+          "
+        >
+          LOADING PROTOCOLS...
+        </div>
+        <div class="cyber-checkbox-container">
+          <input type="checkbox" id="tos-checkbox" class="cyber-checkbox" />
+          <label for="tos-checkbox">I ACCEPT THE PROTOCOLS</label>
+        </div>
+        <button id="tos-btn" class="cyber-btn disabled">
+          INITIALIZE SYSTEM
+        </button>
+      </div>
 
-       <!-- Auth Menu -->
-       <div id="auth-menu" class="ui-panel">
-          <h2 class="neon-text glitch" data-text="IDENTIFICATION">IDENTIFICATION</h2>
-          <p style="font-size: 10px; margin-bottom: 20px; color: #aaa;">SELECT LOGIN METHOD</p>
+      <!-- Auth Menu -->
+      <div id="auth-menu" class="ui-panel">
+        <h2 class="neon-text glitch" data-text="IDENTIFICATION">
+          IDENTIFICATION
+        </h2>
+        <p style="font-size: 10px; margin-bottom: 20px; color: #aaa">
+          SELECT LOGIN METHOD
+        </p>
 
-          <button id="btn-login-web3" class="cyber-btn">
-             <span class="btn-icon">🦊</span> CONNECT WALLET
-          </button>
+        <button id="btn-login-web3" class="cyber-btn">
+          <span class="btn-icon">🦊</span> CONNECT WALLET
+        </button>
 
-          <button id="btn-login-google" class="cyber-btn">
-             <span class="btn-icon">G</span> GOOGLE ACCESS
-          </button>
+        <button id="btn-login-google" class="cyber-btn">
+          <span class="btn-icon">G</span> GOOGLE ACCESS
+        </button>
 
-          <button id="btn-login-guest" class="cyber-btn" style="border-color: #ffd700; color: #ffd700;">
-             <span class="btn-icon">👻</span> PLAY AS GUEST
-          </button>
+        <button
+          id="btn-login-guest"
+          class="cyber-btn"
+          style="border-color: #ffd700; color: #ffd700"
+        >
+          <span class="btn-icon">👻</span> PLAY AS GUEST
+        </button>
 
-          <div id="auth-status" style="margin-top: 15px; font-size: 10px; color: var(--neon-cyan); min-height: 20px;"></div>
-       </div>
+        <div
+          id="auth-status"
+          style="
+            margin-top: 15px;
+            font-size: 10px;
+            color: var(--neon-cyan);
+            min-height: 20px;
+          "
+        ></div>
+      </div>
     </div>
 
     <!-- 🌹 Landing Page (Renamed ID from app-root to landing-page to match main.js) -->
@@ -77,75 +110,100 @@
       <!-- Sidebar (Tibia Style) -->
       <aside id="sidebar">
         <div class="sidebar-header">
-           <h1 class="logo-text">BOMB DASH</h1>
-           <small style="color: #666; font-size: 8px;">LEGACY EDITION</small>
+          <h1 class="logo-text">BOMB DASH</h1>
+          <small style="color: #666; font-size: 8px">LEGACY EDITION</small>
         </div>
 
         <div class="menu-group">
-           <div class="menu-header">Main Menu</div>
-           <a href="#" class="menu-item active" onclick="showSection('hero-section')">Home</a>
-           <a href="#" class="menu-item" onclick="showSection('news-section')">Latest News</a>
-           <a href="#" id="start-game-sidebar-btn" class="menu-item" style="color: #00ffff;">PLAY NOW</a>
+          <div class="menu-header">Main Menu</div>
+          <a
+            href="#"
+            class="menu-item active"
+            onclick="showSection('hero-section')"
+            >Home</a
+          >
+          <a href="#" class="menu-item" onclick="showSection('news-section')"
+            >Latest News</a
+          >
+          <a
+            href="#"
+            id="start-game-sidebar-btn"
+            class="menu-item"
+            style="color: #00ffff"
+            >PLAY NOW</a
+          >
         </div>
 
         <div class="menu-group">
-           <div class="menu-header">Game Info</div>
-           <a href="whitepaper.html" class="menu-item">Whitepaper</a>
-           <a href="lore.html" class="menu-item">Lore & Stories</a>
-           <a href="wiki.html" class="menu-item">Wiki / Guides</a>
+          <div class="menu-header">Game Info</div>
+          <a href="whitepaper.html" class="menu-item">Whitepaper</a>
+          <a href="lore.html" class="menu-item">Lore & Stories</a>
+          <a href="wiki.html" class="menu-item">Wiki / Guides</a>
         </div>
 
         <div class="menu-group">
-           <div class="menu-header">Community</div>
-           <a href="#" class="menu-item">Discord</a>
-           <a href="#" class="menu-item">Telegram</a>
-           <a href="#" class="menu-item">Twitter</a>
+          <div class="menu-header">Community</div>
+          <a href="#" class="menu-item">Discord</a>
+          <a href="#" class="menu-item">Telegram</a>
+          <a href="#" class="menu-item">Twitter</a>
         </div>
 
         <div class="menu-group">
-            <div class="menu-header">Account</div>
-            <a href="#" class="menu-item" onclick="showLogin()">Login / Register</a>
-            <a href="#" class="menu-item">Support</a>
+          <div class="menu-header">Account</div>
+          <a href="#" class="menu-item" onclick="showLogin()"
+            >Login / Register</a
+          >
+          <a href="#" class="menu-item">Support</a>
         </div>
 
-        <div style="padding: 20px; text-align: center; margin-top: auto;">
-             <small style="color: #444;">Authorized by Senspark</small>
+        <div style="padding: 20px; text-align: center; margin-top: auto">
+          <small style="color: #444">Authorized by Senspark</small>
         </div>
       </aside>
 
       <!-- Main Content -->
       <main id="main-content">
-         <!-- Hero Section -->
-         <section id="hero-section" class="hero-section">
-            <h2 class="hero-title">ENTER THE ARENA</h2>
-            <p class="hero-subtitle">THE ULTIMATE BOMBERMAN BATTLE ROYALE</p>
-            <div class="hero-actions">
-               <button id="start-game-btn" class="cta-button">PLAY NOW</button>
-               <a href="whitepaper.html" class="secondary-button">WHITEPAPER</a>
-            </div>
-         </section>
+        <!-- Hero Section -->
+        <section id="hero-section" class="hero-section">
+          <h2 class="hero-title">ENTER THE ARENA</h2>
+          <p class="hero-subtitle">THE ULTIMATE BOMBERMAN BATTLE ROYALE</p>
+          <div class="hero-actions">
+            <button id="start-game-btn" class="cta-button">PLAY NOW</button>
+            <a href="whitepaper.html" class="secondary-button">WHITEPAPER</a>
+          </div>
+        </section>
 
-         <!-- News Section -->
-         <section id="news-section" class="news-section">
-            <h3 class="section-title">LATEST NEWS</h3>
-            <div id="news-grid" class="news-grid">
-               <!-- Dynamic Content -->
-               <div style="color: #666;">Loading news...</div>
-            </div>
-         </section>
+        <!-- News Section -->
+        <section id="news-section" class="news-section">
+          <h3 class="section-title">LATEST NEWS</h3>
+          <div id="news-grid" class="news-grid">
+            <!-- Dynamic Content -->
+            <div style="color: #666">Loading news...</div>
+          </div>
+        </section>
 
-         <!-- Footer -->
-         <footer class="footer">
-             <p>&copy; 2024 Bomb Dash. All Rights Reserved.</p>
-             <p style="margin-top: 5px;">Based on BombCrypto. Authorized by Senspark.</p>
-         </footer>
+        <!-- Footer -->
+        <footer class="footer">
+          <p>&copy; 2024 Bomb Dash. All Rights Reserved.</p>
+          <p style="margin-top: 5px">
+            Based on BombCrypto. Authorized by Senspark.
+          </p>
+        </footer>
       </main>
     </div>
 
     <!-- 🎮 Game Container (Initially Hidden) -->
     <div
       id="game-container"
-      style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100"
+      style="
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 100;
+      "
     >
       <div id="phaser-dom-container"></div>
     </div>
@@ -153,19 +211,57 @@
     <script type="module" src="./main.js"></script>
 
     <!-- Register Form (Hidden) -->
-    <div id="register-form-container" class="form-container" style="display: none">
-       <div class="form-box">
+    <div
+      id="register-form-container"
+      class="form-container"
+      style="display: none"
+    >
+      <div class="form-box">
         <h2 class="form-title">JOIN THE LEGACY</h2>
         <label for="register-username">Username:</label>
-        <input type="text" id="register-username" name="register-username" autocomplete="username" />
+        <input
+          type="text"
+          id="register-username"
+          name="register-username"
+          autocomplete="username"
+        />
         <label for="register-pin">PIN (4 digits):</label>
-        <input type="password" id="register-pin" name="register-pin" maxlength="4" autocomplete="new-password" />
+        <input
+          type="password"
+          id="register-pin"
+          name="register-pin"
+          maxlength="4"
+          autocomplete="new-password"
+        />
         <p id="register-message" class="form-message"></p>
-        <button type="button" id="register-submit-button" class="form-button">IGNITE</button>
-        <button type="button" id="register-back-button" class="form-button secondary">RETURN</button>
+        <button type="button" id="register-submit-button" class="form-button">
+          IGNITE
+        </button>
+        <button
+          type="button"
+          id="register-back-button"
+          class="form-button secondary"
+        >
+          RETURN
+        </button>
         <p class="form-tip">Create your mark. Username & 4-digit PIN.</p>
-        <p class="form-pin-warning" style="color: #ff4444; font-size: 8px; margin-top: 10px">WARNING: PIN IS IRRECOVERABLE.</p>
-        <a href="/wiki.html" style="color: #dc143c; font-size: 10px; margin-top: 15px; text-decoration: none; border-bottom: 1px dashed #dc143c;">Open BombWiki & ROI Calculator</a>
+        <p
+          class="form-pin-warning"
+          style="color: #ff4444; font-size: 8px; margin-top: 10px"
+        >
+          WARNING: PIN IS IRRECOVERABLE.
+        </p>
+        <a
+          href="/wiki.html"
+          style="
+            color: #dc143c;
+            font-size: 10px;
+            margin-top: 15px;
+            text-decoration: none;
+            border-bottom: 1px dashed #dc143c;
+          "
+          >Open BombWiki & ROI Calculator</a
+        >
       </div>
     </div>
 
@@ -174,18 +270,37 @@
       <div class="form-box">
         <h2 class="form-title">AUTHENTICATE</h2>
         <label for="login-username">Username:</label>
-        <input type="text" id="login-username" name="login-username" autocomplete="username" />
+        <input
+          type="text"
+          id="login-username"
+          name="login-username"
+          autocomplete="username"
+        />
         <label for="login-pin">PIN (4 digits):</label>
-        <input type="password" id="login-pin" name="login-pin" maxlength="4" autocomplete="current-password" />
+        <input
+          type="password"
+          id="login-pin"
+          name="login-pin"
+          maxlength="4"
+          autocomplete="current-password"
+        />
         <p id="login-message" class="form-message"></p>
-        <button type="button" id="login-submit-button" class="form-button">ENTER</button>
-        <button type="button" id="login-back-button" class="form-button secondary">RETURN</button>
+        <button type="button" id="login-submit-button" class="form-button">
+          ENTER
+        </button>
+        <button
+          type="button"
+          id="login-back-button"
+          class="form-button secondary"
+        >
+          RETURN
+        </button>
       </div>
     </div>
 
     <!-- PvP Lobby -->
     <div id="pvp-lobby-container" class="form-container" style="display: none">
-        <div class="form-box">
+      <div class="form-box">
         <h2 class="form-title">PVP ARENA</h2>
         <p class="form-message" style="color: #ffffff; min-height: 40px">
           Choose your battlefield.
@@ -207,29 +322,83 @@
     </div>
 
     <!-- Wager Arena -->
-    <div id="wager-arena-container" class="form-container" style="display: none">
+    <div
+      id="wager-arena-container"
+      class="form-container"
+      style="display: none"
+    >
       <div class="form-box">
         <h2 class="form-title">HIGH STAKES</h2>
         <p id="wager-arena-message" class="form-message" style="color: #ffffff">
           Fortune favors the bold.
         </p>
-        <div id="wager-tiers-list" style="width: 100%; max-width: 300px; margin-bottom: 20px">
-          <button type="button" class="form-button wager-tier-button" data-tier-id="1">Bronze: 10 BCOIN / 20 XP</button>
-          <button type="button" class="form-button wager-tier-button" data-tier-id="2">Silver: 50 BCOIN / 100 XP</button>
-          <button type="button" class="form-button wager-tier-button" data-tier-id="3">Gold: 200 BCOIN / 500 XP</button>
+        <div
+          id="wager-tiers-list"
+          style="width: 100%; max-width: 300px; margin-bottom: 20px"
+        >
+          <button
+            type="button"
+            class="form-button wager-tier-button"
+            data-tier-id="1"
+          >
+            Bronze: 10 BCOIN / 20 XP
+          </button>
+          <button
+            type="button"
+            class="form-button wager-tier-button"
+            data-tier-id="2"
+          >
+            Silver: 50 BCOIN / 100 XP
+          </button>
+          <button
+            type="button"
+            class="form-button wager-tier-button"
+            data-tier-id="3"
+          >
+            Gold: 200 BCOIN / 500 XP
+          </button>
         </div>
-        <button type="button" id="wager-arena-back-button" class="form-button secondary">RETURN</button>
+        <button
+          type="button"
+          id="wager-arena-back-button"
+          class="form-button secondary"
+        >
+          RETURN
+        </button>
       </div>
-       <div id="wager-confirm-dialog" class="form-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-         <div class="form-box">
+      <div
+        id="wager-confirm-dialog"
+        class="form-container"
+        style="
+          display: none;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        "
+      >
+        <div class="form-box">
           <h2 class="form-title" style="color: #dc143c">FINAL WARNING</h2>
-          <p id="wager-confirm-message" class="form-message" style="color: #ffffff; font-size: 10px; min-height: 60px">
+          <p
+            id="wager-confirm-message"
+            class="form-message"
+            style="color: #ffffff; font-size: 10px; min-height: 60px"
+          >
             You are risking X BCOIN and Y XP. Defeat means de-leveling. Proceed?
           </p>
-          <button type="button" id="wager-confirm-button" class="form-button">ACCEPT FATE</button>
-          <button type="button" id="wager-cancel-button" class="form-button secondary">RETREAT</button>
-         </div>
-       </div>
+          <button type="button" id="wager-confirm-button" class="form-button">
+            ACCEPT FATE
+          </button>
+          <button
+            type="button"
+            id="wager-cancel-button"
+            class="form-button secondary"
+          >
+            RETREAT
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts for UI logic -->
@@ -244,22 +413,22 @@
         });
       }
 
-      window.showSection = function(sectionId) {
-         const section = document.getElementById(sectionId);
-         if(section) section.scrollIntoView({ behavior: 'smooth' });
+      window.showSection = function (sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) section.scrollIntoView({ behavior: 'smooth' });
       };
 
-      window.showLogin = function() {
-          const loginContainer = document.getElementById('login-form-container');
-          if(loginContainer) {
-              loginContainer.style.display = 'flex';
-              // Ensure close button works to hide it if needed manually
-              const backBtn = document.getElementById('login-back-button');
-              if (backBtn) {
-                  // The main.js might override this, but let's add a safe fallback listener just for UI toggle
-                  // Note: main.js handles hiding on 'RETURN' usually.
-              }
+      window.showLogin = function () {
+        const loginContainer = document.getElementById('login-form-container');
+        if (loginContainer) {
+          loginContainer.style.display = 'flex';
+          // Ensure close button works to hide it if needed manually
+          const backBtn = document.getElementById('login-back-button');
+          if (backBtn) {
+            // The main.js might override this, but let's add a safe fallback listener just for UI toggle
+            // Note: main.js handles hiding on 'RETURN' usually.
           }
+        }
       };
 
       // Fetch News
@@ -273,33 +442,40 @@
             container.innerHTML = '';
 
             if (data.news.length === 0) {
-                 container.innerHTML = '<p style="color: #666;">No news available.</p>';
-                 return;
+              container.innerHTML =
+                '<p style="color: #666;">No news available.</p>';
+              return;
             }
 
-            data.news.forEach(item => {
-               const card = document.createElement('div');
-               card.className = 'news-card';
-               const imageUrl = item.image_url || '/assets/img/bg/default-news.png';
+            data.news.forEach((item) => {
+              const card = document.createElement('div');
+              card.className = 'news-card';
+              const imageUrl =
+                item.image_url || '/assets/img/bg/default-news.png';
 
-               // Use a simpler date format
-               const dateStr = new Date(item.created_at).toLocaleDateString();
+              // Use a simpler date format
+              const dateStr = new Date(item.created_at).toLocaleDateString();
 
-               card.innerHTML = `
+              card.innerHTML = `
                  <div class="news-image" style="background-image: url('${imageUrl}'); background-size: cover; background-position: center;"></div>
                  <div class="news-content">
                    <div class="news-date">${dateStr}</div>
                    <h3 class="news-title">${item.title}</h3>
-                   <p class="news-excerpt">${item.content.substring(0, 100)}...</p>
+                   <p class="news-excerpt">${item.content.substring(
+                     0,
+                     100
+                   )}...</p>
                  </div>
                `;
-               container.appendChild(card);
+              container.appendChild(card);
             });
           }
         } catch (e) {
-          console.error("Failed to load news", e);
+          console.error('Failed to load news', e);
           const container = document.getElementById('news-grid');
-          if(container) container.innerHTML = '<p style="color: #f00;">Failed to load news.</p>';
+          if (container)
+            container.innerHTML =
+              '<p style="color: #f00;">Failed to load news.</p>';
         }
       }
 

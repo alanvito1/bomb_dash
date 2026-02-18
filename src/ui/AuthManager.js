@@ -24,12 +24,12 @@ export default class AuthManager {
 
     // Check for existing Supabase session (Google Redirect handling)
     if (supabase) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                console.log("Supabase Session found:", session);
-                this.handleGoogleSuccess(session);
-            }
-        });
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          console.log('Supabase Session found:', session);
+          this.handleGoogleSuccess(session);
+        }
+      });
     }
   }
 
@@ -39,14 +39,14 @@ export default class AuthManager {
     this.btnGuest.onclick = () => this.loginGuest();
   }
 
-  setLoading(isLoading, msg = "AUTHENTICATING...") {
+  setLoading(isLoading, msg = 'AUTHENTICATING...') {
     if (isLoading) {
       this.status.innerHTML = `<div class="pixel-spinner"></div><br>${msg}`;
       this.btnWeb3.classList.add('disabled');
       this.btnGoogle.classList.add('disabled');
       this.btnGuest.classList.add('disabled');
     } else {
-      this.status.innerHTML = "";
+      this.status.innerHTML = '';
       this.btnWeb3.classList.remove('disabled');
       this.btnGoogle.classList.remove('disabled');
       this.btnGuest.classList.remove('disabled');
@@ -62,19 +62,19 @@ export default class AuthManager {
 
   async loginWeb3() {
     this.overlayManager.playSound('click');
-    this.setLoading(true, "CONNECTING WALLET...");
+    this.setLoading(true, 'CONNECTING WALLET...');
     try {
       await api.web3Login();
       this.onSuccess();
     } catch (e) {
       console.error(e);
-      this.setError(e.message || "Connection Failed");
+      this.setError(e.message || 'Connection Failed');
     }
   }
 
   async loginGuest() {
     this.overlayManager.playSound('click');
-    this.setLoading(true, "GENERATING GUEST ID...");
+    this.setLoading(true, 'GENERATING GUEST ID...');
 
     try {
       // 1. Check or Create Local Wallet
@@ -94,10 +94,9 @@ export default class AuthManager {
 
       await api.loginWithSigner(wallet, address, chainId);
       this.onSuccess();
-
     } catch (e) {
       console.error(e);
-      this.setError("Guest Login Failed");
+      this.setError('Guest Login Failed');
     }
   }
 
@@ -105,17 +104,17 @@ export default class AuthManager {
     this.overlayManager.playSound('click');
 
     if (!supabase) {
-      this.setError("Google Login Config Missing");
+      this.setError('Google Login Config Missing');
       return;
     }
 
-    this.setLoading(true, "REDIRECTING TO GOOGLE...");
+    this.setLoading(true, 'REDIRECTING TO GOOGLE...');
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
-      }
+        redirectTo: window.location.origin,
+      },
     });
 
     if (error) {
@@ -125,29 +124,28 @@ export default class AuthManager {
   }
 
   async handleGoogleSuccess(session) {
-    this.setLoading(true, "VERIFYING GOOGLE ID...");
+    this.setLoading(true, 'VERIFYING GOOGLE ID...');
     try {
-       // Treating Google User as a Guest with a persistent wallet could be done here.
-       // For now, we reuse the Guest logic but could key it off the User ID.
-       // Simulating "Google Account Linked Wallet":
-       const userId = session.user.id;
-       let pk = localStorage.getItem(`google_wallet_${userId}`);
+      // Treating Google User as a Guest with a persistent wallet could be done here.
+      // For now, we reuse the Guest logic but could key it off the User ID.
+      // Simulating "Google Account Linked Wallet":
+      const userId = session.user.id;
+      let pk = localStorage.getItem(`google_wallet_${userId}`);
 
-       if (!pk) {
-          // Deterministic or random? Random is safer for now without complex crypto.
-          const wallet = ethers.Wallet.createRandom();
-          pk = wallet.privateKey;
-          localStorage.setItem(`google_wallet_${userId}`, pk);
-       }
+      if (!pk) {
+        // Deterministic or random? Random is safer for now without complex crypto.
+        const wallet = ethers.Wallet.createRandom();
+        pk = wallet.privateKey;
+        localStorage.setItem(`google_wallet_${userId}`, pk);
+      }
 
-       const wallet = new ethers.Wallet(pk);
-       const address = await wallet.getAddress();
-       await api.loginWithSigner(wallet, address, 97);
-       this.onSuccess();
-
+      const wallet = new ethers.Wallet(pk);
+      const address = await wallet.getAddress();
+      await api.loginWithSigner(wallet, address, 97);
+      this.onSuccess();
     } catch (e) {
-        console.error(e);
-        this.setError("Google-Linked Login Failed");
+      console.error(e);
+      this.setError('Google-Linked Login Failed');
     }
   }
 
