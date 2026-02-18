@@ -42,6 +42,7 @@ window.DEBUG_MODE = true;
 // ⚙️ Configurações gerais do Phaser
 const config = {
   type: Phaser.AUTO,
+  parent: 'game-container', // Ensure canvas is attached to our controlled container
   width: 480,
   height: 800,
   backgroundColor: '#000000',
