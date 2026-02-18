@@ -250,27 +250,26 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Glow (Base = Cyan Neon)
-    g.fillStyle(0x00FFFF, 0.3);
-    g.beginPath();
-    g.moveTo(16, 4);
-    g.lineTo(30, 16);
-    g.lineTo(30, 30);
-    g.lineTo(2, 30);
-    g.lineTo(2, 16);
-    g.closePath();
-    g.fill();
+    const drawHouse = (graphics) => {
+        graphics.beginPath();
+        graphics.moveTo(16, 6);
+        graphics.lineTo(28, 16);
+        graphics.lineTo(28, 28);
+        graphics.lineTo(4, 28);
+        graphics.lineTo(4, 16);
+        graphics.closePath();
+    };
 
-    // House shape
-    g.fillStyle(0xffffff);
-    g.beginPath();
-    g.moveTo(16, 6);
-    g.lineTo(28, 16);
-    g.lineTo(28, 28);
-    g.lineTo(4, 28);
-    g.lineTo(4, 16);
-    g.closePath();
-    g.fill();
+    // Glow (Cyan)
+    g.lineStyle(4, 0x00FFFF, 0.3);
+    drawHouse(g);
+    g.strokePath();
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawHouse(g);
+    g.strokePath();
+
     g.generateTexture(key, 32, 32);
   }
 
@@ -278,16 +277,24 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Glow (Heroes = Cyan Neon)
-    g.fillStyle(0x00FFFF, 0.3);
-    g.fillRoundedRect(4, 6, 24, 24, 6);
+    const drawBackpack = (graphics) => {
+        // Bag
+        graphics.strokeRoundedRect(6, 8, 20, 20, 4);
+        // Flap
+        graphics.beginPath();
+        graphics.moveTo(6, 14);
+        graphics.lineTo(26, 14);
+        graphics.strokePath();
+    };
 
-    // Backpack shape
-    g.fillStyle(0xffffff);
-    g.fillRoundedRect(6, 8, 20, 20, 4);
-    // Flap
-    g.fillStyle(0xcccccc);
-    g.fillRoundedRect(6, 8, 20, 8, 2);
+    // Glow (Cyan)
+    g.lineStyle(4, 0x00FFFF, 0.3);
+    drawBackpack(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawBackpack(g);
+
     g.generateTexture(key, 32, 32);
   }
 
@@ -295,30 +302,27 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Glow (Battle = Orange Neon)
-    g.lineStyle(6, 0xFFAA00, 0.4);
-    // Sword 1
-    g.beginPath();
-    g.moveTo(8, 24);
-    g.lineTo(24, 8);
-    g.stroke();
-    // Sword 2
-    g.beginPath();
-    g.moveTo(24, 24);
-    g.lineTo(8, 8);
-    g.stroke();
+    const drawSwords = (graphics) => {
+        // Sword 1
+        graphics.beginPath();
+        graphics.moveTo(8, 24);
+        graphics.lineTo(24, 8);
+        graphics.strokePath();
+        // Sword 2
+        graphics.beginPath();
+        graphics.moveTo(24, 24);
+        graphics.lineTo(8, 8);
+        graphics.strokePath();
+    };
 
-    g.lineStyle(3, 0xffffff);
-    // Sword 1
-    g.beginPath();
-    g.moveTo(8, 24);
-    g.lineTo(24, 8);
-    g.stroke();
-    // Sword 2
-    g.beginPath();
-    g.moveTo(24, 24);
-    g.lineTo(8, 8);
-    g.stroke();
+    // Glow (Orange/Red)
+    g.lineStyle(4, 0xFF4500, 0.3);
+    drawSwords(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawSwords(g);
+
     g.generateTexture(key, 32, 32);
   }
 
@@ -326,24 +330,27 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Glow (Shop = Cyan Neon)
-    g.fillStyle(0x00FFFF, 0.3);
-    g.fillRect(6, 8, 22, 16);
-    g.fillCircle(10, 24, 4);
-    g.fillCircle(24, 24, 4);
+    const drawCart = (graphics) => {
+        // Cart body
+        graphics.strokeRect(8, 10, 18, 12);
+        // Handle
+        graphics.beginPath();
+        graphics.moveTo(4, 8);
+        graphics.lineTo(8, 10);
+        graphics.strokePath();
+        // Wheels
+        graphics.strokeCircle(10, 24, 2);
+        graphics.strokeCircle(24, 24, 2);
+    };
 
-    g.fillStyle(0xffffff);
-    // Cart body
-    g.fillRect(8, 10, 18, 12);
-    // Wheels
-    g.fillCircle(10, 24, 2);
-    g.fillCircle(24, 24, 2);
-    // Handle
-    g.lineStyle(2, 0xffffff);
-    g.beginPath();
-    g.moveTo(4, 8);
-    g.lineTo(8, 10);
-    g.stroke();
+    // Glow (Cyan)
+    g.lineStyle(4, 0x00FFFF, 0.3);
+    drawCart(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawCart(g);
+
     g.generateTexture(key, 32, 32);
   }
 
@@ -351,106 +358,145 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Glow (Ranking = Gold Neon)
-    g.fillStyle(0xFFD700, 0.3);
-    g.beginPath();
-    g.moveTo(8, 8);
-    g.lineTo(24, 8);
-    g.lineTo(20, 20);
-    g.lineTo(16, 20);
-    g.lineTo(12, 20);
-    g.lineTo(8, 8);
-    g.fill();
-    g.fillRect(12, 18, 8, 10);
+    const drawTrophy = (graphics) => {
+        graphics.beginPath();
+        graphics.moveTo(8, 8);
+        graphics.lineTo(24, 8);
+        graphics.lineTo(20, 20);
+        graphics.lineTo(16, 20);
+        graphics.lineTo(12, 20);
+        graphics.lineTo(8, 8);
+        graphics.strokePath();
+        // Base
+        graphics.strokeRect(12, 20, 8, 4);
+        graphics.beginPath();
+        graphics.moveTo(10, 24);
+        graphics.lineTo(22, 24);
+        graphics.strokePath();
+    };
 
-    g.fillStyle(0xffd700); // Gold
-    // Trophy cup
-    g.beginPath();
-    g.moveTo(8, 8);
-    g.lineTo(24, 8);
-    g.lineTo(20, 20);
-    g.lineTo(16, 20);
-    g.lineTo(12, 20);
-    g.lineTo(8, 8);
-    g.fill();
-    // Base
-    g.fillRect(14, 20, 4, 4);
-    g.fillRect(10, 24, 12, 2);
+    // Glow (Gold)
+    g.lineStyle(4, 0xFFD700, 0.3);
+    drawTrophy(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawTrophy(g);
+
     g.generateTexture(key, 32, 32);
   }
 
   static createIconGold(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xffd700);
-    g.fillCircle(16, 16, 12);
-    g.fillStyle(0xffaa00);
-    g.fillCircle(16, 16, 8);
+
+    const drawCoin = (graphics) => {
+        graphics.strokeCircle(16, 16, 10);
+        graphics.beginPath();
+        graphics.moveTo(16, 10);
+        graphics.lineTo(16, 22);
+        graphics.strokePath();
+    };
+
+    // Glow (Gold)
+    g.lineStyle(4, 0xFFD700, 0.3);
+    drawCoin(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawCoin(g);
+
     g.generateTexture(key, 32, 32);
   }
 
   static createIconBcoin(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x00ffff); // Cyan/Neon
-    g.fillCircle(16, 16, 12);
-    g.fillStyle(0x000033);
-    g.fillCircle(16, 16, 8);
-    // B letter (simplified)
-    g.fillStyle(0xffffff);
-    g.fillRect(14, 10, 2, 12);
-    g.fillRect(14, 10, 6, 2);
-    g.fillRect(14, 15, 6, 2);
-    g.fillRect(14, 20, 6, 2);
+
+    const drawB = (graphics) => {
+        graphics.strokeCircle(16, 16, 12);
+        // B shape
+        graphics.strokeRect(12, 10, 8, 12);
+    };
+
+    // Glow (Cyan)
+    g.lineStyle(4, 0x00FFFF, 0.3);
+    drawB(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawB(g);
+
     g.generateTexture(key, 32, 32);
   }
 
   static createIconSettings(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.lineStyle(3, 0xffffff);
-    g.strokeCircle(16, 16, 8);
-    // Cogs
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const x1 = 16 + Math.cos(angle) * 8;
-        const y1 = 16 + Math.sin(angle) * 8;
-        const x2 = 16 + Math.cos(angle) * 12;
-        const y2 = 16 + Math.sin(angle) * 12;
-        g.beginPath();
-        g.moveTo(x1, y1);
-        g.lineTo(x2, y2);
-        g.stroke();
-    }
+
+    const drawGear = (graphics) => {
+        graphics.strokeCircle(16, 16, 8);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const x1 = 16 + Math.cos(angle) * 8;
+            const y1 = 16 + Math.sin(angle) * 8;
+            const x2 = 16 + Math.cos(angle) * 12;
+            const y2 = 16 + Math.sin(angle) * 12;
+            graphics.beginPath();
+            graphics.moveTo(x1, y1);
+            graphics.lineTo(x2, y2);
+            graphics.strokePath();
+        }
+    };
+
+    // Glow (Grey/Cyan)
+    g.lineStyle(4, 0xAAAAAA, 0.3);
+    drawGear(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawGear(g);
+
     g.generateTexture(key, 32, 32);
   }
 
   static createIconWallet(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x8B4513); // Brown leather
-    g.fillRoundedRect(4, 8, 24, 16, 2);
-    // Flap
-    g.fillStyle(0xA0522D);
-    g.fillRoundedRect(4, 10, 12, 12, 2);
+
+    const drawWallet = (graphics) => {
+        graphics.strokeRoundedRect(4, 8, 24, 16, 2);
+        graphics.strokeRoundedRect(4, 10, 12, 12, 2);
+    };
+
+    // Glow (Brown/Orange)
+    g.lineStyle(4, 0x8B4513, 0.3);
+    drawWallet(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawWallet(g);
+
     g.generateTexture(key, 32, 32);
   }
 
   static createIconBook(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    // Cover
-    g.fillStyle(0x8B0000); // Dark Red
-    g.fillRoundedRect(6, 4, 20, 24, 2);
-    // Pages
-    g.fillStyle(0xFFFFFF);
-    g.fillRect(24, 6, 4, 20);
-    // Binding
-    g.fillStyle(0x000000);
-    g.fillRect(6, 4, 4, 24);
-    // Symbol
-    g.lineStyle(2, 0xFFD700);
-    g.strokeCircle(16, 16, 6);
+
+    const drawBook = (graphics) => {
+        graphics.strokeRect(6, 4, 20, 24);
+        graphics.strokeCircle(16, 16, 6);
+    };
+
+    // Glow (Red)
+    g.lineStyle(4, 0xFF0000, 0.3);
+    drawBook(g);
+
+    // Core (White)
+    g.lineStyle(2, 0xFFFFFF, 1.0);
+    drawBook(g);
+
     g.generateTexture(key, 32, 32);
   }
 

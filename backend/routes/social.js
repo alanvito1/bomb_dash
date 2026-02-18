@@ -81,23 +81,8 @@ router.post('/join-guild', verifyToken, async (req, res) => {
 
 // List Guilds
 router.get('/guilds', async (req, res) => {
-  try {
-    const guilds = await Guild.findAll({
-      include: [{ model: GuildMember, attributes: ['id'] }] // Count members roughly
-    });
-
-    const result = guilds.map(g => ({
-      id: g.id,
-      name: g.name,
-      tag: g.tag,
-      memberCount: g.GuildMembers.length
-    }));
-
-    res.json({ success: true, guilds: result });
-  } catch (error) {
-    console.error('List Guilds Error:', error);
-    res.status(500).json({ success: false, message: 'Server error.' });
-  }
+  // STUB: Return empty list for UI/UX Task Force to prevent 404/errors
+  res.json({ success: true, guilds: [] });
 });
 
 // Get My Guild

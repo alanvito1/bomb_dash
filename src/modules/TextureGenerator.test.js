@@ -16,6 +16,8 @@ describe('TextureGenerator', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       stroke: vi.fn(),
+      strokePath: vi.fn(),
+      strokeRoundedRect: vi.fn(),
       fill: vi.fn(),
       fillRoundedRect: vi.fn(),
       arc: vi.fn(),

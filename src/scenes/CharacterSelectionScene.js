@@ -158,6 +158,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     loadingText.setText(LanguageManager.get('char_select_loading'));
     try {
       const apiResponse = await api.getHeroes();
+      if (!this.sys || !this.scene) return; // Prevent crash if scene destroyed
       if (apiResponse.success && apiResponse.heroes.length > 0) {
         this.heroes = apiResponse.heroes;
         if (loadingText.scene) loadingText.destroy();
