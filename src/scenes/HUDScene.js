@@ -103,6 +103,7 @@ export default class HUDScene extends Phaser.Scene {
       gameScene.events.on('update-xp', this.updateXP, this);
       gameScene.events.on('update-wave', this.updateWave, this);
       gameScene.events.on('update-timer', this.updateTimer, this);
+      gameScene.events.on('update-bcoin', this.handleBalanceUpdate, this);
     }
     GameEventEmitter.on('bcoin-balance-update', this.handleBalanceUpdate, this);
   }

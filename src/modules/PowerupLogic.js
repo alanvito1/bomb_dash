@@ -28,7 +28,35 @@ export default class PowerupLogic {
         powerup.setVelocityY(80);
         powerup.setDisplaySize(30, 30);
 
-        // 💫 FLOAT ANIMATION (Scale Pulse)
+        // 💫 LOOT POP (Juice)
+        // 1. Pop Up & Bounce
+        this.scene.tweens.add({
+            targets: powerup,
+            y: y - 40,
+            duration: 300,
+            ease: 'Back.out',
+            onComplete: () => {
+                this.scene.tweens.add({
+                    targets: powerup,
+                    y: y,
+                    duration: 500,
+                    ease: 'Bounce.out',
+                    onComplete: () => {
+                        // 2. Start Float Loop
+                        this.scene.tweens.add({
+                            targets: powerup,
+                            y: y - 5,
+                            duration: 1000,
+                            yoyo: true,
+                            repeat: -1,
+                            ease: 'Sine.easeInOut'
+                        });
+                    }
+                });
+            }
+        });
+
+        // 3. Pulse Scale Loop (Simultaneous)
         this.scene.tweens.add({
           targets: powerup,
           scaleX: powerup.scaleX * 1.2,
