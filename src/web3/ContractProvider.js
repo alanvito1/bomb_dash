@@ -68,30 +68,45 @@ class ContractProvider {
       console.log(
         'Initializing ContractProvider: fetching contract addresses...'
       );
-      const response = await fetch(`${API_BASE_URL}/contracts`);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch contract addresses: ${response.statusText}`
-        );
-      }
-      const data = await response.json();
 
-      if (data.success) {
-        this.addresses = {
-          wagerArena: data.wagerArenaAddress,
-          heroStaking: data.heroStakingAddress,
-          mockHeroNFT: data.mockHeroNFTAddress,
-          bcoin: data.bcoinTokenAddress,
-          tournamentController: data.tournamentControllerAddress,
-          perpetualRewardPool: data.perpetualRewardPoolAddress,
-        };
-        this.initialized = true;
-        console.log(
-          'ContractProvider initialized successfully with addresses:',
-          this.addresses
-        );
-      } else {
-        throw new Error(data.message || 'Failed to fetch contract addresses.');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/contracts`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch contract addresses: ${response.statusText}`
+          );
+        }
+        const data = await response.json();
+
+        if (data.success) {
+          this.addresses = {
+            wagerArena: data.wagerArenaAddress,
+            heroStaking: data.heroStakingAddress,
+            mockHeroNFT: data.mockHeroNFTAddress,
+            bcoin: data.bcoinTokenAddress,
+            tournamentController: data.tournamentControllerAddress,
+            perpetualRewardPool: data.perpetualRewardPoolAddress,
+          };
+          this.initialized = true;
+          console.log(
+            '✅ ContractProvider initialized successfully:',
+            this.addresses
+          );
+        } else {
+          throw new Error(data.message || 'Failed to fetch contract addresses.');
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+           throw new Error('ContractProvider initialization timed out (5s).');
+        }
+        throw err;
       }
     } catch (error) {
       console.error('CRITICAL: Failed to initialize ContractProvider.', error);

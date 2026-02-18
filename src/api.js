@@ -61,23 +61,45 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.jwtToken}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.groupCollapsed(`🌐 API Request: ${endpoint}`);
+    console.log(`URL: ${url}`);
+    console.log(`Method: ${options.method || 'GET'}`);
+    if (options.body) console.log('Body:', JSON.parse(options.body));
+    console.log('Headers:', headers);
+    console.groupEnd();
 
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || 'API request failed');
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      console.groupCollapsed(`✅ API Response: ${endpoint} (${response.status})`);
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: response.statusText }));
+        console.error('❌ Error Data:', errorData);
+        console.groupEnd();
+        throw new Error(errorData.message || 'API request failed');
+      }
+
+      if (response.status === 204) {
+        console.log('No Content (204)');
+        console.groupEnd();
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('Data:', data);
+      console.groupEnd();
+      return data;
+    } catch (error) {
+      console.error(`🔥 API Failure: ${endpoint}`, error);
+      throw error;
     }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return response.json();
   }
 
   // --- Authentication Methods ---
