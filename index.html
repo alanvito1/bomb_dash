@@ -13,7 +13,7 @@
     <title>💣 Bomb Dash</title>
 
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap"
       rel="stylesheet"
     />
 
@@ -28,320 +28,123 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 
     <link rel="stylesheet" href="assets/css/landing.css" />
-
-    <style>
-      /*
-     * 🌹 AVRE AESTHETIC SYSTEM
-     * Palette: Crimson (#DC143C) | White (#FFFFFF) | Void (#000000)
-     */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        background-color: #000;
-        font-family: 'Press Start 2P', monospace;
-        overflow: hidden;
-      }
-
-      #phaser-dom-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 10;
-      }
-      #phaser-dom-container input {
-        pointer-events: auto;
-      }
-
-      canvas {
-        display: block;
-        margin: auto;
-        image-rendering: pixelated;
-        /* 🌹 The Crimson Touch */
-        border: 2px solid #dc143c;
-        box-shadow: 0 0 20px rgba(220, 20, 60, 0.4);
-        max-width: 100vw;
-        max-height: 100vh;
-      }
-
-      /* 🌹 Glassmorphism & Red Mode */
-      .form-container {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 400px;
-        padding: 25px;
-        background-color: rgba(20, 0, 0, 0.9); /* Deep Burgundy */
-        border: 2px solid #dc143c; /* Crimson */
-        border-radius: 8px;
-        z-index: 100;
-        color: #ffffff;
-        font-family: 'Press Start 2P', monospace;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        /* 🌹 AVRE Shadow */
-        box-shadow: 0 4px 14px rgba(220, 20, 60, 0.25);
-        backdrop-filter: blur(5px);
-        transition: all 0.3s ease;
-      }
-
-      .form-box {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .form-title {
-        font-size: 20px;
-        margin-bottom: 25px;
-        color: #ffffff;
-        text-shadow: 0 0 10px #dc143c;
-      }
-
-      .form-container label {
-        font-size: 10px;
-        margin-top: 10px;
-        margin-bottom: 5px;
-        width: 100%;
-        max-width: 300px;
-        text-align: left;
-        color: #dc143c;
-        text-transform: uppercase;
-      }
-
-      .form-container input[type='text'],
-      .form-container input[type='password'] {
-        width: 100%;
-        max-width: 300px;
-        padding: 12px;
-        font-size: 14px;
-        border: 1px solid #dc143c;
-        background-color: #1a0505; /* Very Dark Red */
-        color: #fff;
-        font-family: monospace;
-        margin-bottom: 15px;
-        border-radius: 4px;
-        outline: none;
-        transition: all 0.3s ease;
-      }
-
-      .form-container input:focus {
-        box-shadow: 0 0 10px #dc143c;
-        border-color: #ffffff;
-      }
-
-      .form-message {
-        font-size: 10px;
-        color: #ff4444; /* Bright Red for Errors */
-        min-height: 20px;
-        text-align: center;
-        width: 100%;
-        max-width: 300px;
-        margin-bottom: 10px;
-        word-wrap: break-word;
-      }
-
-      .form-message.success {
-        color: #ffffff;
-        border-left: 3px solid #dc143c;
-        padding-left: 10px;
-      }
-      .form-message.processing {
-        color: #ffffff;
-        opacity: 0.8;
-      }
-
-      /* 🌹 Organic Motion Buttons */
-      .form-button {
-        width: 100%;
-        max-width: 300px;
-        padding: 12px 15px;
-        font-size: 12px;
-        font-family: 'Press Start 2P', monospace;
-        color: #ffffff;
-        background-color: #dc143c; /* Crimson */
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 15px;
-        text-align: center;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-      }
-
-      .form-button:hover {
-        background-color: #b22222; /* Firebrick */
-        transform: scale(1.02);
-        box-shadow: 0 0 15px rgba(220, 20, 60, 0.6);
-      }
-
-      .form-button.secondary {
-        background-color: transparent;
-        border: 1px solid #ffffff;
-        color: #ffffff;
-      }
-      .form-button.secondary:hover {
-        background-color: #ffffff;
-        color: #dc143c;
-        border-color: #ffffff;
-      }
-
-      .form-tip {
-        font-size: 9px;
-        color: #aaaaaa;
-        margin-top: 20px;
-        text-align: center;
-        width: 100%;
-        max-width: 300px;
-      }
-
-      /* Confetti (Hidden by default) */
-      .confetti {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background-color: #dc143c;
-        animation: fall linear forwards;
-        z-index: 9999;
-      }
-      @keyframes fall {
-        to {
-          transform: translateY(100vh) rotate(720deg);
-        }
-      }
-    </style>
   </head>
 
   <body>
-    <!-- 🌹 Landing Page -->
+    <!-- 🌹 Landing Page (Renamed ID from app-root to landing-page to match main.js) -->
     <div id="landing-page">
-      <h1 class="landing-title">💣 Bomb Dash</h1>
-      <p class="landing-subtitle">ENTER THE RETRO ARENA</p>
-      <div class="btn-container">
-        <button id="start-game-btn" class="btn-landing">START GAME</button>
-        <button
-          onclick="window.location.href='wiki.html'"
-          class="btn-landing wiki"
-        >
-          WIKI
-        </button>
-      </div>
+      <!-- Sidebar (Tibia Style) -->
+      <aside id="sidebar">
+        <div class="sidebar-header">
+           <h1 class="logo-text">BOMB DASH</h1>
+           <small style="color: #666; font-size: 8px;">LEGACY EDITION</small>
+        </div>
+
+        <div class="menu-group">
+           <div class="menu-header">Main Menu</div>
+           <a href="#" class="menu-item active" onclick="showSection('hero-section')">Home</a>
+           <a href="#" class="menu-item" onclick="showSection('news-section')">Latest News</a>
+           <a href="#" id="start-game-sidebar-btn" class="menu-item" style="color: #00ffff;">PLAY NOW</a>
+        </div>
+
+        <div class="menu-group">
+           <div class="menu-header">Game Info</div>
+           <a href="whitepaper.html" class="menu-item">Whitepaper</a>
+           <a href="lore.html" class="menu-item">Lore & Stories</a>
+           <a href="wiki.html" class="menu-item">Wiki / Guides</a>
+        </div>
+
+        <div class="menu-group">
+           <div class="menu-header">Community</div>
+           <a href="#" class="menu-item">Discord</a>
+           <a href="#" class="menu-item">Telegram</a>
+           <a href="#" class="menu-item">Twitter</a>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-header">Account</div>
+            <a href="#" class="menu-item" onclick="showLogin()">Login / Register</a>
+            <a href="#" class="menu-item">Support</a>
+        </div>
+
+        <div style="padding: 20px; text-align: center; margin-top: auto;">
+             <small style="color: #444;">Authorized by Senspark</small>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main id="main-content">
+         <!-- Hero Section -->
+         <section id="hero-section" class="hero-section">
+            <h2 class="hero-title">ENTER THE ARENA</h2>
+            <p class="hero-subtitle">THE ULTIMATE BOMBERMAN BATTLE ROYALE</p>
+            <div class="hero-actions">
+               <button id="start-game-btn" class="cta-button">PLAY NOW</button>
+               <a href="whitepaper.html" class="secondary-button">WHITEPAPER</a>
+            </div>
+         </section>
+
+         <!-- News Section -->
+         <section id="news-section" class="news-section">
+            <h3 class="section-title">LATEST NEWS</h3>
+            <div id="news-grid" class="news-grid">
+               <!-- Dynamic Content -->
+               <div style="color: #666;">Loading news...</div>
+            </div>
+         </section>
+
+         <!-- Footer -->
+         <footer class="footer">
+             <p>&copy; 2024 Bomb Dash. All Rights Reserved.</p>
+             <p style="margin-top: 5px;">Based on BombCrypto. Authorized by Senspark.</p>
+         </footer>
+      </main>
     </div>
 
     <!-- 🎮 Game Container (Initially Hidden) -->
     <div
       id="game-container"
-      style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1"
+      style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100"
     >
       <div id="phaser-dom-container"></div>
     </div>
 
     <script type="module" src="./main.js"></script>
 
-    <!-- Register Form -->
-    <div
-      id="register-form-container"
-      class="form-container"
-      style="display: none"
-    >
-      <div class="form-box">
+    <!-- Register Form (Hidden) -->
+    <div id="register-form-container" class="form-container" style="display: none">
+       <div class="form-box">
         <h2 class="form-title">JOIN THE LEGACY</h2>
         <label for="register-username">Username:</label>
-        <input
-          type="text"
-          id="register-username"
-          name="register-username"
-          autocomplete="username"
-        />
+        <input type="text" id="register-username" name="register-username" autocomplete="username" />
         <label for="register-pin">PIN (4 digits):</label>
-        <input
-          type="password"
-          id="register-pin"
-          name="register-pin"
-          maxlength="4"
-          autocomplete="new-password"
-        />
+        <input type="password" id="register-pin" name="register-pin" maxlength="4" autocomplete="new-password" />
         <p id="register-message" class="form-message"></p>
-        <button type="button" id="register-submit-button" class="form-button">
-          IGNITE
-        </button>
-        <button
-          type="button"
-          id="register-back-button"
-          class="form-button secondary"
-        >
-          RETURN
-        </button>
+        <button type="button" id="register-submit-button" class="form-button">IGNITE</button>
+        <button type="button" id="register-back-button" class="form-button secondary">RETURN</button>
         <p class="form-tip">Create your mark. Username & 4-digit PIN.</p>
-        <p
-          class="form-pin-warning"
-          style="color: #ff4444; font-size: 8px; margin-top: 10px"
-        >
-          WARNING: PIN IS IRRECOVERABLE.
-        </p>
-        <!-- Link to Wiki -->
-        <a
-          href="/wiki.html"
-          style="
-            color: #dc143c;
-            font-size: 10px;
-            margin-top: 15px;
-            text-decoration: none;
-            border-bottom: 1px dashed #dc143c;
-          "
-          >Open BombWiki & ROI Calculator</a
-        >
+        <p class="form-pin-warning" style="color: #ff4444; font-size: 8px; margin-top: 10px">WARNING: PIN IS IRRECOVERABLE.</p>
+        <a href="/wiki.html" style="color: #dc143c; font-size: 10px; margin-top: 15px; text-decoration: none; border-bottom: 1px dashed #dc143c;">Open BombWiki & ROI Calculator</a>
       </div>
     </div>
 
-    <!-- Login Form -->
+    <!-- Login Form (Hidden) -->
     <div id="login-form-container" class="form-container" style="display: none">
       <div class="form-box">
         <h2 class="form-title">AUTHENTICATE</h2>
         <label for="login-username">Username:</label>
-        <input
-          type="text"
-          id="login-username"
-          name="login-username"
-          autocomplete="username"
-        />
+        <input type="text" id="login-username" name="login-username" autocomplete="username" />
         <label for="login-pin">PIN (4 digits):</label>
-        <input
-          type="password"
-          id="login-pin"
-          name="login-pin"
-          maxlength="4"
-          autocomplete="current-password"
-        />
+        <input type="password" id="login-pin" name="login-pin" maxlength="4" autocomplete="current-password" />
         <p id="login-message" class="form-message"></p>
-        <button type="button" id="login-submit-button" class="form-button">
-          ENTER
-        </button>
-        <button
-          type="button"
-          id="login-back-button"
-          class="form-button secondary"
-        >
-          RETURN
-        </button>
+        <button type="button" id="login-submit-button" class="form-button">ENTER</button>
+        <button type="button" id="login-back-button" class="form-button secondary">RETURN</button>
       </div>
     </div>
 
     <!-- PvP Lobby -->
     <div id="pvp-lobby-container" class="form-container" style="display: none">
-      <div class="form-box">
+        <div class="form-box">
         <h2 class="form-title">PVP ARENA</h2>
         <p class="form-message" style="color: #ffffff; min-height: 40px">
           Choose your battlefield.
@@ -363,89 +166,107 @@
     </div>
 
     <!-- Wager Arena -->
-    <div
-      id="wager-arena-container"
-      class="form-container"
-      style="display: none"
-    >
+    <div id="wager-arena-container" class="form-container" style="display: none">
       <div class="form-box">
         <h2 class="form-title">HIGH STAKES</h2>
         <p id="wager-arena-message" class="form-message" style="color: #ffffff">
           Fortune favors the bold.
         </p>
-
-        <div
-          id="wager-tiers-list"
-          style="width: 100%; max-width: 300px; margin-bottom: 20px"
-        >
-          <button
-            type="button"
-            class="form-button wager-tier-button"
-            data-tier-id="1"
-          >
-            Bronze: 10 BCOIN / 20 XP
-          </button>
-          <button
-            type="button"
-            class="form-button wager-tier-button"
-            data-tier-id="2"
-          >
-            Silver: 50 BCOIN / 100 XP
-          </button>
-          <button
-            type="button"
-            class="form-button wager-tier-button"
-            data-tier-id="3"
-          >
-            Gold: 200 BCOIN / 500 XP
-          </button>
+        <div id="wager-tiers-list" style="width: 100%; max-width: 300px; margin-bottom: 20px">
+          <button type="button" class="form-button wager-tier-button" data-tier-id="1">Bronze: 10 BCOIN / 20 XP</button>
+          <button type="button" class="form-button wager-tier-button" data-tier-id="2">Silver: 50 BCOIN / 100 XP</button>
+          <button type="button" class="form-button wager-tier-button" data-tier-id="3">Gold: 200 BCOIN / 500 XP</button>
         </div>
-
-        <button
-          type="button"
-          id="wager-arena-back-button"
-          class="form-button secondary"
-        >
-          RETURN
-        </button>
+        <button type="button" id="wager-arena-back-button" class="form-button secondary">RETURN</button>
       </div>
-
-      <div
-        id="wager-confirm-dialog"
-        class="form-container"
-        style="
-          display: none;
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-        "
-      >
-        <div class="form-box">
+       <div id="wager-confirm-dialog" class="form-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+         <div class="form-box">
           <h2 class="form-title" style="color: #dc143c">FINAL WARNING</h2>
-          <p
-            id="wager-confirm-message"
-            class="form-message"
-            style="color: #ffffff; font-size: 10px; min-height: 60px"
-          >
+          <p id="wager-confirm-message" class="form-message" style="color: #ffffff; font-size: 10px; min-height: 60px">
             You are risking X BCOIN and Y XP. Defeat means de-leveling. Proceed?
           </p>
-          <button type="button" id="wager-confirm-button" class="form-button">
-            ACCEPT FATE
-          </button>
-          <button
-            type="button"
-            id="wager-cancel-button"
-            class="form-button secondary"
-          >
-            RETREAT
-          </button>
-        </div>
-      </div>
+          <button type="button" id="wager-confirm-button" class="form-button">ACCEPT FATE</button>
+          <button type="button" id="wager-cancel-button" class="form-button secondary">RETREAT</button>
+         </div>
+       </div>
     </div>
 
-    <!-- 🤫 AVRE Easter Egg: Konami Code -->
+    <!-- Scripts for UI logic -->
+    <script>
+      // Sidebar "Play Now" button proxy
+      const sidebarStartBtn = document.getElementById('start-game-sidebar-btn');
+      if (sidebarStartBtn) {
+        sidebarStartBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const mainStartBtn = document.getElementById('start-game-btn');
+          if (mainStartBtn) mainStartBtn.click();
+        });
+      }
+
+      window.showSection = function(sectionId) {
+         const section = document.getElementById(sectionId);
+         if(section) section.scrollIntoView({ behavior: 'smooth' });
+      };
+
+      window.showLogin = function() {
+          const loginContainer = document.getElementById('login-form-container');
+          if(loginContainer) {
+              loginContainer.style.display = 'flex';
+              // Ensure close button works to hide it if needed manually
+              const backBtn = document.getElementById('login-back-button');
+              if (backBtn) {
+                  // The main.js might override this, but let's add a safe fallback listener just for UI toggle
+                  // Note: main.js handles hiding on 'RETURN' usually.
+              }
+          }
+      };
+
+      // Fetch News
+      async function loadNews() {
+        try {
+          const response = await fetch('/api/news');
+          const data = await response.json();
+          if (data.success) {
+            const container = document.getElementById('news-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (data.news.length === 0) {
+                 container.innerHTML = '<p style="color: #666;">No news available.</p>';
+                 return;
+            }
+
+            data.news.forEach(item => {
+               const card = document.createElement('div');
+               card.className = 'news-card';
+               const imageUrl = item.image_url || '/assets/img/bg/default-news.png';
+
+               // Use a simpler date format
+               const dateStr = new Date(item.created_at).toLocaleDateString();
+
+               card.innerHTML = `
+                 <div class="news-image" style="background-image: url('${imageUrl}'); background-size: cover; background-position: center;"></div>
+                 <div class="news-content">
+                   <div class="news-date">${dateStr}</div>
+                   <h3 class="news-title">${item.title}</h3>
+                   <p class="news-excerpt">${item.content.substring(0, 100)}...</p>
+                 </div>
+               `;
+               container.appendChild(card);
+            });
+          }
+        } catch (e) {
+          console.error("Failed to load news", e);
+          const container = document.getElementById('news-grid');
+          if(container) container.innerHTML = '<p style="color: #f00;">Failed to load news.</p>';
+        }
+      }
+
+      // Load news on start
+      window.addEventListener('DOMContentLoaded', loadNews);
+    </script>
+
+    <!-- Preserve Konami Code Script at bottom -->
     <script>
       const konamiCode = [
         'ArrowUp',
@@ -478,13 +299,6 @@
           '%c🌹 AVRE MODE ACTIVATED 🌹',
           'color: #DC143C; font-size: 24px; font-weight: bold;'
         );
-
-        // Confetti Explosion
-        for (let i = 0; i < 100; i++) {
-          createConfetti();
-        }
-
-        // Pulse Effect
         const overlay = document.createElement('div');
         overlay.style.position = 'fixed';
         overlay.style.top = '0';
@@ -503,20 +317,6 @@
         setTimeout(() => {
           document.body.removeChild(overlay);
         }, 600);
-      }
-
-      function createConfetti() {
-        const confetti = document.createElement('div');
-        confetti.classList.add('confetti');
-        confetti.style.left = Math.random() * 100 + 'vw';
-        confetti.style.backgroundColor =
-          Math.random() > 0.5 ? '#DC143C' : '#FFFFFF';
-        confetti.style.animationDuration = Math.random() * 2 + 1 + 's';
-        document.body.appendChild(confetti);
-
-        setTimeout(() => {
-          confetti.remove();
-        }, 3000);
       }
     </script>
   </body>

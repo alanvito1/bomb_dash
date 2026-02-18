@@ -1,153 +1,315 @@
-/* 🌹 AVRE Retro Synthwave Landing Page */
+/*
+ * 🌹 AVRE AESTHETIC SYSTEM - HYBRID V2
+ * Palette: Crimson (#DC143C) | White (#FFFFFF) | Void (#000000) | Cyan (#00FFFF)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
+
 :root {
-  --neon-pink: #ff00ff;
-  --neon-blue: #00ffff;
-  --deep-purple: #1a0b2e;
-  --grid-color: rgba(255, 0, 255, 0.2);
+  --color-crimson: #DC143C;
+  --color-void: #0d0d0d;
+  --color-panel: #1a1a1a;
+  --color-border: #444;
+  --color-text: #e0e0e0;
+  --color-highlight: #00ffff;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-body: 'Roboto', sans-serif;
 }
 
-/* Ensure landing page covers everything */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-void);
+  font-family: var(--font-body);
+  color: var(--color-text);
+  overflow: hidden; /* Prevent body scroll, use inner containers */
+}
+
+/* --- Layout --- */
+/* This ID matches the one expected by main.js to hide the UI when game starts */
 #landing-page {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 5; /* Above game until game starts */
+}
+
+/* Sidebar (Tibia Style) */
+#sidebar {
+  width: 280px;
+  background-color: var(--color-panel);
+  border-right: 2px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999; /* Highest priority */
-  background: radial-gradient(circle at center, #2b1055 0%, #000000 100%);
-  overflow: hidden;
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 20;
 }
 
-/* Retro Grid Background Effect */
-#landing-page::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background-image:
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 50px 50px;
-  transform: perspective(500px) rotateX(60deg);
-  animation: grid-move 20s linear infinite;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.6;
+.sidebar-header {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--color-crimson);
+  background: linear-gradient(180deg, #2a0000 0%, var(--color-panel) 100%);
 }
 
-@keyframes grid-move {
-  0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-  100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
+.logo-text {
+  font-family: var(--font-pixel);
+  color: var(--color-crimson);
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+  line-height: 1.4;
 }
 
-.landing-title {
-  font-size: 4rem;
+.menu-group {
+  margin-bottom: 10px;
+}
+
+.menu-header {
+  background-color: #2c2c2c;
+  padding: 8px 15px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #aaa;
   text-transform: uppercase;
-  color: #fff;
-  text-shadow:
-    0 0 5px #fff,
-    0 0 10px #fff,
-    0 0 20px var(--neon-pink),
-    0 0 40px var(--neon-pink),
-    0 0 80px var(--neon-pink);
+  border-top: 1px solid #444;
+  border-bottom: 1px solid #444;
+  /* Tibia-ish visual cue */
+  background-image: linear-gradient(to right, #333 1px, transparent 1px);
+  background-size: 4px 100%;
+}
+
+.menu-item {
+  display: block;
+  padding: 8px 20px;
+  color: #ccc;
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid #222;
+  transition: all 0.2s;
+}
+
+.menu-item:hover {
+  background-color: #333;
+  color: var(--color-highlight);
+  padding-left: 25px;
+}
+
+.menu-item.active {
+  color: var(--color-crimson);
+  border-left: 4px solid var(--color-crimson);
+  background-color: #220000;
+}
+
+/* Main Content Area */
+#main-content {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  background: radial-gradient(circle at center, #1a0505 0%, #000000 100%);
+}
+
+/* Hero Section */
+.hero-section {
+  height: 60vh;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Placeholder pattern for hero background */
+  background-color: #000;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)),
+    repeating-linear-gradient(45deg, #111 0, #111 10px, #000 10px, #000 20px);
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+  padding: 20px;
+  border-bottom: 4px solid var(--color-crimson);
+}
+
+.hero-title {
+  font-family: var(--font-pixel);
+  font-size: 48px;
+  color: var(--color-crimson);
+  text-shadow: 4px 4px 0 #000;
   margin-bottom: 20px;
-  animation: flicker 2s infinite alternate;
-  text-align: center;
-  padding: 0 20px;
 }
 
-@keyframes flicker {
-  0%, 18%, 22%, 25%, 53%, 57%, 100% {
-    opacity: 1;
-    text-shadow:
-      0 0 5px #fff,
-      0 0 10px #fff,
-      0 0 20px var(--neon-pink),
-      0 0 40px var(--neon-pink),
-      0 0 80px var(--neon-pink);
-  }
-  20%, 24%, 55% {
-    opacity: 0.8;
-    text-shadow: none;
-  }
-}
-
-.landing-subtitle {
-  font-size: 1.2rem;
-  color: var(--neon-blue);
-  margin-bottom: 60px;
-  text-shadow: 0 0 10px var(--neon-blue);
-  text-align: center;
-  padding: 0 20px;
+.hero-subtitle {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 40px;
   letter-spacing: 2px;
 }
 
-.btn-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: center;
-}
-
-.btn-landing {
-  background: rgba(0, 0, 0, 0.6);
+.cta-button {
+  display: inline-block;
+  padding: 15px 40px;
+  background-color: var(--color-crimson);
   color: #fff;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 1.5rem;
-  padding: 20px 40px;
-  border: 3px solid var(--neon-blue);
-  box-shadow: 0 0 15px var(--neon-blue), inset 0 0 10px var(--neon-blue);
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  text-decoration: none;
+  border: 2px solid #fff;
+  box-shadow: 0 0 15px var(--color-crimson);
   cursor: pointer;
-  text-transform: uppercase;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  min-width: 250px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: pulse 2s infinite;
 }
 
-.btn-landing:hover {
-  background: var(--neon-blue);
-  color: #000;
-  box-shadow: 0 0 30px var(--neon-blue), 0 0 60px var(--neon-blue);
+.cta-button:hover {
   transform: scale(1.05);
+  box-shadow: 0 0 25px var(--color-crimson);
 }
 
-.btn-landing.wiki {
-  font-size: 1rem;
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(220, 20, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
+}
+
+.secondary-button {
+  display: inline-block;
+  margin-left: 20px;
   padding: 15px 30px;
-  border-color: var(--neon-pink);
-  box-shadow: 0 0 15px var(--neon-pink), inset 0 0 10px var(--neon-pink);
-  min-width: 200px;
-}
-
-.btn-landing.wiki:hover {
-  background: var(--neon-pink);
+  background-color: transparent;
   color: #fff;
-  box-shadow: 0 0 30px var(--neon-pink), 0 0 60px var(--neon-pink);
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  text-decoration: none;
+  border: 2px solid #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 600px) {
-  .landing-title {
-    font-size: 2.2rem;
+.secondary-button:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+/* News Section */
+.news-section {
+  padding: 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-family: var(--font-pixel);
+  font-size: 24px;
+  color: var(--color-highlight);
+  margin-bottom: 30px;
+  border-left: 5px solid var(--color-crimson);
+  padding-left: 15px;
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.news-card {
+  background-color: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.news-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--color-crimson);
+}
+
+.news-image {
+  width: 100%;
+  height: 150px;
+  background-color: #333;
+  object-fit: cover;
+  display: block;
+}
+
+.news-content {
+  padding: 15px;
+}
+
+.news-date {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.news-title {
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.news-excerpt {
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+/* Footer */
+.footer {
+  padding: 40px;
+  text-align: center;
+  background-color: var(--color-panel);
+  border-top: 1px solid #444;
+  font-size: 12px;
+  color: #666;
+  margin-top: 50px;
+}
+
+/* Game Container - Needs to be hidden initially but take full screen when active */
+/* In main.js, it sets display: block. We need to ensure it covers the landing page if both were somehow visible, but main.js hides landing page. */
+#game-container {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background-color: #000;
+}
+
+/* Forms (Login/Register) - Keep existing styles but make sure they overlay properly */
+.form-container {
+  /* Inherited from original, just ensuring z-index */
+  z-index: 200;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #landing-page {
+    flex-direction: column;
   }
-  .landing-subtitle {
-    font-size: 0.8rem;
-    margin-bottom: 40px;
+  #sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    overflow-y: scroll;
+    order: 2; /* Move menu below hero on mobile? Or above? Let's keep it typical mobile header style maybe? For now sidebar at top is safest for access */
+    order: 0;
   }
-  .btn-landing {
-    font-size: 1rem;
-    padding: 15px 20px;
-    min-width: 200px;
+  .hero-title {
+    font-size: 24px;
   }
-  .btn-landing.wiki {
-    font-size: 0.8rem;
-    min-width: 160px;
+  .hero-section {
+    height: 40vh;
+    min-height: 300px;
   }
 }

@@ -185,6 +185,60 @@
           </tbody>
         </table>
       </div>
+
+      <!-- News Management Section -->
+      <div class="section">
+        <h2>News Management</h2>
+        <form id="news-form">
+          <div class="form-group">
+            <label for="news-title">Title:</label>
+            <input type="text" id="news-title" name="title" required />
+          </div>
+          <div class="form-group">
+            <label for="news-category">Category:</label>
+            <select
+              id="news-category"
+              name="category"
+              style="flex: 2; padding: 8px; border-radius: 4px; border: 1px solid #555; background-color: #444; color: #e0e0e0;"
+            >
+              <option value="News">News</option>
+              <option value="Updates">Updates</option>
+              <option value="Events">Events</option>
+              <option value="Community">Community</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="news-image">Image URL (Optional):</label>
+            <input
+              type="text"
+              id="news-image"
+              name="image_url"
+              placeholder="https://..."
+            />
+          </div>
+          <div class="form-group" style="align-items: flex-start;">
+            <label for="news-content" style="margin-top: 10px;">Content:</label>
+            <textarea
+              id="news-content"
+              name="content"
+              rows="5"
+              style="flex: 2; padding: 8px; border-radius: 4px; border: 1px solid #555; background-color: #444; color: #e0e0e0;"
+              required
+            ></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Post News</button>
+        </form>
+        <p id="news-message" style="margin-top: 15px"></p>
+
+        <h3
+          style="margin-top: 30px; color: #00ffff; border-bottom: 1px solid #00ffff; padding-bottom: 5px;"
+        >
+          Recent News
+        </h3>
+        <div id="news-list-container" style="margin-top: 20px;">
+          <!-- News items will be listed here -->
+        </div>
+      </div>
     </div>
 
     <!-- Main script for the admin panel -->

@@ -239,6 +239,19 @@ const SoloGameHistory = sequelize.define(
 
 SoloGameHistory.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
 
+const News = sequelize.define(
+  'News',
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    title: { type: DataTypes.STRING, allowNull: false },
+    category: { type: DataTypes.STRING, allowNull: false }, // e.g., 'News', 'Updates', 'Events'
+    content: { type: DataTypes.TEXT, allowNull: false },
+    image_url: { type: DataTypes.STRING, allowNull: true },
+    created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { tableName: 'news', timestamps: false }
+);
+
 async function seedDatabase() {
   await WagerTier.bulkCreate(
     [
@@ -408,6 +421,39 @@ async function runMigrations(queryInterface) {
       });
       console.log("MIGRATION: 'match_data' column added successfully.");
     }
+  }
+
+  // --- News Table Migration ---
+  if (!tables.includes('news')) {
+    console.log("MIGRATION: 'news' table not found. Creating it now...");
+    await queryInterface.createTable('news', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      image_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+    });
+    console.log("MIGRATION: 'news' table created successfully.");
   }
 
   console.log('MIGRATION: Database schema check complete.');
@@ -1009,4 +1055,5 @@ module.exports = {
   Hero,
   MatchmakingQueue,
   AltarDonation,
+  News,
 };
