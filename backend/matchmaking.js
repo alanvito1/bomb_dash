@@ -146,6 +146,9 @@ async function findHumanOpponent(player, allPlayers, processedIds, levelRange) {
 
     if (!opponentHero) continue;
 
+    // SEPARATION: Guests (mock) only play with Guests (mock). NFTs only with NFTs.
+    if (playerHero.hero_type !== opponentHero.hero_type) continue;
+
     const levelDifference = Math.abs(playerHero.level - opponentHero.level);
 
     if (levelDifference <= levelRange) {
