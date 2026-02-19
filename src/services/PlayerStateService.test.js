@@ -84,4 +84,63 @@ describe('PlayerStateService', () => {
         const parsed = JSON.parse(stored);
         expect(parsed.user.bcoin).toBeLessThan(MOCK_USER.bcoin);
     });
+
+    describe('Task Force Phase 4: Upgrade Forge', () => {
+        it('should initialize inventory empty if new user', () => {
+            const inventory = playerStateService.getInventory();
+            expect(inventory).toEqual([]);
+        });
+
+        it('should correctly count fragments', () => {
+             playerStateService.addSessionLoot([
+                { type: 'fragment', rarity: 'Common', quantity: 10 },
+                { type: 'fragment', rarity: 'Rare', quantity: 5 }
+            ]);
+            expect(playerStateService.getFragmentCount('Common')).toBe(10);
+            expect(playerStateService.getFragmentCount('Rare')).toBe(5);
+        });
+
+        it('should upgrade hero POWER using 50 Common Fragments', () => {
+            const hero = playerStateService.getHeroes()[0];
+            const initialPower = hero.stats.power || 0;
+
+            playerStateService.addSessionLoot([
+                { type: 'fragment', rarity: 'Common', quantity: 60 }
+            ]);
+
+            const res = playerStateService.upgradeHeroStatWithFragments(hero.id, 'power');
+
+            expect(res.success).toBe(true);
+            expect(res.newStatValue).toBe(initialPower + 1);
+            expect(playerStateService.getFragmentCount('Common')).toBe(10);
+        });
+
+        it('should fail upgrade if insufficient fragments', () => {
+            const hero = playerStateService.getHeroes()[0];
+
+            playerStateService.addSessionLoot([
+                { type: 'fragment', rarity: 'Common', quantity: 40 }
+            ]);
+
+            const res = playerStateService.upgradeHeroStatWithFragments(hero.id, 'power');
+
+            expect(res.success).toBe(false);
+            expect(res.message).toBe('Insufficient Fragments');
+        });
+
+        it('should upgrade hero SPEED using 50 Common Fragments', () => {
+            const hero = playerStateService.getHeroes()[0];
+            const initialSpeed = hero.stats.speed || 0;
+
+            playerStateService.addSessionLoot([
+                { type: 'fragment', rarity: 'Common', quantity: 50 }
+            ]);
+
+            const res = playerStateService.upgradeHeroStatWithFragments(hero.id, 'speed');
+
+            expect(res.success).toBe(true);
+            expect(res.newStatValue).toBe(initialSpeed + 1);
+            expect(res.remainingFragments).toBe(0);
+        });
+    });
 });

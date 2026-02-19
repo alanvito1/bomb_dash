@@ -1,239 +1,162 @@
 import UIModal from './UIModal.js';
-import api from '../api.js';
+import playerStateService from '../services/PlayerStateService.js';
 import SoundManager from '../utils/sound.js';
 
 export default class ForgeModal extends UIModal {
     constructor(scene) {
-        super(scene, 600, 700, 'FORGE OF DESTINY');
-        this.inventory = [];
-        this.slots = [null, null];
+        super(scene, 600, 600, 'THE UPGRADE FORGE');
+        this.selectedHero = null;
         this.populate();
     }
 
-    async populate() {
-        this.slots = [null, null];
-        this.refreshUI();
-        await this.loadInventory();
-        if (!this.scene || !this.active) return;
+    populate() {
+        // Get selected hero from registry or service
+        const savedHero = this.scene.registry.get('selectedHero');
+        if (savedHero) {
+            // Find the up-to-date hero object from service to ensure we have latest stats
+            const heroes = playerStateService.getHeroes();
+            this.selectedHero = heroes.find(h => h.id === savedHero.id) || savedHero;
+        } else {
+            // Fallback
+            this.selectedHero = playerStateService.getHeroes()[0];
+        }
+
         this.refreshUI();
     }
 
     refreshUI() {
         this.windowContainer.removeAll(true);
-        this.createAnvilArea();
-        this.addText(0, 50, 'INVENTORY', '#fff', '14px');
-        this.renderInventory();
-    }
 
-    createAnvilArea() {
-        const y = -this.modalHeight / 2 + 150;
-
-        // Slot 1
-        this.createSlot(-100, y, 0);
-
-        // Plus Sign
-        this.addText(0, y, '+', '#fff', '30px');
-
-        // Slot 2
-        this.createSlot(100, y, 1);
-
-        // Fuse Button
-        this.fuseBtn = this.createButton(0, y + 100, 'FUSE (50 BCOIN)', 200, 50, () => this.fuseItems());
-        this.windowContainer.add(this.fuseBtn);
-    }
-
-    createSlot(x, y, index) {
-        const size = 80;
-        const container = this.scene.add.container(x, y);
-
-        const bg = this.scene.add.graphics();
-        bg.fillStyle(0x000000, 0.5);
-        bg.fillRect(-size/2, -size/2, size, size);
-        bg.lineStyle(2, 0x00ffff);
-        bg.strokeRect(-size/2, -size/2, size, size);
-
-        container.add(bg);
-        container.setSize(size, size);
-        container.setInteractive({ useHandCursor: true });
-
-        container.on('pointerdown', () => {
-            if (this.slots[index]) {
-                this.slots[index] = null;
-                this.refreshUI();
-            }
-        });
-
-        if (this.slots[index]) {
-            const item = this.slots[index];
-            const icon = this.scene.add.image(0, 0, 'icon_base').setScale(1.5);
-            // Try to use item specific texture if available, else generic
-            if (this.scene.textures.exists('item_' + item.Item.type)) {
-                 icon.setTexture('item_' + item.Item.type);
-            }
-
-            const text = this.scene.add.text(0, 20, item.Item.name, {
-                fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#fff', align: 'center', wordWrap: { width: size }
-            }).setOrigin(0.5);
-
-            container.add([icon, text]);
-        } else {
-             const placeholder = this.scene.add.text(0, 0, 'EMPTY', {
-                fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#333'
-            }).setOrigin(0.5);
-            container.add(placeholder);
-        }
-
-        this.windowContainer.add(container);
-    }
-
-    async loadInventory() {
-        try {
-            const res = await api.getInventory();
-            if (!this.scene || !this.active) return;
-            if (res.success) {
-                this.inventory = res.inventory;
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    renderInventory() {
-        const startX = -this.modalWidth / 2 + 50;
-        const startY = 100;
-        const cols = 5;
-        const spacing = 100;
-
-        if (this.inventory.length === 0) {
-            this.addText(0, startY, 'No Items Found', '#888');
+        if (!this.selectedHero) {
+            this.addText(0, 0, 'No Hero Selected', '#888');
             return;
         }
 
-        this.inventory.forEach((uItem, i) => {
-            const x = startX + (i % cols) * spacing;
-            const y = startY + Math.floor(i / cols) * spacing;
-            this.createInventoryItem(x, y, uItem);
-        });
+        // 1. Resources Header (Fragments)
+        this.createResourcesHeader();
+
+        // 2. Hero Showcase (Sprite + Stats)
+        this.createHeroShowcase();
+
+        // 3. Upgrade Controls
+        this.createUpgradeControls();
     }
 
-    createInventoryItem(x, y, uItem) {
-        const size = 80;
-        const container = this.scene.add.container(x, y);
+    createResourcesHeader() {
+        const y = -this.modalHeight / 2 + 60;
 
+        // Background Panel for Resources
         const bg = this.scene.add.graphics();
-        bg.fillStyle(0x222222, 1);
-        bg.fillRoundedRect(-size/2, -size/2, size, size, 4);
+        bg.fillStyle(0x222222, 0.8);
+        bg.fillRoundedRect(-200, y - 20, 400, 40, 4);
+        bg.lineStyle(1, 0x444444);
+        bg.strokeRoundedRect(-200, y - 20, 400, 40, 4);
+        this.windowContainer.add(bg);
 
-        // Highlight if selected in ANY slot
-        const isSelected = this.slots.some(s => s && s.id === uItem.id);
-        // Special highlight if selected TWICE (same item in both slots)
-        const countSelected = this.slots.filter(s => s && s.id === uItem.id).length;
+        // Common Fragments
+        const commonCount = playerStateService.getFragmentCount('Common');
+        const cIcon = this.scene.add.circle(-100, y, 8, 0xAAAAAA); // Grey dot
+        const cText = this.scene.add.text(-80, y, `COMMON: ${commonCount}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#AAAAAA'
+        }).setOrigin(0, 0.5);
 
-        if (countSelected > 0) {
-            bg.lineStyle(2, 0xffff00); // Yellow border
-            bg.strokeRoundedRect(-size/2, -size/2, size, size, 4);
-        }
+        // Rare Fragments
+        const rareCount = playerStateService.getFragmentCount('Rare');
+        const rIcon = this.scene.add.circle(50, y, 8, 0x00FF00); // Green dot
+        const rText = this.scene.add.text(70, y, `RARE: ${rareCount}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#00FF00'
+        }).setOrigin(0, 0.5);
 
-        const name = this.scene.add.text(0, 0, uItem.Item.name, {
-             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#fff', align: 'center', wordWrap: { width: size-10 }
-        }).setOrigin(0.5);
-
-        // Quantity Logic: Show "Available / Total" if selected?
-        // Just show Total.
-        const qty = this.scene.add.text(size/2 - 5, size/2 - 5, `x${uItem.quantity}`, {
-             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#00ff00'
-        }).setOrigin(1, 1);
-
-        if (countSelected > 0) {
-             // Show selection count indicator
-             const selInd = this.scene.add.text(-size/2 + 5, -size/2 + 5, `${countSelected}`, {
-                 fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffff00', backgroundColor: '#000'
-             }).setOrigin(0,0);
-             container.add(selInd);
-        }
-
-        container.add([bg, name, qty]);
-        container.setSize(size, size);
-        container.setInteractive({ useHandCursor: true });
-
-        container.on('pointerdown', () => {
-            this.onItemClick(uItem);
-        });
-
-        this.windowContainer.add(container);
+        this.windowContainer.add([cIcon, cText, rIcon, rText]);
     }
 
-    onItemClick(uItem) {
-        const slot0 = this.slots[0];
-        const slot1 = this.slots[1];
+    createHeroShowcase() {
+        const y = -80;
 
-        // Logic: Try to fill empty slot first.
-        // If clicked item is already in a slot:
-        //    - If in slot 0:
-        //         - If quantity >= 2 and slot 1 empty: Add to slot 1
-        //         - Else: Remove from slot 0
-        //    - If in slot 1: Remove from slot 1
+        // Hero Sprite
+        const spriteKey = this.selectedHero.sprite_name || 'ninja_hero';
+        if (this.scene.textures.exists(spriteKey)) {
+            const sprite = this.scene.add.image(0, y, spriteKey).setScale(2);
+            // Floating animation
+            this.scene.tweens.add({
+                targets: sprite,
+                y: y - 5,
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            this.windowContainer.add(sprite);
+        }
 
-        if (slot0 && slot0.id === uItem.id) {
-            if (slot1 && slot1.id === uItem.id) {
-                // Remove from slot 1 (toggle off second selection)
-                this.slots[1] = null;
-            } else {
-                if (uItem.quantity >= 2 && !slot1) {
-                    this.slots[1] = uItem;
-                } else {
-                    this.slots[0] = null;
-                }
-            }
-        } else if (slot1 && slot1.id === uItem.id) {
-            this.slots[1] = null;
+        // Hero Name
+        this.addText(0, y + 60, this.selectedHero.name || 'Unknown Hero', '#FFFFFF', '14px');
+
+        // Level / XP ?
+        // Keep it simple as per prompt: "Display do Herói: Mostre... atributos atuais"
+    }
+
+    createUpgradeControls() {
+        const y = 80;
+        const gap = 80;
+
+        // Ensure stats object exists
+        const stats = this.selectedHero.stats || {};
+        const power = stats.power || 0;
+        const speed = stats.speed || 0;
+
+        // POWER ROW
+        this.createStatRow(y, 'POWER', power, 'power');
+
+        // SPEED ROW
+        this.createStatRow(y + gap, 'SPEED', speed, 'speed');
+    }
+
+    createStatRow(y, label, value, statKey) {
+        const xStart = -180;
+
+        // Label
+        const lbl = this.scene.add.text(xStart, y, label, {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FFD700'
+        }).setOrigin(0, 0.5);
+        this.windowContainer.add(lbl);
+
+        // Value
+        const val = this.scene.add.text(xStart + 100, y, `${value}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FFF'
+        }).setOrigin(0, 0.5);
+        this.windowContainer.add(val);
+
+        // Upgrade Button
+        const cost = 50;
+        const btnX = 100;
+
+        const btn = this.createButton(btnX, y, `UPGRADE (+1)\nCOST: ${cost} Common`, 180, 40, () => {
+             this.handleUpgrade(statKey);
+        });
+
+        this.windowContainer.add(btn);
+    }
+
+    handleUpgrade(statKey) {
+        const res = playerStateService.upgradeHeroStatWithFragments(this.selectedHero.id, statKey);
+
+        if (res.success) {
+            SoundManager.play(this.scene, 'powerup_collect'); // Or 'upgrade' if exists
+
+            // Visual feedback
+            // Show "+1" floating text
+            // Update local hero reference
+            this.selectedHero = res.hero;
+
+            // Update Registry to sync with Menu
+            this.scene.registry.set('selectedHero', this.selectedHero);
+
+            // Refresh UI
+            this.refreshUI();
         } else {
-            // Not in any slot
-            if (!slot0) this.slots[0] = uItem;
-            else if (!slot1) this.slots[1] = uItem;
-        }
-
-        this.refreshUI();
-    }
-
-    async fuseItems() {
-        if (!this.slots[0] || !this.slots[1]) {
-            alert('Select 2 items');
-            return;
-        }
-
-        // Visual Tension Shake
-        this.scene.tweens.add({
-            targets: this.windowContainer,
-            x: this.windowContainer.x + 5,
-            duration: 50,
-            yoyo: true,
-            repeat: 10
-        });
-        SoundManager.play(this.scene, 'click');
-
-        try {
-            const res = await api.craftItem(this.slots[0].id, this.slots[1].id);
-            if (!this.scene || !this.active) return;
-
-            if (res.success) {
-                if (res.result === 'success') {
-                    SoundManager.play(this.scene, 'level_up');
-                    alert(res.message);
-                } else {
-                    SoundManager.play(this.scene, 'explosion'); // Break sound
-                    alert(res.message);
-                }
-                this.slots = [null, null];
-                await this.loadInventory();
-                if (!this.scene || !this.active) return;
-                this.refreshUI();
-            } else {
-                alert(res.message);
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Crafting failed');
+            SoundManager.play(this.scene, 'error'); // Or 'explosion'
+            alert(res.message); // Simple feedback for now
         }
     }
 
@@ -247,17 +170,41 @@ export default class ForgeModal extends UIModal {
     createButton(x, y, label, w, h, callback) {
         const container = this.scene.add.container(x, y);
         const bg = this.scene.add.graphics();
-        bg.fillStyle(0xff0000, 1);
-        bg.fillRoundedRect(-w/2, -h/2, w, h, 4);
+
+        // Retro Button Style
+        bg.fillStyle(0xFF4500, 1); // Orange/Red
+        bg.fillRect(-w/2, -h/2, w, h);
+
+        // Highlight
+        bg.fillStyle(0xFF8C00, 1);
+        bg.fillRect(-w/2, -h/2, w, 4);
+
+        // Shadow
+        bg.fillStyle(0x8B0000, 1);
+        bg.fillRect(-w/2, h/2 - 4, w, 4);
+
+        // Border
+        bg.lineStyle(2, 0x000000);
+        bg.strokeRect(-w/2, -h/2, w, h);
 
         const text = this.scene.add.text(0, 0, label, {
-             fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#fff'
+             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#fff', align: 'center', lineSpacing: 4
         }).setOrigin(0.5);
 
         container.add([bg, text]);
         container.setSize(w, h);
         container.setInteractive({ useHandCursor: true });
-        container.on('pointerdown', callback);
+
+        container.on('pointerdown', () => {
+             bg.y = 2; text.y = 2; // Press effect
+        });
+        container.on('pointerout', () => {
+             bg.y = 0; text.y = 0;
+        });
+        container.on('pointerup', () => {
+             bg.y = 0; text.y = 0;
+             callback();
+        });
 
         return container;
     }

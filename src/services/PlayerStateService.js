@@ -60,6 +60,12 @@ class PlayerStateService {
         return hero ? (hero.max_stage || 1) : 1;
     }
 
+    getFragmentCount(rarity) {
+        if (!this.state.inventory) return 0;
+        const item = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === rarity);
+        return item ? item.quantity : 0;
+    }
+
     // --- ACTIONS ---
 
     completeStage(heroId, stageId) {
@@ -104,6 +110,39 @@ class PlayerStateService {
 
         this.saveState();
         return { success: true, hero, statUpgraded: randomStat };
+    }
+
+    upgradeHeroStatWithFragments(heroId, statName) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        if (!hero) throw new Error('Hero not found');
+
+        // Valid stats to upgrade via this method
+        if (!['power', 'speed'].includes(statName)) {
+             throw new Error('Invalid stat for upgrade');
+        }
+
+        const rarity = 'Common';
+        const cost = 50;
+
+        const fragmentCount = this.getFragmentCount(rarity);
+        if (fragmentCount < cost) {
+            return { success: false, message: 'Insufficient Fragments' };
+        }
+
+        // Deduct Fragments
+        const item = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === rarity);
+        if (item) {
+            item.quantity -= cost;
+        }
+
+        // Upgrade Stat
+        if (!hero.stats) hero.stats = {};
+        if (!hero.stats[statName]) hero.stats[statName] = 1;
+
+        hero.stats[statName] += 1;
+
+        this.saveState();
+        return { success: true, hero, newStatValue: hero.stats[statName], remainingFragments: item ? item.quantity : 0 };
     }
 
     rerollHeroSpells(heroId) {
