@@ -134,6 +134,7 @@ export default class MenuScene extends Phaser.Scene {
   updateHeroSprite(key) {
     if (this.heroSprite && this.textures.exists(key)) {
       this.heroSprite.setTexture(key);
+      this.updateHeroScale();
     }
   }
 
@@ -337,11 +338,26 @@ export default class MenuScene extends Phaser.Scene {
     const cx = width / 2;
     const cy = height / 2;
 
-    this.heroSprite = this.add.image(cx, cy, 'ninja_hero').setScale(4);
+    this.heroSprite = this.add.image(cx, cy, 'ninja_hero');
+    this.updateHeroScale();
+  }
 
-    this.tweens.add({
+  updateHeroScale() {
+    if (!this.heroSprite) return;
+
+    // Enforce fixed display height (approx 3x larger than 40px icons = ~150px)
+    const targetHeight = 150;
+    const scale = targetHeight / this.heroSprite.height;
+
+    this.heroSprite.setScale(scale);
+
+    // Stop existing tween if any
+    if (this.heroTween) this.heroTween.stop();
+
+    // Create new breathing tween based on calculated scale
+    this.heroTween = this.tweens.add({
       targets: this.heroSprite,
-      scaleY: 4.2,
+      scaleY: scale * 1.05,
       duration: 2000,
       yoyo: true,
       repeat: -1,
