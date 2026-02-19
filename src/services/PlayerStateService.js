@@ -21,9 +21,13 @@ class PlayerStateService {
     }
 
     getDefaultState() {
+        const heroes = JSON.parse(JSON.stringify(MockHeroes));
         return {
-            user: { ...MOCK_USER }, // Copy to avoid mutation issues
-            heroes: JSON.parse(JSON.stringify(MockHeroes)), // Deep copy
+            user: {
+                ...MOCK_USER,
+                selectedHeroId: heroes[0] ? heroes[0].id : null
+            }, // Copy to avoid mutation issues
+            heroes: heroes, // Deep copy
             houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
             inventory: [] // Phase 3: Grind & Loot System
         };
@@ -67,6 +71,15 @@ class PlayerStateService {
     }
 
     // --- ACTIONS ---
+
+    setSelectedHero(heroId) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        if (!hero) throw new Error('Hero not found');
+
+        this.state.user.selectedHeroId = heroId;
+        this.saveState();
+        return { success: true, hero };
+    }
 
     completeStage(heroId, stageId) {
         const hero = this.state.heroes.find(h => h.id === heroId);

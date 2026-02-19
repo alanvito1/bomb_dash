@@ -222,6 +222,12 @@ export default class ChatWidget {
     }
   }
 
+  setVisible(visible) {
+    if (this.container) {
+      this.container.style.display = visible ? 'flex' : 'none';
+    }
+  }
+
   destroy() {
     if (this.container) {
       this.container.remove();

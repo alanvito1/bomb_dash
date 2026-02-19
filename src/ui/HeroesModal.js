@@ -17,26 +17,49 @@ const RARITY_COLORS = {
 export default class HeroesModal extends UIModal {
     constructor(scene) {
         super(scene, 460, 600, LanguageManager.get('heroes_title', {}, 'HEROES'));
-        this.selectedHero = null;
         this.heroes = [];
+        this.selectedHero = null;
+        this.currentSelectedId = null;
         this.populate();
     }
 
     async populate() {
-        // Fetch Heroes
         try {
-            const res = await api.getHeroes();
+            const [heroesRes, userRes] = await Promise.all([
+                api.getHeroes(),
+                api.getCurrentUser()
+            ]);
+
             if (!this.scene || !this.active) return; // Prevent crash if closed
 
-            if (res.success && res.heroes) {
-                this.heroes = res.heroes;
-                this.renderGrid();
-            } else {
-                console.warn('Failed to fetch heroes', res);
-                this.showError('Failed to load heroes.');
+            if (heroesRes.success) {
+                this.heroes = heroesRes.heroes;
             }
+            if (userRes.success) {
+                this.currentSelectedId = userRes.user.selectedHeroId;
+            }
+
+            // Fallback selection
+            if (!this.currentSelectedId && this.heroes.length > 0) {
+                this.currentSelectedId = this.heroes[0].id;
+                // Auto-select first if none selected
+                api.setSelectedHero(this.currentSelectedId).catch(console.error);
+            }
+
+            this.selectedHero = this.heroes.find(h => h.id === this.currentSelectedId) || this.heroes[0];
+
+            // Sync registry for MenuScene showcase
+            if (this.selectedHero) {
+                this.scene.registry.set('selectedHero', this.selectedHero);
+                if (this.scene.updateHeroSprite) {
+                    this.scene.updateHeroSprite(this.selectedHero.sprite_name);
+                }
+            }
+
+            this.renderGrid();
+            this.renderDetails();
         } catch (e) {
-            console.error(e);
+            console.error('Failed to load heroes data', e);
             if (this.scene && this.windowContainer) {
                 this.showError('Network Error.');
             }
@@ -51,178 +74,203 @@ export default class HeroesModal extends UIModal {
         this.gridContainer = this.scene.add.container(0, 0);
         this.windowContainer.add(this.gridContainer);
 
-        const startX = -this.modalWidth / 2 + 50;
-        const startY = -this.modalHeight / 2 + 80;
-        const slotSize = 80;
+        // Layout Config (3 Columns)
+        const cols = 3;
+        const cardW = 120;
+        const cardH = 140; // Taller cards
         const gap = 20;
-        const cols = 5;
+
+        const totalW = (cols * cardW) + ((cols - 1) * gap);
+        const startX = -totalW / 2 + cardW / 2;
+        const startY = -this.modalHeight / 2 + 120; // Start below title
 
         this.heroes.forEach((hero, index) => {
             const col = index % cols;
             const row = Math.floor(index / cols);
-            const x = startX + col * (slotSize + gap);
-            const y = startY + row * (slotSize + gap);
+            const x = startX + col * (cardW + gap);
+            const y = startY + row * (cardH + gap);
 
-            this.createHeroSlot(x, y, slotSize, hero);
+            this.createHeroCard(x, y, cardW, cardH, hero);
         });
     }
 
-    createHeroSlot(x, y, size, hero) {
+    createHeroCard(x, y, w, h, hero) {
         const container = this.scene.add.container(x, y);
+        const isSelected = (hero.id === this.currentSelectedId);
         const rarityColor = RARITY_COLORS[hero.rarity] || 0xffffff;
 
-        // Slot Bg
+        // 1. Background
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x222222, 1);
-        bg.fillRect(0, 0, size, size);
-        bg.lineStyle(2, rarityColor);
-        bg.strokeRect(0, 0, size, size);
+        bg.fillRoundedRect(-w/2, -h/2, w, h, 8);
+
+        // Border Logic
+        if (isSelected) {
+            // Glowing Gold/Green Border
+            bg.lineStyle(4, 0x00ff00, 1); // Bright Green for Selected
+            bg.strokeRoundedRect(-w/2, -h/2, w, h, 8);
+
+            // Glow Effect (Outer Stroke with alpha)
+            bg.lineStyle(8, 0x00ff00, 0.3);
+            bg.strokeRoundedRect(-w/2, -h/2, w, h, 8);
+        } else {
+            // Rarity Border
+            bg.lineStyle(2, rarityColor, 0.8);
+            bg.strokeRoundedRect(-w/2, -h/2, w, h, 8);
+        }
         container.add(bg);
 
-        // Avatar (Placeholder Text or Sprite)
-        // If sprite exists, use it, else use Text Initials
+        // 2. Avatar
         if (hero.sprite_name && this.scene.textures.exists(hero.sprite_name)) {
-            const avatar = this.scene.add.image(size / 2, size / 2, hero.sprite_name).setDisplaySize(size - 10, size - 10);
+            const avatar = this.scene.add.image(0, -20, hero.sprite_name);
+            // Scale to fit width/height safely
+            const maxDim = Math.min(w, h) * 0.7;
+            const scale = maxDim / Math.max(avatar.width, avatar.height);
+            avatar.setScale(scale);
             container.add(avatar);
         } else {
              const initials = (hero.name || 'H').substring(0, 2).toUpperCase();
-             const txt = this.scene.add.text(size / 2, size / 2, initials, {
-                 fontSize: '20px', fill: '#fff'
+             const txt = this.scene.add.text(0, -20, initials, {
+                 fontSize: '32px', fill: '#555'
              }).setOrigin(0.5);
              container.add(txt);
         }
 
-        // Level Badge
-        const lvlBg = this.scene.add.circle(size - 10, 10, 10, 0x000000);
-        const lvlText = this.scene.add.text(size - 10, 10, hero.level.toString(), {
+        // 3. Name Label
+        const nameText = this.scene.add.text(0, 20, hero.name.toUpperCase(), {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: isSelected ? '#00ff00' : '#ffffff',
+            align: 'center',
+            wordWrap: { width: w - 10 }
+        }).setOrigin(0.5, 0);
+        container.add(nameText);
+
+        // 4. Level Badge (Top Right)
+        const lvlBg = this.scene.add.circle(w/2 - 15, -h/2 + 15, 10, 0x000000);
+        const lvlText = this.scene.add.text(w/2 - 15, -h/2 + 15, hero.level.toString(), {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             fill: '#ffffff'
         }).setOrigin(0.5);
         container.add([lvlBg, lvlText]);
 
-        // Rarity Label (Bottom)
-        const rarityName = RARITY[hero.rarity] ? RARITY[hero.rarity].substring(0, 3) : 'UNK';
-        const rarText = this.scene.add.text(size/2, size - 10, rarityName, {
-             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: `#${rarityColor.toString(16).padStart(6, '0')}`
-        }).setOrigin(0.5);
-        container.add(rarText);
+        // 5. "SELECTED" Label (Bottom)
+        if (isSelected) {
+            const selBg = this.scene.add.graphics();
+            selBg.fillStyle(0x00ff00, 1);
+            selBg.fillRoundedRect(-w/2 + 10, h/2 - 25, w - 20, 20, 4);
+
+            const selText = this.scene.add.text(0, h/2 - 15, LanguageManager.get('heroes_selected', {}, 'SELECTED'), {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '8px',
+                color: '#000000'
+            }).setOrigin(0.5);
+
+            container.add([selBg, selText]);
+        }
 
         // Interaction
-        container.setSize(size, size);
+        container.setSize(w, h);
         container.setInteractive({ useHandCursor: true });
 
-        container.on('pointerdown', () => {
+        container.on('pointerdown', async () => {
             SoundManager.playClick(this.scene);
-            this.selectHero(hero);
-
-            this.scene.tweens.add({
-                targets: container,
-                scale: 0.95,
-                yoyo: true,
-                duration: 50
-            });
+            await this.handleSelectHero(hero);
         });
 
         this.gridContainer.add(container);
     }
 
-    selectHero(hero) {
+    async handleSelectHero(hero) {
+        if (this.currentSelectedId === hero.id) return; // Already selected
+
+        this.currentSelectedId = hero.id;
         this.selectedHero = hero;
+
+        // Visual Feedback (immediate)
+        this.renderGrid();
         this.renderDetails();
 
-        // Update Registry & Menu Showcase
-        this.scene.registry.set('selectedHero', hero);
-        if (this.scene.updateHeroSprite) {
-            this.scene.updateHeroSprite(hero.sprite_name);
+        // Update Backend/State
+        try {
+            await api.setSelectedHero(hero.id);
+            // Update Menu Showcase
+            this.scene.registry.set('selectedHero', hero);
+            if (this.scene.updateHeroSprite) {
+                this.scene.updateHeroSprite(hero.sprite_name);
+            }
+        } catch (e) {
+            console.error('Failed to select hero', e);
         }
     }
 
     renderDetails() {
         if (!this.selectedHero) return;
 
-        // Remove previous details container if exists
         if (this.detailsContainer) {
             this.detailsContainer.destroy();
         }
 
-        const detailsY = 100; // Bottom half
+        // Panel Position: Bottom area
+        const detailsY = 180;
         this.detailsContainer = this.scene.add.container(0, detailsY);
 
-        // Background for details
+        // Background
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x111111, 0.95);
-        bg.fillRect(-this.modalWidth / 2 + 20, 0, this.modalWidth - 40, 240);
+        bg.fillRect(-this.modalWidth / 2 + 20, 0, this.modalWidth - 40, 180);
         bg.lineStyle(1, 0x444444);
-        bg.strokeRect(-this.modalWidth / 2 + 20, 0, this.modalWidth - 40, 240);
+        bg.strokeRect(-this.modalWidth / 2 + 20, 0, this.modalWidth - 40, 180);
         this.detailsContainer.add(bg);
 
-        // Hero Name & Rarity
-        const rarityColor = RARITY_COLORS[this.selectedHero.rarity] || 0xffffff;
-        const name = this.scene.add.text(0, 20, (this.selectedHero.name || 'Hero').toUpperCase(), {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '14px',
-            fill: `#${rarityColor.toString(16).padStart(6, '0')}`
-        }).setOrigin(0.5);
-        this.detailsContainer.add(name);
-
-        // --- STATS COLUMN (Left) ---
-        const startX = -this.modalWidth / 2 + 40;
-        let statY = 50;
+        // --- STATS (Horizontal Layout) ---
         const stats = [
-            { label: 'POWER', val: this.selectedHero.stats.power },
-            { label: 'SPEED', val: this.selectedHero.stats.speed },
-            { label: 'STAMINA', val: this.selectedHero.stats.stamina },
-            { label: 'BOMBS', val: this.selectedHero.stats.bomb_num },
-            { label: 'RANGE', val: this.selectedHero.stats.range }
+            { label: 'POW', val: this.selectedHero.stats.power, icon: '⚔️' },
+            { label: 'SPD', val: this.selectedHero.stats.speed, icon: '👟' },
+            { label: 'HP', val: this.selectedHero.stats.stamina, icon: '❤️' },
+            { label: 'RNG', val: this.selectedHero.stats.range, icon: '🎯' }
         ];
 
+        let statX = -this.modalWidth / 2 + 50;
+        const statY = 30;
+        const statGap = 90;
+
         stats.forEach(s => {
-            const txt = this.scene.add.text(startX, statY, `${s.label}: ${s.val}`, {
-                 fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffffff'
-            });
+            const txt = this.scene.add.text(statX, statY, `${s.label}\n${s.val}`, {
+                 fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffffff', align: 'center'
+            }).setOrigin(0.5, 0);
             this.detailsContainer.add(txt);
-            statY += 20;
+            statX += statGap;
         });
 
-        // --- SPELLS COLUMN (Right) ---
-        const spellX = 20;
-        let spellY = 50;
-        const spellTitle = this.scene.add.text(spellX, spellY, 'SPELLS:', {
+        // --- SPELLS ---
+        const spellY = 80;
+        const spellTitle = this.scene.add.text(0, spellY, 'SPELLS', {
              fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffff00'
-        });
+        }).setOrigin(0.5);
         this.detailsContainer.add(spellTitle);
-        spellY += 20;
 
+        let spellListText = "None";
         if (this.selectedHero.spells && this.selectedHero.spells.length > 0) {
-            this.selectedHero.spells.forEach(spellId => {
-                const spell = SPELLS[spellId];
-                const spellName = spell ? spell.name : `Unknown (${spellId})`;
-                const txt = this.scene.add.text(spellX, spellY, `- ${spellName}`, {
-                     fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#00ffff'
-                });
-                this.detailsContainer.add(txt);
-                spellY += 15;
-            });
-        } else {
-             const txt = this.scene.add.text(spellX, spellY, 'None', {
-                 fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#888'
-            });
-            this.detailsContainer.add(txt);
+            spellListText = this.selectedHero.spells.map(id => {
+                const spell = SPELLS[id];
+                return spell ? spell.name : '?';
+            }).join(', ');
         }
 
-        // --- ACTION BUTTONS ---
-        const btnY = 190;
+        const spellsTxt = this.scene.add.text(0, spellY + 20, spellListText, {
+             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#00ffff', align: 'center', wordWrap: { width: 300 }
+        }).setOrigin(0.5);
+        this.detailsContainer.add(spellsTxt);
 
-        // Upgrade Button
-        const upgBtn = this.createActionButton(-100, btnY, 'UPGRADE STATS', 500, 0x00ff00, async (btn, txt) => {
-            await this.handleUpgrade(btn, txt);
-        });
+        // --- ACTION BUTTONS (Upgrade / Reroll) ---
+        const btnY = 140;
 
-        // Reroll Button
-        const rerollBtn = this.createActionButton(100, btnY, 'REROLL SPELLS', 1000, 0xff00ff, async (btn, txt) => {
-            await this.handleReroll(btn, txt);
-        });
+        // Upgrade
+        const upgBtn = this.createActionButton(-100, btnY, 'UPGRADE', 500, 0x00ff00, (b, t) => this.handleUpgrade(b, t));
+        // Reroll
+        const rerollBtn = this.createActionButton(100, btnY, 'REROLL', 1000, 0xff00ff, (b, t) => this.handleReroll(b, t));
 
         this.detailsContainer.add([upgBtn, rerollBtn]);
         this.windowContainer.add(this.detailsContainer);
@@ -230,8 +278,7 @@ export default class HeroesModal extends UIModal {
 
     createActionButton(x, y, label, cost, color, callback) {
         const container = this.scene.add.container(x, y);
-
-        const w = 180;
+        const w = 140;
         const h = 40;
 
         const bg = this.scene.add.graphics();
@@ -240,11 +287,11 @@ export default class HeroesModal extends UIModal {
         bg.lineStyle(2, color);
         bg.strokeRoundedRect(-w/2, -h/2, w, h, 4);
 
-        const lbl = this.scene.add.text(0, -5, label, {
+        const lbl = this.scene.add.text(0, -6, label, {
             fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffffff'
         }).setOrigin(0.5);
 
-        const costLbl = this.scene.add.text(0, 10, `${cost} BCOIN`, {
+        const costLbl = this.scene.add.text(0, 8, `${cost} BC`, {
             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffd700'
         }).setOrigin(0.5);
 
@@ -262,7 +309,7 @@ export default class HeroesModal extends UIModal {
 
     async handleUpgrade(btnContainer, costText) {
         const originalText = costText.text;
-        costText.setText('Processing...');
+        costText.setText('...');
 
         try {
             const res = await api.upgradeHeroStat(this.selectedHero.id);
@@ -272,64 +319,54 @@ export default class HeroesModal extends UIModal {
                 SoundManager.play(this.scene, 'upgrade');
                 this.selectedHero = res.hero;
 
-                // Update hero in local list
+                // Update list
                 const idx = this.heroes.findIndex(h => h.id === res.hero.id);
                 if (idx !== -1) this.heroes[idx] = res.hero;
 
-                // Refresh UI
                 this.renderDetails();
                 bcoinService.updateBalance();
             } else {
-                costText.setText(res.message || 'Error');
+                costText.setText('Err');
                 SoundManager.play(this.scene, 'error');
-                this.scene.time.delayedCall(1500, () => {
-                     if (costText.active) costText.setText(originalText);
-                });
+                this.scene.time.delayedCall(1000, () => costText.setText(originalText));
             }
         } catch (e) {
             console.error(e);
-            costText.setText('Error');
+            costText.setText('Err');
         }
     }
 
     async handleReroll(btnContainer, costText) {
         const originalText = costText.text;
-        costText.setText('Rolling...');
+        costText.setText('...');
 
         try {
             const res = await api.rerollHeroSpells(this.selectedHero.id);
             if (!this.scene || !this.active) return;
 
             if (res.success) {
-                SoundManager.play(this.scene, 'upgrade'); // Use upgrade sound for now
+                SoundManager.play(this.scene, 'upgrade');
                 this.selectedHero = res.hero;
 
-                // Update hero in local list
+                 // Update list
                 const idx = this.heroes.findIndex(h => h.id === res.hero.id);
                 if (idx !== -1) this.heroes[idx] = res.hero;
 
-                // Refresh UI
                 this.renderDetails();
                 bcoinService.updateBalance();
             } else {
-                costText.setText(res.message || 'Error');
+                costText.setText('Err');
                 SoundManager.play(this.scene, 'error');
-                this.scene.time.delayedCall(1500, () => {
-                     if (costText.active) costText.setText(originalText);
-                });
+                this.scene.time.delayedCall(1000, () => costText.setText(originalText));
             }
         } catch (e) {
             console.error(e);
-            costText.setText('Error');
+            costText.setText('Err');
         }
     }
 
     showError(msg) {
-        const text = this.scene.add.text(0, 0, msg, {
-             fontFamily: '"Press Start 2P"',
-             fontSize: '12px',
-             fill: '#ff0000'
-        }).setOrigin(0.5);
-        this.windowContainer.add(text);
+        // Implement simple toast or error text
+        console.warn(msg);
     }
 }
