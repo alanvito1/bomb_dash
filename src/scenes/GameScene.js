@@ -73,21 +73,17 @@ export default class GameScene extends Phaser.Scene {
 
   shutdown() {
     if (this.chatWidget) this.chatWidget.destroy();
+    // [VCL-09 FIX] Ensure HUDScene is stopped to prevent zombie listeners
+    this.scene.stop('HUDScene');
   }
 
   async initializeScene() {
     // FURIA-FS-04: Black box recorder for debugging disappearing enemies.
     window.enemyStateHistory = [];
     console.log('[VCL-09] GameScene: Starting initialization...');
-    try {
-      const serverSettings = await api.getGameSettings();
-      if (serverSettings.success) this.gameSettings = serverSettings.settings;
-    } catch (error) {
-      console.warn(
-        '[GameScene] Could not fetch game settings. Using defaults.',
-        error
-      );
-    }
+
+    // [VCL-09 FIX] Removed /api/admin/settings call to prevent 403 Forbidden.
+    // Using default local settings instead.
 
     this.pauseManager = new PauseManager(this);
     SoundManager.stop(this, 'menu_music');
