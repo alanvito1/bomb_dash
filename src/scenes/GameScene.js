@@ -12,6 +12,7 @@ import PauseManager from '../utils/PauseManager.js';
 import SoundManager from '../utils/sound.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import ChatWidget from '../ui/ChatWidget.js';
+import playerStateService from '../services/PlayerStateService.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -260,7 +261,10 @@ export default class GameScene extends Phaser.Scene {
     this.bossDefeated = false;
     this.bossSpawned = false;
     this.activePowerups = {};
-    this.sessionLoot = { coins: 0, xp: 0, items: [] }; // Risk Mechanics + Items
+    // Phase 3: The Grind & Loot System
+    this.sessionLoot = []; // Array of { type: 'fragment', rarity: string, quantity: number }
+    this.sessionCoins = 0;
+
     this.sessionBestiary = {}; // Phase 2: Bestiary
     this.sessionBombHits = 0; // Phase 2: Proficiency
     this.sessionDistance = 0; // Phase 2: Proficiency
@@ -616,84 +620,95 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  async handleVictory() {
+      if (this.transitioning) return;
+      this.transitioning = true;
+      this.physics.pause();
+      this.setPlayerState('CANNOT_SHOOT', 'Victory');
+      SoundManager.stopAll(this);
+      SoundManager.play(this, 'level_up'); // Victory Sound
+
+      // Visual Feedback
+      const cx = this.cameras.main.centerX;
+      const cy = this.cameras.main.centerY;
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x000000, 0.8);
+      overlay.fillRect(0, 0, this.scale.width, this.scale.height);
+      overlay.setDepth(2000);
+
+      this.add.text(cx, cy - 50, 'STAGE CLEAR!', {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '32px',
+          color: '#00ff00',
+          align: 'center',
+          stroke: '#000000',
+          strokeThickness: 6
+      }).setOrigin(0.5).setDepth(2001);
+
+      this.add.text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.length} Items`, {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '16px',
+          color: '#ffffff',
+          align: 'center',
+          lineSpacing: 10
+      }).setOrigin(0.5).setDepth(2001);
+
+      // Save to Persistent State
+      playerStateService.addSessionLoot(this.sessionLoot);
+
+      // Unlock Next Node
+      if (this.playerStats.id && this.stageConfig) {
+          playerStateService.completeStage(this.playerStats.id, this.stageConfig.id);
+      }
+
+      // Return to WorldMap after delay
+      this.time.delayedCall(3000, () => {
+          this.scene.stop('HUDScene');
+          this.scene.start('WorldMapScene');
+      });
+  }
+
   async handleGameOver(isVictory = false) {
+    // Note: isVictory argument is practically unused now for "Success" path which goes to handleVictory
+    // But kept for legacy or if we want to route victory here later.
+    // For now, handleGameOver is mostly for DEFEAT.
+
     if (this.gamePaused || this.transitioning) return;
-    this.transitioning = true; // Use transitioning to prevent double calls
+    this.transitioning = true;
     this.gamePaused = true;
     this.player?.setActive(false);
     this.setPlayerState('CANNOT_SHOOT', 'Game over');
     SoundManager.stopAll(this);
 
-    // Risk Mechanic: Lose Loot on Defeat
-    let finalCoins = 0;
-    let finalXp = 0;
-    let finalItems = [];
+    // DEFEAT LOGIC: LOSE EVERYTHING
+    SoundManager.play(this, 'gameover');
+    const finalCoins = 0;
+    const finalItems = []; // Lost session loot
+    const finalXp = this.score; // Keep XP for kills? Let's say yes for progression.
 
-    if (isVictory) {
-      SoundManager.play(this, 'level_up'); // Or victory sound
-      finalCoins = this.sessionLoot.coins;
-      finalXp = this.sessionLoot.xp; // Or stick to score-based XP? Using Score for XP for now.
-      finalItems = this.sessionLoot.items || [];
-    } else {
-      SoundManager.play(this, 'gameover');
-      finalCoins = 0; // Lost everything
-      // Optional: XP penalty? For now, we keep XP based on score (kills) or maybe lose it too?
-      // Prompt said: "O jogador perde 100% do Loot Temporário". XP loss was optional.
-      // Let's assume XP is safe (Account progression) but Coins are lost (Loot).
-      // Actually, usually in Roguelites, you keep XP.
-      finalXp = this.score;
-      finalItems = []; // Lost items
-    }
-
+    // Report to backend (for XP)
     const heroId = this.playerStats.id;
-
-    // This is the critical fix: report the match result to the backend to award XP.
     if (heroId) {
       try {
-        console.log(
-          `[GameScene] Reporting match complete. HeroID: ${heroId}, XP: ${finalXp}, Coins: ${finalCoins}, Items: ${finalItems.length}`
-        );
-        // Phase 2: Submit Bestiary and Proficiency Data
-        const bestiary = this.sessionBestiary || {};
-        const proficiency = {
-            bombHits: this.sessionBombHits || 0,
-            distance: this.sessionDistance || 0
-        };
-
-        // Use the new, correct method on the api client.
-        const response = await api.completeMatch(heroId, finalXp, finalCoins, bestiary, proficiency, finalItems);
-        if (response.success) {
-          console.log('[GameScene] XP/Coins/Proficiency awarded successfully by the server.');
-        } else {
-          console.warn(
-            '[GameScene] Server failed to award rewards:',
-            response.message
-          );
-        }
-
-        // --- STAGE UNLOCK LOGIC (Phase 4 Foundation) ---
-        if (isVictory && this.stageConfig) {
-             const unlockRes = await api.completeStage(heroId, this.stageConfig.id);
-             if (unlockRes.unlocked) {
-                 console.log(`[GameScene] STAGE UNLOCKED! New Max Stage: ${unlockRes.newMaxStage}`);
-                 // Optional: Show unlock notification
-             }
-        }
-
-      } catch (error) {
-        console.error('[GameScene] Error reporting match completion:', error);
+        await api.completeMatch(heroId, finalXp, finalCoins, this.sessionBestiary || {}, {}, []);
+      } catch (e) {
+        console.warn('Failed to report defeat stats', e);
       }
     }
 
-    // LP-05 & LP-07: Pass all relevant data to GameOverScene
     this.scene.stop('HUDScene');
+    // Go to WorldMapScene empty handed (or GameOverScene first)
+    // Prompt says "volta para a WorldMapScene de mãos vazias".
+    // I will route to GameOverScene with "DEFEAT" message, which then goes to Menu/Map.
     this.scene.start('GameOverScene', {
       score: this.score,
       world: this.world,
       phase: this.phase,
-      coins: finalCoins, // Show what was actually kept
+      coins: 0,
       xpGained: finalXp,
-      isVictory: isVictory
+      isVictory: false,
+      customMessage: 'MISSION FAILED\nLOOT LOST'
     });
   }
 
@@ -817,16 +832,9 @@ export default class GameScene extends Phaser.Scene {
         }
     });
 
-    // LP-05: Check if the current non-boss wave is complete, then advance.
-    if (
-      this.enemiesSpawned > 0 &&
-      this.enemiesKilled >= this.enemiesSpawned &&
-      !this.bossSpawned &&
-      !this.waveStarted &&
-      !this.transitioning
-    ) {
-      this.waveStarted = true; // Prevents this from being called multiple times
-      this.time.delayedCall(1000, this.prepareNextStage, [], this);
+    // Phase 3: Grind Victory Condition (15 Kills)
+    if (this.enemiesKilled >= 15 && !this.transitioning) {
+        this.handleVictory();
     }
   }
 
@@ -835,74 +843,101 @@ export default class GameScene extends Phaser.Scene {
   }
 
   trySpawnLoot(x, y) {
-    if (Math.random() > 0.2) return; // 20% Global Drop Rate
-
-    const roll = Math.random() * 100;
-    let itemKey = '';
-    let itemName = '';
-    let isBcoin = false;
-
-    // Drop Table
-    if (roll < 50) {
-        // 50% Gold (BCOIN)
-        itemKey = 'icon_bcoin'; // or 'icon_gold'
-        itemName = 'BCOIN';
-        isBcoin = true;
-    } else if (roll < 80) {
-        // 30% Scrap
-        itemKey = 'item_scrap';
-        itemName = 'Scrap Metal';
-    } else if (roll < 95) {
-        // 15% Potion
-        itemKey = 'item_health_potion';
-        itemName = 'Health Potion';
-    } else {
-        // 5% Equipment (Rare/Common)
-        const equipRoll = Math.random();
-        if (equipRoll < 0.25) { itemKey = 'item_rusty_sword'; itemName = 'Rusty Sword'; }
-        else if (equipRoll < 0.50) { itemKey = 'item_leather_vest'; itemName = 'Leather Vest'; }
-        else if (equipRoll < 0.75) { itemKey = 'item_neon_boots'; itemName = 'Neon Boots'; }
-        else { itemKey = 'item_iron_katana'; itemName = 'Iron Katana'; }
+    // 1. Health Potion (5% Chance - Coexists)
+    if (Math.random() < 0.05) {
+        this.spawnLootItem(x, y, 'item_health_potion', 'Health Potion', 0xffffff, false);
     }
 
-    // Spawn Sprite
-    const loot = this.lootGroup.create(x, y, itemKey);
-    loot.setDisplaySize(24, 24);
-    loot.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
-    loot.setDrag(100);
-    loot.itemName = itemName;
-    loot.isBcoin = isBcoin;
+    // 2. Global Drop System (30% Chance)
+    if (Math.random() > 0.3) return;
 
-    // Float Animation
-    this.tweens.add({
-        targets: loot,
-        y: y - 5,
-        duration: 1000,
-        yoyo: true,
-        repeat: -1
-    });
+    // 3. Rarity Roll (The Roulette)
+    const roll = Math.random() * 100;
+    let rarity = 'Common';
+    let color = 0xAAAAAA;
 
-    // Auto-destroy after 15s to save memory
-    this.time.delayedCall(15000, () => {
-        if (loot.active) loot.destroy();
-    });
+    if (roll < 85) {
+        rarity = 'Common';
+        color = 0xAAAAAA;
+    } else if (roll < 95) {
+        rarity = 'Rare';
+        color = 0x00FF00;
+    } else if (roll < 99) {
+        rarity = 'Super Rare';
+        color = 0x0000FF;
+    } else if (roll < 99.8) {
+        rarity = 'Epic';
+        color = 0x800080;
+    } else if (roll < 99.99) {
+        rarity = 'Legendary';
+        color = 0xFFA500;
+    } else {
+        rarity = 'Super Legendary';
+        color = 0xFF0000;
+    }
+
+    // Spawn Token
+    const loot = this.spawnLootItem(x, y, 'token', `${rarity} Fragment`, color, true);
+    loot.rarity = rarity;
+  }
+
+  spawnLootItem(x, y, key, name, tint, isFragment) {
+      const loot = this.lootGroup.create(x, y, key);
+      loot.setDisplaySize(24, 24);
+      if (tint) loot.setTint(tint);
+      loot.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
+      loot.setDrag(100);
+
+      loot.itemName = name;
+      loot.isFragment = isFragment;
+      loot.color = tint; // For feedback text
+
+      // Float Animation
+      this.tweens.add({
+          targets: loot,
+          y: y - 5,
+          duration: 1000,
+          yoyo: true,
+          repeat: -1
+      });
+
+      // Auto-destroy after 15s
+      this.time.delayedCall(15000, () => {
+          if (loot.active) loot.destroy();
+      });
+
+      return loot;
   }
 
   handleLootPickup(player, loot) {
       if (!loot.active) return;
 
-      // Add to session
-      if (loot.isBcoin) {
-          const amount = Phaser.Math.Between(1, 5);
-          this.sessionLoot.coins += amount;
-          this.showFloatingText(player.x, player.y - 20, `+${amount} BCOIN`, '#00ffff');
-      } else {
-          this.sessionLoot.items.push(loot.itemName);
-          this.showFloatingText(player.x, player.y - 20, loot.itemName, '#ffffff');
-      }
+      const isFragment = loot.isFragment;
+      const rarity = loot.rarity;
+      const colorInt = loot.color || 0xffffff;
+      const colorHex = '#' + colorInt.toString(16).padStart(6, '0');
 
-      SoundManager.play(this, 'coin_collect'); // Use generic collect sound
       loot.destroy();
+
+      if (isFragment) {
+          // Add to Session Loot (Risk & Reward)
+          this.sessionLoot.push({
+              type: 'fragment',
+              rarity: rarity,
+              quantity: 1
+          });
+
+          this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
+          SoundManager.play(this, 'coin_collect');
+      } else {
+          // Instant Heal (Potion)
+          const healAmount = Math.floor(this.playerStats.maxHp * 0.2);
+          this.playerStats.hp = Math.min(this.playerStats.hp + healAmount, this.playerStats.maxHp);
+          this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+
+          this.showFloatingText(player.x, player.y - 40, `+${healAmount} HP`, '#00ff00');
+          SoundManager.play(this, 'powerup_collect');
+      }
   }
 
   showFloatingText(x, y, message, color) {

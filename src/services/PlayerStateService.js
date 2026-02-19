@@ -24,7 +24,8 @@ class PlayerStateService {
         return {
             user: { ...MOCK_USER }, // Copy to avoid mutation issues
             heroes: JSON.parse(JSON.stringify(MockHeroes)), // Deep copy
-            houses: JSON.parse(JSON.stringify(MockHouses)) // Deep copy
+            houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
+            inventory: [] // Phase 3: Grind & Loot System
         };
     }
 
@@ -48,6 +49,10 @@ class PlayerStateService {
 
     getHouses() {
         return this.state.houses;
+    }
+
+    getInventory() {
+        return this.state.inventory || [];
     }
 
     getHeroStage(heroId) {
@@ -144,6 +149,36 @@ class PlayerStateService {
 
         this.saveState();
         return { success: true, hero, newSpells: hero.spells };
+    }
+
+    /**
+     * Phase 3: Merges session loot into persistent inventory.
+     * @param {Array} sessionLoot - Array of { type, rarity, quantity } objects.
+     */
+    addSessionLoot(sessionLoot) {
+        if (!sessionLoot || !Array.isArray(sessionLoot)) return;
+
+        if (!this.state.inventory) this.state.inventory = [];
+
+        sessionLoot.forEach(item => {
+            const existingItem = this.state.inventory.find(
+                i => i.type === item.type && i.rarity === item.rarity
+            );
+
+            if (existingItem) {
+                existingItem.quantity = (existingItem.quantity || 0) + (item.quantity || 1);
+            } else {
+                this.state.inventory.push({
+                    type: item.type,
+                    rarity: item.rarity,
+                    quantity: item.quantity || 1
+                });
+            }
+        });
+
+        console.log('[PlayerState] Inventory Updated:', this.state.inventory);
+        this.saveState();
+        return { success: true, inventory: this.state.inventory };
     }
 
     resetState() {
