@@ -299,14 +299,7 @@ export default class TextureGenerator {
   }
 
   static createIconBattle(scene, key) {
-    this.createGeometricIcon(scene, key, '⚔️', 0xFFFF00); // Keeping Emoji for Battle as simple text render usually works for this one symbol, or fallback to 'ATK'
-    // Actually, user asked for "PLAY", "SHOP", etc. text.
-    // Let's use text labels as requested: "PLAY"
-    // But this function is for the ICON.
-    // The Battle Button is special.
-    // Let's use 'ATK' for now if emoji fails, but let's try 'ATK'.
-    // User said: "PLAY", "SHOP", "HEROES", "RANK"
-    this.createGeometricIcon(scene, key, 'ATK', 0xFFFF00);
+    this.createGeometricIcon(scene, key, 'PLAY', 0xFFFF00);
   }
 
   static createIconShop(scene, key) {

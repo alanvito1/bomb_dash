@@ -5,6 +5,8 @@ import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import TextureGenerator from '../modules/TextureGenerator.js';
+import { createNeonButton } from '../utils/ui.js';
+import { MOCK_USER } from '../config/MockData.js';
 import { addJuice } from '../modules/UIGenerator.js';
 import ShopModal from '../ui/ShopModal.js';
 import HeroesModal from '../ui/HeroesModal.js';
@@ -94,6 +96,20 @@ export default class MenuScene extends Phaser.Scene {
 
     // --- CHAT ---
     this.chatWidget = new ChatWidget(this);
+
+    // --- DEBUG BYPASS ---
+    // Press ENTER to skip to GameScene
+    this.input.keyboard.on('keydown-ENTER', () => {
+        console.log('DEV START DETECTED (ENTER)');
+        this.scene.start(CST.SCENES.GAME, { userData: MOCK_USER });
+    });
+
+    // Hidden Button (Top Left Corner)
+    const devBtn = this.add.zone(0, 0, 100, 50).setOrigin(0).setInteractive();
+    devBtn.on('pointerdown', () => {
+         console.log('DEV START CLICKED');
+         this.scene.start(CST.SCENES.GAME, { userData: MOCK_USER });
+    });
   }
 
   async loadUserHero() {
@@ -351,117 +367,44 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createBottomDock(width, height) {
-    const dockHeight = 80;
-    const container = this.add.container(0, height - dockHeight); // Fixed 80px bar
+    const dockHeight = 100;
+    const container = this.add.container(0, height - dockHeight);
 
     // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.9);
     bg.fillRect(0, 0, width, dockHeight);
-    bg.lineStyle(2, 0x00ffff, 1); // Neon Cyan Top Border
+    bg.lineStyle(2, 0x00ffff, 1);
     bg.beginPath();
     bg.moveTo(0, 0);
     bg.lineTo(width, 0);
     bg.strokePath();
     container.add(bg);
 
-    // Buttons
-    const buttons = [
-      { icon: 'icon_base', label: 'Base', active: true },
-      { icon: 'icon_heroes', label: 'Heroes', action: () => this.heroesModal.open() },
-      {
-        icon: 'icon_battle',
-        label: 'BATTLE',
-        scene: CST.SCENES.CHARACTER_SELECTION,
-        isBattle: true,
-      },
-      { icon: 'icon_shop', label: 'Shop', action: () => this.shopModal.open() },
-      { icon: 'icon_ranking', label: 'Ranking', action: () => this.rankingModal.open() },
-    ];
+    const btnY = dockHeight / 2;
 
-    const step = width / buttons.length;
-    const halfStep = step / 2;
+    // Layout: [HEROES] [PLAY] [SHOP]
+    // 3 large buttons distributed evenly
 
-    buttons.forEach((btn, i) => {
-      const x = i * step + halfStep;
-      const y = dockHeight / 2;
-
-      if (btn.isBattle) {
-        // Floating Battle Button
-        const battleContainer = this.add.container(x, y - 30);
-
-        // Glow
-        const glow = this.add.graphics();
-        glow.fillStyle(0xffd700, 0.3);
-        glow.fillCircle(0, 0, 45);
-
-        // Button Body
-        const circle = this.add.graphics();
-        circle.lineStyle(4, 0xffaa00);
-        circle.fillStyle(0xffd700);
-        circle.fillCircle(0, 0, 35);
-        circle.strokeCircle(0, 0, 35);
-
-        // Icon
-        const icon = this.add
-          .image(0, 0, btn.icon)
-          .setScale(1.2)
-          .setTint(0x000000);
-
-        battleContainer.add([glow, circle, icon]);
-        battleContainer.setSize(80, 80);
-        battleContainer.setInteractive({ useHandCursor: true });
-
-        // Pulse
-        this.tweens.add({
-          targets: battleContainer,
-          scale: 1.05,
-          duration: 800,
-          yoyo: true,
-          repeat: -1,
-        });
-
-        battleContainer.on('pointerup', (pointer, localX, localY, event) => {
-          if (event && event.stopPropagation) {
-            event.stopPropagation();
-          }
-          SoundManager.playClick(this);
-          console.log('Battle Button Clicked');
-          this.battleModal.open();
-        });
-
-        container.add(battleContainer);
-      } else {
-        // Normal Button
-        const btnContainer = this.add.container(x, y);
-
-        const icon = this.add.image(0, -10, btn.icon);
-        if (btn.active) icon.setTint(0x00ffff);
-        else icon.setTint(0x888888);
-
-        const text = this.add
-          .text(0, 15, btn.label, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
-            fill: btn.active ? '#00ffff' : '#888888',
-          })
-          .setOrigin(0.5);
-
-        btnContainer.add([icon, text]);
-        btnContainer.setSize(60, 60);
-
-        addJuice(btnContainer, this);
-
-        btnContainer.on('pointerup', () => {
-          if (btn.action) btn.action();
-          if (btn.scene) {
-            this.scene.start(btn.scene, { userData: this.userData });
-          }
-        });
-
-        container.add(btnContainer);
-      }
+    // Heroes (Cyan)
+    const heroesBtn = createNeonButton(this, width * 0.20, btnY, 'HEROES', 0x00ffff, () => {
+        SoundManager.playClick(this);
+        this.heroesModal.open();
     });
+
+    // PLAY (Yellow) - Replaces Battle
+    const playBtn = createNeonButton(this, width * 0.50, btnY, 'PLAY', 0xffff00, () => {
+        SoundManager.playClick(this);
+        this.battleModal.open();
+    });
+
+    // Shop (Green)
+    const shopBtn = createNeonButton(this, width * 0.80, btnY, 'SHOP', 0x00ff00, () => {
+        SoundManager.playClick(this);
+        this.shopModal.open();
+    });
+
+    container.add([heroesBtn, playBtn, shopBtn]);
   }
 
   getShortName() {
