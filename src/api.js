@@ -422,14 +422,26 @@ class ApiClient {
    * Lists all guilds.
    */
   async getGuilds() {
-    return this.fetch('/social/guilds');
+    try {
+      const data = await this.fetch('/social/guilds');
+      if (!data.success) throw new Error(data.message);
+      return data.guilds;
+    } catch (e) {
+      console.warn('⚠️ Backend offline. Using Frontend Mock for Guilds.');
+      return []; // Return empty list to prevent crash
+    }
   }
 
   /**
    * Gets the current user's guild info.
    */
   async getMyGuild() {
-    return this.fetch('/social/my-guild');
+    try {
+      return await this.fetch('/social/my-guild');
+    } catch (e) {
+      console.warn('⚠️ Backend offline. Using Frontend Mock for My Guild.');
+      return { success: true, guild: null };
+    }
   }
 
   // --- Economy Methods ---
@@ -438,7 +450,12 @@ class ApiClient {
    * Gets user inventory.
    */
   async getInventory() {
-    return this.fetch('/economy/inventory');
+    try {
+      return await this.fetch('/economy/inventory');
+    } catch (e) {
+      console.warn('⚠️ Backend offline. Using Frontend Mock for Inventory.');
+      return { success: true, items: [] };
+    }
   }
 
   /**
@@ -457,7 +474,12 @@ class ApiClient {
    * Gets the global reward pool amount.
    */
   async getRewardPool() {
-    return this.fetch('/economy/reward-pool');
+    try {
+      return await this.fetch('/economy/reward-pool');
+    } catch (e) {
+      console.warn('⚠️ Backend offline. Using Frontend Mock for Reward Pool.');
+      return { success: true, pool: 500000 };
+    }
   }
 
   // --- Admin Methods ---
@@ -508,7 +530,12 @@ class ApiClient {
    * @returns {Promise<object>} A promise that resolves with the bestiary data.
    */
   async getBestiary() {
-    return this.fetch('/game/bestiary');
+    try {
+      return await this.fetch('/game/bestiary');
+    } catch (e) {
+      console.warn('⚠️ Backend offline. Using Frontend Mock for Bestiary.');
+      return { success: true, bestiary: {} };
+    }
   }
 
   // --- Matchmaking Methods ---

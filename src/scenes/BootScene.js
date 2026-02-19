@@ -14,7 +14,7 @@ export default class BootScene extends Phaser.Scene {
     SoundManager.init(this);
 
     // Generate procedural textures (Explosions, UI, Particles)
-    TextureGenerator.generate(this);
+    // TextureGenerator.generate(this);
 
     // Add a bright, obvious shape to confirm the renderer is working.
     const { width, height } = this.scale;

@@ -10,20 +10,24 @@ export default class BattleModal extends UIModal {
 
     createButtons() {
         // SOLO RUN Button
-        this.createModeButton(0, -40, 'SOLO RUN', 0x00ff00, () => {
+        this.createModeButton(0, -40, 'SOLO RUN', 0x00ff00, (event) => {
             console.log('Starting Solo Run');
-            // [PRAGMATIC INPUT FIX] Stop event propagation and clear inputs to prevent leaks into GameScene
-            this.scene.input.stopPropagation();
-            this.scene.input.clear();
+            // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
+            if (event && event.stopPropagation) {
+                event.stopPropagation();
+            }
+            // REMOVED: this.scene.input.clear() caused crash (input undefined context)
             this.scene.scene.start(CST.SCENES.GAME, { gameMode: 'solo' });
         });
 
         // PVP MATCH Button
-        this.createModeButton(0, 50, 'PVP MATCH', 0xff4500, () => {
+        this.createModeButton(0, 50, 'PVP MATCH', 0xff4500, (event) => {
             console.log('Starting PvP Match');
-            // [PRAGMATIC INPUT FIX] Stop event propagation and clear inputs
-            this.scene.input.stopPropagation();
-            this.scene.input.clear();
+            // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
+            if (event && event.stopPropagation) {
+                event.stopPropagation();
+            }
+            // REMOVED: this.scene.input.clear() caused crash
             this.scene.scene.start(CST.SCENES.PVP);
         });
     }
@@ -68,9 +72,9 @@ export default class BattleModal extends UIModal {
              bg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
         });
 
-        container.on('pointerdown', () => {
+        container.on('pointerdown', (pointer, localX, localY, event) => {
             SoundManager.playClick(this.scene);
-            callback();
+            callback(event);
         });
 
         this.windowContainer.add(container);
