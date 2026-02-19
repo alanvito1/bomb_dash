@@ -92,6 +92,7 @@ const adminRoutes = require('./routes/admin.js');
 const newsRoutes = require('./routes/news.js');
 const socialRoutes = require('./routes/social.js');
 const economyRoutes = require('./routes/economy.js');
+console.log('✅ Economy Routes Loaded');
 const rankingRoutes = require('./routes/ranking.js');
 
 const app = express();

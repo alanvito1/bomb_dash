@@ -14,6 +14,7 @@ export default class ForgeModal extends UIModal {
         this.slots = [null, null];
         this.refreshUI();
         await this.loadInventory();
+        if (!this.scene || !this.active) return;
         this.refreshUI();
     }
 
@@ -88,6 +89,7 @@ export default class ForgeModal extends UIModal {
     async loadInventory() {
         try {
             const res = await api.getInventory();
+            if (!this.scene || !this.active) return;
             if (res.success) {
                 this.inventory = res.inventory;
             }
@@ -212,6 +214,7 @@ export default class ForgeModal extends UIModal {
 
         try {
             const res = await api.craftItem(this.slots[0].id, this.slots[1].id);
+            if (!this.scene || !this.active) return;
 
             if (res.success) {
                 if (res.result === 'success') {
@@ -223,6 +226,7 @@ export default class ForgeModal extends UIModal {
                 }
                 this.slots = [null, null];
                 await this.loadInventory();
+                if (!this.scene || !this.active) return;
                 this.refreshUI();
             } else {
                 alert(res.message);

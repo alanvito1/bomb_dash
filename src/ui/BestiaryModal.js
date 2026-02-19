@@ -13,7 +13,7 @@ export default class BestiaryModal extends UIModal {
     async populate() {
         try {
             const res = await api.getBestiary();
-            if (!this.scene || !this.windowContainer) return;
+            if (!this.scene || !this.active) return;
 
             if (res.success) {
                 this.bestiaryData = res.bestiary;
