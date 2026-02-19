@@ -57,8 +57,28 @@
       "energy_shield": "assets/items/powerups/powerup5.png"
     },
     "ui": {
-      "btn_menu": "src/assets/btn_menu.png",
-      "btn_pause": "src/assets/btn_pause.png"
+      "btn_menu": "assets/ui/btn_menu.png",
+      "btn_pause": "assets/ui/btn_pause.png",
+      "leaderboard": {
+        "bronze": "assets/ui/Leaderboard/Bronze_Leaderboard.png",
+        "silver": "assets/ui/Leaderboard/Silver_Leaderboard.png",
+        "gold": "assets/ui/Leaderboard/Gold_Leaderboard.png",
+        "platinum": "assets/ui/Leaderboard/Platinum_Leaderboard.png",
+        "diamond": "assets/ui/Leaderboard/Diamond_Leaderboard.png",
+        "mega": "assets/ui/Leaderboard/Mega_Leaderboard.png"
+      },
+      "rarity": {
+        "common": "assets/ui/Rarity/01_Common.png",
+        "rare": "assets/ui/Rarity/02_Rare.png",
+        "super_rare": "assets/ui/Rarity/03_Super_Rare.png",
+        "epic": "assets/ui/Rarity/04_Epic.png",
+        "legend": "assets/ui/Rarity/05_Legend.png",
+        "super_legend": "assets/ui/Rarity/06_Super_Legend.png",
+        "mega": "assets/ui/Rarity/07_Mega.png",
+        "super_mega": "assets/ui/Rarity/08_Super_Mega.png",
+        "mystic": "assets/ui/Rarity/09_Mystic.png",
+        "super_mystic": "assets/ui/Rarity/10_Super_Mystic.png"
+      }
     },
     "backgrounds": {
       "bg1": "assets/backgrounds/bg1.png",
@@ -78,33 +98,33 @@
   },
   "sounds": {
     "music": {
-      "menu_music": "src/assets/sounds/menu_music.mp3",
-      "world1_music": "src/assets/sounds/world1_music.mp3",
-      "world1": "src/assets/sounds/world1_music.mp3",
-      "world2": "src/assets/sounds/world2_music.mp3",
-      "world3": "src/assets/sounds/world3_music.mp3",
-      "world4": "src/assets/sounds/world4_music.mp3",
-      "world5": "src/assets/sounds/world5_music.mp3"
+      "menu_music": "assets/audio/menu_music.mp3",
+      "world1_music": "assets/audio/world1_music.mp3",
+      "world1": "assets/audio/world1_music.mp3",
+      "world2": "assets/audio/world2_music.mp3",
+      "world3": "assets/audio/world3_music.mp3",
+      "world4": "assets/audio/world4_music.mp3",
+      "world5": "assets/audio/world5_music.mp3"
     },
     "sfx": {
-      "click": "src/assets/sounds/click.mp3",
-      "bomb_fire": "src/assets/sounds/bomb_fire.mp3",
-      "explosion": "src/assets/sounds/explosion.mp3",
-      "coin_collect": "src/assets/sounds/coin_collect.mp3",
-      "powerup_collect": "src/assets/sounds/powerup_collect.mp3",
-      "enemy_death": "src/assets/sounds/enemy_death.mp3",
-      "boss_death": "src/assets/sounds/boss_death.mp3",
-      "gameover": "src/assets/sounds/gameover.mp3",
-      "next_stage": "src/assets/sounds/next_stage.mp3",
-      "submit": "src/assets/sounds/submit.mp3",
-      "pause": "src/assets/sounds/pause.mp3",
-      "open_shop": "src/assets/sounds/open_shop.mp3",
-      "hit_enemy": "src/assets/sounds/hit_enemy.mp3",
-      "player_hit": "src/assets/sounds/player_hit.mp3",
-      "upgrade": "src/assets/sounds/upgrade.mp3",
-      "wave_start": "src/assets/sounds/wave_start.mp3",
-      "boss_spawn": "src/assets/sounds/boss_spawn.mp3",
-      "powerup_expire": "src/assets/sounds/powerup_expire.mp3"
+      "click": "assets/audio/click.mp3",
+      "bomb_fire": "assets/audio/bomb_fire.mp3",
+      "explosion": "assets/audio/explosion.mp3",
+      "coin_collect": "assets/audio/coin_collect.mp3",
+      "powerup_collect": "assets/audio/powerup_collect.mp3",
+      "enemy_death": "assets/audio/enemy_death.mp3",
+      "boss_death": "assets/audio/boss_death.mp3",
+      "gameover": "assets/audio/gameover.mp3",
+      "next_stage": "assets/audio/next_stage.mp3",
+      "submit": "assets/audio/submit.mp3",
+      "pause": "assets/audio/pause.mp3",
+      "open_shop": "assets/audio/open_shop.mp3",
+      "hit_enemy": "assets/audio/hit_enemy.mp3",
+      "player_hit": "assets/audio/player_hit.mp3",
+      "upgrade": "assets/audio/upgrade.mp3",
+      "wave_start": "assets/audio/wave_start.mp3",
+      "boss_spawn": "assets/audio/boss_spawn.mp3",
+      "powerup_expire": "assets/audio/powerup_expire.mp3"
     }
   }
 }
