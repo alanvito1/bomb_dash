@@ -50,11 +50,11 @@
       "boss5": "src/assets/boss5.png"
     },
     "powerups": {
-      "rapid_fire": "src/assets/powerups/powerup1.png",
-      "multi_shot": "src/assets/powerups/powerup2.png",
-      "power_bomb": "src/assets/powerups/powerup3.png",
-      "mega_bomb": "src/assets/powerups/powerup4.png",
-      "energy_shield": "src/assets/powerups/powerup5.png"
+      "rapid_fire": "assets/items/powerups/powerup1.png",
+      "multi_shot": "assets/items/powerups/powerup2.png",
+      "power_bomb": "assets/items/powerups/powerup3.png",
+      "mega_bomb": "assets/items/powerups/powerup4.png",
+      "energy_shield": "assets/items/powerups/powerup5.png"
     },
     "ui": {
       "btn_menu": "src/assets/btn_menu.png",
@@ -70,10 +70,10 @@
       "menu_bg_vertical": "src/assets/menu_bg_vertical.png"
     },
     "projectiles": {
-      "bomb": "src/assets/bomb.png"
+      "bomb": "assets/vfx/bomb.png"
     },
     "effects": {
-      "explosion": "src/assets/explosion.png"
+      "explosion": "assets/vfx/explosion.png"
     }
   },
   "sounds": {
