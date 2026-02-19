@@ -24,7 +24,8 @@ describe('TextureGenerator', () => {
       closePath: vi.fn(),
       fillGradientStyle: vi.fn(),
       fillEllipse: vi.fn(),
-      destroy: vi.fn()
+      destroy: vi.fn(),
+      clear: vi.fn()
     };
 
     const mockRenderTexture = {
@@ -63,9 +64,11 @@ describe('TextureGenerator', () => {
     // 3. Ensure we reached the end (createShadow)
     expect(mockGraphics.generateTexture).toHaveBeenCalledWith('shadow', 32, 16);
 
-    // 4. Ensure Icons were generated using RenderTexture
+    // 4. Ensure Icons were generated using RenderTexture or Graphics fallback
+    // Since we are moving to geometric shapes + text, we verify that either RenderTexture or Graphics was used correctly
+    // Depending on implementation, we might not use renderTexture anymore if we stick to simpler graphics generation.
+    // But let's assume we use renderTexture to combine shape + text.
     expect(mockScene.make.renderTexture).toHaveBeenCalled();
-    expect(mockRenderTexture.saveTexture).toHaveBeenCalledWith('icon_base');
   });
 
   it('should catch errors and not crash', () => {

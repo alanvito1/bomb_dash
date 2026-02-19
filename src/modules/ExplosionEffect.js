@@ -1,8 +1,19 @@
 import SoundManager from '../utils/sound.js';
 
 export default function ExplosionEffect(scene, x, y) {
+  // [PRAGMATIC GUARD] Prevent crash if scene is dead or anims missing
+  if (!scene || !scene.anims || !scene.add) {
+    console.warn('[ExplosionEffect] Called on invalid scene.');
+    return;
+  }
+
   // 1. Ensure animation exists
   if (!scene.anims.exists('explosion_anim')) {
+    if (!scene.textures.exists('explosion_sheet')) {
+       console.warn('[ExplosionEffect] Texture "explosion_sheet" missing. Skipping effect.');
+       return;
+    }
+
     const texture = scene.textures.get('explosion_sheet');
 
     // If the texture was generated but acts as a single frame, slice it.
@@ -32,6 +43,8 @@ export default function ExplosionEffect(scene, x, y) {
 
   // 2. Create Sprite
   const explosion = scene.add.sprite(x, y, 'explosion_sheet');
+  if (!explosion) return; // Guard against sprite creation failure
+
   explosion.setScale(2); // 32px * 2 = 64px
 
   // 3. Play Animation
