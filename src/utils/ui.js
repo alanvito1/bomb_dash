@@ -101,3 +101,95 @@ export function createButton(scene, x, y, text, onClick) {
 
   return container;
 }
+
+/**
+ * Creates a minimalist neon-styled button (Offline-First Design).
+ * Visual: Rounded pill shape with bright neon border and large native text.
+ *
+ * @param {Phaser.Scene} scene
+ * @param {number} x
+ * @param {number} y
+ * @param {string} text
+ * @param {number} color - Hex color for the neon glow (default: Cyan 0x00ffff)
+ * @param {function} onClick
+ * @returns {Phaser.GameObjects.Container}
+ */
+export function createNeonButton(scene, x, y, text, color = 0x00ffff, onClick) {
+  const container = scene.add.container(x, y);
+
+  const width = 140;
+  const height = 50;
+  const radius = 25; // Round pill shape
+
+  const bg = scene.add.graphics();
+
+  const drawState = (isHover) => {
+      bg.clear();
+      // Fill
+      if (isHover) {
+          bg.fillStyle(color, 0.2);
+      } else {
+          bg.fillStyle(0x000000, 0.9);
+      }
+      bg.fillRoundedRect(-width/2, -height/2, width, height, radius);
+
+      // Main Stroke
+      bg.lineStyle(2, color, 1);
+      bg.strokeRoundedRect(-width/2, -height/2, width, height, radius);
+
+      // Glow Stroke
+      const glowAlpha = isHover ? 0.6 : 0.3;
+      const glowWidth = isHover ? 6 : 4;
+      bg.lineStyle(glowWidth, color, glowAlpha);
+      bg.strokeRoundedRect(-width/2, -height/2, width, height, radius);
+  };
+
+  drawState(false);
+  container.add(bg);
+
+  // Text: Large, readable, native font fallback
+  const label = scene.add.text(0, 0, text, {
+      fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      align: 'center'
+  }).setOrigin(0.5);
+
+  // Subtle text shadow matching the neon color
+  label.setShadow(0, 0, '#' + color.toString(16).padStart(6, '0'), 5);
+
+  container.add(label);
+  container.setSize(width, height);
+
+  // Interaction
+  container.setInteractive({ useHandCursor: true });
+
+  container.on('pointerover', () => {
+      drawState(true);
+      container.setScale(1.05);
+  });
+
+  container.on('pointerout', () => {
+      drawState(false);
+      container.setScale(1.0);
+  });
+
+  container.on('pointerup', (pointer, localX, localY, event) => {
+      if (event && event.stopPropagation) event.stopPropagation();
+
+      // Click Feedback
+      scene.tweens.add({
+          targets: container,
+          scale: 0.95,
+          duration: 50,
+          yoyo: true,
+          onComplete: () => {
+              container.setScale(1.05); // Return to hover scale
+              if (onClick) onClick();
+          }
+      });
+  });
+
+  return container;
+}
