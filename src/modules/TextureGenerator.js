@@ -88,6 +88,75 @@ export default class TextureGenerator {
   }
 
   /**
+   * Generates a procedural Soft Block (Destructible - Brick).
+   * @param {Phaser.Scene} scene
+   */
+  static createSoftBlock(scene) {
+    if (scene.textures.exists('soft_block')) return;
+
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Base Brown
+    graphics.fillStyle(0x8B4513);
+    graphics.fillRect(0, 0, 32, 32);
+
+    // Inner Lighter Brown (Bevel)
+    graphics.fillStyle(0xA0522D);
+    graphics.fillRect(2, 2, 28, 28);
+
+    // Brick Pattern Lines
+    graphics.lineStyle(2, 0x654321);
+    graphics.moveTo(0, 16);
+    graphics.lineTo(32, 16);
+    graphics.moveTo(16, 0);
+    graphics.lineTo(16, 16);
+    graphics.moveTo(8, 16);
+    graphics.lineTo(8, 32);
+    graphics.moveTo(24, 16);
+    graphics.lineTo(24, 32);
+    graphics.strokePath();
+
+    graphics.generateTexture('soft_block', 32, 32);
+    console.log('✅ Generated procedural SOFT BLOCK');
+  }
+
+  /**
+   * Generates a procedural Hard Block (Indestructible - Metal).
+   * @param {Phaser.Scene} scene
+   */
+  static createHardBlock(scene) {
+    if (scene.textures.exists('hard_block')) return;
+
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Base Dark Grey
+    graphics.fillStyle(0x444444);
+    graphics.fillRect(0, 0, 32, 32);
+
+    // Rivets (Corners)
+    graphics.fillStyle(0x888888);
+    graphics.fillCircle(4, 4, 2);
+    graphics.fillCircle(28, 4, 2);
+    graphics.fillCircle(4, 28, 2);
+    graphics.fillCircle(28, 28, 2);
+
+    // Cross Brace
+    graphics.lineStyle(2, 0x222222);
+    graphics.moveTo(0, 0);
+    graphics.lineTo(32, 32);
+    graphics.moveTo(32, 0);
+    graphics.lineTo(0, 32);
+    graphics.strokePath();
+
+    // Border
+    graphics.lineStyle(2, 0x888888);
+    graphics.strokeRect(0, 0, 32, 32);
+
+    graphics.generateTexture('hard_block', 32, 32);
+    console.log('✅ Generated procedural HARD BLOCK');
+  }
+
+  /**
    * Generates a dynamic explosion sprite sheet.
    * 5 frames of orange circles expanding and fading.
    * @param {Phaser.Scene} scene

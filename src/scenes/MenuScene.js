@@ -4,8 +4,7 @@ import { CST } from '../CST.js';
 import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
-import TextureGenerator from '../modules/TextureGenerator.js';
-import { createNeonButton } from '../utils/ui.js';
+import { createRetroButton, createRetroPanel } from '../utils/ui.js'; // Updated Import
 import { MOCK_USER } from '../config/MockData.js';
 import { addJuice } from '../modules/UIGenerator.js';
 import ShopModal from '../ui/ShopModal.js';
@@ -53,9 +52,6 @@ export default class MenuScene extends Phaser.Scene {
       return;
     }
 
-    // Ensure assets are generated
-    // TextureGenerator.generate(this); // Disabled for Phase 3 (PNG Only)
-
     const { width, height } = this.scale;
 
     // --- BACKGROUND ---
@@ -64,7 +60,7 @@ export default class MenuScene extends Phaser.Scene {
       height / 2,
       width,
       height,
-      'floor_grid'
+      'menu_bg_vertical' // Using real asset now
     );
 
     // --- LAYOUT ---
@@ -151,21 +147,18 @@ export default class MenuScene extends Phaser.Scene {
   createRewardPoolWidget(width) {
       const container = this.add.container(width / 2, 90);
 
-      const bg = this.add.graphics();
-      bg.fillStyle(0x000000, 0.7);
-      bg.fillRoundedRect(-100, 0, 200, 30, 4);
-      bg.lineStyle(1, 0xffd700);
-      bg.strokeRoundedRect(-100, 0, 200, 30, 4);
+      // Replaced Graphics with RetroPanel
+      const bg = createRetroPanel(this, 0, 0, 200, 30, 'dark');
 
-      const label = this.add.text(0, 5, 'REWARD POOL', {
+      const label = this.add.text(0, -6, 'REWARD POOL', {
           fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffd700'
       }).setOrigin(0.5);
 
-      this.poolText = this.add.text(0, 20, 'Loading...', {
+      this.poolText = this.add.text(0, 6, 'Loading...', {
           fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#fff'
       }).setOrigin(0.5);
 
-      this.trendArrow = this.add.text(85, 15, '-', {
+      this.trendArrow = this.add.text(85, 0, '-', {
           fontSize: '12px', fill: '#00ff00'
       }).setOrigin(0.5);
 
@@ -179,7 +172,7 @@ export default class MenuScene extends Phaser.Scene {
       if (!this.poolText || !this.poolText.active) return;
       try {
           const res = await api.getRewardPool();
-          if (!this.sys || !this.scene) return; // Prevent crash if scene destroyed
+          if (!this.sys || !this.scene) return;
           if (res.success) {
               const val = res.pool;
               this.poolText.setText(`${val} BCOIN`);
@@ -204,15 +197,9 @@ export default class MenuScene extends Phaser.Scene {
     const barHeight = 80;
     const container = this.add.container(0, 0);
 
-    // Background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.9);
-    bg.fillRect(0, 0, width, barHeight);
-    bg.lineStyle(2, 0x00ffff, 0.5);
-    bg.beginPath();
-    bg.moveTo(0, barHeight);
-    bg.lineTo(width, barHeight);
-    bg.strokePath();
+    // Retro Panel Background (Metal Style)
+    // Centered at width/2, barHeight/2
+    const bg = createRetroPanel(this, width/2, barHeight/2, width, barHeight, 'metal');
     container.add(bg);
 
     // --- LEFT: PLAYER INFO ---
@@ -230,7 +217,7 @@ export default class MenuScene extends Phaser.Scene {
     const mask = maskShape.createGeometryMask();
     avatarImg.setMask(mask);
 
-    // Name - Truncated for safety
+    // Name
     let rawName = this.getShortName();
     if (rawName.length > 12) {
       rawName = rawName.substring(0, 10) + '...';
@@ -247,7 +234,7 @@ export default class MenuScene extends Phaser.Scene {
     const xpY = 45;
     const xpWidth = 80;
     const xpBg = this.add
-      .rectangle(70, xpY, xpWidth, 6, 0x333333)
+      .rectangle(70, xpY, xpWidth, 6, 0x222222) // Darker for retro
       .setOrigin(0, 0);
     const xpFill = this.add
       .rectangle(70, xpY, xpWidth * 0.6, 6, 0x00ff00)
@@ -255,8 +242,7 @@ export default class MenuScene extends Phaser.Scene {
 
     container.add([avatarBg, avatarImg, nameText, xpBg, xpFill]);
 
-    // --- CENTER/RIGHT: RESOURCES (Compact Stack) ---
-    // Start after XP bar (approx 160px)
+    // --- CENTER/RIGHT: RESOURCES ---
     const resX = 160;
     const goldY = 25;
     const bcoinY = 50;
@@ -299,7 +285,7 @@ export default class MenuScene extends Phaser.Scene {
 
     container.add([goldIcon, this.goldText, bcoinBg, bcoinIcon, this.bcoinText]);
 
-    // --- FAR RIGHT: BUTTONS (Compact Row) ---
+    // --- FAR RIGHT: BUTTONS (Icons) ---
     const btnY = 30;
     const btnGap = 36;
     let btnX = width - 20;
@@ -331,7 +317,6 @@ export default class MenuScene extends Phaser.Scene {
       btnX -= btnGap;
     };
 
-    // Add buttons from Right to Left
     addBtn('icon_settings', () => this.settingsModal.open(), 0xaaaaaa);
     addBtn('icon_wallet', () => this.walletModal.open(), 0xcd7f32);
     addBtn('icon_altar', () => this.altarModal.open(), 0xffd700);
@@ -342,8 +327,6 @@ export default class MenuScene extends Phaser.Scene {
 
     // Guest Dot
     if (this.userData.isGuest) {
-      // Wallet is the 2nd button added (index 1 in reverse order)
-      // X = (width - 20) - 36
       const walletX = width - 20 - 36;
       const dot = this.add.circle(walletX + 10, btnY - 10, 4, 0xff0000);
       container.add(dot);
@@ -351,14 +334,11 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createHeroShowcase(width, height) {
-    // Center
     const cx = width / 2;
     const cy = height / 2;
 
-    // Hero
     this.heroSprite = this.add.image(cx, cy, 'ninja_hero').setScale(4);
 
-    // Breathing Tween
     this.tweens.add({
       targets: this.heroSprite,
       scaleY: 4.2,
@@ -373,36 +353,27 @@ export default class MenuScene extends Phaser.Scene {
     const dockHeight = 100;
     const container = this.add.container(0, height - dockHeight);
 
-    // Background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.9);
-    bg.fillRect(0, 0, width, dockHeight);
-    bg.lineStyle(2, 0x00ffff, 1);
-    bg.beginPath();
-    bg.moveTo(0, 0);
-    bg.lineTo(width, 0);
-    bg.strokePath();
+    // Background (Metal Panel)
+    const bg = createRetroPanel(this, width/2, dockHeight/2, width, dockHeight, 'metal');
     container.add(bg);
 
     const btnY = dockHeight / 2;
 
-    // Layout: [HEROES] [PLAY] [SHOP]
-    // 3 large buttons distributed evenly
-
-    // Heroes (Cyan)
-    const heroesBtn = createNeonButton(this, width * 0.20, btnY, 'HEROES', 0x00ffff, () => {
+    // --- RETRO BUTTONS ---
+    // Heroes (Neutral/Cyan)
+    const heroesBtn = createRetroButton(this, width * 0.20, btnY, 120, 50, 'HEROES', 'neutral', () => {
         SoundManager.playClick(this);
         this.heroesModal.open();
     });
 
-    // PLAY (Yellow) - Replaces Battle
-    const playBtn = createNeonButton(this, width * 0.50, btnY, 'PLAY', 0xffff00, () => {
+    // PLAY (Primary/Yellow)
+    const playBtn = createRetroButton(this, width * 0.50, btnY, 140, 60, 'PLAY', 'primary', () => {
         SoundManager.playClick(this);
         this.battleModal.open();
     });
 
-    // Shop (Green)
-    const shopBtn = createNeonButton(this, width * 0.80, btnY, 'SHOP', 0x00ff00, () => {
+    // Shop (Success/Green)
+    const shopBtn = createRetroButton(this, width * 0.80, btnY, 120, 50, 'SHOP', 'success', () => {
         SoundManager.playClick(this);
         this.shopModal.open();
     });
