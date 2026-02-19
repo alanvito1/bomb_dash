@@ -17,10 +17,6 @@ export default class TextureGenerator {
     graphics.fillStyle(0x000000);
     graphics.fillRect(4, 10, 24, 6);
 
-    // Eyes: White dots (optional, for "ninja" look)
-    // The prompt says "Um retângulo Ciano com uma faixa preta (olhos)."
-    // I'll stick to the minimalist instruction strictly.
-
     graphics.generateTexture(key, 32, 32);
     console.log(`✅ Generated procedural HERO: ${key}`);
   }
@@ -246,26 +242,34 @@ export default class TextureGenerator {
     smokeGraphics.generateTexture('particle_smoke', 6, 6);
   }
 
+  // ==================================================================================
+  // NEO-RETRO ICONS (Redesigned per User Specs)
+  // ==================================================================================
+
   static createIconBase(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const drawHouse = (graphics) => {
-        // Roof (Triangle - disconnected for cyberpunk feel)
+    const drawHome = (graphics) => {
+        // Roof: Cyberpunk Triangle (Floating)
         graphics.beginPath();
-        graphics.moveTo(16, 4);
-        graphics.lineTo(28, 14);
-        graphics.moveTo(4, 14);
-        graphics.lineTo(16, 4);
+        graphics.moveTo(16, 4); // Top
+        graphics.lineTo(28, 12); // Right
+        graphics.lineTo(4, 12);  // Left
+        graphics.closePath();
         graphics.strokePath();
 
-        // Body (Square - with gaps)
+        // Body: Cyber Pentagonal Base
         graphics.beginPath();
-        graphics.moveTo(6, 16);
-        graphics.lineTo(6, 28);
-        graphics.lineTo(26, 28);
-        graphics.lineTo(26, 16);
-        // Door
+        graphics.moveTo(6, 15);  // Top Left
+        graphics.lineTo(26, 15); // Top Right
+        graphics.lineTo(26, 28); // Bottom Right
+        graphics.lineTo(6, 28);  // Bottom Left
+        graphics.closePath();
+        graphics.strokePath();
+
+        // Door: Neon Entry
+        graphics.beginPath();
         graphics.moveTo(12, 28);
         graphics.lineTo(12, 20);
         graphics.lineTo(20, 20);
@@ -273,13 +277,13 @@ export default class TextureGenerator {
         graphics.strokePath();
     };
 
-    // Glow (Cyan)
-    g.lineStyle(4, 0x00FFFF, 0.3);
-    drawHouse(g);
+    // Glow (Cyber Cyan)
+    g.lineStyle(3, 0x00FFFF, 0.5);
+    drawHome(g);
 
     // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
-    drawHouse(g);
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
+    drawHome(g);
 
     g.generateTexture(key, 32, 32);
   }
@@ -288,23 +292,30 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const drawBackpack = (graphics) => {
-        // Bag
-        graphics.strokeRoundedRect(6, 8, 20, 20, 4);
-        // Flap
+    const drawHelmet = (graphics) => {
+        // Helmet Dome
         graphics.beginPath();
-        graphics.moveTo(6, 14);
-        graphics.lineTo(26, 14);
+        graphics.arc(16, 16, 10, Math.PI, 0, false); // Top half
+        graphics.lineTo(26, 24); // Jaw Right
+        graphics.lineTo(6, 24);  // Jaw Left
+        graphics.closePath();
+        graphics.strokePath();
+
+        // Visor (V Shape)
+        graphics.beginPath();
+        graphics.moveTo(10, 16);
+        graphics.lineTo(16, 20);
+        graphics.lineTo(22, 16);
         graphics.strokePath();
     };
 
-    // Glow (Cyan)
-    g.lineStyle(4, 0x00FFFF, 0.3);
-    drawBackpack(g);
+    // Glow (Green/Cyan)
+    g.lineStyle(3, 0x00FF00, 0.4);
+    drawHelmet(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
-    drawBackpack(g);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
+    drawHelmet(g);
 
     g.generateTexture(key, 32, 32);
   }
@@ -313,30 +324,45 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const drawSword = (graphics) => {
+    // Metallic Sword with Neon Edge
+    const drawSword = (graphics, isGlow) => {
         // Blade
         graphics.beginPath();
-        graphics.moveTo(16, 26); // Hilt bottom
-        graphics.lineTo(16, 6);  // Tip
+        graphics.moveTo(16, 24); // Base
+        graphics.lineTo(16, 4);  // Tip
         graphics.strokePath();
 
-        // Guard
+        // Edge (V Shape for blade width)
+        if (!isGlow) {
+             graphics.lineStyle(1, 0xCCCCCC); // Silver
+             graphics.beginPath();
+             graphics.moveTo(14, 24);
+             graphics.lineTo(16, 4);
+             graphics.lineTo(18, 24);
+             graphics.strokePath();
+        }
+
+        // Guard (Cross)
+        graphics.lineStyle(isGlow ? 3 : 2, isGlow ? 0xFF0000 : 0x888888);
         graphics.beginPath();
-        graphics.moveTo(10, 22);
-        graphics.lineTo(22, 22);
+        graphics.moveTo(8, 24);
+        graphics.lineTo(24, 24);
         graphics.strokePath();
 
-        // Pommel
-        graphics.strokeCircle(16, 28, 2);
+        // Hilt
+        graphics.lineStyle(isGlow ? 3 : 2, isGlow ? 0xFF0000 : 0x555555);
+        graphics.beginPath();
+        graphics.moveTo(16, 24);
+        graphics.lineTo(16, 30);
+        graphics.strokePath();
     };
 
-    // Glow (Red/Orange - Cyberpunk War)
-    g.lineStyle(4, 0xFF4500, 0.3);
-    drawSword(g);
+    // Glow (Red/Orange)
+    g.lineStyle(4, 0xFF4500, 0.4);
+    drawSword(g, true);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
-    drawSword(g);
+    // Core
+    drawSword(g, false);
 
     g.generateTexture(key, 32, 32);
   }
@@ -345,26 +371,36 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const drawChest = (graphics) => {
-        // Box Body
-        graphics.strokeRect(6, 14, 20, 12);
-
-        // Curved Lid (Arc)
+    const drawPotion = (graphics) => {
+        // Round Flask
         graphics.beginPath();
-        graphics.arc(16, 14, 10, Math.PI, 0);
+        graphics.arc(16, 20, 8, 0, Math.PI * 2);
         graphics.strokePath();
 
-        // Lock
-        graphics.strokeRect(14, 18, 4, 4);
+        // Neck
+        graphics.beginPath();
+        graphics.moveTo(13, 13);
+        graphics.lineTo(13, 8);
+        graphics.lineTo(19, 8);
+        graphics.lineTo(19, 13);
+        graphics.strokePath();
+
+        // Cork
+        graphics.strokeRect(14, 6, 4, 2);
+
+        // Shine (Curved Line)
+        graphics.beginPath();
+        graphics.arc(16, 20, 5, Math.PI * 1.2, Math.PI * 1.5);
+        graphics.strokePath();
     };
 
-    // Glow (Purple/Pink - Cyberpunk Market)
-    g.lineStyle(4, 0xFF00FF, 0.3);
-    drawChest(g);
+    // Glow (Magenta)
+    g.lineStyle(3, 0xFF00FF, 0.4);
+    drawPotion(g);
 
     // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
-    drawChest(g);
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
+    drawPotion(g);
 
     g.generateTexture(key, 32, 32);
   }
@@ -373,40 +409,74 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const drawChalice = (graphics) => {
-        // Cup (Half Circle)
+    const drawTrophy = (graphics) => {
+        // Cup Body
         graphics.beginPath();
-        graphics.arc(16, 12, 10, 0, Math.PI, false);
+        graphics.arc(16, 8, 8, 0, Math.PI, false);
+        graphics.closePath();
         graphics.strokePath();
 
-        // Stem
+        // Handles
         graphics.beginPath();
-        graphics.moveTo(16, 22);
-        graphics.lineTo(16, 26);
+        graphics.moveTo(8, 10);
+        graphics.lineTo(4, 12);
+        graphics.lineTo(8, 16);
+        graphics.moveTo(24, 10);
+        graphics.lineTo(28, 12);
+        graphics.lineTo(24, 16);
         graphics.strokePath();
 
         // Base
         graphics.beginPath();
+        graphics.moveTo(16, 20);
+        graphics.lineTo(16, 24);
         graphics.moveTo(10, 28);
         graphics.lineTo(22, 28);
-        graphics.strokePath();
-
-        // Rim
-        graphics.beginPath();
-        graphics.moveTo(6, 12);
-        graphics.lineTo(26, 12);
         graphics.strokePath();
     };
 
     // Glow (Gold)
-    g.lineStyle(4, 0xFFD700, 0.3);
-    drawChalice(g);
+    g.lineStyle(3, 0xFFD700, 0.4);
+    drawTrophy(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
-    drawChalice(g);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
+    drawTrophy(g);
 
     g.generateTexture(key, 32, 32);
+  }
+
+  static createIconForge(scene, key) {
+      if (scene.textures.exists(key)) return;
+      const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+      const drawAnvil = (graphics) => {
+          // Top Flat
+          graphics.strokeRect(6, 12, 20, 6);
+          // Pointy End
+          graphics.beginPath();
+          graphics.moveTo(6, 12);
+          graphics.lineTo(2, 14);
+          graphics.lineTo(6, 18);
+          graphics.strokePath();
+          // Base
+          graphics.beginPath();
+          graphics.moveTo(10, 18);
+          graphics.lineTo(4, 28);
+          graphics.lineTo(28, 28);
+          graphics.lineTo(22, 18);
+          graphics.strokePath();
+      };
+
+      // Glow (Orange/Red)
+      g.lineStyle(3, 0xFF4500, 0.4);
+      drawAnvil(g);
+
+      // Core
+      g.lineStyle(1.5, 0xFFFFFF, 1.0);
+      drawAnvil(g);
+
+      g.generateTexture(key, 32, 32);
   }
 
   static createIconGold(scene, key) {
@@ -415,18 +485,23 @@ export default class TextureGenerator {
 
     const drawCoin = (graphics) => {
         graphics.strokeCircle(16, 16, 10);
+        // $ Sign-ish
         graphics.beginPath();
         graphics.moveTo(16, 10);
         graphics.lineTo(16, 22);
+        graphics.moveTo(14, 12);
+        graphics.lineTo(18, 12);
+        graphics.moveTo(14, 20);
+        graphics.lineTo(18, 20);
         graphics.strokePath();
     };
 
     // Glow (Gold)
-    g.lineStyle(4, 0xFFD700, 0.3);
+    g.lineStyle(3, 0xFFD700, 0.4);
     drawCoin(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
     drawCoin(g);
 
     g.generateTexture(key, 32, 32);
@@ -438,16 +513,20 @@ export default class TextureGenerator {
 
     const drawB = (graphics) => {
         graphics.strokeCircle(16, 16, 12);
-        // B shape
+        // B
         graphics.strokeRect(12, 10, 8, 12);
+        graphics.beginPath();
+        graphics.moveTo(12, 16);
+        graphics.lineTo(20, 16);
+        graphics.strokePath();
     };
 
     // Glow (Cyan)
-    g.lineStyle(4, 0x00FFFF, 0.3);
+    g.lineStyle(3, 0x00FFFF, 0.4);
     drawB(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
     drawB(g);
 
     g.generateTexture(key, 32, 32);
@@ -458,13 +537,14 @@ export default class TextureGenerator {
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
     const drawGear = (graphics) => {
-        graphics.strokeCircle(16, 16, 8);
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
+        graphics.strokeCircle(16, 16, 6);
+        // Teeth
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
             const x1 = 16 + Math.cos(angle) * 8;
             const y1 = 16 + Math.sin(angle) * 8;
-            const x2 = 16 + Math.cos(angle) * 12;
-            const y2 = 16 + Math.sin(angle) * 12;
+            const x2 = 16 + Math.cos(angle) * 11;
+            const y2 = 16 + Math.sin(angle) * 11;
             graphics.beginPath();
             graphics.moveTo(x1, y1);
             graphics.lineTo(x2, y2);
@@ -472,12 +552,12 @@ export default class TextureGenerator {
         }
     };
 
-    // Glow (Grey/Cyan)
-    g.lineStyle(4, 0xAAAAAA, 0.3);
+    // Glow (Grey)
+    g.lineStyle(3, 0xAAAAAA, 0.4);
     drawGear(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
     drawGear(g);
 
     g.generateTexture(key, 32, 32);
@@ -488,16 +568,22 @@ export default class TextureGenerator {
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
     const drawWallet = (graphics) => {
-        graphics.strokeRoundedRect(4, 8, 24, 16, 2);
-        graphics.strokeRoundedRect(4, 10, 12, 12, 2);
+        graphics.strokeRoundedRect(6, 10, 20, 14, 2);
+        // Flap
+        graphics.beginPath();
+        graphics.moveTo(6, 14);
+        graphics.lineTo(26, 14);
+        graphics.strokePath();
+        // Button
+        graphics.strokeCircle(22, 17, 2);
     };
 
-    // Glow (Brown/Orange)
-    g.lineStyle(4, 0x8B4513, 0.3);
+    // Glow (Bronze)
+    g.lineStyle(3, 0xCD7F32, 0.4);
     drawWallet(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
     drawWallet(g);
 
     g.generateTexture(key, 32, 32);
@@ -508,16 +594,22 @@ export default class TextureGenerator {
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
     const drawBook = (graphics) => {
-        graphics.strokeRect(6, 4, 20, 24);
-        graphics.strokeCircle(16, 16, 6);
+        graphics.strokeRect(8, 6, 16, 20);
+        // Cross or Symbol
+        graphics.beginPath();
+        graphics.moveTo(16, 10);
+        graphics.lineTo(16, 22);
+        graphics.moveTo(12, 16);
+        graphics.lineTo(20, 16);
+        graphics.strokePath();
     };
 
-    // Glow (Red)
-    g.lineStyle(4, 0xFF0000, 0.3);
+    // Glow (Crimson)
+    g.lineStyle(3, 0xDC143C, 0.4);
     drawBook(g);
 
-    // Core (White)
-    g.lineStyle(2, 0xFFFFFF, 1.0);
+    // Core
+    g.lineStyle(1.5, 0xFFFFFF, 1.0);
     drawBook(g);
 
     g.generateTexture(key, 32, 32);
@@ -556,19 +648,14 @@ export default class TextureGenerator {
   }
 
   static createPotion(scene, key) {
+    // Reuse but fill
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    // Flask Body (Round bottom)
-    g.fillStyle(0xFF00FF); // Pink/Purple potion
+    g.fillStyle(0xFF00FF);
     g.beginPath();
     g.arc(16, 20, 10, 0, Math.PI * 2);
     g.fill();
-    // Neck
     g.fillRect(12, 4, 8, 8);
-    // Cork
-    g.fillStyle(0x8B4513);
-    g.fillRect(12, 2, 8, 4);
-    // Shine
     g.fillStyle(0xFFFFFF);
     g.fillCircle(12, 16, 3);
     g.generateTexture(key, 32, 32);
@@ -584,22 +671,6 @@ export default class TextureGenerator {
     g.lineTo(24, 12);
     g.lineTo(16, 20);
     g.lineTo(8, 12);
-    g.fill();
-    // Gem 2 (Behind)
-    g.fillStyle(0x008888);
-    g.beginPath();
-    g.moveTo(10, 14);
-    g.lineTo(18, 22);
-    g.lineTo(10, 30);
-    g.lineTo(2, 22);
-    g.fill();
-    // Gem 3 (Behind)
-    g.fillStyle(0x00AAAA);
-    g.beginPath();
-    g.moveTo(22, 14);
-    g.lineTo(30, 22);
-    g.lineTo(22, 30);
-    g.lineTo(14, 22);
     g.fill();
     g.generateTexture(key, 32, 32);
   }
@@ -648,8 +719,6 @@ export default class TextureGenerator {
     g.fillStyle(0x8B4513); // Brown
     g.fillRect(8, 8, 16, 20);
     // Neck cutout
-    g.fillStyle(0x000000, 0); // Transparent erase not easy, so draw over if bg known? No, just draw shape.
-    // Simpler: Just a brown shape
     g.fillStyle(0xA0522D);
     g.fillRect(10, 10, 12, 16);
     g.generateTexture(key, 32, 32);
@@ -746,6 +815,7 @@ export default class TextureGenerator {
       this.createIconBattle(scene, 'icon_battle');
       this.createIconShop(scene, 'icon_shop');
       this.createIconRanking(scene, 'icon_ranking');
+      this.createIconForge(scene, 'icon_forge'); // Added Forge
       this.createIconGold(scene, 'icon_gold');
       this.createIconBcoin(scene, 'icon_bcoin');
       this.createIconSettings(scene, 'icon_settings');

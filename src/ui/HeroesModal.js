@@ -18,7 +18,7 @@ export default class HeroesModal extends UIModal {
         // Fetch Heroes
         try {
             const res = await api.getHeroes();
-            if (!this.scene || !this.windowContainer) return; // Prevent crash if closed
+            if (!this.scene || !this.active) return; // Prevent crash if closed
 
             if (res.success && res.heroes) {
                 this.heroes = res.heroes;
@@ -242,23 +242,32 @@ export default class HeroesModal extends UIModal {
         // Logic from ShopScene.js
         try {
             const { balance } = await bcoinService.getBalance();
+            if (!this.scene || !this.active) return;
+
             if (parseFloat(balance) < cost) {
                 SoundManager.play(this.scene, 'error');
-                btnText.setText('NO FUNDS');
-                this.scene.time.delayedCall(1000, () => btnText.setText(`UPG (${Math.floor(cost)})`));
+                if (btnText.active) {
+                    btnText.setText('NO FUNDS');
+                    this.scene.time.delayedCall(1000, () => {
+                        if (btnText.active) btnText.setText(`UPG (${Math.floor(cost)})`);
+                    });
+                }
                 return;
             }
 
-            btnText.setText('WAIT...');
+            if (btnText.active) btnText.setText('WAIT...');
 
             // 1. Approve
             await bcoinService.approve(contracts.tournamentController.address, cost);
+            if (!this.scene || !this.active) return;
 
             // 2. Pay
             const payTx = await tournamentService.payUpgradeFee(cost);
+            if (!this.scene || !this.active) return;
 
             // 3. Verify
             const result = await api.updateUserStats(this.selectedHero.id, type, payTx.hash);
+            if (!this.scene || !this.active) return;
 
             if (result.success) {
                 SoundManager.play(this.scene, 'upgrade');

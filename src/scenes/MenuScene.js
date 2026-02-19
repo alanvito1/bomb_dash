@@ -476,7 +476,7 @@ export default class MenuScene extends Phaser.Scene {
           repeat: -1,
         });
 
-        battleContainer.on('pointerdown', (pointer, localX, localY, event) => {
+        battleContainer.on('pointerup', (pointer, localX, localY, event) => {
           if (event && event.stopPropagation) {
             event.stopPropagation();
           }
