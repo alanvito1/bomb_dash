@@ -78,8 +78,18 @@ export default class LoadingScene extends Phaser.Scene {
       );
     });
 
-    this.load.on('loaderror', (file) => {
-      console.error('🔥 Asset failed to load:', file.src);
+    this.load.on('loaderror', (fileObj) => {
+      console.warn('⚠️ Asset failed to load, creating fallback:', fileObj.key);
+      if (fileObj.type === 'image' || fileObj.type === 'spritesheet') {
+        const key = fileObj.key;
+        if (!this.textures.exists(key)) {
+            // Generate a 1x1 black fallback texture
+            const graphics = this.make.graphics({x:0, y:0, add:false});
+            graphics.fillStyle(0x000000); // Black
+            graphics.fillRect(0,0,32,32);
+            graphics.generateTexture(key, 32, 32);
+        }
+      }
     });
 
     // --- Asset Loading Logic ---
@@ -88,29 +98,33 @@ export default class LoadingScene extends Phaser.Scene {
       'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
     );
 
-    console.log('🔄 Loading critical assets explicitly...');
+    console.log('🔄 Loading assets from /assets/icons/ ...');
 
-    // Heroes (Commented out to force Procedural Generation for Phase 2)
-    // this.load.image('ninja', '/assets/img/hero/ninja.png');
-    // this.load.image('ninja_hero', '/assets/img/hero/ninja.png');
-    // this.load.image('witch', '/assets/img/hero/witch.png');
-    // this.load.image('witch_hero', '/assets/img/hero/witch.png');
+    const assets = [
+        'ninja', 'ninja_hero', 'witch', 'witch_hero',
+        'enemy', 'bomb',
+        'bg1', 'floor_grid',
+        'icon_base', 'icon_heroes', 'icon_battle', 'icon_shop', 'icon_ranking',
+        'icon_forge', 'icon_gold', 'icon_bcoin', 'icon_settings', 'icon_wallet',
+        'icon_book', 'icon_guild', 'icon_altar', 'icon_avatar',
+        'item_chest', 'item_potion', 'item_gems',
+        'item_rusty_sword', 'item_iron_katana', 'item_leather_vest', 'item_nano_vest',
+        'item_neon_boots', 'item_health_potion', 'item_scrap', 'item_cyber_core',
+        'heart_full', 'heart_empty', 'shadow', 'particle_pixel', 'particle_smoke'
+    ];
 
-    // Backgrounds
-    // this.load.image('bg1', '/assets/img/bg/bg1.png');
+    assets.forEach(key => {
+        this.load.image(key, `assets/icons/${key}.png`);
+    });
 
-    // Audio
-    // this.load.audio('menu_music', '/assets/audio/menu.mp3');
-    // Explicit click audio load as requested
-    // this.load.audio('click', '/assets/audio/click.mp3');
+    // Special Case: Explosion Sheet
+    this.load.spritesheet('explosion_sheet', 'assets/icons/explosion_sheet.png', { frameWidth: 32, frameHeight: 32 });
 
     this.load.on('complete', () => {
       console.log('✅ All assets finished loading.');
 
-      // --- TASK FORCE: FASE 2 - ASSETS PROCEDURAIS ---
-      // Generate new Neon/Minimalist assets if files are missing.
-      // This runs BEFORE AssetLoader to prioritize the new designs.
-      TextureGenerator.generate(this);
+      // --- TASK FORCE: PROCEDURAL GENERATION DISABLED ---
+      // TextureGenerator.generate(this);
 
       // --- ASSET RECOVERY SYSTEM ---
       // If any asset failed to load (404), generate a procedural fallback.

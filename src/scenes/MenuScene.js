@@ -51,7 +51,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     // Ensure assets are generated
-    TextureGenerator.generate(this);
+    // TextureGenerator.generate(this); // Disabled for Phase 3 (PNG Only)
 
     const { width, height } = this.scale;
 

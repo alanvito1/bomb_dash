@@ -8,12 +8,12 @@ npm warn deprecated glob@5.0.15: Glob versions prior to v9 are no longer support
 npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
 npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
 
-added 909 packages, and audited 910 packages in 27s
+added 907 packages, and audited 908 packages in 26s
 
 174 packages are looking for funding
   run `npm fund` for details
 
-54 vulnerabilities (30 low, 22 moderate, 2 high)
+63 vulnerabilities (28 low, 16 moderate, 19 high)
 
 To address issues that do not require attention, run:
   npm audit fix
