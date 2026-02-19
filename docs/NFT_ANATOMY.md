@@ -1,0 +1,115 @@
+# NFT Anatomy & Integration Guide
+
+## 1. Hero Genotype (BHero)
+
+The Hero NFT is the core gameplay unit. Its "DNA" is immutable on-chain, but your game can attach external progression (XP, Level) off-chain.
+
+### 1.1 Data Structure (Bitwise Packing)
+The hero's attributes are packed into a single `uint256` integer to save gas.
+**Total Size:** 256 bits
+
+| Bits Range | Attribute | Size | Description |
+| :--- | :--- | :--- | :--- |
+| 0-30 | ID | 30 | Unique Token ID |
+| 30-40 | Index | 10 | Internal Index |
+| 40-45 | Rarity | 5 | 0-5 (Common to SP Legend) |
+| 45-50 | Level | 5 | Base Level (1-5) |
+| 50-55 | Color | 5 | 1-5 (Visual Theme) |
+| 55-60 | Skin | 5 | 0-31 (Visual Sprite ID) |
+| 60-65 | Stamina | 5 | 0-31 (Max Energy) |
+| 65-70 | Speed | 5 | 0-31 (Movement Speed) |
+| 70-75 | BombSkin | 5 | 0-31 (Visual) |
+| 75-80 | BombCount | 5 | 0-31 (Max Bombs Placed) |
+| 80-85 | BombPower | 5 | 0-31 (Damage per Bomb) |
+| 85-90 | BombRange | 5 | 0-31 (Explosion Radius) |
+| 90-95 | AbilityCount | 5 | Number of Spells |
+| 95+ | Abilities | 5/ea | Array of Spell IDs |
+| 145+ | BlockNum | 30 | Block Minter |
+
+### 1.2 Rarity Map
+| ID | Name |
+| :--- | :--- |
+| 0 | Common |
+| 1 | Rare |
+| 2 | Super Rare |
+| 3 | Epic |
+| 4 | Legend |
+| 5 | SP Legend |
+
+### 1.3 Gameplay Stats & Ranges
+*Note: Ranges are based on 5-bit limits (0-31).*
+
+| Stat | Key | Range (Est.) | Description |
+| :--- | :--- | :--- | :--- |
+| **Power** | `bomb_power` | 1 - 20 | Damage to Chests/Blocks. +Level Bonus. |
+| **Speed** | `speed` | 1 - 15 | Movement velocity on the grid. |
+| **Stamina** | `stamina` | 50 - 200 | *Encoded as 0-31, but often multiplied by factor in-game.* |
+| **Bomb Num** | `bomb_count` | 1 - 10 | Concurrent bombs allowed. |
+| **Range** | `bomb_range` | 1 - 6 | Explosion length in grid cells. |
+
+**Level Bonus (Added to Power):**
+*   Level 1: +0
+*   Level 2: +1
+*   Level 3: +2
+*   Level 4: +3
+*   Level 5: +5
+
+### 1.4 Spells (Abilities)
+Passive skills encoded in the `abilities` array.
+
+| ID | Name | Effect |
+| :--- | :--- | :--- |
+| 1 | **Treasure Hunter** | +2 DMG to Chests |
+| 2 | **Jail Breaker** | +5 DMG to Prison Blocks |
+| 3 | **Pierce Block** | Bomb explosion penetrates blocks |
+| 4 | **Save Battery** | 20% chance to not consume Mana/Stamina |
+| 5 | **Fast Charge** | +0.5 Stamina/Min regeneration while resting |
+| 6 | **Bomb Pass** | Can walk through bombs |
+| 7 | **Block Pass** | Can walk through soft blocks |
+
+---
+
+## 2. House Genotype (BHouse)
+
+Houses are used to recover Hero Stamina faster.
+
+### 2.1 Attributes
+Packed in `uint256`.
+
+| Attribute | Size | Description |
+| :--- | :--- | :--- |
+| **Rarity** | 5 bits | 0-5 (House Type) |
+| **Recovery** | 15 bits | Stamina recharged per minute |
+| **Capacity** | 5 bits | Number of Heroes that can rest |
+
+### 2.2 House Types & Stats
+
+| ID | Name | Slots | Charge Rate |
+| :--- | :--- | :--- | :--- |
+| 0 | Tiny House | 4 | 2 / min |
+| 1 | Mini House | 6 | 5 / min |
+| 2 | Lux House | 8 | 8 / min |
+| 3 | PentHouse | 10 | 11 / min |
+| 4 | Villa | 12 | 14 / min |
+| 5 | Super Villa | 14 | 17 / min |
+
+---
+
+## 3. Integration Strategy
+
+### 3.1 Ownership Verification (Future Web3)
+To verify a user owns a hero:
+1.  **Contract:** `BHero` (ERC721).
+2.  **Method:** `ownerOf(tokenId)` -> returns `address`.
+3.  **Check:** Compare returned address with user's connected wallet.
+
+### 3.2 Off-Chain Evolution
+Since the contract is immutable:
+1.  **Read:** Fetch Hero `uint256` details from Chain.
+2.  **Store:** Save base stats in your DB (`hero_genotype`).
+3.  **Evolve:** Create a parallel table `hero_progression`:
+    *   `hero_id`: Link to NFT.
+    *   `bonus_power`: Earned in-game.
+    *   `bonus_speed`: Earned in-game.
+    *   `custom_name`: User defined.
+4.  **Calculate:** `Final Power = Genotype.Power + LevelBonus + Progression.BonusPower`.
