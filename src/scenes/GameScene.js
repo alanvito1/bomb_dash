@@ -211,6 +211,12 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
 
+    // [PRAGMATIC INPUT FIX] Delay shooting enablement to prevent Menu clicks from leaking
+    this.canShoot = false;
+    this.time.delayedCall(500, () => {
+        this.canShoot = true;
+    });
+
     // FURIA-FS-01: Signal that initialization is complete and the update loop can run.
     this.isInitialized = true;
   }
@@ -269,7 +275,7 @@ export default class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         // CQ-02: Only fire if player state allows it
-        if (this.player?.active && this.playerState === 'CAN_SHOOT') {
+        if (this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
           this.firePlayerBomb(true);
         }
       },

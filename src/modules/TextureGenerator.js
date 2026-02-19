@@ -243,106 +243,114 @@ export default class TextureGenerator {
   }
 
   // ==================================================================================
-  // NEO-RETRO ICONS (Redesigned: Emoji + Glow)
+  // PRAGMATIC VISUAL FIX (Geometric + Text)
   // ==================================================================================
 
   /**
-   * Helper to generate a glowing emoji icon.
+   * Helper to generate a simple geometric icon with text.
    * @param {Phaser.Scene} scene
    * @param {string} key
-   * @param {string} emoji
+   * @param {string} label (Max 3 chars if possible)
    * @param {number} color
    */
-  static createEmojiIcon(scene, key, emoji, color) {
+  static createGeometricIcon(scene, key, label, color) {
     if (scene.textures.exists(key)) return;
 
-    const size = 64; // High res for scaling down
+    const size = 64;
     const rt = scene.make.renderTexture({ width: size, height: size }, false);
 
-    // Background Glow
     const bg = scene.make.graphics({ add: false });
-    bg.fillStyle(color, 0.2);
-    bg.fillCircle(size/2, size/2, size/2);
-    bg.lineStyle(4, color, 0.8);
-    bg.strokeCircle(size/2, size/2, size/2 - 2);
 
-    // Core Ring
-    bg.lineStyle(2, 0xffffff, 0.5);
-    bg.strokeCircle(size/2, size/2, size/2 - 6);
+    // Background Shape (Circle/Hexagon-ish)
+    bg.fillStyle(color, 1.0); // Solid color
+    bg.fillCircle(size/2, size/2, size/2 - 4);
+
+    // Border
+    bg.lineStyle(4, 0xffffff, 1.0);
+    bg.strokeCircle(size/2, size/2, size/2 - 4);
 
     rt.draw(bg, 0, 0);
 
-    // Emoji
-    const text = scene.make.text(size/2, size/2, emoji, {
-        fontSize: '32px',
+    // Text Label (High Contrast)
+    // Using simple font available everywhere
+    const text = scene.make.text(size/2, size/2, label, {
+        fontSize: '20px',
         align: 'center',
-        fontFamily: 'Segoe UI Emoji, Apple Color Emoji, sans-serif'
+        fontFamily: 'Arial, sans-serif',
+        fontStyle: 'bold',
+        color: '#000000' // Black text on colored bg
     }).setOrigin(0.5);
 
     rt.draw(text, size/2, size/2);
 
     rt.saveTexture(key);
 
-    // Cleanup objects used for generation
     bg.destroy();
     text.destroy();
     rt.destroy();
   }
 
   static createIconBase(scene, key) {
-    this.createEmojiIcon(scene, key, '🏠', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'BASE', 0x00FFFF);
   }
 
   static createIconHeroes(scene, key) {
-    this.createEmojiIcon(scene, key, '🦸', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'HERO', 0x00FFFF);
   }
 
   static createIconBattle(scene, key) {
-    this.createEmojiIcon(scene, key, '⚔️', 0xFFFF00);
+    this.createGeometricIcon(scene, key, '⚔️', 0xFFFF00); // Keeping Emoji for Battle as simple text render usually works for this one symbol, or fallback to 'ATK'
+    // Actually, user asked for "PLAY", "SHOP", etc. text.
+    // Let's use text labels as requested: "PLAY"
+    // But this function is for the ICON.
+    // The Battle Button is special.
+    // Let's use 'ATK' for now if emoji fails, but let's try 'ATK'.
+    // User said: "PLAY", "SHOP", "HEROES", "RANK"
+    this.createGeometricIcon(scene, key, 'ATK', 0xFFFF00);
   }
 
   static createIconShop(scene, key) {
-    this.createEmojiIcon(scene, key, '🛒', 0x00FF00);
+    this.createGeometricIcon(scene, key, 'SHOP', 0x00FF00);
   }
 
   static createIconRanking(scene, key) {
-    this.createEmojiIcon(scene, key, '🏆', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'RANK', 0x00FFFF);
   }
 
   static createIconForge(scene, key) {
-    this.createEmojiIcon(scene, key, '🔨', 0xFF4500);
+    this.createGeometricIcon(scene, key, 'FORG', 0xFF4500);
   }
 
   static createIconGold(scene, key) {
-    this.createEmojiIcon(scene, key, '💰', 0xFFD700);
+    this.createGeometricIcon(scene, key, '$$$', 0xFFD700);
   }
 
   static createIconBcoin(scene, key) {
-    this.createEmojiIcon(scene, key, '🅱️', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'B', 0x00FFFF);
   }
 
   static createIconSettings(scene, key) {
-    this.createEmojiIcon(scene, key, '⚙️', 0xAAAAAA);
+    this.createGeometricIcon(scene, key, 'SET', 0xAAAAAA);
   }
 
   static createIconWallet(scene, key) {
-    this.createEmojiIcon(scene, key, '👛', 0xCD7F32);
+    this.createGeometricIcon(scene, key, 'WAL', 0xCD7F32);
   }
 
   static createIconBook(scene, key) {
-    this.createEmojiIcon(scene, key, '📖', 0xDC143C);
+    this.createGeometricIcon(scene, key, 'BOOK', 0xDC143C);
   }
 
   static createIconGuild(scene, key) {
-    this.createEmojiIcon(scene, key, '🛡️', 0xFF00FF);
+    this.createGeometricIcon(scene, key, 'GLD', 0xFF00FF);
   }
 
   static createIconAltar(scene, key) {
-    this.createEmojiIcon(scene, key, '🔮', 0xFFD700);
+    this.createGeometricIcon(scene, key, 'ALT', 0xFFD700);
   }
 
   static createAvatar(scene, key) {
-     this.createEmojiIcon(scene, key, '👤', 0xCCCCCC);
+     this.createGeometricIcon(scene, key, 'YOU', 0xCCCCCC);
   }
 
   static createChest(scene, key) {

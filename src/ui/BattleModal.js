@@ -12,12 +12,18 @@ export default class BattleModal extends UIModal {
         // SOLO RUN Button
         this.createModeButton(0, -40, 'SOLO RUN', 0x00ff00, () => {
             console.log('Starting Solo Run');
+            // [PRAGMATIC INPUT FIX] Stop event propagation and clear inputs to prevent leaks into GameScene
+            this.scene.input.stopPropagation();
+            this.scene.input.clear();
             this.scene.scene.start(CST.SCENES.GAME, { gameMode: 'solo' });
         });
 
         // PVP MATCH Button
         this.createModeButton(0, 50, 'PVP MATCH', 0xff4500, () => {
             console.log('Starting PvP Match');
+            // [PRAGMATIC INPUT FIX] Stop event propagation and clear inputs
+            this.scene.input.stopPropagation();
+            this.scene.input.clear();
             this.scene.scene.start(CST.SCENES.PVP);
         });
     }
