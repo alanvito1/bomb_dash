@@ -79,6 +79,11 @@ const Hero = sequelize.define(
       allowNull: false,
       validate: { isIn: [['HERO', 'HOUSE']] },
     },
+    max_stage: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      allowNull: false,
+    },
     status: {
       type: DataTypes.STRING,
       defaultValue: 'in_wallet',
@@ -469,6 +474,9 @@ async function runMigrations(queryInterface) {
     if (!heroTableInfo.agility_xp) {
       await queryInterface.addColumn('heroes', 'agility_xp', { type: DataTypes.INTEGER, defaultValue: 0 });
     }
+    if (!heroTableInfo.max_stage) {
+      await queryInterface.addColumn('heroes', 'max_stage', { type: DataTypes.INTEGER, defaultValue: 1, allowNull: false });
+    }
   }
 
   // --- UserBestiary Table Migration ---
@@ -856,6 +864,7 @@ async function updateHeroStats(heroId, stats) {
     'status',
     'rarity',
     'nft_type',
+    'max_stage',
   ];
   const updateData = {};
   for (const key in stats) {

@@ -52,9 +52,10 @@ export default class GameScene extends Phaser.Scene {
     this.gameMode = data.gameMode || 'solo';
     this.opponent = data.opponent || null;
     this.matchId = data.matchId || null;
+    this.stageConfig = data.stageConfig || null; // Stage Routing
     this.lastBombSoundTime = 0;
     console.log(
-      `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}`
+      `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}, Stage: ${this.stageConfig ? this.stageConfig.name : 'Default'}`
     );
   }
 
@@ -174,8 +175,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.registry.remove('selectedHero');
 
+    // Use stage background if available, else default
+    const bgAsset = this.stageConfig ? this.stageConfig.background_asset : 'bg1';
     this.bg = this.add
-      .image(this.scale.width / 2, this.scale.height / 2, 'bg1')
+      .image(this.scale.width / 2, this.scale.height / 2, bgAsset)
       .setOrigin(0.5)
       .setDisplaySize(480, 800);
     this.scene.launch('HUDScene');
@@ -223,8 +226,15 @@ export default class GameScene extends Phaser.Scene {
 
   initializePveMatch() {
     // LP-05: Initialize world and phase progression system
-    this.world = 1;
+    // Stage Routing: Map Stage ID to World ID for enemy scaling/assets
+    this.world = this.stageConfig ? this.stageConfig.id : 1;
     this.phase = 1;
+
+    // Determine max phases (waves) for this Node
+    this.maxPhases = (this.stageConfig && this.stageConfig.enemy_config)
+        ? this.stageConfig.enemy_config.wave_count
+        : 7; // Default to old 7-phase system if no config
+
     this.waveStarted = false;
     this.enemiesSpawned = 0;
     this.enemiesKilled = 0;
@@ -288,7 +298,7 @@ export default class GameScene extends Phaser.Scene {
     this.events.emit('update-wave', {
       world: this.world,
       phase: this.phase,
-      isBoss: this.phase === 7,
+      isBoss: this.phase === this.maxPhases, // Show boss UI on last wave?
     });
 
     // ⏱️ TIMER: 3 Minutes Survival Limit
@@ -596,6 +606,16 @@ export default class GameScene extends Phaser.Scene {
             response.message
           );
         }
+
+        // --- STAGE UNLOCK LOGIC (Phase 4 Foundation) ---
+        if (isVictory && this.stageConfig) {
+             const unlockRes = await api.completeStage(heroId, this.stageConfig.id);
+             if (unlockRes.unlocked) {
+                 console.log(`[GameScene] STAGE UNLOCKED! New Max Stage: ${unlockRes.newMaxStage}`);
+                 // Optional: Show unlock notification
+             }
+        }
+
       } catch (error) {
         console.error('[GameScene] Error reporting match completion:', error);
       }
@@ -631,10 +651,12 @@ export default class GameScene extends Phaser.Scene {
   prepareNextStage() {
     // LP-05: This function is now the single point of logic for advancing waves.
     this.phase++;
-    if (this.phase > 7) {
-      // 7 phases per world, with phase 7 being the boss
-      this.phase = 1;
-      this.world++;
+
+    // Check if Node is complete
+    if (this.phase > this.maxPhases) {
+        // Victory!
+        this.handleGameOver(true);
+        return;
     }
 
     this.resetWaveState();
@@ -645,7 +667,7 @@ export default class GameScene extends Phaser.Scene {
     this.events.emit('update-wave', {
       world: this.world,
       phase: this.phase,
-      isBoss: this.phase === 7,
+      isBoss: this.phase === this.maxPhases,
     });
 
     this.enemySpawner.spawnWave(this.world, this.phase);

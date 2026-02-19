@@ -11,13 +11,13 @@ export default class BattleModal extends UIModal {
     createButtons() {
         // SOLO RUN Button
         this.createModeButton(0, -40, 'SOLO RUN', 0x00ff00, (event) => {
-            console.log('Starting Solo Run');
+            console.log('Starting World Map');
             // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
             if (event && event.stopPropagation) {
                 event.stopPropagation();
             }
             // REMOVED: this.scene.input.clear() caused crash (input undefined context)
-            this.scene.scene.start(CST.SCENES.GAME, { gameMode: 'solo' });
+            this.scene.scene.start('WorldMapScene');
         });
 
         // PVP MATCH Button
