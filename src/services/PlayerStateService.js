@@ -50,7 +50,30 @@ class PlayerStateService {
         return this.state.houses;
     }
 
+    getHeroStage(heroId) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        return hero ? (hero.max_stage || 1) : 1;
+    }
+
     // --- ACTIONS ---
+
+    completeStage(heroId, stageId) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        if (!hero) throw new Error('Hero not found');
+
+        // Initialize max_stage if missing
+        if (!hero.max_stage) hero.max_stage = 1;
+
+        // Unlock next stage logic
+        if (stageId >= hero.max_stage) {
+            hero.max_stage = stageId + 1;
+            console.log(`[PlayerState] Hero ${hero.name} unlocked Stage ${hero.max_stage}`);
+            this.saveState();
+            return { success: true, newMaxStage: hero.max_stage, unlocked: true };
+        }
+
+        return { success: true, newMaxStage: hero.max_stage, unlocked: false };
+    }
 
     upgradeHeroStat(heroId) {
         const hero = this.state.heroes.find(h => h.id === heroId);

@@ -72,7 +72,8 @@ export const MockHeroes = [
       color: 2 // Green
     },
     sprite_name: 'ninja_hero', // Placeholder
-    spells: []
+    spells: [],
+    max_stage: 1
   },
   {
     id: 1002,
@@ -92,7 +93,8 @@ export const MockHeroes = [
       color: 1 // Blue
     },
     sprite_name: 'witch_hero', // Placeholder
-    spells: [1] // Treasure Hunter
+    spells: [1], // Treasure Hunter
+    max_stage: 1
   },
   {
     id: 1003,
@@ -112,7 +114,8 @@ export const MockHeroes = [
       color: 3 // Cyan
     },
     sprite_name: 'ninja_hero', // Placeholder
-    spells: [1, 2] // Treasure Hunter, Jail Breaker
+    spells: [1, 2], // Treasure Hunter, Jail Breaker
+    max_stage: 1
   },
   {
     id: 1004,
@@ -132,7 +135,8 @@ export const MockHeroes = [
       color: 5 // Red
     },
     sprite_name: 'witch_hero', // Placeholder
-    spells: [1, 2, 4] // TH, JB, Save Battery
+    spells: [1, 2, 4], // TH, JB, Save Battery
+    max_stage: 1
   },
   {
     id: 1005,
@@ -152,7 +156,8 @@ export const MockHeroes = [
       color: 4 // Purple
     },
     sprite_name: 'ninja_hero', // Placeholder
-    spells: [3, 5, 7] // Pierce, Fast Charge, Block Pass
+    spells: [3, 5, 7], // Pierce, Fast Charge, Block Pass
+    max_stage: 1
   },
   {
     id: 1006,
@@ -172,7 +177,8 @@ export const MockHeroes = [
       color: 6 // Gold
     },
     sprite_name: 'witch_hero', // Placeholder
-    spells: [3, 5, 6, 7] // Pierce, Fast Charge, Bomb Pass, Block Pass
+    spells: [3, 5, 6, 7], // Pierce, Fast Charge, Bomb Pass, Block Pass
+    max_stage: 10 // Let the golden god have access to everything for testing
   }
 ];
 

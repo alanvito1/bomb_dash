@@ -234,6 +234,17 @@ class ApiClient {
       return this._mockResponse({ success: true });
   }
 
+  async completeStage(heroId, stageId) {
+      try {
+          console.log(`[MockAPI] Complete Stage: Hero ${heroId}, Stage ${stageId}`);
+          const result = playerStateService.completeStage(heroId, stageId);
+          return this._mockResponse(result);
+      } catch (e) {
+          console.error('[MockAPI] completeStage error:', e);
+          return this._mockResponse({ success: false, message: e.message });
+      }
+  }
+
   async logSoloGameCompleted() {
       return this._mockResponse({ success: true });
   }
