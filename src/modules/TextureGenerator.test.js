@@ -23,8 +23,19 @@ describe('TextureGenerator', () => {
       arc: vi.fn(),
       closePath: vi.fn(),
       fillGradientStyle: vi.fn(),
-      fillEllipse: vi.fn(), // Added this
-      // quadraticBezierTo is deliberately missing
+      fillEllipse: vi.fn(),
+      destroy: vi.fn()
+    };
+
+    const mockRenderTexture = {
+        draw: vi.fn(),
+        saveTexture: vi.fn(),
+        destroy: vi.fn()
+    };
+
+    const mockText = {
+        setOrigin: vi.fn().mockReturnThis(),
+        destroy: vi.fn()
     };
 
     const mockScene = {
@@ -33,6 +44,8 @@ describe('TextureGenerator', () => {
       },
       make: {
         graphics: vi.fn().mockReturnValue(mockGraphics),
+        renderTexture: vi.fn().mockReturnValue(mockRenderTexture),
+        text: vi.fn().mockReturnValue(mockText)
       },
     };
 
@@ -40,9 +53,8 @@ describe('TextureGenerator', () => {
     TextureGenerator.generate(mockScene);
 
     // Verifications
+
     // 1. Check if lineTo was called (used in createIronKatana fix)
-    // We can't know for sure which call is which without more specific spies,
-    // but at least we know it didn't crash.
     expect(mockGraphics.lineTo).toHaveBeenCalled();
 
     // 2. Ensure createIronKatana generated its texture
@@ -50,6 +62,10 @@ describe('TextureGenerator', () => {
 
     // 3. Ensure we reached the end (createShadow)
     expect(mockGraphics.generateTexture).toHaveBeenCalledWith('shadow', 32, 16);
+
+    // 4. Ensure Icons were generated using RenderTexture
+    expect(mockScene.make.renderTexture).toHaveBeenCalled();
+    expect(mockRenderTexture.saveTexture).toHaveBeenCalledWith('icon_base');
   });
 
   it('should catch errors and not crash', () => {

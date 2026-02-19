@@ -93,7 +93,7 @@ export default class TextureGenerator {
    * @param {Phaser.Scene} scene
    * @param {string} key
    */
-  static createExplosion(scene, key = 'explosion') {
+  static createExplosion(scene, key = 'explosion_sheet') {
     if (scene.textures.exists(key)) return;
 
     // 5 frames, 32x32 each -> 160x32 texture
@@ -243,478 +243,106 @@ export default class TextureGenerator {
   }
 
   // ==================================================================================
-  // NEO-RETRO ICONS (Redesigned per User Specs)
+  // NEO-RETRO ICONS (Redesigned: Emoji + Glow)
   // ==================================================================================
 
-  static createIconBase(scene, key) {
+  /**
+   * Helper to generate a glowing emoji icon.
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   * @param {string} emoji
+   * @param {number} color
+   */
+  static createEmojiIcon(scene, key, emoji, color) {
     if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Background
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
+    const size = 64; // High res for scaling down
+    const rt = scene.make.renderTexture({ width: size, height: size }, false);
 
-    const drawHome = (graphics) => {
-      // Roof: Cyberpunk Triangle (Floating)
-      graphics.beginPath();
-      graphics.moveTo(16, 4); // Top
-      graphics.lineTo(28, 12); // Right
-      graphics.lineTo(4, 12); // Left
-      graphics.closePath();
-      graphics.strokePath();
+    // Background Glow
+    const bg = scene.make.graphics({ add: false });
+    bg.fillStyle(color, 0.2);
+    bg.fillCircle(size/2, size/2, size/2);
+    bg.lineStyle(4, color, 0.8);
+    bg.strokeCircle(size/2, size/2, size/2 - 2);
 
-      // Body: Cyber Pentagonal Base
-      graphics.beginPath();
-      graphics.moveTo(6, 15); // Top Left
-      graphics.lineTo(26, 15); // Top Right
-      graphics.lineTo(26, 28); // Bottom Right
-      graphics.lineTo(6, 28); // Bottom Left
-      graphics.closePath();
-      graphics.strokePath();
+    // Core Ring
+    bg.lineStyle(2, 0xffffff, 0.5);
+    bg.strokeCircle(size/2, size/2, size/2 - 6);
 
-      // Door: Neon Entry
-      graphics.beginPath();
-      graphics.moveTo(12, 28);
-      graphics.lineTo(12, 20);
-      graphics.lineTo(20, 20);
-      graphics.lineTo(20, 28);
-      graphics.strokePath();
-    };
+    rt.draw(bg, 0, 0);
 
-    // Glow (Cyber Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawHome(g);
+    // Emoji
+    const text = scene.make.text(size/2, size/2, emoji, {
+        fontSize: '32px',
+        align: 'center',
+        fontFamily: 'Segoe UI Emoji, Apple Color Emoji, sans-serif'
+    }).setOrigin(0.5);
 
-    // Core (White)
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawHome(g);
+    rt.draw(text, size/2, size/2);
 
-    g.generateTexture(key, 32, 32);
+    rt.saveTexture(key);
+
+    // Cleanup objects used for generation
+    bg.destroy();
+    text.destroy();
+    rt.destroy();
+  }
+
+  static createIconBase(scene, key) {
+    this.createEmojiIcon(scene, key, '🏠', 0x00FFFF);
   }
 
   static createIconHeroes(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawHelmet = (graphics) => {
-      // Helmet Dome
-      graphics.beginPath();
-      graphics.arc(16, 16, 10, Math.PI, 0, false); // Top half
-      graphics.lineTo(26, 24); // Jaw Right
-      graphics.lineTo(6, 24); // Jaw Left
-      graphics.closePath();
-      graphics.strokePath();
-
-      // Visor (V Shape)
-      graphics.beginPath();
-      graphics.moveTo(10, 16);
-      graphics.lineTo(16, 20);
-      graphics.lineTo(22, 16);
-      graphics.strokePath();
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawHelmet(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawHelmet(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🦸', 0x00FFFF);
   }
 
   static createIconBattle(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Yellow for Action)
-    g.fillStyle(0xFFFF00, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    // Metallic Sword with Neon Edge
-    const drawSword = (graphics, isGlow) => {
-      // Blade
-      graphics.beginPath();
-      graphics.moveTo(16, 24); // Base
-      graphics.lineTo(16, 4); // Tip
-      graphics.strokePath();
-
-      // Guard (Cross)
-      graphics.beginPath();
-      graphics.moveTo(8, 24);
-      graphics.lineTo(24, 24);
-      graphics.strokePath();
-
-      // Hilt
-      graphics.beginPath();
-      graphics.moveTo(16, 24);
-      graphics.lineTo(16, 30);
-      graphics.strokePath();
-    };
-
-    // Glow (Yellow Neon) - Thicker
-    g.lineStyle(4, 0xffff00, 0.8);
-    drawSword(g, true);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawSword(g, false);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '⚔️', 0xFFFF00);
   }
 
   static createIconShop(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Green for Shop)
-    g.fillStyle(0x00FF00, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawPotion = (graphics) => {
-      // Round Flask
-      graphics.beginPath();
-      graphics.arc(16, 20, 8, 0, Math.PI * 2);
-      graphics.strokePath();
-
-      // Neck
-      graphics.beginPath();
-      graphics.moveTo(13, 13);
-      graphics.lineTo(13, 8);
-      graphics.lineTo(19, 8);
-      graphics.lineTo(19, 13);
-      graphics.strokePath();
-
-      // Cork
-      graphics.strokeRect(14, 6, 4, 2);
-    };
-
-    // Glow (Green Matrix) - Thicker
-    g.lineStyle(4, 0x00ff00, 0.8);
-    drawPotion(g);
-
-    // Core (White)
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawPotion(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🛒', 0x00FF00);
   }
 
   static createIconRanking(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan for Navigation)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawTrophy = (graphics) => {
-      // Cup Body
-      graphics.beginPath();
-      graphics.arc(16, 8, 8, 0, Math.PI, false);
-      graphics.closePath();
-      graphics.strokePath();
-
-      // Handles
-      graphics.beginPath();
-      graphics.moveTo(8, 10);
-      graphics.lineTo(4, 12);
-      graphics.lineTo(8, 16);
-      graphics.moveTo(24, 10);
-      graphics.lineTo(28, 12);
-      graphics.lineTo(24, 16);
-      graphics.strokePath();
-
-      // Base
-      graphics.beginPath();
-      graphics.moveTo(16, 20);
-      graphics.lineTo(16, 24);
-      graphics.moveTo(10, 28);
-      graphics.lineTo(22, 28);
-      graphics.strokePath();
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawTrophy(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawTrophy(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🏆', 0x00FFFF);
   }
 
   static createIconForge(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan for Navigation)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawAnvil = (graphics) => {
-      // Top Flat
-      graphics.strokeRect(6, 12, 20, 6);
-      // Pointy End
-      graphics.beginPath();
-      graphics.moveTo(6, 12);
-      graphics.lineTo(2, 14);
-      graphics.lineTo(6, 18);
-      graphics.strokePath();
-      // Base
-      graphics.beginPath();
-      graphics.moveTo(10, 18);
-      graphics.lineTo(4, 28);
-      graphics.lineTo(28, 28);
-      graphics.lineTo(22, 18);
-      graphics.strokePath();
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawAnvil(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawAnvil(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🔨', 0xFF4500);
   }
 
   static createIconGold(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    const drawCoin = (graphics) => {
-        graphics.strokeCircle(16, 16, 10);
-        // $ Sign-ish
-        graphics.beginPath();
-        graphics.moveTo(16, 10);
-        graphics.lineTo(16, 22);
-        graphics.moveTo(14, 12);
-        graphics.lineTo(18, 12);
-        graphics.moveTo(14, 20);
-        graphics.lineTo(18, 20);
-        graphics.strokePath();
-    };
-
-    // Glow (Gold)
-    g.lineStyle(3, 0xFFD700, 0.4);
-    drawCoin(g);
-
-    // Core
-    g.lineStyle(1.5, 0xFFFFFF, 1.0);
-    drawCoin(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '💰', 0xFFD700);
   }
 
   static createIconBcoin(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    const drawB = (graphics) => {
-        graphics.strokeCircle(16, 16, 12);
-        // B
-        graphics.strokeRect(12, 10, 8, 12);
-        graphics.beginPath();
-        graphics.moveTo(12, 16);
-        graphics.lineTo(20, 16);
-        graphics.strokePath();
-    };
-
-    // Glow (Cyan)
-    g.lineStyle(3, 0x00FFFF, 0.4);
-    drawB(g);
-
-    // Core
-    g.lineStyle(1.5, 0xFFFFFF, 1.0);
-    drawB(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🅱️', 0x00FFFF);
   }
 
   static createIconSettings(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawGear = (graphics) => {
-      graphics.strokeCircle(16, 16, 6);
-      // Teeth
-      for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2;
-        const x1 = 16 + Math.cos(angle) * 8;
-        const y1 = 16 + Math.sin(angle) * 8;
-        const x2 = 16 + Math.cos(angle) * 11;
-        const y2 = 16 + Math.sin(angle) * 11;
-        graphics.beginPath();
-        graphics.moveTo(x1, y1);
-        graphics.lineTo(x2, y2);
-        graphics.strokePath();
-      }
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawGear(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawGear(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '⚙️', 0xAAAAAA);
   }
 
   static createIconWallet(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawWallet = (graphics) => {
-      graphics.strokeRoundedRect(6, 10, 20, 14, 2);
-      // Flap
-      graphics.beginPath();
-      graphics.moveTo(6, 14);
-      graphics.lineTo(26, 14);
-      graphics.strokePath();
-      // Button
-      graphics.strokeCircle(22, 17, 2);
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawWallet(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawWallet(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '👛', 0xCD7F32);
   }
 
   static createIconBook(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawBook = (graphics) => {
-      graphics.strokeRect(8, 6, 16, 20);
-      // Cross or Symbol
-      graphics.beginPath();
-      graphics.moveTo(16, 10);
-      graphics.lineTo(16, 22);
-      graphics.moveTo(12, 16);
-      graphics.lineTo(20, 16);
-      graphics.strokePath();
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawBook(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawBook(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '📖', 0xDC143C);
   }
 
   static createIconGuild(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawGuild = (graphics) => {
-      // Flag/Banner
-      graphics.beginPath();
-      graphics.moveTo(6, 6);
-      graphics.lineTo(26, 6);
-      graphics.lineTo(26, 20);
-      graphics.lineTo(16, 26);
-      graphics.lineTo(6, 20);
-      graphics.closePath();
-      graphics.strokePath();
-
-      // Inner G
-      graphics.beginPath();
-      graphics.moveTo(16, 12);
-      graphics.lineTo(20, 12);
-      graphics.moveTo(20, 12);
-      graphics.arc(16, 16, 4, 0, Math.PI * 1.5, true);
-      graphics.strokePath();
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawGuild(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawGuild(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🛡️', 0xFF00FF);
   }
 
   static createIconAltar(scene, key) {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0, add: false });
-
-    // Background (Cyan)
-    g.fillStyle(0x00FFFF, 0.2);
-    g.fillRect(0, 0, 32, 32);
-
-    const drawAltar = (graphics) => {
-      // Base steps
-      graphics.strokeRect(4, 24, 24, 4);
-      graphics.strokeRect(8, 20, 16, 4);
-      // Pillar
-      graphics.strokeRect(10, 12, 12, 8);
-      // Orb
-      graphics.strokeCircle(16, 8, 4);
-    };
-
-    // Glow (Cyan) - Thicker
-    g.lineStyle(4, 0x00ffff, 0.8);
-    drawAltar(g);
-
-    // Core
-    g.lineStyle(2, 0xffffff, 1.0);
-    drawAltar(g);
-
-    g.generateTexture(key, 32, 32);
+    this.createEmojiIcon(scene, key, '🔮', 0xFFD700);
   }
 
   static createAvatar(scene, key) {
-     if (scene.textures.exists(key)) return;
-     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-     g.fillStyle(0x333333);
-     g.fillCircle(16, 16, 16);
-     g.fillStyle(0xcccccc);
-     g.fillCircle(16, 12, 6); // Head
-     // Shoulders
-     g.beginPath();
-     g.arc(16, 32, 12, Math.PI, 0);
-     g.fill();
-     g.generateTexture(key, 32, 32);
+     this.createEmojiIcon(scene, key, '👤', 0xCCCCCC);
   }
 
   static createChest(scene, key) {
@@ -891,7 +519,7 @@ export default class TextureGenerator {
       // Mobs/Items
       this.createEnemy(scene, 'enemy');
       this.createBomb(scene, 'bomb');
-      this.createExplosion(scene, 'explosion');
+      this.createExplosion(scene, 'explosion_sheet'); // Updated Key
 
       // Backgrounds
       this.createGridBackground(scene, 'bg1');
@@ -903,7 +531,7 @@ export default class TextureGenerator {
       this.createIconBattle(scene, 'icon_battle');
       this.createIconShop(scene, 'icon_shop');
       this.createIconRanking(scene, 'icon_ranking');
-      this.createIconForge(scene, 'icon_forge'); // Added Forge
+      this.createIconForge(scene, 'icon_forge');
       this.createIconGold(scene, 'icon_gold');
       this.createIconBcoin(scene, 'icon_bcoin');
       this.createIconSettings(scene, 'icon_settings');

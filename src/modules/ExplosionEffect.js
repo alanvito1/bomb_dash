@@ -7,11 +7,10 @@ export default function ExplosionEffect(scene, x, y) {
 
     // If the texture was generated but acts as a single frame, slice it.
     if (texture && texture.frameTotal === 1) {
-      const frameWidth = 16;
-      const frameHeight = 16;
-      // We know it's 64x16
-      for (let i = 0; i < 4; i++) {
-        // Add frames 0, 1, 2, 3
+      const frameWidth = 32;
+      const frameHeight = 32;
+      // We know it's 160x32 (5 frames)
+      for (let i = 0; i < 5; i++) {
         texture.add(i, 0, i * frameWidth, 0, frameWidth, frameHeight);
       }
     }
@@ -23,8 +22,9 @@ export default function ExplosionEffect(scene, x, y) {
         { key: 'explosion_sheet', frame: 1 },
         { key: 'explosion_sheet', frame: 2 },
         { key: 'explosion_sheet', frame: 3 },
+        { key: 'explosion_sheet', frame: 4 },
       ],
-      frameRate: 15,
+      frameRate: 20,
       repeat: 0,
       hideOnComplete: true,
     });
@@ -32,7 +32,7 @@ export default function ExplosionEffect(scene, x, y) {
 
   // 2. Create Sprite
   const explosion = scene.add.sprite(x, y, 'explosion_sheet');
-  explosion.setScale(3); // Make it big and pixelated (16px * 3 = 48px)
+  explosion.setScale(2); // 32px * 2 = 64px
 
   // 3. Play Animation
   explosion.play('explosion_anim');
