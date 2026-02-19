@@ -25,9 +25,15 @@ export default class EnemySpawner {
       this.enemyKeys = Object.keys(manifest.assets.enemies || {});
       this.bossKeys = Object.keys(manifest.assets.bosses || {});
     } else {
-      this.enemyKeys = [];
-      this.bossKeys = [];
+      // Fallback to procedural assets if manifest is missing or empty
+      console.warn('EnemySpawner: Manifest missing/empty. Using procedural fallbacks.');
+      this.enemyKeys = ['enemy']; // Procedural red square
+      this.bossKeys = ['enemy'];  // Reuse for boss if needed
     }
+
+    // Safety check: If keys are empty even after manifest load (e.g. empty json)
+    if (this.enemyKeys.length === 0) this.enemyKeys = ['enemy'];
+    if (this.bossKeys.length === 0) this.bossKeys = ['enemy'];
   }
 
   /**
