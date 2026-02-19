@@ -64,6 +64,8 @@ export default class CollisionHandler {
    */
   hitEnemy(bomb, enemy) {
     if (!enemy.active) return;
+    const impactX = bomb.x;
+    const impactY = bomb.y;
     bomb.destroy();
 
     // Proficiency: Bomb Mastery
@@ -79,11 +81,39 @@ export default class CollisionHandler {
     const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
 
     if (currentLevel > prevLevel) {
-        createFloatingText(this.scene, bomb.x, bomb.y - 20, 'BOMB MASTERY UP!', '#ffff00');
+        createFloatingText(this.scene, impactX, impactY - 20, 'BOMB MASTERY UP!', '#ffff00');
         SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
     }
 
-    let damage = this.scene.playerStats?.damage ?? 1;
+    // --- SPLASH DAMAGE LOGIC ---
+    const range = this.scene.playerStats.bombRange || 1;
+    const explosionRadius = 20 + (range * 12);
+    const scale = explosionRadius / 16; // Base 32px / 2 = 16px radius for scale 1.
+
+    // Visual Explosion
+    ExplosionEffect(this.scene, impactX, impactY, scale);
+
+    const baseDamage = this.scene.playerStats.damage || 1;
+
+    // Identify Targets
+    // We use a simple distance check against all active enemies.
+    const targets = this.scene.enemies.getChildren().filter(target => {
+        if (!target.active) return false;
+        const dist = Phaser.Math.Distance.Between(impactX, impactY, target.x, target.y);
+        return dist <= explosionRadius;
+    });
+
+    // Apply Damage
+    targets.forEach(target => {
+        this.applyDamage(target, baseDamage);
+    });
+  }
+
+  /**
+   * Applies damage to a specific enemy, handling bonuses and death logic.
+   */
+  applyDamage(enemy, baseDamage) {
+    if (!enemy.active) return;
 
     // Bestiary Bonus
     const enemyType = enemy.texture.key;
@@ -94,6 +124,7 @@ export default class CollisionHandler {
     else if (kills >= 1000) bonus = 0.10;
     else if (kills >= 100) bonus = 0.05;
 
+    let damage = baseDamage;
     if (bonus > 0) {
         damage = Math.ceil(damage * (1 + bonus));
     }
@@ -113,8 +144,6 @@ export default class CollisionHandler {
     });
 
     if (enemy.hp <= 0) {
-      ExplosionEffect(this.scene, enemy.x, enemy.y);
-
       // 🧃 JUICE: Hit Stop & Shake
       this.scene.cameras.main.shake(50, 0.005);
       if (this.scene.physics.world.isPaused === false) {
@@ -178,12 +207,6 @@ export default class CollisionHandler {
       this.scene.sessionBestiary[type] = (this.scene.sessionBestiary[type] || 0) + 1;
 
       // Floating Text Feedback
-      // Only show occasionally or if it's a new unlock (hard to track unlock here without complex state)
-      // Just show "Knowledge Up" sometimes?
-      // Prompt: "Ao matar um monstro... mostre um pequeno texto flutuante ('Bestiary Updated')"
-      // To avoid spam, maybe only every 10 kills or if it's a rare monster?
-      // For now, let's show it with a small chance or specific color.
-      // Actually, let's show "+1 Knowledge" in Blue.
       createFloatingText(this.scene, enemy.x, enemy.y - 40, 'Bestiary +1', '#00ffff');
 
       this.scene.enemiesKilled++;

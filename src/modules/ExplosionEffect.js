@@ -1,6 +1,6 @@
 import SoundManager from '../utils/sound.js';
 
-export default function ExplosionEffect(scene, x, y) {
+export default function ExplosionEffect(scene, x, y, scale = 2) {
   // [PRAGMATIC GUARD] Prevent crash if scene is dead or anims missing
   if (!scene || !scene.anims || !scene.add) {
     console.warn('[ExplosionEffect] Called on invalid scene.');
@@ -45,7 +45,7 @@ export default function ExplosionEffect(scene, x, y) {
   const explosion = scene.add.sprite(x, y, 'explosion_sheet');
   if (!explosion) return; // Guard against sprite creation failure
 
-  explosion.setScale(2); // 32px * 2 = 64px
+  explosion.setScale(scale);
 
   // 3. Play Animation
   explosion.play('explosion_anim');
@@ -58,7 +58,9 @@ export default function ExplosionEffect(scene, x, y) {
   // 5. Screen Shake
   // Only shake if configured or reasonable default
   if (scene.cameras && scene.cameras.main) {
-    scene.cameras.main.shake(200, 0.01);
+    // Scale shake intensity with explosion size slightly?
+    const shakeIntensity = 0.01 * (scale / 2);
+    scene.cameras.main.shake(200, Math.min(shakeIntensity, 0.05));
   }
 
   // 6. Sound

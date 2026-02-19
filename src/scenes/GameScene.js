@@ -149,6 +149,20 @@ export default class GameScene extends Phaser.Scene {
       bcoin: userAccountData.coins,
     };
 
+    // --- PHASE 2: INJECT HERO STATS ---
+    // Extract hero stats (support both flat and nested 'stats' structure from PlayerStateService)
+    const heroStats = selectedHero.stats || selectedHero;
+    const heroSpeed = heroStats.speed || 1;
+    const heroPower = heroStats.power || 1;
+    const heroBombNum = heroStats.bomb_num || 1;
+    const heroRange = heroStats.range || heroStats.bomb_range || 1;
+
+    // Apply Formulas
+    this.playerStats.speed = 150 + (heroSpeed * 10);
+    this.playerStats.damage = heroPower;
+    this.playerStats.bombNum = heroBombNum;
+    this.playerStats.bombRange = heroRange;
+
     // Apply Proficiency Bonuses
     // Bomb Mastery: +0.1% Radius per level (Logarithmic Growth)
     // Formula: Level = Math.floor(Math.sqrt(XP) / 2)
@@ -156,11 +170,16 @@ export default class GameScene extends Phaser.Scene {
     const agilityXp = selectedHero.agility_xp || 0;
 
     const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
-    this.playerStats.bombSize = (this.playerStats.bombSize || 1) * (1 + bombLevel * 0.001); // +0.1% per level (nerfed for balance)
+    // this.playerStats.bombSize logic is replaced by bombRange in Phase 2, but we keep the mastery bonus as a multiplier if needed?
+    // Prompt says: "O jogador vai querer gastar moedas para upar isso." (referring to range).
+    // Let's keep bombSize logic as a visual scaler or separate bonus?
+    // Actually, Phase 2 replaces "Bomb Range (Splash Damage)" logic.
+    // Let's apply the mastery bonus to the range as well for consistency.
+    this.playerStats.bombRange *= (1 + bombLevel * 0.01); // +1% Range per level (boosted from 0.1% for visibility)
 
     // Agility: +0.1% Speed per level
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
-    this.playerStats.speed *= (1 + agilityLevel * 0.001); // +0.1% per level
+    this.playerStats.speed *= (1 + agilityLevel * 0.005); // +0.5% Speed per level (boosted)
 
     // Load Bestiary Data for Bonuses
     try {
@@ -437,52 +456,97 @@ export default class GameScene extends Phaser.Scene {
       });
       return;
     }
-    const count = 1 + (stats.multiShot ?? 0);
-    const spacing = 15;
-    const startX = firer.x - (spacing * (count - 1)) / 2;
-    const bombSize = stats.bombSize || 1;
+
+    // Phase 2: Firing Logic (Bomb Num)
+    // bombNum = 1: Single
+    // bombNum = 2: Dual Parallel
+    // bombNum >= 3: Fan/Spread
+
+    let count = stats.bombNum || 1;
+    // Fallback to legacy multiShot if bombNum not set
+    if (!stats.bombNum && stats.multiShot !== undefined) {
+        count = 1 + stats.multiShot;
+    }
+
+    const bombSize = stats.bombSize || 1; // Visual scaler
     const bombDisplaySize = 8 * bombSize;
-    for (let i = 0; i < count; i++) {
-      const bombY = firer.y + (velocityY > 0 ? 30 : -30);
-      const bomb = bombGroup.create(startX + spacing * i, bombY, 'bomb');
-      bomb
-        .setDisplaySize(bombDisplaySize, bombDisplaySize)
-        .setVelocityY(velocityY);
+    const baseVelocity = Math.abs(velocityY);
+    const direction = velocityY > 0 ? 1 : -1; // 1 for down (enemy), -1 for up (player)
 
-      // 💣 BOMB PULSE (Visual Overhaul)
-      // Pulse scale
-      this.tweens.add({
-        targets: bomb,
-        scaleX: bomb.scaleX * 1.2,
-        scaleY: bomb.scaleY * 1.2,
-        duration: 200,
-        yoyo: true,
-        repeat: -1,
-      });
-      // Pulse Tint (Red Warning)
-      this.tweens.addCounter({
-        from: 0,
-        to: 100,
-        duration: 200,
-        yoyo: true,
-        repeat: -1,
-        onUpdate: (tween) => {
-          const val = Math.floor(tween.getValue());
-          // Interpolate towards red (tint reduces green/blue channels)
-          // Start: 0xffffff (No tint) -> End: 0xffcccc (Reddish)
-          // Actually, setTint works by multiplying.
-          // To make it redder, we want 0xff0000.
-          // Let's just flash it red.
-          if (val > 50) {
-            bomb.setTint(0xff4444);
-          } else {
-            bomb.clearTint();
-            if (isOpponent) bomb.setTint(0xff8080);
-          }
-        },
-      });
+    const createBomb = (x, y, vx, vy) => {
+        const bomb = bombGroup.create(x, y, 'bomb');
+        bomb.setDisplaySize(bombDisplaySize, bombDisplaySize)
+            .setVelocity(vx, vy);
 
-      if (isOpponent) bomb.setTint(0xff8080);
+        // 💣 BOMB PULSE
+        this.tweens.add({
+            targets: bomb,
+            scaleX: bomb.scaleX * 1.2,
+            scaleY: bomb.scaleY * 1.2,
+            duration: 200,
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Tint Logic
+        if (isOpponent) {
+             bomb.setTint(0xff8080);
+        } else {
+            this.tweens.addCounter({
+                from: 0,
+                to: 100,
+                duration: 200,
+                yoyo: true,
+                repeat: -1,
+                onUpdate: (tween) => {
+                    if (tween.getValue() > 50) bomb.setTint(0xff4444);
+                    else bomb.clearTint();
+                },
+            });
+        }
+    };
+
+    const startY = firer.y + (direction * 30);
+
+    if (count === 1) {
+        // Single Shot
+        createBomb(firer.x, startY, 0, direction * baseVelocity);
+    } else if (count === 2) {
+        // Dual Parallel
+        const spacing = 15;
+        createBomb(firer.x - spacing, startY, 0, direction * baseVelocity);
+        createBomb(firer.x + spacing, startY, 0, direction * baseVelocity);
+    } else {
+        // Fan / Spread (>= 3)
+        // Center shot + angled side shots
+        // Total spread angle = 30 degrees?
+        // Let's distribute them evenly.
+        // E.g. 3 shots: -15, 0, +15 degrees
+        // E.g. 5 shots: -30, -15, 0, +15, +30
+
+        const totalSpread = 45; // Degrees
+        const step = totalSpread / (count - 1);
+        const startAngle = -totalSpread / 2;
+
+        for (let i = 0; i < count; i++) {
+            const angleDeg = startAngle + (step * i);
+            const angleRad = Phaser.Math.DegToRad(angleDeg - 90 * direction); // -90 for up, +90 for down? No.
+            // Phaser coordinates: 0 is Right, -90 is Up, 90 is Down.
+            // If direction is -1 (Up), we want angles around -90. (-105, -90, -75)
+            // If direction is 1 (Down), we want angles around 90. (75, 90, 105)
+
+            let finalAngle = 0;
+            if (direction === -1) {
+                 finalAngle = Phaser.Math.DegToRad(-90 + angleDeg);
+            } else {
+                 finalAngle = Phaser.Math.DegToRad(90 + angleDeg);
+            }
+
+            const vx = Math.cos(finalAngle) * baseVelocity;
+            const vy = Math.sin(finalAngle) * baseVelocity;
+
+            createBomb(firer.x, startY, vx, vy);
+        }
     }
 
     if (!isOpponent) {

@@ -1,27 +1,6 @@
 import { createFloatingText } from './FloatingText.js';
 import SoundManager from '../utils/sound.js';
 
-// Disparo de bombas com tamanho ajustado por upgrades e power-ups
-export function fireBomb(scene) {
-  if (scene.gamePaused) return;
-
-  const count = 1 + (scene.playerStats.multiShot ?? 0);
-  const spacing = 15;
-  const startX = scene.player.x - (spacing * (count - 1)) / 2;
-
-  const bombSize = 8 * (scene.playerStats.bombSize || 1); // ✅ Aplica multiplicador de tamanho
-
-  for (let i = 0; i < count; i++) {
-    const bomb = scene.bombs.create(
-      startX + spacing * i,
-      scene.player.y - 20,
-      'bomb'
-    );
-    bomb.setDisplaySize(bombSize, bombSize);
-    bomb.setVelocityY(-300);
-  }
-}
-
 export default class PlayerController {
   constructor(scene) {
     this.scene = scene;
