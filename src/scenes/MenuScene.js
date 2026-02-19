@@ -17,6 +17,7 @@ import AltarModal from '../ui/AltarModal.js';
 import BestiaryModal from '../ui/BestiaryModal.js';
 import SocialModal from '../ui/SocialModal.js';
 import ForgeModal from '../ui/ForgeModal.js';
+import HousesModal from '../ui/HousesModal.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import BattleModal from '../ui/BattleModal.js';
 
@@ -82,6 +83,7 @@ export default class MenuScene extends Phaser.Scene {
     this.bestiaryModal = new BestiaryModal(this);
     this.socialModal = new SocialModal(this);
     this.forgeModal = new ForgeModal(this);
+    this.housesModal = new HousesModal(this);
     this.battleModal = new BattleModal(this);
 
     // --- AUDIO ---
@@ -336,6 +338,7 @@ export default class MenuScene extends Phaser.Scene {
     addBtn('icon_book', () => this.bestiaryModal.open(), 0xdc143c);
     addBtn('icon_guild', () => this.socialModal.open(), 0xff00ff);
     addBtn('icon_forge', () => this.forgeModal.open(), 0xff4500);
+    addBtn('icon_house', () => this.housesModal.open(), 0x00ffff);
 
     // Guest Dot
     if (this.userData.isGuest) {

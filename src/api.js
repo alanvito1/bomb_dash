@@ -11,7 +11,9 @@ import {
   MOCK_BESTIARY
 } from './config/MockData.js';
 
-console.log('⚠️ OFFLINE MODE: API is running in full mock mode.');
+import playerStateService from './services/PlayerStateService.js';
+
+console.log('⚠️ OFFLINE MODE: API is running in full mock mode with Local State.');
 
 class ApiClient {
   constructor() {
@@ -51,13 +53,13 @@ class ApiClient {
   async loginWithSigner(signer, address, chainId) {
     console.log('[MockAPI] Login with signer:', address);
     this.setJwtToken('mock-jwt-token');
-    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: MOCK_USER });
+    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: playerStateService.getUser() });
   }
 
   async web3Login() {
     console.log('[MockAPI] Web3 Login requested. simulating success.');
     this.setJwtToken('mock-jwt-token');
-    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: MOCK_USER });
+    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: playerStateService.getUser() });
   }
 
   hasSession() {
@@ -66,7 +68,7 @@ class ApiClient {
 
   async checkLoginStatus() {
     if (!this.jwtToken) throw new Error('No token');
-    return this._mockResponse({ success: true, user: MOCK_USER });
+    return this._mockResponse({ success: true, user: playerStateService.getUser() });
   }
 
   logout() {
@@ -76,7 +78,11 @@ class ApiClient {
   // --- Game Data ---
 
   async getHeroes() {
-    return this._mockResponse({ success: true, heroes: MOCK_HEROES });
+    return this._mockResponse({ success: true, heroes: playerStateService.getHeroes() });
+  }
+
+  async getHouses() {
+    return this._mockResponse({ success: true, houses: playerStateService.getHouses() });
   }
 
   async getInventory() {
@@ -96,27 +102,56 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this._mockResponse({ success: true, user: MOCK_USER });
+    return this._mockResponse({ success: true, user: playerStateService.getUser() });
   }
 
   // --- Actions (Mocked) ---
 
   async craftItem(item1Id, item2Id) {
     console.log(`[MockAPI] Crafting items ${item1Id} + ${item2Id}`);
-    // Simulate success: remove 2, add 1 better
-    // Ideally we'd modify local state if we want complex simulation,
-    // but for now return success and let UI update or reload.
     return this._mockResponse({ success: true, result: 'success', message: 'Crafted successfully (Mock)' });
   }
 
   async purchaseHeroUpgrade(heroId, type, cost) {
     console.log(`[MockAPI] Upgrade hero ${heroId} ${type}`);
-    return this._mockResponse({ success: true });
+    // This is the legacy call. Redirecting to new service if applicable,
+    // or keep mocked.
+    // Since we want to use the new service, let's map it.
+    try {
+        const result = playerStateService.upgradeHeroStat(heroId);
+        return this._mockResponse({ success: true, hero: result.hero });
+    } catch (e) {
+        return this._mockResponse({ success: false, message: e.message });
+    }
+  }
+
+  async upgradeHeroStat(heroId) {
+      try {
+          const result = playerStateService.upgradeHeroStat(heroId);
+          return this._mockResponse({ success: true, hero: result.hero, stat: result.statUpgraded });
+      } catch (e) {
+          return this._mockResponse({ success: false, message: e.message });
+      }
+  }
+
+  async rerollHeroSpells(heroId) {
+      try {
+          const result = playerStateService.rerollHeroSpells(heroId);
+          return this._mockResponse({ success: true, hero: result.hero, spells: result.newSpells });
+      } catch (e) {
+          return this._mockResponse({ success: false, message: e.message });
+      }
   }
 
   async updateUserStats(heroId, upgradeType, txHash) {
      console.log(`[MockAPI] Update stats hero ${heroId}`);
-     return this._mockResponse({ success: true });
+     // Mapping to new service logic for consistency
+     try {
+        const result = playerStateService.upgradeHeroStat(heroId);
+        return this._mockResponse({ success: true, hero: result.hero });
+     } catch (e) {
+         return this._mockResponse({ success: false, message: e.message });
+     }
   }
 
   async levelUpHero(heroId) {
