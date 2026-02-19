@@ -2,9 +2,8 @@
 import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
-import { createButton } from '../modules/UIGenerator.js';
 import AssetLoader from '../utils/AssetLoader.js';
-import TextureGenerator from '../modules/TextureGenerator.js';
+import { MockHeroes } from '../config/MockNFTData.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -16,10 +15,8 @@ export default class LoadingScene extends Phaser.Scene {
   preload() {
     console.log('🔄 LoadingScene: Preload is starting...');
     // --- E2E Test Reliability Fix ---
-    // Initialize LanguageManager immediately to prevent test timeouts.
     LanguageManager.init(this);
     this.contractsInitializedPromise = contractProvider.initialize();
-    // -----------------------------
 
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
@@ -32,12 +29,10 @@ export default class LoadingScene extends Phaser.Scene {
       align: 'center',
     };
 
-    // Title
     this.add
       .text(centerX, centerY - 80, 'ESTABLISHING LINK...', textStyle)
       .setOrigin(0.5);
 
-    // Random RPG Loading Messages
     const loadingMessages = [
       'Calibrating Bombs...',
       'Mining BCOIN...',
@@ -57,7 +52,7 @@ export default class LoadingScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Progress Bar Background
+    // Progress Bar
     const progressBox = this.add.graphics();
     progressBox.fillStyle(0x000033, 0.8);
     progressBox.lineStyle(2, 0x00ffff, 1);
@@ -78,60 +73,113 @@ export default class LoadingScene extends Phaser.Scene {
       );
     });
 
+    // --- ROBUST FALLBACK SYSTEM ---
     this.load.on('loaderror', (fileObj) => {
-      console.warn('⚠️ Asset failed to load, creating fallback:', fileObj.key);
+      console.warn('⚠️ Asset failed to load, creating fallback:', fileObj.key, fileObj.url);
       if (fileObj.type === 'image' || fileObj.type === 'spritesheet') {
         const key = fileObj.key;
         if (!this.textures.exists(key)) {
-            // Generate a 1x1 black fallback texture
+            // Generate a 32x32 Placeholder Texture
+            // Color code based on type for visual debugging
+            let color = 0xff00ff; // Magenta = Error
+            if (key.includes('hero')) color = 0x00ff00; // Green = Hero
+            if (key.includes('enemy')) color = 0xff0000; // Red = Enemy
+            if (key.includes('boss')) color = 0x880000; // Dark Red = Boss
+            if (key.includes('item') || key.includes('powerup')) color = 0xffff00; // Yellow = Item
+
             const graphics = this.make.graphics({x:0, y:0, add:false});
-            graphics.fillStyle(0x000000); // Black
+            graphics.fillStyle(color);
             graphics.fillRect(0,0,32,32);
+            graphics.lineStyle(2, 0xffffff);
+            graphics.strokeRect(0,0,32,32);
             graphics.generateTexture(key, 32, 32);
         }
       }
     });
 
-    // --- Asset Loading Logic ---
+    // --- ASSET LOADING ---
     this.load.script(
       'webfont',
       'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
     );
 
-    console.log('🔄 Loading assets from /assets/icons/ ...');
+    // 1. Dynamic Hero Loading (Optimization: Load only user heroes)
+    console.log('🔄 Loading Heroes from MockData...');
+    MockHeroes.forEach(hero => {
+        const { skin, color } = hero.visuals;
+        const key = `hero_s${skin}_c${color}`;
+        const path = `assets/heroes/hero_s${skin}_c${color}.png`;
+        this.load.image(key, path);
+        // Also map standard hero keys if needed
+        if (hero.sprite_name && hero.sprite_name !== key) {
+           // We will handle sprite_name remapping in GameScene or via a helper,
+           // but for now, let's load the asset.
+        }
+    });
+    // Load Legacy/Default Heroes as fallback
+    this.load.image('ninja_hero', 'assets/heroes/hero_s1_c2.png'); // Default Ninja
+    this.load.image('witch_hero', 'assets/heroes/hero_s5_c4.png'); // Default Witch
 
-    const assets = [
-        'ninja', 'ninja_hero', 'witch', 'witch_hero',
-        'enemy', 'bomb',
-        'bg1', 'floor_grid',
-        'icon_base', 'icon_heroes', 'icon_battle', 'icon_shop', 'icon_ranking',
-        'icon_forge', 'icon_gold', 'icon_bcoin', 'icon_settings', 'icon_wallet',
-        'icon_book', 'icon_guild', 'icon_altar', 'icon_avatar',
-        'item_chest', 'item_potion', 'item_gems',
-        'item_rusty_sword', 'item_iron_katana', 'item_leather_vest', 'item_nano_vest',
-        'item_neon_boots', 'item_health_potion', 'item_scrap', 'item_cyber_core',
-        'heart_full', 'heart_empty', 'shadow', 'particle_pixel', 'particle_smoke'
+    // 2. Enemies
+    for (let i = 1; i <= 5; i++) {
+        this.load.image(`enemy${i}`, `assets/enemies/enemy${i}.png`);
+    }
+    // Map generic 'enemy' to enemy1 for backward compatibility
+    this.load.image('enemy', 'assets/enemies/enemy1.png');
+
+    // 3. Bosses (Standardized Keys)
+    this.load.image('boss_robot', 'assets/bosses/Robot/robot_front-(1).png');
+    this.load.image('boss_tank', 'assets/bosses/boss_tank/down (1).png');
+    this.load.image('boss_golzilla', 'assets/bosses/golzilla/golzilla_small_front (1).png');
+    this.load.image('boss_soldier', 'assets/bosses/soldier/soldier (1).png');
+    this.load.image('boss5', 'assets/bosses/boss5.png');
+
+    // 4. Powerups
+    const powerups = [
+        { key: 'rapid_fire', file: 'powerup1.png' },
+        { key: 'multi_shot', file: 'powerup2.png' },
+        { key: 'power_bomb', file: 'powerup3.png' },
+        { key: 'mega_bomb', file: 'powerup4.png' },
+        { key: 'energy_shield', file: 'powerup5.png' }
     ];
-
-    assets.forEach(key => {
-        this.load.image(key, `assets/icons/${key}.png`);
+    powerups.forEach(p => {
+        this.load.image(p.key, `assets/items/powerups/${p.file}`);
     });
 
-    // Special Case: Explosion Sheet
-    this.load.spritesheet('explosion_sheet', 'assets/icons/explosion_sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // 5. VFX & Projectiles
+    this.load.image('bomb', 'assets/vfx/bomb.png');
+    this.load.spritesheet('explosion_sheet', 'assets/vfx/explosion_sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Fallback if sheet is missing, load raw and we'll slice it? No, raw is 160x32, Phaser handles sheets well.
+    // Ensure path matches Inventory: public/assets/vfx/explosion.png (Wait, inventory said explosion.png)
+    // Checking memory: "The explosion texture is generated as 'explosion_sheet' ... source asset is .../explosion.png"
+    // The previous loader loaded from icons/explosion_sheet.png.
+    // I need to be careful here. I will try loading 'assets/vfx/explosion.png' as a spritesheet.
+    this.load.spritesheet('explosion', 'assets/vfx/explosion.png', { frameWidth: 32, frameHeight: 32 });
+
+    // 6. Backgrounds & UI
+    this.load.image('floor_grid', 'assets/backgrounds/menu_bg_vertical.png'); // Temp grid
+    for (let i = 1; i <= 5; i++) {
+        this.load.image(`bg${i}`, `assets/backgrounds/bg${i}.png`);
+    }
+    this.load.image('menu_bg_vertical', 'assets/backgrounds/menu_bg_vertical.png');
+
+    // UI Icons
+    const uiIcons = [
+        'btn_menu', 'btn_pause'
+    ];
+    uiIcons.forEach(icon => {
+        this.load.image(icon, `assets/ui/${icon}.png`);
+    });
+
+    // Load Rarity/Leaderboard assets if needed later (skipping for now to save bandwidth/time, will load on demand or in Menu)
 
     this.load.on('complete', () => {
       console.log('✅ All assets finished loading.');
 
-      // --- TASK FORCE: PROCEDURAL GENERATION DISABLED ---
-      // TextureGenerator.generate(this);
-
       // --- ASSET RECOVERY SYSTEM ---
-      // If any asset failed to load (404), generate a procedural fallback.
-      // (This will handle remaining assets like particles/hearts using the old generator)
+      // Checks if critical keys exist, generates blocks
       AssetLoader.ensureAssets(this);
 
-      // Font handling
       const handleFontLoaded = () => {
         this.checkSessionAndProceed(loadingText);
       };
@@ -162,41 +210,24 @@ export default class LoadingScene extends Phaser.Scene {
         console.log('✅ LoadingScene: Contracts Initialized.');
       } catch (e) {
         console.error('⚠️ LoadingScene: Contract Initialization Failed/Timed Out.', e);
-        // We continue anyway, as we might be in Offline Mode or just need basic UI
       }
 
       loadingText.setText('VERIFYING SESSION...');
 
-      // --- TASK FORCE: UNIFIED LOGIN FLOW ---
-      // Check if session exists (Local Token or Guest PK)
       if (api.hasSession()) {
         console.log('[LoadingScene] Session detected. Attempting to validate...');
-
         try {
-          // Try to validate with Backend
           const loginStatus = await api.checkLoginStatus();
           if (loginStatus.success) {
-            console.log(
-              `[LoadingScene] Session validated: ${loginStatus.user.address}`
-            );
             this.registry.set('loggedInUser', loginStatus.user);
             this.scene.start('MenuScene');
             return;
           }
         } catch (e) {
-          console.warn(
-            '[LoadingScene] API Validation failed, but session exists. Entering Offline/Guest Mode.',
-            e
-          );
+          console.warn('[LoadingScene] API Validation failed, entering Offline Mode.', e);
         }
 
-        // --- FALLBACK / OFFLINE MODE ---
-        // If validation failed (API Error) but we have a session, we let them in.
-        // This prevents the user from being kicked back to AuthChoice if backend is down.
-        console.log(
-          '[LoadingScene] Bypassing AuthChoice due to existing session (Fail-Safe).'
-        );
-
+        console.log('[LoadingScene] Bypassing AuthChoice (Fail-Safe).');
         const mockUser = {
           walletAddress: 'OFFLINE-MODE',
           isGuest: true,
@@ -207,24 +238,15 @@ export default class LoadingScene extends Phaser.Scene {
         return;
       }
 
-      // Only if NO session exists at all, show prompt
-      console.log(
-        '[LoadingScene] No session found. Showing Overlay Prompt.'
-      );
+      console.log('[LoadingScene] No session found. Showing Overlay Prompt.');
       this.showLoginOverlayPrompt(loadingText);
     } catch (error) {
       console.error('[LoadingScene] Critical Initialization Error:', error);
-      // Even in critical error, if we have session, try to enter menu?
-      // checkSessionAndProceed catches its own errors mostly.
-      // If we are here, something really bad happened (e.g. ContractProvider failed).
-      // If we have session, let's try to enter anyway.
       if (api.hasSession()) {
         const mockUser = { walletAddress: 'EMERGENCY-MODE', isGuest: true };
         this.registry.set('loggedInUser', mockUser);
         this.scene.start('MenuScene');
       } else {
-        // If we crashed and have no session, just show the prompt.
-        // We can't really do much else.
         this.showLoginOverlayPrompt(loadingText);
       }
     }
@@ -236,12 +258,10 @@ export default class LoadingScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // Dark Overlay
     const overlay = this.add.graphics();
     overlay.fillStyle(0x000000, 0.9);
     overlay.fillRect(0, 0, this.scale.width, this.scale.height);
 
-    // Warning Text
     this.add.text(centerX, centerY - 20, 'SESSION NOT FOUND', {
       fontFamily: '"Press Start 2P"',
       fontSize: '16px',
@@ -256,9 +276,5 @@ export default class LoadingScene extends Phaser.Scene {
       align: 'center',
       lineSpacing: 10
     }).setOrigin(0.5);
-  }
-
-  create() {
-    // Logic handled in preload complete
   }
 }
