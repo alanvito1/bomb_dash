@@ -186,43 +186,46 @@ export default class MenuScene extends Phaser.Scene {
     const barHeight = 80;
     const container = this.add.container(0, 0);
 
-    // Background (Gradient-ish via multiple rects or just solid with alpha)
+    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.9);
     bg.fillRect(0, 0, width, barHeight);
-
-    // Bottom Border (Neon Cyan)
     bg.lineStyle(2, 0x00ffff, 0.5);
     bg.beginPath();
     bg.moveTo(0, barHeight);
     bg.lineTo(width, barHeight);
     bg.strokePath();
-
     container.add(bg);
 
     // --- LEFT: PLAYER INFO ---
-    // Avatar Circle
     const avatarX = 40;
     const avatarY = 40;
-    const avatarBg = this.add.circle(avatarX, avatarY, 22, 0x00ffff); // Cyan border
+
+    // Avatar
+    const avatarBg = this.add.circle(avatarX, avatarY, 22, 0x00ffff);
     const avatarImg = this.add
       .image(avatarX, avatarY, 'icon_avatar')
       .setDisplaySize(40, 40);
-    // Masking the avatar to be a circle
     const maskShape = this.make.graphics();
     maskShape.fillStyle(0xffffff);
     maskShape.fillCircle(avatarX, avatarY, 20);
     const mask = maskShape.createGeometryMask();
     avatarImg.setMask(mask);
 
-    // Name
-    const nameText = this.add.text(70, 25, this.getShortName(), {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '12px',
-      fill: '#ffffff',
-    });
+    // Name - Truncated for safety
+    let rawName = this.getShortName();
+    if (rawName.length > 12) {
+      rawName = rawName.substring(0, 10) + '...';
+    }
+    const nameText = this.add
+      .text(70, 25, rawName, {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '12px',
+        fill: '#ffffff',
+      })
+      .setOrigin(0, 0.5);
 
-    // XP Bar (Thin)
+    // XP Bar
     const xpY = 45;
     const xpWidth = 80;
     const xpBg = this.add
@@ -230,158 +233,100 @@ export default class MenuScene extends Phaser.Scene {
       .setOrigin(0, 0);
     const xpFill = this.add
       .rectangle(70, xpY, xpWidth * 0.6, 6, 0x00ff00)
-      .setOrigin(0, 0); // Mock 60%
+      .setOrigin(0, 0);
 
     container.add([avatarBg, avatarImg, nameText, xpBg, xpFill]);
 
-    // --- CENTER/RIGHT: RESOURCES ---
-    const resStartX = width - 180;
+    // --- CENTER/RIGHT: RESOURCES (Compact Stack) ---
+    // Start after XP bar (approx 160px)
+    const resX = 160;
+    const goldY = 25;
+    const bcoinY = 50;
 
     // Gold
-    const goldY = 25;
     const goldIcon = this.add
-      .image(resStartX, goldY, 'icon_gold')
-      .setScale(0.8);
-    this.goldText = this.add.text(resStartX + 20, goldY - 8, '1250', {
-      // Mock Value
-      fontFamily: '"Press Start 2P"',
-      fontSize: '12px',
-      fill: '#ffffff',
-    });
+      .image(resX, goldY, 'icon_gold')
+      .setScale(0.6)
+      .setOrigin(0, 0.5);
+    this.goldText = this.add
+      .text(resX + 20, goldY, '1250', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        fill: '#ffd700',
+      })
+      .setOrigin(0, 0.5);
 
     // BCOIN
-    const bcoinY = 55;
-    // Darker background for BCOIN
+    const bcoinIcon = this.add
+      .image(resX, bcoinY, 'icon_bcoin')
+      .setScale(0.6)
+      .setOrigin(0, 0.5);
+    this.bcoinText = this.add
+      .text(resX + 20, bcoinY, '---', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        fill: '#00ffff',
+      })
+      .setOrigin(0, 0.5);
+
+    // Interactive BCOIN area
     const bcoinBg = this.add
-      .rectangle(resStartX, bcoinY, 110, 24, 0x000033)
+      .rectangle(resX, bcoinY, 80, 20, 0x000000, 0)
       .setOrigin(0, 0.5)
       .setInteractive({ useHandCursor: true });
-
     bcoinBg.on('pointerup', () => {
       SoundManager.playClick(this);
       this.walletModal.open();
     });
 
-    const bcoinIcon = this.add
-      .image(resStartX, bcoinY, 'icon_bcoin')
-      .setScale(0.8);
-    this.bcoinText = this.add.text(resStartX + 20, bcoinY - 8, '---', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '12px',
-      fill: '#00ffff',
-    });
+    container.add([goldIcon, this.goldText, bcoinBg, bcoinIcon, this.bcoinText]);
 
-    container.add([
-      bcoinBg,
-      goldIcon,
-      this.goldText,
-      bcoinIcon,
-      this.bcoinText,
-    ]);
+    // --- FAR RIGHT: BUTTONS (Compact Row) ---
+    const btnY = 30;
+    const btnGap = 36;
+    let btnX = width - 20;
 
-    // --- RIGHT CORNER: BUTTONS ---
-    // Forge (Economy)
-    if (this.textures.exists('icon_forge')) {
-        const forgeBtn = this.add.image(width - 225, 30, 'icon_forge').setScale(0.8);
-        addJuice(forgeBtn, this);
-        forgeBtn.on('pointerup', () => this.forgeModal.open());
-        container.add(forgeBtn);
-    } else {
+    const addBtn = (key, callback, color) => {
+      let btn;
+      if (this.textures.exists(key)) {
+        btn = this.add.image(btnX, btnY, key).setScale(0.8);
+      } else {
         const gfx = this.add.graphics();
-        gfx.fillStyle(0xff4500, 1);
+        gfx.fillStyle(color || 0xffffff, 1);
         gfx.fillCircle(0, 0, 12);
-        const icon = this.add.container(width - 225, 30);
-        icon.add(gfx);
-        icon.add(this.add.text(0, 0, 'F', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
-        icon.setSize(24, 24);
-        icon.setInteractive({ useHandCursor: true });
-        addJuice(icon, this);
-        icon.on('pointerup', () => this.forgeModal.open());
-        container.add(icon);
-    }
+        btn = this.add.container(btnX, btnY);
+        btn.add(gfx);
+        btn.add(
+          this.add
+            .text(0, 0, key.charAt(5).toUpperCase(), {
+              fontSize: '10px',
+              color: '#000',
+            })
+            .setOrigin(0.5)
+        );
+        btn.setSize(24, 24);
+      }
+      addJuice(btn, this);
+      btn.setInteractive({ useHandCursor: true });
+      btn.on('pointerup', callback);
+      container.add(btn);
+      btnX -= btnGap;
+    };
 
-    // Guild (Social)
-    if (this.textures.exists('icon_guild')) {
-        const guildBtn = this.add.image(width - 185, 30, 'icon_guild').setScale(0.8);
-        addJuice(guildBtn, this);
-        guildBtn.on('pointerup', () => this.socialModal.open());
-        container.add(guildBtn);
-    } else {
-        const gfx = this.add.graphics();
-        gfx.fillStyle(0xff00ff, 1);
-        gfx.fillCircle(0, 0, 12);
-        const icon = this.add.container(width - 185, 30);
-        icon.add(gfx);
-        icon.add(this.add.text(0, 0, 'G', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
-        icon.setSize(24, 24);
-        icon.setInteractive({ useHandCursor: true });
-        addJuice(icon, this);
-        icon.on('pointerup', () => this.socialModal.open());
-        container.add(icon);
-    }
+    // Add buttons from Right to Left
+    addBtn('icon_settings', () => this.settingsModal.open(), 0xaaaaaa);
+    addBtn('icon_wallet', () => this.walletModal.open(), 0xcd7f32);
+    addBtn('icon_altar', () => this.altarModal.open(), 0xffd700);
+    addBtn('icon_book', () => this.bestiaryModal.open(), 0xdc143c);
+    addBtn('icon_guild', () => this.socialModal.open(), 0xff00ff);
+    addBtn('icon_forge', () => this.forgeModal.open(), 0xff4500);
 
-    // Bestiary (The Codex)
-    const bookBtn = this.add.image(width - 145, 30, 'icon_book').setScale(0.8);
-    addJuice(bookBtn, this);
-    bookBtn.on('pointerup', () => {
-        this.bestiaryModal.open();
-    });
-    container.add(bookBtn);
-
-    // Altar Widget
-    if (this.textures.exists('icon_altar')) {
-        const altarBtn = this.add
-          .image(width - 105, 30, 'icon_altar')
-          .setScale(0.8);
-
-        addJuice(altarBtn, this);
-        altarBtn.on('pointerup', () => {
-          this.altarModal.open();
-        });
-        container.add(altarBtn);
-    } else {
-        // Placeholder if texture missing
-        const gfx = this.add.graphics();
-        gfx.fillStyle(0xffd700, 1);
-        gfx.fillCircle(0, 0, 12);
-        const icon = this.add.container(width - 105, 30);
-        icon.add(gfx);
-        icon.add(this.add.text(0, 0, 'A', { fontSize: '12px', color: '#000' }).setOrigin(0.5));
-
-        container.add(icon);
-        icon.setSize(24, 24);
-        icon.setInteractive({ useHandCursor: true });
-        addJuice(icon, this);
-        icon.on('pointerup', () => {
-            this.altarModal.open();
-        });
-    }
-
-    // Wallet
-    const walletBtn = this.add
-      .image(width - 65, 30, 'icon_wallet')
-      .setScale(0.8);
-
-    addJuice(walletBtn, this);
-    walletBtn.on('pointerup', () => {
-      this.walletModal.open();
-    });
-
-    // Settings
-    const settingsBtn = this.add
-      .image(width - 25, 30, 'icon_settings')
-      .setScale(0.8);
-
-    addJuice(settingsBtn, this);
-    settingsBtn.on('pointerup', () => {
-      this.settingsModal.open();
-    });
-
-    container.add([walletBtn, settingsBtn]);
-
-    // Red Dot on Wallet if Guest
+    // Guest Dot
     if (this.userData.isGuest) {
-      const dot = this.add.circle(width - 65 + 10, 30 - 10, 4, 0xff0000);
+      // Wallet is the 2nd button added (index 1 in reverse order)
+      // X = (width - 20) - 36
+      const walletX = width - 20 - 36;
+      const dot = this.add.circle(walletX + 10, btnY - 10, 4, 0xff0000);
       container.add(dot);
     }
   }
@@ -530,12 +475,18 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   handleBalanceUpdate(data) {
-    if (this.bcoinText) {
-      if (data.error) {
-        this.bcoinText.setText('Err');
-      } else {
-        this.bcoinText.setText(data.balance.toString());
-      }
+    if (
+      !this.scene ||
+      !this.sys ||
+      !this.bcoinText ||
+      !this.bcoinText.active
+    ) {
+      return;
+    }
+    if (data.error) {
+      this.bcoinText.setText('Err');
+    } else {
+      this.bcoinText.setText(data.balance.toString());
     }
   }
 

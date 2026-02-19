@@ -59,7 +59,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.json('assetManifest', 'src/config/asset-manifest.json');
+    this.load.json('assetManifest', 'assets/asset-manifest.json');
   }
 
   create() {
