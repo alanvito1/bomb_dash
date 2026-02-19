@@ -374,27 +374,41 @@ export default class MenuScene extends Phaser.Scene {
     container.add(bg);
 
     const btnY = dockHeight / 2;
+    const btnW = 90;
+    const playBtnW = 110;
+
+    // Positions
+    const x1 = width * 0.14;
+    const x2 = width * 0.38;
+    const x3 = width * 0.62;
+    const x4 = width * 0.86;
 
     // --- RETRO BUTTONS ---
     // Heroes (Neutral/Cyan)
-    const heroesBtn = createRetroButton(this, width * 0.20, btnY, 120, 50, 'HEROES', 'neutral', () => {
+    const heroesBtn = createRetroButton(this, x1, btnY, btnW, 50, 'HEROES', 'neutral', () => {
         SoundManager.playClick(this);
         this.heroesModal.open();
     });
 
+    // FORGE (Danger/Orange)
+    const forgeBtn = createRetroButton(this, x2, btnY, btnW, 50, 'FORGE', 'danger', () => {
+        SoundManager.playClick(this);
+        this.forgeModal.open();
+    });
+
     // PLAY (Primary/Yellow)
-    const playBtn = createRetroButton(this, width * 0.50, btnY, 140, 60, 'PLAY', 'primary', () => {
+    const playBtn = createRetroButton(this, x3, btnY, playBtnW, 60, 'PLAY', 'primary', () => {
         SoundManager.playClick(this);
         this.battleModal.open();
     });
 
     // Shop (Success/Green)
-    const shopBtn = createRetroButton(this, width * 0.80, btnY, 120, 50, 'SHOP', 'success', () => {
+    const shopBtn = createRetroButton(this, x4, btnY, btnW, 50, 'SHOP', 'success', () => {
         SoundManager.playClick(this);
         this.shopModal.open();
     });
 
-    container.add([heroesBtn, playBtn, shopBtn]);
+    container.add([heroesBtn, forgeBtn, playBtn, shopBtn]);
   }
 
   getShortName() {
