@@ -3,51 +3,51 @@
     "heroes": {
       "ninja": {
         "frames": [
-          "src/assets/Ninja Hero/ninja/ninja_01.png",
-          "src/assets/Ninja Hero/ninja/ninja_02.png",
-          "src/assets/Ninja Hero/ninja/ninja_03.png",
-          "src/assets/Ninja Hero/ninja/ninja_04.png",
-          "src/assets/Ninja Hero/ninja/ninja_05.png",
-          "src/assets/Ninja Hero/ninja/ninja_06.png",
-          "src/assets/Ninja Hero/ninja/ninja_07.png",
-          "src/assets/Ninja Hero/ninja/ninja_08.png",
-          "src/assets/Ninja Hero/ninja/ninja_09.png",
-          "src/assets/Ninja Hero/ninja/ninja_10.png",
-          "src/assets/Ninja Hero/ninja/ninja_11.png",
-          "src/assets/Ninja Hero/ninja/ninja_12.png"
+          "assets/heroes_legacy/ninja/ninja_01.png",
+          "assets/heroes_legacy/ninja/ninja_02.png",
+          "assets/heroes_legacy/ninja/ninja_03.png",
+          "assets/heroes_legacy/ninja/ninja_04.png",
+          "assets/heroes_legacy/ninja/ninja_05.png",
+          "assets/heroes_legacy/ninja/ninja_06.png",
+          "assets/heroes_legacy/ninja/ninja_07.png",
+          "assets/heroes_legacy/ninja/ninja_08.png",
+          "assets/heroes_legacy/ninja/ninja_09.png",
+          "assets/heroes_legacy/ninja/ninja_10.png",
+          "assets/heroes_legacy/ninja/ninja_11.png",
+          "assets/heroes_legacy/ninja/ninja_12.png"
         ]
       },
       "witch": {
         "frames": [
-          "src/assets/Witch Hero/Red/witch_01.png",
-          "src/assets/Witch Hero/Red/witch_02.png",
-          "src/assets/Witch Hero/Red/witch_03.png",
-          "src/assets/Witch Hero/Red/witch_04.png",
-          "src/assets/Witch Hero/Red/witch_05.png",
-          "src/assets/Witch Hero/Red/witch_06.png",
-          "src/assets/Witch Hero/Red/witch_07.png",
-          "src/assets/Witch Hero/Red/witch_08.png",
-          "src/assets/Witch Hero/Red/witch_09.png",
-          "src/assets/Witch Hero/Red/witch_10.png",
-          "src/assets/Witch Hero/Red/witch_11.png",
-          "src/assets/Witch Hero/Red/witch_12.png"
+          "assets/heroes_legacy/witch/witch_01.png",
+          "assets/heroes_legacy/witch/witch_02.png",
+          "assets/heroes_legacy/witch/witch_03.png",
+          "assets/heroes_legacy/witch/witch_04.png",
+          "assets/heroes_legacy/witch/witch_05.png",
+          "assets/heroes_legacy/witch/witch_06.png",
+          "assets/heroes_legacy/witch/witch_07.png",
+          "assets/heroes_legacy/witch/witch_08.png",
+          "assets/heroes_legacy/witch/witch_09.png",
+          "assets/heroes_legacy/witch/witch_10.png",
+          "assets/heroes_legacy/witch/witch_11.png",
+          "assets/heroes_legacy/witch/witch_12.png"
         ]
       },
-      "player_default": "src/assets/player.png"
+      "player_default": "assets/heroes_legacy/player.png"
     },
     "enemies": {
-      "enemy1": "src/assets/enemy1.png",
-      "enemy2": "src/assets/enemy2.png",
-      "enemy3": "src/assets/enemy3.png",
-      "enemy4": "src/assets/enemy4.png",
-      "enemy5": "src/assets/enemy5.png"
+      "enemy1": "assets/enemies/enemy1.png",
+      "enemy2": "assets/enemies/enemy2.png",
+      "enemy3": "assets/enemies/enemy3.png",
+      "enemy4": "assets/enemies/enemy4.png",
+      "enemy5": "assets/enemies/enemy5.png"
     },
     "bosses": {
-      "robot": "src/assets/Boss and Creeps/Boss/Robot/robot_front-(1).png",
-      "boss_tank": "src/assets/Boss and Creeps/Boss/boss_tank/down (1).png",
-      "golzilla": "src/assets/Boss and Creeps/Boss/golzilla/golzilla_small_front (1).png",
-      "soldier": "src/assets/Boss and Creeps/Boss/soldier/soldier (1).png",
-      "boss5": "src/assets/boss5.png"
+      "robot": "assets/bosses/Robot/robot_front-(1).png",
+      "boss_tank": "assets/bosses/boss_tank/down (1).png",
+      "golzilla": "assets/bosses/golzilla/golzilla_small_front (1).png",
+      "soldier": "assets/bosses/soldier/soldier (1).png",
+      "boss5": "assets/bosses/boss5.png"
     },
     "powerups": {
       "rapid_fire": "assets/items/powerups/powerup1.png",
@@ -61,13 +61,13 @@
       "btn_pause": "src/assets/btn_pause.png"
     },
     "backgrounds": {
-      "bg1": "src/assets/bg1.png",
-      "bg2": "src/assets/bg2.png",
-      "bg3": "src/assets/bg3.png",
-      "bg4": "src/assets/bg4.png",
-      "bg5": "src/assets/bg5.png",
-      "gameover_bg": "src/assets/gameover_bg.png",
-      "menu_bg_vertical": "src/assets/menu_bg_vertical.png"
+      "bg1": "assets/backgrounds/bg1.png",
+      "bg2": "assets/backgrounds/bg2.png",
+      "bg3": "assets/backgrounds/bg3.png",
+      "bg4": "assets/backgrounds/bg4.png",
+      "bg5": "assets/backgrounds/bg5.png",
+      "gameover_bg": "assets/backgrounds/gameover_bg.png",
+      "menu_bg_vertical": "assets/backgrounds/menu_bg_vertical.png"
     },
     "projectiles": {
       "bomb": "assets/vfx/bomb.png"
