@@ -25,7 +25,9 @@ class PlayerStateService {
         return {
             user: {
                 ...MOCK_USER,
-                selectedHeroId: heroes[0] ? heroes[0].id : null
+                selectedHeroId: heroes[0] ? heroes[0].id : null,
+                accountLevel: 1, // Task Force: Summoner's Journey
+                accountXp: 0
             }, // Copy to avoid mutation issues
             heroes: heroes, // Deep copy
             houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
@@ -70,6 +72,14 @@ class PlayerStateService {
         if (!this.state.inventory) return 0;
         const item = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === rarity);
         return item ? item.quantity : 0;
+    }
+
+    getAccountLevel() {
+        return this.state.user.accountLevel || 1;
+    }
+
+    getAccountXp() {
+        return this.state.user.accountXp || 0;
     }
 
     // --- ACTIONS ---
@@ -247,6 +257,30 @@ class PlayerStateService {
 
         this.saveState();
         return { success: true, hero, newSpells: hero.spells };
+    }
+
+    addAccountXp(amount) {
+        if (!this.state.user.accountLevel) this.state.user.accountLevel = 1;
+        if (!this.state.user.accountXp) this.state.user.accountXp = 0;
+
+        this.state.user.accountXp += amount;
+        let leveledUp = false;
+        let requiredXp = this.state.user.accountLevel * 100;
+
+        while (this.state.user.accountXp >= requiredXp) {
+            this.state.user.accountXp -= requiredXp;
+            this.state.user.accountLevel++;
+            requiredXp = this.state.user.accountLevel * 100;
+            leveledUp = true;
+        }
+
+        this.saveState();
+        return {
+            success: true,
+            leveledUp: leveledUp,
+            newLevel: this.state.user.accountLevel,
+            currentXp: this.state.user.accountXp
+        };
     }
 
     /**

@@ -20,6 +20,7 @@ import ForgeModal from '../ui/ForgeModal.js';
 import HousesModal from '../ui/HousesModal.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import BattleModal from '../ui/BattleModal.js';
+import playerStateService from '../services/PlayerStateService.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -235,8 +236,16 @@ export default class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
 
+    // Account Level Logic
+    // Refresh user state from service to get latest XP
+    const pState = playerStateService.getUser();
+    const accountLevel = pState.accountLevel || 1;
+    const accountXp = pState.accountXp || 0;
+    const requiredXp = accountLevel * 100;
+    const progress = requiredXp > 0 ? Math.min(accountXp / requiredXp, 1) : 0;
+
     // Account Level (Lore Update)
-    const levelText = this.add.text(70 + nameText.width + 10, 25, LanguageManager.get('account_level', {level: 1}, 'Lvl 1'), {
+    const levelText = this.add.text(70 + nameText.width + 10, 25, LanguageManager.get('account_level', {level: accountLevel}, `Lvl ${accountLevel}`), {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         fill: '#00ff00',
@@ -249,7 +258,7 @@ export default class MenuScene extends Phaser.Scene {
       .rectangle(70, xpY, xpWidth, 6, 0x222222) // Darker for retro
       .setOrigin(0, 0);
     const xpFill = this.add
-      .rectangle(70, xpY, xpWidth * 0.6, 6, 0x00ff00)
+      .rectangle(70, xpY, xpWidth * progress, 6, 0x00ff00)
       .setOrigin(0, 0);
 
     container.add([avatarBg, avatarImg, nameText, xpBg, xpFill]);
