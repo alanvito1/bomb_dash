@@ -15,6 +15,7 @@ import GameEventEmitter from '../utils/GameEventEmitter.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import playerStateService from '../services/PlayerStateService.js';
 import { MOBS } from '../config/MobConfig.js';
+import PostFXManager from '../modules/PostFXManager.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -69,6 +70,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     this.events.on('shutdown', this.shutdown, this);
     this.chatWidget = new ChatWidget(this);
+    PostFXManager.init(this);
     this.initializeScene();
   }
 

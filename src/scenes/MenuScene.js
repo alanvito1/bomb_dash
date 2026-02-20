@@ -21,6 +21,7 @@ import HousesModal from '../ui/HousesModal.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import BattleModal from '../ui/BattleModal.js';
 import playerStateService from '../services/PlayerStateService.js';
+import PostFXManager from '../modules/PostFXManager.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -110,6 +111,9 @@ export default class MenuScene extends Phaser.Scene {
          console.log('DEV START CLICKED');
          this.scene.start(CST.SCENES.GAME, { userData: MOCK_USER });
     });
+
+    // Apply Retro Filter
+    PostFXManager.init(this);
   }
 
   async loadUserHero() {
