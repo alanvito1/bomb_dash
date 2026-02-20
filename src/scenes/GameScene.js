@@ -3,6 +3,8 @@ import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
+import DamageTextManager from '../modules/DamageTextManager.js';
+import NeonBurstManager from '../modules/NeonBurstManager.js';
 import { showNextStageDialog as StageDialog } from '../modules/NextStageDialog.js';
 import PlayerController from '../modules/PlayerController.js';
 import PowerupLogic from '../modules/PowerupLogic.js';
@@ -203,8 +205,18 @@ export default class GameScene extends Phaser.Scene {
       });
     });
 
+    // --- TASK FORCE: THE HEART OF GAME JUICE ---
+    this.damageTextManager = new DamageTextManager(this);
+    this.neonBurst = new NeonBurstManager(this);
+
     this.playerController = new PlayerController(this);
     this.player = this.playerController.create();
+
+    // 1. O Efeito Bloom (Hero) - Subtle
+    if (this.player.preFX) {
+        const bloom = this.player.preFX.addBloom(0xffffff, 1, 1, 1.2, 1.2);
+    }
+
     this.cursors = this.input.keyboard.createCursorKeys();
 
     if (this.gameMode === 'ranked') {
@@ -550,6 +562,15 @@ export default class GameScene extends Phaser.Scene {
         const bomb = bombGroup.create(x, y, 'bomb');
         bomb.setDisplaySize(bombDisplaySize, bombDisplaySize)
             .setVelocity(vx, vy);
+
+        // 1. O Efeito Bloom (Projectile) - Intense
+        // White Core (ffffff), Aura depends on state/tint
+        if (bomb.preFX) {
+             // Color for aura: Default Neon Orange (FF5F1F) or Cyan (00FFFF)
+             // Let's use Neon Orange for Player Bombs
+             const bloomColor = isOpponent ? 0xff0000 : 0xFF5F1F;
+             bomb.preFX.addBloom(bloomColor, 1, 1, 2, 1.2);
+        }
 
         this.tweens.add({
             targets: bomb,
