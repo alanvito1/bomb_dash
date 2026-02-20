@@ -108,8 +108,9 @@ export function createRetroPanel(scene, x, y, width, height, style = 'wood') {
  * @param {string} text
  * @param {string} type - 'primary' (Yellow), 'success' (Green), 'danger' (Red), 'neutral' (Blue), 'metal' (Grey)
  * @param {function} onClick
+ * @param {string|null} iconKey - Optional icon asset key to display
  */
-export function createRetroButton(scene, x, y, width, height, text, type = 'primary', onClick) {
+export function createRetroButton(scene, x, y, width, height, text, type = 'primary', onClick, iconKey = null) {
     // Defaults
     width = width || 140;
     height = height || 40;
@@ -171,10 +172,33 @@ export function createRetroButton(scene, x, y, width, height, text, type = 'prim
     // Text
     const label = scene.add.text(0, 0, text, {
         fontFamily: '"Press Start 2P", monospace', // Retro Font
-        fontSize: '12px',
+        fontSize: '10px', // Slightly smaller to fit icon
         color: '#000000',
         align: 'center'
     }).setOrigin(0.5);
+
+    // Icon Logic
+    let icon = null;
+    if (iconKey && scene.textures.exists(iconKey)) {
+        icon = scene.add.image(0, 0, iconKey);
+
+        // Scale icon to fit height (max 60% of button height)
+        const maxIconH = height * 0.6;
+        const scale = maxIconH / icon.height;
+        icon.setScale(scale);
+
+        // Layout: Icon Left, Text Right (Centered Group)
+        const gap = 8;
+        const totalContentWidth = (icon.width * scale) + gap + label.width;
+
+        // Shift Icon to start
+        icon.x = -totalContentWidth / 2 + (icon.width * scale) / 2;
+        // Shift Label to end
+        label.x = icon.x + (icon.width * scale) / 2 + gap + label.width / 2;
+
+        container.add(icon);
+    }
+
     container.add(label);
 
     container.setSize(width, height);
@@ -182,18 +206,22 @@ export function createRetroButton(scene, x, y, width, height, text, type = 'prim
 
     container.on('pointerdown', () => {
         drawButton(true);
-        label.y = 2; // Shift text down
+        const shiftY = 2;
+        label.y = shiftY;
+        if (icon) icon.y = shiftY;
     });
 
     container.on('pointerup', () => {
         drawButton(false);
         label.y = 0;
+        if (icon) icon.y = 0;
         if (onClick) onClick();
     });
 
     container.on('pointerout', () => {
         drawButton(false);
         label.y = 0;
+        if (icon) icon.y = 0;
     });
 
     return container;

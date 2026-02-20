@@ -1,5 +1,6 @@
 // src/scenes/MenuScene.js
 import SoundManager from '../utils/sound.js';
+import LanguageManager from '../utils/LanguageManager.js';
 import { CST } from '../CST.js';
 import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
@@ -122,7 +123,13 @@ export default class MenuScene extends Phaser.Scene {
       const res = await api.getHeroes();
       if (!this.sys || !this.scene) return; // Prevent crash if scene destroyed
       if (res.success && res.heroes.length > 0) {
-        const hero = res.heroes[0];
+        // Task Force: Load Selected Hero from User Data if available
+        let hero = res.heroes[0];
+        if (this.userData && this.userData.selectedHeroId) {
+            const found = res.heroes.find(h => h.id === this.userData.selectedHeroId);
+            if (found) hero = found;
+        }
+
         this.registry.set('selectedHero', hero);
         this.updateHeroSprite(hero.sprite_name);
       }
@@ -210,7 +217,7 @@ export default class MenuScene extends Phaser.Scene {
     // Avatar
     const avatarBg = this.add.circle(avatarX, avatarY, 22, 0x00ffff);
     const avatarImg = this.add
-      .image(avatarX, avatarY, 'icon_avatar')
+      .image(avatarX, avatarY, 'icon_summoner')
       .setDisplaySize(40, 40);
     const maskShape = this.make.graphics();
     maskShape.fillStyle(0xffffff);
@@ -218,18 +225,22 @@ export default class MenuScene extends Phaser.Scene {
     const mask = maskShape.createGeometryMask();
     avatarImg.setMask(mask);
 
-    // Name
-    let rawName = this.getShortName();
-    if (rawName.length > 12) {
-      rawName = rawName.substring(0, 10) + '...';
-    }
+    // Summoner Title (Lore Update)
+    const summonerTitle = LanguageManager.get('summoner_title', {}, 'SUMMONER');
     const nameText = this.add
-      .text(70, 25, rawName, {
+      .text(70, 25, summonerTitle, {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '12px',
         fill: '#ffffff',
       })
       .setOrigin(0, 0.5);
+
+    // Account Level (Lore Update)
+    const levelText = this.add.text(70 + nameText.width + 10, 25, LanguageManager.get('account_level', {level: 1}, 'Lvl 1'), {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        fill: '#00ff00',
+    }).setOrigin(0, 0.5);
 
     // XP Bar
     const xpY = 45;
@@ -388,25 +399,25 @@ export default class MenuScene extends Phaser.Scene {
     const heroesBtn = createRetroButton(this, x1, btnY, btnW, 50, 'HEROES', 'neutral', () => {
         SoundManager.playClick(this);
         this.heroesModal.open();
-    });
+    }, 'icon_heroes');
 
     // FORGE (Danger/Orange)
     const forgeBtn = createRetroButton(this, x2, btnY, btnW, 50, 'FORGE', 'danger', () => {
         SoundManager.playClick(this);
         this.forgeModal.open();
-    });
+    }, 'icon_forge');
 
     // PLAY (Primary/Yellow)
     const playBtn = createRetroButton(this, x3, btnY, playBtnW, 60, 'PLAY', 'primary', () => {
         SoundManager.playClick(this);
         this.battleModal.open();
-    });
+    }, 'icon_play');
 
     // Shop (Success/Green)
     const shopBtn = createRetroButton(this, x4, btnY, btnW, 50, 'SHOP', 'success', () => {
         SoundManager.playClick(this);
         this.shopModal.open();
-    });
+    }, 'icon_shop');
 
     container.add([heroesBtn, forgeBtn, playBtn, shopBtn]);
   }

@@ -56,6 +56,9 @@ export default class UIModal extends Phaser.GameObjects.Container {
       align: 'center'
     }).setOrigin(0.5);
 
+    // Glow Effect
+    titleText.setShadow(0, 0, '#00ffff', 8, true, true);
+
     // Title underline
     const line = scene.add.graphics();
     line.lineStyle(2, 0x00ffff, 0.5);
@@ -107,6 +110,10 @@ export default class UIModal extends Phaser.GameObjects.Container {
   open() {
     this.setVisible(true);
 
+    if (this.scene.chatWidget && typeof this.scene.chatWidget.setVisible === 'function') {
+        this.scene.chatWidget.setVisible(false);
+    }
+
     // Animation: Pop In
     this.windowContainer.setScale(0.8);
     this.windowContainer.setAlpha(0);
@@ -152,6 +159,9 @@ export default class UIModal extends Phaser.GameObjects.Container {
           ease: 'Back.in',
           onComplete: () => {
               this.setVisible(false);
+        if (this.scene.chatWidget && typeof this.scene.chatWidget.setVisible === 'function') {
+            this.scene.chatWidget.setVisible(true);
+        }
           }
       });
 

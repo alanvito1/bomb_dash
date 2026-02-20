@@ -171,6 +171,18 @@ export default class LoadingScene extends Phaser.Scene {
         this.load.image(icon, `assets/ui/${icon}.png`);
     });
 
+    // New Menu Icons (Task Force: UI Polish)
+    this.load.image('icon_heroes', 'assets/icons/HeroSIcon.png');
+    this.load.image('icon_play', 'assets/icons/shield_lightning.png');
+    this.load.image('icon_shop', 'assets/icons/token.png');
+    this.load.image('icon_forge', 'assets/icons/bhouse.webp');
+    this.load.image('icon_summoner', 'assets/icons/Icon_L.png');
+
+    // Resource Icons
+    this.load.image('icon_gold', 'assets/icons/token.png');
+    this.load.image('icon_bcoin', 'assets/icons/sen_token.png');
+    this.load.image('icon_avatar', 'assets/icons/Icon_L.png'); // Default avatar
+
     // Load Rarity/Leaderboard assets if needed later (skipping for now to save bandwidth/time, will load on demand or in Menu)
 
     this.load.on('complete', () => {

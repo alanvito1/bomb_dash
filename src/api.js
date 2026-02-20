@@ -105,6 +105,15 @@ class ApiClient {
     return this._mockResponse({ success: true, user: playerStateService.getUser() });
   }
 
+  async setSelectedHero(heroId) {
+      try {
+          const result = playerStateService.setSelectedHero(heroId);
+          return this._mockResponse(result);
+      } catch (e) {
+          return this._mockResponse({ success: false, message: e.message });
+      }
+  }
+
   // --- Actions (Mocked) ---
 
   async craftItem(item1Id, item2Id) {
