@@ -97,8 +97,13 @@ body {
 .ui-panel {
   pointer-events: auto; /* Enable clicks on panels */
   background: #050505; /* Absolute Black */
+
+  /* Borda Sólida Pixelada */
   border: 2px solid var(--neon-primary);
-  box-shadow: 0 0 15px var(--neon-primary), inset 0 0 20px rgba(255, 95, 31, 0.1);
+
+  /* Oclusão Ambiental (Brilho Laranja Fantasmagórico Interno) */
+  box-shadow: inset 0 0 15px rgba(255, 95, 31, 0.2);
+
   padding: 20px;
   width: 90%;
   max-width: 500px;
@@ -205,39 +210,91 @@ body {
   }
 }
 
-/* --- Buttons --- */
+/* --- Buttons (NEON TUBE STYLE) --- */
 .cyber-btn {
-  background: transparent;
-  border: 2px solid var(--neon-primary);
+  background-color: transparent;
   color: var(--neon-primary);
   padding: 15px 20px;
   font-family: 'Press Start 2P', monospace;
   font-size: 14px;
   cursor: pointer;
   text-transform: uppercase;
-  transition: all 0.2s;
-  box-shadow: 0 0 5px var(--neon-primary);
   width: 100%;
   margin-bottom: 10px;
   position: relative;
   overflow: hidden;
+
+  /* Bordas sólidas e pixeladas */
+  border: 2px solid var(--neon-primary);
+  border-radius: 0;
+
+  /* Texto com núcleo branco e brilho laranja */
+  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+
+  /* Caixa com luz externa e interna */
+  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-primary), inset 0 0 20px var(--neon-primary);
+
+  /* Transições Suaves */
+  transition: all 0.1s ease-in-out;
 }
 
 .cyber-btn:hover {
-  background: var(--neon-primary);
-  color: #000;
-  box-shadow: 0 0 20px var(--neon-primary);
+  /* Aumenta a intensidade em 50% */
+  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-primary), 0 0 30px var(--neon-primary);
+  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-primary), inset 0 0 30px var(--neon-primary);
+  background-color: transparent; /* Ensure it stays transparent but glows */
 }
 
 .cyber-btn:active {
-  transform: translateY(2px);
+  /* Feedback tátil */
+  transform: scale(0.96);
+  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-primary), inset 0 0 10px var(--neon-primary);
 }
 
 .cyber-btn.disabled {
   border-color: #555;
   color: #555;
   box-shadow: none;
+  text-shadow: none;
   cursor: not-allowed;
+}
+
+.cyber-btn.disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* --- Utility Classes for Colors --- */
+.btn-cyan {
+  color: var(--neon-cyan) !important;
+  border-color: var(--neon-cyan) !important;
+  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan) !important;
+  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-cyan), inset 0 0 20px var(--neon-cyan) !important;
+}
+
+.btn-cyan:hover {
+  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan) !important;
+  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-cyan), inset 0 0 30px var(--neon-cyan) !important;
+}
+
+.btn-cyan:active {
+  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-cyan), inset 0 0 10px var(--neon-cyan) !important;
+}
+
+.btn-magenta {
+  color: var(--neon-magenta) !important;
+  border-color: var(--neon-magenta) !important;
+  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta) !important;
+  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-magenta), inset 0 0 20px var(--neon-magenta) !important;
+}
+
+.btn-magenta:hover {
+  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-magenta), 0 0 30px var(--neon-magenta) !important;
+  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-magenta), inset 0 0 30px var(--neon-magenta) !important;
+}
+
+.btn-magenta:active {
+  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-magenta), inset 0 0 10px var(--neon-magenta) !important;
 }
 
 /* --- Checkbox --- */
