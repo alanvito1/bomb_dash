@@ -59,6 +59,12 @@ export default class AssetLoader {
         }
     });
 
+    // 4. Ensure Particles Exist
+    if (!scene.textures.exists('particle_pixel')) {
+        console.log('✨ Generating Procedural Particles...');
+        TextureGenerator.createParticles(scene);
+    }
+
     console.log('✅ AssetLoader: Asset verification complete.');
   }
 }

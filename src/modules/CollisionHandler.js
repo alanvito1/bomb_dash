@@ -1,6 +1,5 @@
 import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
-import { createFloatingText } from './FloatingText.js';
 import { showNextStageDialog as StageDialog } from './NextStageDialog.js';
 import playerStateService from '../services/PlayerStateService.js';
 
@@ -82,7 +81,12 @@ export default class CollisionHandler {
     const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
 
     if (currentLevel > prevLevel) {
-        createFloatingText(this.scene, impactX, impactY - 20, 'BOMB MASTERY UP!', '#ffff00');
+        // Use DamageTextManager for general notifications too if flexible, or keep createFloatingText?
+        // User asked for "Damage Text Manager". For system messages, maybe keep createFloatingText or adapt manager.
+        // Let's use the manager as it's cleaner.
+        if (this.scene.damageTextManager) {
+             this.scene.damageTextManager.show(impactX, impactY - 20, 'BOMB MASTERY UP!', true);
+        }
         SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
     }
 
@@ -139,9 +143,12 @@ export default class CollisionHandler {
         });
     }
 
-    // Show Critical Hit if bonus applies? Or just normal text.
-    const color = bonus > 0 ? '#ff00ff' : '#ff4d4d'; // Purple for knowledge bonus
-    createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, color);
+    // 4. Floating Combat Text
+    if (this.scene.damageTextManager) {
+        // Critical if bonus > 0 or random chance
+        const isCrit = (bonus > 0);
+        this.scene.damageTextManager.show(enemy.x, enemy.y, damage, isCrit, enemy.isBoss);
+    }
 
     SoundManager.play(this.scene, 'hit_enemy');
 
@@ -152,35 +159,32 @@ export default class CollisionHandler {
     });
 
     if (enemy.hp <= 0) {
-      // 🧃 JUICE: Hit Stop & Shake
-      this.scene.cameras.main.shake(50, 0.005);
-      if (this.scene.physics.world.isPaused === false) {
-          this.scene.physics.pause();
-          this.scene.time.delayedCall(50, () => {
-              if (this.scene && !this.scene.gamePaused) {
-                  this.scene.physics.resume();
-              }
-          });
+      // 3. Screen Shake & Hit Pause
+      if (enemy.isBoss) {
+          // Boss Death: Epic Shake & Long Pause
+          this.scene.cameras.main.shake(500, 0.03);
+
+          if (this.scene.physics.world.isPaused === false) {
+              this.scene.physics.pause();
+              // Slow motion / Freeze for 100ms
+              this.scene.time.delayedCall(100, () => {
+                  if (this.scene && !this.scene.gamePaused && !this.scene.bossDefeated) { // Ensure we don't resume if transitioning
+                      this.scene.physics.resume();
+                  }
+              });
+          }
+      } else {
+          // Normal Death: Quick Shake (optional, or rely on impact shake?)
+          // User said: "Quando o Chefão morrer... shake(500, 0.03)".
+          // For impact/damage taken by hero: shake(100, 0.01).
+          // For normal enemy death, user asked for "Neon Burst".
+          // The current code had `shake(50, 0.005)` for death. Let's keep a tiny one.
+          this.scene.cameras.main.shake(50, 0.005);
       }
 
-      // ✨ DEATH PARTICLES (Digital Disintegration)
-      if (this.scene.textures.exists('particle_pixel')) {
-        const particles = this.scene.add.particles(
-          enemy.x,
-          enemy.y,
-          'particle_pixel',
-          {
-            speed: { min: 50, max: 150 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 2, end: 0 },
-            lifespan: 600,
-            blendMode: 'ADD',
-            emitting: false,
-          }
-        );
-        particles.explode(15);
-
-        this.scene.time.delayedCall(700, () => particles.destroy());
+      // 2. Neon Burst Particles (Global Emitter)
+      if (this.scene.neonBurst) {
+          this.scene.neonBurst.explode(enemy.x, enemy.y, enemy.isBoss ? 50 : 20);
       }
 
       SoundManager.play(
@@ -198,13 +202,9 @@ export default class CollisionHandler {
       this.scene.sessionLoot.xp += xpGained;
 
       // Visual Feedback
-      createFloatingText(
-        this.scene,
-        enemy.x,
-        enemy.y - 20,
-        `+${coinsGained} G`,
-        '#ffd700'
-      );
+      if (this.scene.damageTextManager) {
+          this.scene.damageTextManager.show(enemy.x, enemy.y - 20, `+${coinsGained} G`, true);
+      }
 
       // Update HUD to show SESSION LOOT (The "At Risk" Amount)
       this.events.emit('update-bcoin', { balance: this.scene.sessionLoot.coins });
@@ -220,7 +220,9 @@ export default class CollisionHandler {
       playerStateService.incrementBestiaryKill(type);
 
       // Floating Text Feedback
-      createFloatingText(this.scene, enemy.x, enemy.y - 40, 'Bestiary +1', '#00ffff');
+      if (this.scene.damageTextManager) {
+          this.scene.damageTextManager.show(enemy.x, enemy.y - 40, 'Bestiary +1', false);
+      }
 
       this.scene.enemiesKilled++;
 
@@ -251,11 +253,14 @@ export default class CollisionHandler {
     if (this.scene.gamePaused || this.scene.transitioning) return;
 
     // 🔴 PLAYER HIT FX
-    player.setTint(0xff0000);
+    // 3. Screen Shake & Hit Pause (Hero Damage)
+    player.setTint(0xff0000); // Red Flash
     this.scene.time.delayedCall(200, () => {
       if (player.active) player.clearTint();
     });
-    this.scene.cameras.main.shake(200, 0.02);
+
+    // User requested: shake(100, 0.01)
+    this.scene.cameras.main.shake(100, 0.01);
 
     const stats = this.scene.playerStats;
     stats.hp -= 100;
