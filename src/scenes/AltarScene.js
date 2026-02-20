@@ -76,7 +76,7 @@ export default class AltarScene extends Phaser.Scene {
       .dom(centerX, centerY + 20)
       .createFromHTML(
         `
-            <input type="number" id="donation-amount" style="width: 200px; padding: 10px; font-size: 16px; text-align: center; background-color: #1a1a1a; color: #00ffff; border: 2px solid #00ffff;" value="10">
+            <input type="number" id="donation-amount" style="width: 200px; padding: 10px; font-size: 16px; text-align: center; background-color: #050505; color: #ffffff; border: 2px solid #FF5F1F;" value="10">
         `
       )
       .setOrigin(0.5);

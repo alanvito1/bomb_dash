@@ -30,13 +30,13 @@ export default class GameOverScene extends Phaser.Scene {
       .text(centerX, centerY - 200, LanguageManager.get('game_over_title'), {
         fontFamily: '"Press Start 2P"',
         fontSize: '36px',
-        fill: '#ff0000',
+        fill: '#FF5F1F',
         stroke: '#000000',
         strokeThickness: 6,
         shadow: {
           offsetX: 3,
           offsetY: 3,
-          color: '#ff0000',
+          color: '#FF5F1F',
           blur: 15,
           stroke: true,
           fill: true,

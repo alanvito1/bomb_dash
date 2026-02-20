@@ -44,7 +44,7 @@ const config = {
   parent: 'game-container', // Ensure canvas is attached to our controlled container
   width: 480,
   height: 800,
-  backgroundColor: '#000000',
+  backgroundColor: '#050505',
   physics: {
     default: 'arcade',
     arcade: {
@@ -95,7 +95,7 @@ const config = {
 window.launchGame = function () {
   console.log(
     '%cCreated with passion by AVRE 🌹',
-    'color: #DC143C; font-weight: bold; font-size: 16px;'
+    'color: #FF5F1F; font-weight: bold; font-size: 16px;'
   );
   console.log('🚀 Launching Phaser...');
 

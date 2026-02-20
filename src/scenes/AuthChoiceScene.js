@@ -25,7 +25,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
         0,
         width,
         height,
-        0x1a1a1a
+        0x050505
       )
       .setOrigin(0);
 
@@ -53,15 +53,27 @@ export default class AuthChoiceScene extends Phaser.Scene {
         {
           fontFamily: '"Press Start 2P"',
           fontSize: '20px',
-          color: '#ffffff',
-          backgroundColor: '#007bff',
+          color: '#FF5F1F',
+          backgroundColor: '#050505',
           padding: { x: 20, y: 10 },
           align: 'center',
+          stroke: '#FF5F1F',
+          strokeThickness: 2
         }
       )
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .setName('web3LoginButton');
+
+    // Manual border via padding hack or graphics? Text doesn't support border easily.
+    // Let's add hover effects.
+    connectButton.on('pointerover', () => {
+        connectButton.setStyle({ color: '#000000', backgroundColor: '#FF5F1F' });
+    });
+    connectButton.on('pointerout', () => {
+        connectButton.setStyle({ color: '#FF5F1F', backgroundColor: '#050505' });
+    });
+
 
     // --- "Play As Guest" Button ---
     // Added back for testing/guest access
@@ -73,15 +85,24 @@ export default class AuthChoiceScene extends Phaser.Scene {
         {
           fontFamily: '"Press Start 2P"',
           fontSize: '16px',
-          color: '#ffffff',
-          backgroundColor: '#555555',
+          color: '#00FFFF',
+          backgroundColor: '#050505',
           padding: { x: 20, y: 10 },
           align: 'center',
+          stroke: '#00FFFF',
+          strokeThickness: 2
         }
       )
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .setName('guestLoginButton');
+
+     guestButton.on('pointerover', () => {
+        guestButton.setStyle({ color: '#000000', backgroundColor: '#00FFFF' });
+    });
+    guestButton.on('pointerout', () => {
+        guestButton.setStyle({ color: '#00FFFF', backgroundColor: '#050505' });
+    });
 
     // --- Status Text ---
     const statusText = this.add

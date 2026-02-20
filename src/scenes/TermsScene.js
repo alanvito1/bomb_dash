@@ -63,7 +63,7 @@ class TermsScene extends Phaser.Scene {
     const scrollableAreaY = 120;
     const graphics = this.add.graphics();
     graphics
-      .fillStyle(0x1a1a1a, 0.8)
+      .fillStyle(0x050505, 0.9)
       .fillRect(centerX - 220, scrollableAreaY, 440, scrollableAreaHeight);
     graphics
       .lineStyle(2, 0x00ffff)
@@ -91,15 +91,17 @@ class TermsScene extends Phaser.Scene {
     this.acceptButton.setName('acceptButton'); // Add a stable name for automation
     this.buttonBg = this.add
       .graphics()
-      .fillStyle(0x444444, 1)
-      .fillRoundedRect(-175, -25, 350, 50, 10);
+      .fillStyle(0x050505, 1)
+      .lineStyle(2, 0x555555)
+      .strokeRoundedRect(-175, -25, 350, 50, 4);
     const buttonText = this.add
       .text(0, 0, LanguageManager.get('terms.button'), {
         fontFamily: '"Press Start 2P"',
         fontSize: '12px',
-        fill: '#FFFFFF',
+        fill: '#555555',
       })
       .setOrigin(0.5);
+    this.buttonText = buttonText;
     this.acceptButton
       .add([this.buttonBg, buttonText])
       .setSize(350, 50)
@@ -192,10 +194,12 @@ class TermsScene extends Phaser.Scene {
 
   activateButton() {
     this.acceptButton.setAlpha(1.0);
+    this.buttonText.setColor('#FF5F1F');
     this.buttonBg
       .clear()
-      .fillStyle(0x00ff00, 1)
-      .fillRoundedRect(-175, -25, 350, 50, 10);
+      .fillStyle(0x050505, 1)
+      .lineStyle(2, 0xFF5F1F)
+      .strokeRoundedRect(-175, -25, 350, 50, 4);
     this.acceptButton.setInteractive({ useHandCursor: true });
 
     this.acceptButton.on('pointerdown', () => {
@@ -203,18 +207,14 @@ class TermsScene extends Phaser.Scene {
       this.scene.start(CST.SCENES.AUTH_CHOICE);
     });
 
-    this.acceptButton.on('pointerover', () =>
-      this.buttonBg
-        .clear()
-        .fillStyle(0x00dd00, 1)
-        .fillRoundedRect(-175, -25, 350, 50, 10)
-    );
-    this.acceptButton.on('pointerout', () =>
-      this.buttonBg
-        .clear()
-        .fillStyle(0x00ff00, 1)
-        .fillRoundedRect(-175, -25, 350, 50, 10)
-    );
+    this.acceptButton.on('pointerover', () => {
+        this.buttonBg.fillStyle(0xFF5F1F, 1);
+        this.buttonText.setColor('#000000');
+    });
+    this.acceptButton.on('pointerout', () => {
+        this.buttonBg.fillStyle(0x050505, 1);
+        this.buttonText.setColor('#FF5F1F');
+    });
   }
 }
 

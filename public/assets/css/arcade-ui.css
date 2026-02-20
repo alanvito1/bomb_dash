@@ -1,9 +1,11 @@
 :root {
-  --neon-cyan: #00ffff;
-  --neon-magenta: #ff00ff;
+  --neon-primary: #FF5F1F;  /* Neon Orange */
+  --neon-glow: #FF3A00;     /* Intense Glow */
+  --neon-cyan: #00ffff;     /* Secondary/Neutral */
+  --neon-magenta: #ff00ff;  /* Alerts/Rarity */
   --neon-yellow: #ffd700;
-  --bg-dark: #050505;
-  --grid-color: rgba(0, 255, 255, 0.2);
+  --bg-dark: #050505;       /* Absolute Black */
+  --grid-color: rgba(255, 95, 31, 0.15); /* Orange Grid */
 }
 
 /* --- Base --- */
@@ -14,6 +16,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* Prevent scroll */
+  image-rendering: pixelated;
 }
 
 /* --- Background Grid --- */
@@ -93,9 +96,9 @@ body {
 
 .ui-panel {
   pointer-events: auto; /* Enable clicks on panels */
-  background: rgba(10, 10, 10, 0.9);
-  border: 2px solid var(--neon-cyan);
-  box-shadow: 0 0 10px var(--neon-cyan), inset 0 0 20px rgba(0, 255, 255, 0.2);
+  background: #050505; /* Absolute Black */
+  border: 2px solid var(--neon-primary);
+  box-shadow: 0 0 15px var(--neon-primary), inset 0 0 20px rgba(255, 95, 31, 0.1);
   padding: 20px;
   width: 90%;
   max-width: 500px;
@@ -124,8 +127,8 @@ body {
 
 /* --- Typography & Glitch --- */
 .neon-text {
-  color: var(--neon-cyan);
-  text-shadow: 0 0 5px var(--neon-cyan);
+  color: var(--neon-primary);
+  text-shadow: 0 0 10px var(--neon-glow);
   margin-bottom: 20px;
   font-size: 24px;
 }
@@ -143,19 +146,19 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 10, 10, 0.9);
+  background: #050505;
 }
 
 .glitch::before {
   left: 2px;
-  text-shadow: -1px 0 red;
+  text-shadow: -1px 0 var(--neon-magenta);
   clip: rect(24px, 550px, 90px, 0);
   animation: glitch-anim-1 2.5s infinite linear alternate-reverse;
 }
 
 .glitch::after {
   left: -2px;
-  text-shadow: -1px 0 blue;
+  text-shadow: -1px 0 var(--neon-cyan);
   clip: rect(85px, 550px, 140px, 0);
   animation: glitch-anim-2 3s infinite linear alternate-reverse;
 }
@@ -205,15 +208,15 @@ body {
 /* --- Buttons --- */
 .cyber-btn {
   background: transparent;
-  border: 2px solid var(--neon-magenta);
-  color: var(--neon-magenta);
+  border: 2px solid var(--neon-primary);
+  color: var(--neon-primary);
   padding: 15px 20px;
   font-family: 'Press Start 2P', monospace;
   font-size: 14px;
   cursor: pointer;
   text-transform: uppercase;
   transition: all 0.2s;
-  box-shadow: 0 0 5px var(--neon-magenta);
+  box-shadow: 0 0 5px var(--neon-primary);
   width: 100%;
   margin-bottom: 10px;
   position: relative;
@@ -221,9 +224,9 @@ body {
 }
 
 .cyber-btn:hover {
-  background: var(--neon-magenta);
-  color: black;
-  box-shadow: 0 0 20px var(--neon-magenta);
+  background: var(--neon-primary);
+  color: #000;
+  box-shadow: 0 0 20px var(--neon-primary);
 }
 
 .cyber-btn:active {
@@ -252,7 +255,7 @@ body {
   appearance: none;
   width: 20px;
   height: 20px;
-  border: 2px solid var(--neon-cyan);
+  border: 2px solid var(--neon-primary);
   background: transparent;
   cursor: pointer;
   display: inline-block;
@@ -265,7 +268,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: var(--neon-cyan);
+  color: var(--neon-primary);
   font-size: 14px;
 }
 
@@ -273,7 +276,7 @@ body {
 .typing-cursor::after {
   content: '█';
   animation: blink 1s infinite;
-  color: var(--neon-cyan);
+  color: var(--neon-primary);
 }
 
 @keyframes blink {
@@ -290,7 +293,7 @@ body {
 .pixel-spinner {
   width: 40px;
   height: 40px;
-  background-color: var(--neon-cyan);
+  background-color: var(--neon-primary);
   margin: 20px auto;
   animation: rotate-pixel 1.2s infinite ease-in-out;
 }

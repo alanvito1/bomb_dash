@@ -1,11 +1,12 @@
 /* 🌹 AVRE Cyber-Bomber Theme for Wiki */
 :root {
-  --primary-color: #dc143c; /* Crimson */
-  --secondary-color: #b22222; /* Firebrick */
-  --background-color: #000000; /* Void */
+  --primary-color: #FF5F1F; /* Neon Orange */
+  --secondary-color: #FF3A00; /* Neon Glow */
+  --background-color: #050505; /* Absolute Black */
   --text-color: #ffffff; /* White */
-  --glass-bg: rgba(20, 0, 0, 0.9); /* Deep Burgundy */
+  --glass-bg: rgba(5, 5, 5, 0.95); /* Deep Black */
   --font-main: 'Press Start 2P', monospace;
+  --neon-cyan: #00FFFF;
 }
 
 * {
@@ -21,6 +22,7 @@ body {
   line-height: 1.6;
   padding: 20px;
   overflow-x: hidden;
+  image-rendering: pixelated;
 }
 
 .wiki-container {
@@ -28,7 +30,7 @@ body {
   margin: 0 auto;
   padding: 20px;
   border: 2px solid var(--primary-color);
-  box-shadow: 0 0 20px rgba(220, 20, 60, 0.4);
+  box-shadow: 0 0 20px rgba(255, 95, 31, 0.4);
   background-color: var(--glass-bg);
   backdrop-filter: blur(5px);
 }
@@ -37,7 +39,7 @@ h1,
 h2,
 h3 {
   color: var(--primary-color);
-  text-shadow: 0 0 10px var(--primary-color);
+  text-shadow: 0 0 10px var(--secondary-color);
   margin-bottom: 20px;
   text-transform: uppercase;
 }
@@ -51,8 +53,9 @@ h1 {
 .section {
   margin-bottom: 40px;
   padding: 20px;
-  border: 1px solid var(--secondary-color);
-  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--primary-color);
+  background-color: #0a0a0a;
+  box-shadow: inset 0 0 10px rgba(255, 95, 31, 0.1);
 }
 
 /* Hero Grid */
@@ -66,13 +69,13 @@ h1 {
   border: 1px solid var(--primary-color);
   padding: 15px;
   text-align: center;
-  background-color: #1a0505;
+  background-color: #000;
   transition: transform 0.3s ease;
 }
 
 .hero-card:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(220, 20, 60, 0.6);
+  box-shadow: 0 0 15px rgba(255, 95, 31, 0.6);
 }
 
 .hero-name {
@@ -107,24 +110,28 @@ label {
 input,
 select {
   padding: 10px;
-  background-color: #1a0505;
+  background-color: #000;
   border: 1px solid var(--primary-color);
   color: var(--text-color);
   font-family: var(--font-main);
 }
 
 button {
-  background-color: var(--primary-color);
-  color: var(--text-color);
-  border: none;
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
   padding: 15px;
   font-family: var(--font-main);
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  box-shadow: 0 0 5px var(--primary-color);
 }
 
 button:hover {
-  background-color: var(--secondary-color);
+  background-color: var(--primary-color);
+  color: #000;
+  box-shadow: 0 0 15px var(--primary-color);
 }
 
 #roi-result {
