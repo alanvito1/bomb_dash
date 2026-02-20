@@ -1,12 +1,12 @@
 /* 🌹 AVRE Cyber-Bomber Theme for Wiki */
 :root {
-  --primary-color: #FF5F1F; /* Neon Orange */
-  --secondary-color: #FF3A00; /* Neon Glow */
+  --primary-color: #ff5f1f; /* Neon Orange */
+  --secondary-color: #ff3a00; /* Neon Glow */
   --background-color: #050505; /* Absolute Black */
   --text-color: #ffffff; /* White */
   --glass-bg: rgba(5, 5, 5, 0.95); /* Deep Black */
   --font-main: 'Press Start 2P', monospace;
-  --neon-cyan: #00FFFF;
+  --neon-cyan: #00ffff;
 }
 
 * {

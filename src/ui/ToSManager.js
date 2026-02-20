@@ -3,60 +3,78 @@ import LanguageManager from '../utils/LanguageManager.js';
 export default class ToSManager {
   constructor(overlayManager) {
     this.overlayManager = overlayManager;
+    // Bind to DOM elements dynamically in init to ensure they exist
+    this.fullText = '';
+  }
+
+  init() {
     this.modal = document.getElementById('tos-modal');
     this.content = document.getElementById('tos-content');
     this.checkbox = document.getElementById('tos-checkbox');
     this.btn = document.getElementById('tos-btn');
 
-    this.fullText = '';
-    this.typingSpeed = 5; // ms per char
-    this.isTyping = false;
-  }
+    if (!this.modal) {
+      console.error('ToS Modal element not found');
+      return;
+    }
 
-  async init() {
-    this.modal.classList.add('active');
+    this.modal.style.display = 'block'; // Ensure it's visible within the flex container
+    // Actually the parent is flex, the panels might be hidden/shown via display
+    // The previous CSS likely handled it via classes.
+    // Let's assume .ui-panel is visible by default or managed here.
+    // We'll hide other panels just in case.
+    document
+      .querySelectorAll('.ui-panel')
+      .forEach((p) => (p.style.display = 'none'));
+    this.modal.style.display = 'block';
 
-    // Load text from LanguageManager (or fallback)
-    // We assume LanguageManager is already initialized by main.js or OverlayManager
     const termsText = LanguageManager.get('terms.text');
+    // Using a more cyberpunk/terminal text as requested
     this.fullText =
       termsText && termsText !== 'terms.text'
         ? termsText
-        : 'TERMS OF SERVICE\n\n1. NO CHEATING.\n2. HAVE FUN.\n3. PROTOCOL 88 IS ACTIVE.';
+        : `>>> INITIALIZING PROTOCOL 88...
+>>> LOADING ASSETS...
+>>> DECRYPTING...
+
+[TERMS OF ENGAGEMENT]
+
+1. THE ARENA IS LETHAL. DEATH IS PERMANENT FOR SESSION DATA UNLESS SECURED.
+2. UNAUTHORIZED MODIFICATIONS (CHEATS) WILL RESULT IN IMMEDIATE TERMINATION.
+3. BY PROCEEDING, YOU ACKNOWLEDGE THAT BCOIN AND FRAGMENTS ARE DIGITAL ASSETS.
+4. HAVE FUN. OR DIE TRYING.
+
+>>> AWAITING USER CONFIRMATION...`;
 
     this.content.innerHTML = '';
     this.checkbox.checked = false;
     this.btn.classList.add('disabled');
     this.btn.disabled = true;
 
-    this.startTypingEffect();
-    this.attachListeners();
-  }
-
-  startTypingEffect() {
-    this.isTyping = true;
+    // Typewriter Effect
     let i = 0;
     this.content.innerHTML = '<span class="typing-cursor"></span>';
-
     const typeChar = () => {
       if (i < this.fullText.length) {
-        this.content.innerHTML =
-          this.fullText.substring(0, i + 1) +
-          '<span class="typing-cursor"></span>';
-        this.content.scrollTop = this.content.scrollHeight; // Auto-scroll
+        this.content.innerText = this.fullText.substring(0, i + 1);
+        this.content.scrollTop = this.content.scrollHeight;
         i++;
-        setTimeout(typeChar, this.typingSpeed);
-      } else {
-        this.isTyping = false;
-        this.content.innerHTML = this.fullText; // Remove cursor
+        // Faster typing
+        setTimeout(typeChar, 10);
       }
     };
-
     typeChar();
-  }
 
-  attachListeners() {
-    // Checkbox listener
+    // Listeners
+    // Remove old listeners to avoid duplicates if re-init
+    const newCheckbox = this.checkbox.cloneNode(true);
+    this.checkbox.parentNode.replaceChild(newCheckbox, this.checkbox);
+    this.checkbox = newCheckbox;
+
+    const newBtn = this.btn.cloneNode(true);
+    this.btn.parentNode.replaceChild(newBtn, this.btn);
+    this.btn = newBtn;
+
     this.checkbox.addEventListener('change', (e) => {
       if (e.target.checked) {
         this.btn.classList.remove('disabled');
@@ -68,7 +86,6 @@ export default class ToSManager {
       }
     });
 
-    // Button listener
     this.btn.addEventListener('click', () => {
       if (!this.btn.disabled) {
         this.overlayManager.playSound('click');
@@ -78,8 +95,13 @@ export default class ToSManager {
   }
 
   complete() {
-    this.modal.classList.remove('active');
-    // Transition to Auth Menu
-    this.overlayManager.showAuthMenu();
+    this.modal.style.display = 'none';
+
+    // SAVE ACCEPTANCE
+    localStorage.setItem('termsAccepted', 'true');
+    console.log('[ToS] Terms Accepted. Starting Game Loop.');
+
+    // SKIP AUTH -> GO DIRECTLY TO GAME
+    this.overlayManager.startGameDirectly();
   }
 }

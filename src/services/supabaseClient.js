@@ -13,7 +13,9 @@ if (supabaseUrl && supabaseAnonKey) {
     console.error('❌ Failed to initialize Supabase Client:', error);
   }
 } else {
-  console.warn('⚠️ Supabase credentials missing (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY). Realtime features disabled.');
+  console.warn(
+    '⚠️ Supabase credentials missing (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY). Realtime features disabled.'
+  );
 }
 
 export default supabase;

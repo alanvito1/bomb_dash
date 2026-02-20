@@ -16,6 +16,7 @@ import ChatWidget from '../ui/ChatWidget.js';
 import playerStateService from '../services/PlayerStateService.js';
 import { MOBS } from '../config/MobConfig.js';
 import PostFXManager from '../modules/PostFXManager.js';
+import { createRetroButton, createRetroPanel } from '../utils/ui.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +28,7 @@ export default class GameScene extends Phaser.Scene {
     this.gameMode = 'solo';
     this.opponent = null;
     this.matchId = null;
+    this.godMode = false; // Task Force: God Mode
 
     this.DEFAULT_STATS = {
       hp: 2100,
@@ -58,8 +60,14 @@ export default class GameScene extends Phaser.Scene {
     this.matchId = data.matchId || null;
     this.stageConfig = data.stageConfig || null; // Stage Routing
     this.lastBombSoundTime = 0;
+
+    // Check for God Mode from Service (if set by Admin)
+    this.godMode = playerStateService.godMode || false;
+
     console.log(
-      `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${this.matchId}, Stage: ${this.stageConfig ? this.stageConfig.name : 'Default'}`
+      `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${
+        this.matchId
+      }, Stage: ${this.stageConfig ? this.stageConfig.name : 'Default'}`
     );
   }
 
@@ -152,7 +160,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerStats.damage = heroPower + (heroLevel - 1);
 
-    const baseSpeed = 150 + (heroSpeed * 10);
+    const baseSpeed = 150 + heroSpeed * 10;
     this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
 
     this.playerStats.bombNum = heroBombNum;
@@ -162,16 +170,20 @@ export default class GameScene extends Phaser.Scene {
     const agilityXp = selectedHero.agility_xp || 0;
 
     const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
-    this.playerStats.bombRange *= (1 + bombLevel * 0.01);
+    this.playerStats.bombRange *= 1 + bombLevel * 0.01;
 
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
-    this.playerStats.speed *= (1 + agilityLevel * 0.005);
+    this.playerStats.speed *= 1 + agilityLevel * 0.005;
 
     const accountLevel = playerStateService.getAccountLevel();
-    const globalMultiplier = 1 + (accountLevel * 0.01);
+    const globalMultiplier = 1 + accountLevel * 0.01;
     this.playerStats.damage *= globalMultiplier;
     this.playerStats.speed *= globalMultiplier;
-    console.log(`[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(2)}`);
+    console.log(
+      `[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(
+        2
+      )}`
+    );
 
     try {
       const bestiaryRes = await api.getBestiary();
@@ -185,7 +197,9 @@ export default class GameScene extends Phaser.Scene {
 
     this.registry.remove('selectedHero');
 
-    const bgAsset = this.stageConfig ? this.stageConfig.background_asset : 'bg1';
+    const bgAsset = this.stageConfig
+      ? this.stageConfig.background_asset
+      : 'bg1';
     this.bg = this.add
       .image(this.scale.width / 2, this.scale.height / 2, bgAsset)
       .setOrigin(0.5)
@@ -216,7 +230,7 @@ export default class GameScene extends Phaser.Scene {
 
     // 1. O Efeito Bloom (Hero) - Subtle
     if (this.player.preFX) {
-        const bloom = this.player.preFX.addBloom(0xffffff, 1, 1, 1.2, 1.2);
+      const bloom = this.player.preFX.addBloom(0xffffff, 1, 1, 1.2, 1.2);
     }
 
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -233,7 +247,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.canShoot = false;
     this.time.delayedCall(500, () => {
-        this.canShoot = true;
+      this.canShoot = true;
     });
 
     this.isInitialized = true;
@@ -244,8 +258,14 @@ export default class GameScene extends Phaser.Scene {
 
     // TASK FORCE STEP 2: 30-Wave Engine
     this.currentWave = 1;
-    this.maxWaves = (this.stageConfig && this.stageConfig.enemy_config) ? this.stageConfig.enemy_config.wave_count : 30;
-    this.waveQuota = (this.stageConfig && this.stageConfig.enemy_config) ? this.stageConfig.enemy_config.wave_quota : 10;
+    this.maxWaves =
+      this.stageConfig && this.stageConfig.enemy_config
+        ? this.stageConfig.enemy_config.wave_count
+        : 30;
+    this.waveQuota =
+      this.stageConfig && this.stageConfig.enemy_config
+        ? this.stageConfig.enemy_config.wave_quota
+        : 10;
     this.waveKills = 0;
     this.isBossLevel = false;
 
@@ -263,21 +283,29 @@ export default class GameScene extends Phaser.Scene {
     this.coinsEarned = 0;
 
     // ⚠️ RISK ZONE UI
-    const riskText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 100, '⚠️ RISK ZONE ⚠️\nSurvive to Keep Loot!', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '24px',
-      fill: '#ff0000',
-      align: 'center',
-      stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5).setDepth(1000);
+    const riskText = this.add
+      .text(
+        this.scale.width / 2,
+        this.scale.height / 2 - 100,
+        '⚠️ RISK ZONE ⚠️\nSurvive to Keep Loot!',
+        {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '24px',
+          fill: '#ff0000',
+          align: 'center',
+          stroke: '#000000',
+          strokeThickness: 4,
+        }
+      )
+      .setOrigin(0.5)
+      .setDepth(1000);
 
     this.tweens.add({
       targets: riskText,
       alpha: 0,
       duration: 500,
       delay: 2000,
-      onComplete: () => riskText.destroy()
+      onComplete: () => riskText.destroy(),
     });
 
     this.bombs = this.physics.add.group();
@@ -297,7 +325,11 @@ export default class GameScene extends Phaser.Scene {
       delay: this.playerStats.fireRate,
       loop: true,
       callback: () => {
-        if (this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
+        if (
+          this.player?.active &&
+          this.playerState === 'CAN_SHOOT' &&
+          this.canShoot
+        ) {
           this.firePlayerBomb(true);
         }
       },
@@ -319,50 +351,55 @@ export default class GameScene extends Phaser.Scene {
 
   // New Method: startWave
   startWave(wave) {
-      this.currentWave = wave;
-      this.waveKills = 0;
-      this.waveStartKills = this.enemiesKilled; // Baseline for quota check
-      this.isBossLevel = (wave === this.maxWaves);
+    this.currentWave = wave;
+    this.waveKills = 0;
+    this.waveStartKills = this.enemiesKilled; // Baseline for quota check
+    this.isBossLevel = wave === this.maxWaves;
 
-      // Update HUD
-      this.events.emit('update-wave', {
-          world: this.world,
-          phase: this.currentWave,
-          isBoss: this.isBossLevel
-      });
+    // Update HUD
+    this.events.emit('update-wave', {
+      world: this.world,
+      phase: this.currentWave,
+      isBoss: this.isBossLevel,
+    });
 
-      console.log(`[GameScene] Starting Wave ${wave}/${this.maxWaves} (Quota: ${this.waveQuota})`);
+    console.log(
+      `[GameScene] Starting Wave ${wave}/${this.maxWaves} (Quota: ${this.waveQuota})`
+    );
 
-      // Difficulty Scaling (Base Stage Difficulty + Wave Scaling)
-      const stageDiff = this.stageConfig?.difficulty_multiplier || 1.0;
-      const waveDiff = 1.0 + ((wave - 1) * 0.05); // +5% per wave
-      const totalDiff = parseFloat((stageDiff * waveDiff).toFixed(2));
+    // Difficulty Scaling (Base Stage Difficulty + Wave Scaling)
+    const stageDiff = this.stageConfig?.difficulty_multiplier || 1.0;
+    const waveDiff = 1.0 + (wave - 1) * 0.05; // +5% per wave
+    const totalDiff = parseFloat((stageDiff * waveDiff).toFixed(2));
 
-      // Select Mob
-      const config = this.stageConfig?.enemy_config;
-      if (!config) {
-          // Fallback
-          this.enemySpawner.startSpawning({ id: 'slime_green', asset_key: 'enemy1', base_hp: 10, base_speed: 50 }, totalDiff);
-          return;
-      }
+    // Select Mob
+    const config = this.stageConfig?.enemy_config;
+    if (!config) {
+      // Fallback
+      this.enemySpawner.startSpawning(
+        { id: 'slime_green', asset_key: 'enemy1', base_hp: 10, base_speed: 50 },
+        totalDiff
+      );
+      return;
+    }
 
-      // Logic: 1-15 Mob A, 16-29 Mob B, 30 Boss
-      if (this.isBossLevel) {
-          this.enemySpawner.spawnBoss(config.boss, totalDiff);
-      } else if (wave >= 16) {
-          this.enemySpawner.startSpawning(config.mob_b, totalDiff);
-      } else {
-          this.enemySpawner.startSpawning(config.mob_a, totalDiff);
-      }
+    // Logic: 1-15 Mob A, 16-29 Mob B, 30 Boss
+    if (this.isBossLevel) {
+      this.enemySpawner.spawnBoss(config.boss, totalDiff);
+    } else if (wave >= 16) {
+      this.enemySpawner.startSpawning(config.mob_b, totalDiff);
+    } else {
+      this.enemySpawner.startSpawning(config.mob_a, totalDiff);
+    }
   }
 
   prepareNextStage() {
     // This is called when quota is met (Waves 1-29) OR when Boss defeated (via CollisionHandler -> StageDialog)
 
     if (this.currentWave >= this.maxWaves) {
-        // Victory!
-        this.handleVictory();
-        return;
+      // Victory!
+      this.handleVictory();
+      return;
     }
 
     // Advance Wave
@@ -384,7 +421,10 @@ export default class GameScene extends Phaser.Scene {
       window.enemyStateHistory.push(...enemyStates);
     }
     if (window.enemyStateHistory.length > 5000) {
-      window.enemyStateHistory.splice(0, window.enemyStateHistory.length - 5000);
+      window.enemyStateHistory.splice(
+        0,
+        window.enemyStateHistory.length - 5000
+      );
     }
 
     const enemiesToProcess = this.enemies.getChildren().slice();
@@ -393,6 +433,13 @@ export default class GameScene extends Phaser.Scene {
         enemy.destroy();
 
         if (this.pauseManager.isPaused) return;
+
+        // GOD MODE CHECK
+        if (this.godMode) {
+          console.log('[GodMode] Damage Prevented');
+          return;
+        }
+
         const damageTaken = 50;
         this.playerStats.hp -= damageTaken;
         this.events.emit('update-health', {
@@ -429,10 +476,14 @@ export default class GameScene extends Phaser.Scene {
 
     const currentWaveKills = this.enemiesKilled - this.waveStartKills;
 
-    if (currentWaveKills >= this.waveQuota && !this.isBossLevel && !this.transitioning) {
-        // Make sure we increment waveStartKills so we don't trigger repeatedly
-        this.waveStartKills = this.enemiesKilled;
-        this.prepareNextStage();
+    if (
+      currentWaveKills >= this.waveQuota &&
+      !this.isBossLevel &&
+      !this.transitioning
+    ) {
+      // Make sure we increment waveStartKills so we don't trigger repeatedly
+      this.waveStartKills = this.enemiesKilled;
+      this.prepareNextStage();
     }
   }
 
@@ -552,7 +603,7 @@ export default class GameScene extends Phaser.Scene {
 
     let count = stats.bombNum || 1;
     if (!stats.bombNum && stats.multiShot !== undefined) {
-        count = 1 + stats.multiShot;
+      count = 1 + stats.multiShot;
     }
 
     const bombSize = stats.bombSize || 1;
@@ -561,70 +612,69 @@ export default class GameScene extends Phaser.Scene {
     const direction = velocityY > 0 ? 1 : -1;
 
     const createBomb = (x, y, vx, vy) => {
-        const bomb = bombGroup.create(x, y, 'bomb');
-        bomb.setDisplaySize(bombDisplaySize, bombDisplaySize)
-            .setVelocity(vx, vy);
+      const bomb = bombGroup.create(x, y, 'bomb');
+      bomb.setDisplaySize(bombDisplaySize, bombDisplaySize).setVelocity(vx, vy);
 
-        // 1. O Efeito Bloom (Projectile) - Intense
-        // White Core (ffffff), Aura depends on state/tint
-        if (bomb.preFX) {
-             // Color for aura: Default Neon Orange (FF5F1F) or Cyan (00FFFF)
-             // Let's use Neon Orange for Player Bombs
-             const bloomColor = isOpponent ? 0xff0000 : 0xFF5F1F;
-             bomb.preFX.addBloom(bloomColor, 1, 1, 2, 1.2);
-        }
+      // 1. O Efeito Bloom (Projectile) - Intense
+      // White Core (ffffff), Aura depends on state/tint
+      if (bomb.preFX) {
+        // Color for aura: Default Neon Orange (FF5F1F) or Cyan (00FFFF)
+        // Let's use Neon Orange for Player Bombs
+        const bloomColor = isOpponent ? 0xff0000 : 0xff5f1f;
+        bomb.preFX.addBloom(bloomColor, 1, 1, 2, 1.2);
+      }
 
-        this.tweens.add({
-            targets: bomb,
-            scaleX: bomb.scaleX * 1.2,
-            scaleY: bomb.scaleY * 1.2,
-            duration: 200,
-            yoyo: true,
-            repeat: -1,
+      this.tweens.add({
+        targets: bomb,
+        scaleX: bomb.scaleX * 1.2,
+        scaleY: bomb.scaleY * 1.2,
+        duration: 200,
+        yoyo: true,
+        repeat: -1,
+      });
+
+      if (isOpponent) {
+        bomb.setTint(0xff8080);
+      } else {
+        this.tweens.addCounter({
+          from: 0,
+          to: 100,
+          duration: 200,
+          yoyo: true,
+          repeat: -1,
+          onUpdate: (tween) => {
+            if (tween.getValue() > 50) bomb.setTint(0xff4444);
+            else bomb.clearTint();
+          },
         });
-
-        if (isOpponent) {
-             bomb.setTint(0xff8080);
-        } else {
-            this.tweens.addCounter({
-                from: 0,
-                to: 100,
-                duration: 200,
-                yoyo: true,
-                repeat: -1,
-                onUpdate: (tween) => {
-                    if (tween.getValue() > 50) bomb.setTint(0xff4444);
-                    else bomb.clearTint();
-                },
-            });
-        }
+      }
     };
 
-    const startY = firer.y + (direction * 30);
+    const startY = firer.y + direction * 30;
 
     if (count === 1) {
-        createBomb(firer.x, startY, 0, direction * baseVelocity);
+      createBomb(firer.x, startY, 0, direction * baseVelocity);
     } else if (count === 2) {
-        const spacing = 15;
-        createBomb(firer.x - spacing, startY, 0, direction * baseVelocity);
-        createBomb(firer.x + spacing, startY, 0, direction * baseVelocity);
+      const spacing = 15;
+      createBomb(firer.x - spacing, startY, 0, direction * baseVelocity);
+      createBomb(firer.x + spacing, startY, 0, direction * baseVelocity);
     } else {
-        const totalSpread = 45;
-        const step = totalSpread / (count - 1);
-        const startAngle = -totalSpread / 2;
+      const totalSpread = 45;
+      const step = totalSpread / (count - 1);
+      const startAngle = -totalSpread / 2;
 
-        for (let i = 0; i < count; i++) {
-            const angleDeg = startAngle + (step * i);
-            let finalAngle = 0;
-            if (direction === -1) {
-                 finalAngle = Phaser.Math.DegToRad(-90 + angleDeg);
-            } else {
-                 finalAngle = Phaser.Math.DegToRad(90 + angleDeg);
-            }
-            const vx = Math.cos(finalAngle) * baseVelocity;
-            const vy = Math.sin(finalAngle) * baseVelocity;
-            createBomb(firer.x, startY, vx, vy);
+      for (let i = 0; i < count; i++) {
+        const angleDeg = startAngle + step * i;
+        let finalAngle = 0;
+        if (direction === -1) {
+          finalAngle = Phaser.Math.DegToRad(-90 + angleDeg);
+        } else {
+          finalAngle = Phaser.Math.DegToRad(90 + angleDeg);
         }
+        const vx = Math.cos(finalAngle) * baseVelocity;
+        const vy = Math.sin(finalAngle) * baseVelocity;
+        createBomb(firer.x, startY, vx, vy);
+      }
     }
 
     if (!isOpponent) {
@@ -690,14 +740,84 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  async handleVictory() {
-      if (this.transitioning) return;
-      this.transitioning = true;
-      this.physics.pause();
-      this.setPlayerState('CANNOT_SHOOT', 'Victory');
-      SoundManager.stopAll(this);
-      SoundManager.play(this, 'level_up');
+  showSaveProgressModal(onCancel) {
+    // ⚠️ GUEST MODE INTERCEPTION
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const w = 300;
+    const h = 200;
 
+    const container = this.add.container(cx, cy).setDepth(3000);
+
+    const bg = createRetroPanel(this, 0, 0, w, h, 'metal');
+    container.add(bg);
+
+    const title = this.add
+      .text(0, -70, 'WARNING: PROGRESS NOT SAVED', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '12px',
+        fill: '#ff0000',
+        align: 'center',
+      })
+      .setOrigin(0.5);
+
+    const desc = this.add
+      .text(0, -30, 'Connect Google to Secure Loot.\nOr lose it forever.', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#ffffff',
+        align: 'center',
+        lineSpacing: 5,
+      })
+      .setOrigin(0.5);
+
+    // Login Button
+    const loginBtn = createRetroButton(
+      this,
+      0,
+      20,
+      200,
+      40,
+      'LOGIN WITH GOOGLE',
+      'primary',
+      () => {
+        if (window.overlayManager && window.overlayManager.authManager) {
+          window.overlayManager.authManager.loginGoogle();
+        } else {
+          console.error('Auth Manager Not Found');
+        }
+      },
+      null
+    );
+
+    // Continue Button
+    const continueBtn = createRetroButton(
+      this,
+      0,
+      70,
+      200,
+      30,
+      'CONTINUE (UNSAVED)',
+      'neutral',
+      () => {
+        container.destroy();
+        if (onCancel) onCancel();
+      },
+      null
+    );
+
+    container.add([title, desc, loginBtn, continueBtn]);
+  }
+
+  async handleVictory() {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.physics.pause();
+    this.setPlayerState('CANNOT_SHOOT', 'Victory');
+    SoundManager.stopAll(this);
+    SoundManager.play(this, 'level_up');
+
+    const proceed = async () => {
       const cx = this.cameras.main.centerX;
       const cy = this.cameras.main.centerY;
 
@@ -706,59 +826,94 @@ export default class GameScene extends Phaser.Scene {
       overlay.fillRect(0, 0, this.scale.width, this.scale.height);
       overlay.setDepth(2000);
 
-      this.add.text(cx, cy - 50, 'STAGE CLEAR!', {
+      this.add
+        .text(cx, cy - 50, 'STAGE CLEAR!', {
           fontFamily: '"Press Start 2P"',
           fontSize: '32px',
           color: '#00ff00',
           align: 'center',
           stroke: '#000000',
-          strokeThickness: 6
-      }).setOrigin(0.5).setDepth(2001);
+          strokeThickness: 6,
+        })
+        .setOrigin(0.5)
+        .setDepth(2001);
 
-      this.add.text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.coins} Coins`, {
+      this.add
+        .text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.coins} Coins`, {
           fontFamily: '"Press Start 2P"',
           fontSize: '16px',
           color: '#ffffff',
           align: 'center',
-          lineSpacing: 10
-      }).setOrigin(0.5).setDepth(2001);
+          lineSpacing: 10,
+        })
+        .setOrigin(0.5)
+        .setDepth(2001);
 
       const xpGain = 50;
       const xpResult = playerStateService.addAccountXp(xpGain);
 
-      this.add.text(cx, cy + 60, `+${xpGain} SUMMONER XP`, {
-          fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#00ffff'
-      }).setOrigin(0.5).setDepth(2001);
+      this.add
+        .text(cx, cy + 60, `+${xpGain} SUMMONER XP`, {
+          fontFamily: '"Press Start 2P"',
+          fontSize: '12px',
+          color: '#00ffff',
+        })
+        .setOrigin(0.5)
+        .setDepth(2001);
 
       if (xpResult.leveledUp) {
-          this.add.text(cx, cy + 85, `LEVEL UP! (${xpResult.newLevel})`, {
-              fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ffd700'
-          }).setOrigin(0.5).setDepth(2001);
-          SoundManager.play(this, 'level_up');
+        this.add
+          .text(cx, cy + 85, `LEVEL UP! (${xpResult.newLevel})`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#ffd700',
+          })
+          .setOrigin(0.5)
+          .setDepth(2001);
+        SoundManager.play(this, 'level_up');
       }
 
       // Persist Loot (Coins)
       if (this.playerStats.id) {
-         try {
-             await api.completeMatch(this.playerStats.id, xpGain, this.sessionLoot.coins, this.sessionBestiary, {}, []);
-         } catch(e) {
-             console.warn('[GameScene] Failed to sync victory stats:', e);
-         }
+        try {
+          await api.completeMatch(
+            this.playerStats.id,
+            xpGain,
+            this.sessionLoot.coins,
+            this.sessionBestiary,
+            {},
+            []
+          );
+        } catch (e) {
+          console.warn('[GameScene] Failed to sync victory stats:', e);
+        }
       }
 
       if (this.playerStats.id && this.stageConfig) {
-          playerStateService.completeStage(this.playerStats.id, this.stageConfig.id);
+        playerStateService.completeStage(
+          this.playerStats.id,
+          this.stageConfig.id
+        );
       }
 
       // Save Session Loot Items (Fragments) to Inventory
       if (this.sessionLoot.items && this.sessionLoot.items.length > 0) {
-          playerStateService.addSessionLoot(this.sessionLoot.items);
+        playerStateService.addSessionLoot(this.sessionLoot.items);
       }
 
       this.time.delayedCall(3000, () => {
-          this.scene.stop('HUDScene');
-          this.scene.start('WorldMapScene');
+        this.scene.stop('HUDScene');
+        this.scene.start('WorldMapScene');
       });
+    };
+
+    if (playerStateService.isGuest) {
+      this.showSaveProgressModal(() => {
+        proceed();
+      });
+    } else {
+      proceed();
+    }
   }
 
   async handleGameOver(isVictory = false) {
@@ -770,32 +925,55 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.stopAll(this);
 
     SoundManager.play(this, 'gameover');
-    const finalCoins = 0;
-    const finalXp = this.score;
 
-    const heroId = this.playerStats.id;
-    if (heroId) {
-      try {
-        await api.completeMatch(heroId, finalXp, finalCoins, this.sessionBestiary || {}, {}, []);
-      } catch (e) {
-        console.warn('Failed to report defeat stats', e);
+    const proceed = async () => {
+      const finalCoins = 0;
+      const finalXp = this.score;
+
+      const heroId = this.playerStats.id;
+      if (heroId) {
+        try {
+          await api.completeMatch(
+            heroId,
+            finalXp,
+            finalCoins,
+            this.sessionBestiary || {},
+            {},
+            []
+          );
+        } catch (e) {
+          console.warn('Failed to report defeat stats', e);
+        }
       }
-    }
 
-    this.scene.stop('HUDScene');
-    this.scene.start('GameOverScene', {
-      score: this.score,
-      world: this.world,
-      phase: this.currentWave,
-      coins: 0,
-      xpGained: finalXp,
-      isVictory: false,
-      customMessage: 'MISSION FAILED\nLOOT LOST'
-    });
+      this.scene.stop('HUDScene');
+      this.scene.start('GameOverScene', {
+        score: this.score,
+        world: this.world,
+        phase: this.currentWave,
+        coins: 0,
+        xpGained: finalXp,
+        isVictory: false,
+        customMessage: 'MISSION FAILED\nLOOT LOST',
+      });
+    };
+
+    if (playerStateService.isGuest) {
+      this.showSaveProgressModal(() => {
+        proceed();
+      });
+    } else {
+      proceed();
+    }
   }
 
   update(time, delta) {
-    if (!this.isInitialized || this.pauseManager.isPaused || !this.player?.active) return;
+    if (
+      !this.isInitialized ||
+      this.pauseManager.isPaused ||
+      !this.player?.active
+    )
+      return;
     this.playerController.update(this.cursors, this.playerStats.speed, delta);
 
     if (this.gameMode !== 'ranked') {
@@ -810,7 +988,14 @@ export default class GameScene extends Phaser.Scene {
   trySpawnLoot(x, y) {
     // 1. Health Potion (5% Chance - Coexists)
     if (Math.random() < 0.05) {
-        this.spawnLootItem(x, y, 'item_health_potion', 'Health Potion', 0xffffff, false);
+      this.spawnLootItem(
+        x,
+        y,
+        'item_health_potion',
+        'Health Potion',
+        0xffffff,
+        false
+      );
     }
 
     // 2. Global Drop System (30% Chance)
@@ -819,105 +1004,128 @@ export default class GameScene extends Phaser.Scene {
     // 3. Rarity Roll (The Roulette)
     const roll = Math.random() * 100;
     let rarity = 'Common';
-    let color = 0xAAAAAA;
+    let color = 0xaaaaaa;
 
     if (roll < 85) {
-        rarity = 'Common';
-        color = 0xAAAAAA;
+      rarity = 'Common';
+      color = 0xaaaaaa;
     } else if (roll < 95) {
-        rarity = 'Rare';
-        color = 0x00FF00;
+      rarity = 'Rare';
+      color = 0x00ff00;
     } else if (roll < 99) {
-        rarity = 'Super Rare';
-        color = 0x0000FF;
+      rarity = 'Super Rare';
+      color = 0x0000ff;
     } else if (roll < 99.8) {
-        rarity = 'Epic';
-        color = 0x800080;
+      rarity = 'Epic';
+      color = 0x800080;
     } else if (roll < 99.99) {
-        rarity = 'Legendary';
-        color = 0xFFA500;
+      rarity = 'Legendary';
+      color = 0xffa500;
     } else {
-        rarity = 'Super Legendary';
-        color = 0xFF0000;
+      rarity = 'Super Legendary';
+      color = 0xff0000;
     }
 
     // Spawn Token
-    const loot = this.spawnLootItem(x, y, 'token', `${rarity} Fragment`, color, true);
+    const loot = this.spawnLootItem(
+      x,
+      y,
+      'token',
+      `${rarity} Fragment`,
+      color,
+      true
+    );
     loot.rarity = rarity;
   }
 
   spawnLootItem(x, y, key, name, tint, isFragment) {
-      const loot = this.lootGroup.create(x, y, key);
-      loot.setDisplaySize(24, 24);
-      if (tint) loot.setTint(tint);
-      loot.setVelocity(Phaser.Math.Between(-50, 50), Phaser.Math.Between(-50, 50));
-      loot.setDrag(100);
+    const loot = this.lootGroup.create(x, y, key);
+    loot.setDisplaySize(24, 24);
+    if (tint) loot.setTint(tint);
+    loot.setVelocity(
+      Phaser.Math.Between(-50, 50),
+      Phaser.Math.Between(-50, 50)
+    );
+    loot.setDrag(100);
 
-      loot.itemName = name;
-      loot.isFragment = isFragment;
-      loot.color = tint;
+    loot.itemName = name;
+    loot.isFragment = isFragment;
+    loot.color = tint;
 
-      this.tweens.add({
-          targets: loot,
-          y: y - 5,
-          duration: 1000,
-          yoyo: true,
-          repeat: -1
-      });
+    this.tweens.add({
+      targets: loot,
+      y: y - 5,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+    });
 
-      this.time.delayedCall(15000, () => {
-          if (loot.active) loot.destroy();
-      });
+    this.time.delayedCall(15000, () => {
+      if (loot.active) loot.destroy();
+    });
 
-      return loot;
+    return loot;
   }
 
   handleLootPickup(player, loot) {
-      if (!loot.active) return;
+    if (!loot.active) return;
 
-      const isFragment = loot.isFragment;
-      const rarity = loot.rarity;
-      const colorInt = loot.color || 0xffffff;
-      const colorHex = '#' + colorInt.toString(16).padStart(6, '0');
+    const isFragment = loot.isFragment;
+    const rarity = loot.rarity;
+    const colorInt = loot.color || 0xffffff;
+    const colorHex = '#' + colorInt.toString(16).padStart(6, '0');
 
-      loot.destroy();
+    loot.destroy();
 
-      if (isFragment) {
-          // Add to Session Loot
-          if (!this.sessionLoot.items) this.sessionLoot.items = [];
-          this.sessionLoot.items.push({
-              type: 'fragment',
-              rarity: rarity,
-              quantity: 1
-          });
+    if (isFragment) {
+      // Add to Session Loot
+      if (!this.sessionLoot.items) this.sessionLoot.items = [];
+      this.sessionLoot.items.push({
+        type: 'fragment',
+        rarity: rarity,
+        quantity: 1,
+      });
 
-          this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
-          SoundManager.play(this, 'coin_collect');
-      } else {
-          const healAmount = Math.floor(this.playerStats.maxHp * 0.2);
-          this.playerStats.hp = Math.min(this.playerStats.hp + healAmount, this.playerStats.maxHp);
-          this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });
+      this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
+      SoundManager.play(this, 'coin_collect');
+    } else {
+      const healAmount = Math.floor(this.playerStats.maxHp * 0.2);
+      this.playerStats.hp = Math.min(
+        this.playerStats.hp + healAmount,
+        this.playerStats.maxHp
+      );
+      this.events.emit('update-health', {
+        health: this.playerStats.hp,
+        maxHealth: this.playerStats.maxHp,
+      });
 
-          this.showFloatingText(player.x, player.y - 40, `+${healAmount} HP`, '#00ff00');
-          SoundManager.play(this, 'powerup_collect');
-      }
+      this.showFloatingText(
+        player.x,
+        player.y - 40,
+        `+${healAmount} HP`,
+        '#00ff00'
+      );
+      SoundManager.play(this, 'powerup_collect');
+    }
   }
 
   showFloatingText(x, y, message, color) {
-      const text = this.add.text(x, y, message, {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '10px',
-          color: color,
-          stroke: '#000000',
-          strokeThickness: 2
-      }).setOrigin(0.5);
+    const text = this.add
+      .text(x, y, message, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        color: color,
+        stroke: '#000000',
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5);
 
-      this.tweens.add({
-          targets: text,
-          y: y - 30,
-          alpha: 0,
-          duration: 1000,
-          onComplete: () => text.destroy()
-      });
+    this.tweens.add({
+      targets: text,
+      y: y - 30,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => text.destroy(),
+    });
   }
 }

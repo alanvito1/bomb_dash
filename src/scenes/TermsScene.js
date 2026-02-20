@@ -198,7 +198,7 @@ class TermsScene extends Phaser.Scene {
     this.buttonBg
       .clear()
       .fillStyle(0x050505, 1)
-      .lineStyle(2, 0xFF5F1F)
+      .lineStyle(2, 0xff5f1f)
       .strokeRoundedRect(-175, -25, 350, 50, 4);
     this.acceptButton.setInteractive({ useHandCursor: true });
 
@@ -208,12 +208,12 @@ class TermsScene extends Phaser.Scene {
     });
 
     this.acceptButton.on('pointerover', () => {
-        this.buttonBg.fillStyle(0xFF5F1F, 1);
-        this.buttonText.setColor('#000000');
+      this.buttonBg.fillStyle(0xff5f1f, 1);
+      this.buttonText.setColor('#000000');
     });
     this.acceptButton.on('pointerout', () => {
-        this.buttonBg.fillStyle(0x050505, 1);
-        this.buttonText.setColor('#FF5F1F');
+      this.buttonBg.fillStyle(0x050505, 1);
+      this.buttonText.setColor('#FF5F1F');
     });
   }
 }

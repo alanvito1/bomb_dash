@@ -8,12 +8,14 @@ import {
   MOCK_PVP_STATUS,
   MOCK_GLOBAL_BUFFS,
   MOCK_NEWS,
-  MOCK_BESTIARY
+  MOCK_BESTIARY,
 } from './config/MockData.js';
 
 import playerStateService from './services/PlayerStateService.js';
 
-console.log('⚠️ OFFLINE MODE: API is running in full mock mode with Local State.');
+console.log(
+  '⚠️ OFFLINE MODE: API is running in full mock mode with Local State.'
+);
 
 class ApiClient {
   constructor() {
@@ -40,12 +42,12 @@ class ApiClient {
 
   // Generic fetch wrapper for legacy calls
   async fetch(endpoint, options = {}, requiresAuth = true) {
-      console.log(`[MockAPI] Generic fetch intercepted: ${endpoint}`);
-      if (endpoint === '/auth/me') return this.getCurrentUser();
-      if (endpoint === '/heroes') return this.getHeroes();
-      if (endpoint.includes('/economy/inventory')) return this.getInventory();
-      // Add other fallbacks if needed
-      return this._mockResponse({ success: true, mocked: true });
+    console.log(`[MockAPI] Generic fetch intercepted: ${endpoint}`);
+    if (endpoint === '/auth/me') return this.getCurrentUser();
+    if (endpoint === '/heroes') return this.getHeroes();
+    if (endpoint.includes('/economy/inventory')) return this.getInventory();
+    // Add other fallbacks if needed
+    return this._mockResponse({ success: true, mocked: true });
   }
 
   // --- Authentication ---
@@ -53,13 +55,21 @@ class ApiClient {
   async loginWithSigner(signer, address, chainId) {
     console.log('[MockAPI] Login with signer:', address);
     this.setJwtToken('mock-jwt-token');
-    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: playerStateService.getUser() });
+    return this._mockResponse({
+      success: true,
+      token: 'mock-jwt-token',
+      user: playerStateService.getUser(),
+    });
   }
 
   async web3Login() {
     console.log('[MockAPI] Web3 Login requested. simulating success.');
     this.setJwtToken('mock-jwt-token');
-    return this._mockResponse({ success: true, token: 'mock-jwt-token', user: playerStateService.getUser() });
+    return this._mockResponse({
+      success: true,
+      token: 'mock-jwt-token',
+      user: playerStateService.getUser(),
+    });
   }
 
   hasSession() {
@@ -68,7 +78,10 @@ class ApiClient {
 
   async checkLoginStatus() {
     if (!this.jwtToken) throw new Error('No token');
-    return this._mockResponse({ success: true, user: playerStateService.getUser() });
+    return this._mockResponse({
+      success: true,
+      user: playerStateService.getUser(),
+    });
   }
 
   logout() {
@@ -78,11 +91,17 @@ class ApiClient {
   // --- Game Data ---
 
   async getHeroes() {
-    return this._mockResponse({ success: true, heroes: playerStateService.getHeroes() });
+    return this._mockResponse({
+      success: true,
+      heroes: playerStateService.getHeroes(),
+    });
   }
 
   async getHouses() {
-    return this._mockResponse({ success: true, houses: playerStateService.getHouses() });
+    return this._mockResponse({
+      success: true,
+      houses: playerStateService.getHouses(),
+    });
   }
 
   async getInventory() {
@@ -102,23 +121,30 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this._mockResponse({ success: true, user: playerStateService.getUser() });
+    return this._mockResponse({
+      success: true,
+      user: playerStateService.getUser(),
+    });
   }
 
   async setSelectedHero(heroId) {
-      try {
-          const result = playerStateService.setSelectedHero(heroId);
-          return this._mockResponse(result);
-      } catch (e) {
-          return this._mockResponse({ success: false, message: e.message });
-      }
+    try {
+      const result = playerStateService.setSelectedHero(heroId);
+      return this._mockResponse(result);
+    } catch (e) {
+      return this._mockResponse({ success: false, message: e.message });
+    }
   }
 
   // --- Actions (Mocked) ---
 
   async craftItem(item1Id, item2Id) {
     console.log(`[MockAPI] Crafting items ${item1Id} + ${item2Id}`);
-    return this._mockResponse({ success: true, result: 'success', message: 'Crafted successfully (Mock)' });
+    return this._mockResponse({
+      success: true,
+      result: 'success',
+      message: 'Crafted successfully (Mock)',
+    });
   }
 
   async purchaseHeroUpgrade(heroId, type, cost) {
@@ -127,40 +153,48 @@ class ApiClient {
     // or keep mocked.
     // Since we want to use the new service, let's map it.
     try {
-        const result = playerStateService.upgradeHeroStat(heroId);
-        return this._mockResponse({ success: true, hero: result.hero });
+      const result = playerStateService.upgradeHeroStat(heroId);
+      return this._mockResponse({ success: true, hero: result.hero });
     } catch (e) {
-        return this._mockResponse({ success: false, message: e.message });
+      return this._mockResponse({ success: false, message: e.message });
     }
   }
 
   async upgradeHeroStat(heroId) {
-      try {
-          const result = playerStateService.upgradeHeroStat(heroId);
-          return this._mockResponse({ success: true, hero: result.hero, stat: result.statUpgraded });
-      } catch (e) {
-          return this._mockResponse({ success: false, message: e.message });
-      }
+    try {
+      const result = playerStateService.upgradeHeroStat(heroId);
+      return this._mockResponse({
+        success: true,
+        hero: result.hero,
+        stat: result.statUpgraded,
+      });
+    } catch (e) {
+      return this._mockResponse({ success: false, message: e.message });
+    }
   }
 
   async rerollHeroSpells(heroId) {
-      try {
-          const result = playerStateService.rerollHeroSpells(heroId);
-          return this._mockResponse({ success: true, hero: result.hero, spells: result.newSpells });
-      } catch (e) {
-          return this._mockResponse({ success: false, message: e.message });
-      }
+    try {
+      const result = playerStateService.rerollHeroSpells(heroId);
+      return this._mockResponse({
+        success: true,
+        hero: result.hero,
+        spells: result.newSpells,
+      });
+    } catch (e) {
+      return this._mockResponse({ success: false, message: e.message });
+    }
   }
 
   async updateUserStats(heroId, upgradeType, txHash) {
-     console.log(`[MockAPI] Update stats hero ${heroId}`);
-     // Mapping to new service logic for consistency
-     try {
-        const result = playerStateService.upgradeHeroStat(heroId);
-        return this._mockResponse({ success: true, hero: result.hero });
-     } catch (e) {
-         return this._mockResponse({ success: false, message: e.message });
-     }
+    console.log(`[MockAPI] Update stats hero ${heroId}`);
+    // Mapping to new service logic for consistency
+    try {
+      const result = playerStateService.upgradeHeroStat(heroId);
+      return this._mockResponse({ success: true, hero: result.hero });
+    } catch (e) {
+      return this._mockResponse({ success: false, message: e.message });
+    }
   }
 
   async levelUpHero(heroId) {
@@ -174,16 +208,16 @@ class ApiClient {
   }
 
   async saveCheckpoint(wave) {
-      console.log(`[MockAPI] Checkpoint wave ${wave}`);
-      return this._mockResponse({ success: true });
+    console.log(`[MockAPI] Checkpoint wave ${wave}`);
+    return this._mockResponse({ success: true });
   }
 
   async getOwnedNfts() {
-      return this._mockResponse({ success: true, nfts: [] });
+    return this._mockResponse({ success: true, nfts: [] });
   }
 
   async levelUp() {
-      return this._mockResponse({ success: true });
+    return this._mockResponse({ success: true });
   }
 
   // --- Social ---
@@ -203,8 +237,8 @@ class ApiClient {
   }
 
   async getMyGuild() {
-     // Return first guild as if user is in it, or null
-     return this._mockResponse({ success: true, guild: MOCK_GUILDS[0] });
+    // Return first guild as if user is in it, or null
+    return this._mockResponse({ success: true, guild: MOCK_GUILDS[0] });
   }
 
   // --- Status ---
@@ -218,57 +252,65 @@ class ApiClient {
   }
 
   async savePlayerStats(stats) {
-      console.log('[MockAPI] Stats saved', stats);
-      return this._mockResponse({ success: true });
+    console.log('[MockAPI] Stats saved', stats);
+    return this._mockResponse({ success: true });
   }
 
   async getBestiary() {
-      return this._mockResponse({ success: true, bestiary: MOCK_BESTIARY });
+    return this._mockResponse({ success: true, bestiary: MOCK_BESTIARY });
   }
 
   async joinMatchmakingQueue(heroId) {
-      return this._mockResponse({ success: true });
+    return this._mockResponse({ success: true });
   }
 
   async leaveMatchmakingQueue() {
-      return this._mockResponse({ success: true });
+    return this._mockResponse({ success: true });
   }
 
   async getMatchmakingStatus() {
-      return this._mockResponse({ status: 'idle' });
+    return this._mockResponse({ status: 'idle' });
   }
 
   async completeMatch(heroId, xp, coins, bestiary, proficiency, drops) {
-      console.log('[MockAPI] Match Complete', { heroId, xp, coins, drops });
-      return this._mockResponse({ success: true });
+    console.log('[MockAPI] Match Complete', { heroId, xp, coins, drops });
+    return this._mockResponse({ success: true });
   }
 
   async completeStage(heroId, stageId) {
-      try {
-          console.log(`[MockAPI] Complete Stage: Hero ${heroId}, Stage ${stageId}`);
-          const result = playerStateService.completeStage(heroId, stageId);
-          return this._mockResponse(result);
-      } catch (e) {
-          console.error('[MockAPI] completeStage error:', e);
-          return this._mockResponse({ success: false, message: e.message });
-      }
+    try {
+      console.log(`[MockAPI] Complete Stage: Hero ${heroId}, Stage ${stageId}`);
+      const result = playerStateService.completeStage(heroId, stageId);
+      return this._mockResponse(result);
+    } catch (e) {
+      console.error('[MockAPI] completeStage error:', e);
+      return this._mockResponse({ success: false, message: e.message });
+    }
   }
 
   async logSoloGameCompleted() {
-      return this._mockResponse({ success: true });
+    return this._mockResponse({ success: true });
   }
 
   async getSoloRewardClaimSignature() {
-      return this._mockResponse({ signature: '0xMockSig', gamesPlayed: 10, nonce: 1 });
+    return this._mockResponse({
+      signature: '0xMockSig',
+      gamesPlayed: 10,
+      nonce: 1,
+    });
   }
 
   async initiateHeroWithdrawal(heroId) {
-      return this._mockResponse({ success: true, signature: '0xMockSig' });
+    return this._mockResponse({ success: true, signature: '0xMockSig' });
   }
 
   // --- Testnet ---
-  async mintTestHero() { return this._mockResponse({ success: true }); }
-  async mintTestBcoin() { return this._mockResponse({ success: true }); }
+  async mintTestHero() {
+    return this._mockResponse({ success: true });
+  }
+  async mintTestBcoin() {
+    return this._mockResponse({ success: true });
+  }
 }
 
 const api = new ApiClient();

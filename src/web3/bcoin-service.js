@@ -27,7 +27,7 @@ class BcoinService {
   async updateBalance() {
     console.log('[MockBcoin] Updating balance...');
     // Simulate async
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
 
     this.balance = MOCK_BCOIN;
     this.nativeBalance = MOCK_NATIVE;
@@ -43,8 +43,11 @@ class BcoinService {
   async approve(spender, amount) {
     console.log(`[MockBcoin] Approved ${amount} for ${spender}`);
     GameEventEmitter.emit('transaction:pending', '0xMockHash');
-    await new Promise(r => setTimeout(r, 1000));
-    GameEventEmitter.emit('transaction:success', `Successfully approved ${amount} BCOIN.`);
+    await new Promise((r) => setTimeout(r, 1000));
+    GameEventEmitter.emit(
+      'transaction:success',
+      `Successfully approved ${amount} BCOIN.`
+    );
     return { status: 1 };
   }
 

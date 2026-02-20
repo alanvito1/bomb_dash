@@ -12,7 +12,10 @@ const heroUpgrades = {
   },
   health: {
     cost: (hero) => 10 * hero.level,
-    effect: (hero) => ({ maxHp: (hero.max_hp || hero.maxHp || 100) + 10, hp: (hero.max_hp || hero.maxHp || 100) + 10 }),
+    effect: (hero) => ({
+      maxHp: (hero.max_hp || hero.maxHp || 100) + 10,
+      hp: (hero.max_hp || hero.maxHp || 100) + 10,
+    }),
   },
   speed: {
     cost: (hero) => 15 * hero.level,
@@ -24,8 +27,8 @@ router.get('/settings', async (req, res) => {
   try {
     // Basic settings stub
     const settings = [
-        { key: 'xp_multiplier', value: '1.0' },
-        { key: 'global_reward_pool', value: '1000000' }
+      { key: 'xp_multiplier', value: '1.0' },
+      { key: 'global_reward_pool', value: '1000000' },
     ];
     res.json({ success: true, settings });
   } catch (error) {
@@ -76,12 +79,21 @@ router.get('/bestiary', async (req, res) => {
     res.json({ success: true, bestiary });
   } catch (error) {
     console.error('Error fetching bestiary:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch bestiary.' });
+    res
+      .status(500)
+      .json({ success: false, message: 'Failed to fetch bestiary.' });
   }
 });
 
 router.post('/matches/complete', async (req, res) => {
-  const { heroId, xpGained, coinsCollected, bestiary, proficiency, droppedItems } = req.body;
+  const {
+    heroId,
+    xpGained,
+    coinsCollected,
+    bestiary,
+    proficiency,
+    droppedItems,
+  } = req.body;
 
   if (!heroId || typeof xpGained === 'undefined' || xpGained < 0) {
     return res.status(400).json({
@@ -102,7 +114,9 @@ router.post('/matches/complete', async (req, res) => {
   try {
     const heroes = await db.getHeroesByUserId(req.user.userId);
     // Note: getHeroesByUserId returns camelCase props now
-    const heroExists = heroes.some((h) => h.id.toString() === heroId.toString());
+    const heroExists = heroes.some(
+      (h) => h.id.toString() === heroId.toString()
+    );
 
     if (!heroExists) {
       return res.status(403).json({
@@ -120,12 +134,16 @@ router.post('/matches/complete', async (req, res) => {
     await db.grantRewards(req.user.userId, coins, xpGained);
 
     // 3. Process Dropped Items
-    if (droppedItems && Array.isArray(droppedItems) && droppedItems.length > 0) {
+    if (
+      droppedItems &&
+      Array.isArray(droppedItems) &&
+      droppedItems.length > 0
+    ) {
       for (const itemName of droppedItems) {
         // Find item by name (Client sends names like "Rusty Sword", "Scrap Metal")
         const itemDef = await db.getItemByName(itemName);
         if (itemDef) {
-           await db.addItemToUser(req.user.userId, itemDef.id, 1);
+          await db.addItemToUser(req.user.userId, itemDef.id, 1);
         }
       }
     }
@@ -146,15 +164,17 @@ router.post('/matches/complete', async (req, res) => {
       const agilityXp = Math.floor(distance / 100);
 
       if (bombXp > 0 || agilityXp > 0) {
-         await db.updateHeroProficiency(heroId, {
-           bombMasteryXp: bombXp,
-           agilityXp: agilityXp
-         });
+        await db.updateHeroProficiency(heroId, {
+          bombMasteryXp: bombXp,
+          agilityXp: agilityXp,
+        });
       }
     }
 
     const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
-    const updatedHero = updatedHeroes.find((h) => h.id.toString() === heroId.toString());
+    const updatedHero = updatedHeroes.find(
+      (h) => h.id.toString() === heroId.toString()
+    );
 
     res.json({
       success: true,
@@ -203,7 +223,12 @@ router.post('/user/stats', async (req, res) => {
     const user = await db.getUserById(req.user.userId);
 
     if (user.coins < expectedCost) {
-        return res.status(400).json({ success: false, message: `Insufficient BCOIN. Need ${expectedCost}.` });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: `Insufficient BCOIN. Need ${expectedCost}.`,
+        });
     }
 
     // Deduct Cost
@@ -224,10 +249,7 @@ router.post('/user/stats', async (req, res) => {
       hero: updatedHero,
     });
   } catch (error) {
-    console.error(
-      `Error processing upgrade for hero ${heroId}:`,
-      error
-    );
+    console.error(`Error processing upgrade for hero ${heroId}:`, error);
     res.status(500).json({
       success: false,
       message: 'Internal server error during hero upgrade.',
@@ -241,28 +263,29 @@ router.post('/altar/donate', async (req, res) => {
   const { amount } = req.body;
 
   if (!amount) {
-      return res.status(400).json({ success: false, message: 'Amount required' });
+    return res.status(400).json({ success: false, message: 'Amount required' });
   }
 
   try {
-      // Logic: Deduct BCOIN from user instead of verifying on-chain tx
-      const user = await db.getUserById(req.user.userId);
-      if (user.coins < amount) {
-          return res.status(400).json({ success: false, message: 'Insufficient BCOIN' });
-      }
+    // Logic: Deduct BCOIN from user instead of verifying on-chain tx
+    const user = await db.getUserById(req.user.userId);
+    if (user.coins < amount) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Insufficient BCOIN' });
+    }
 
-      await db.grantRewards(req.user.userId, -amount, 0);
-      await db.addDonationToAltar(amount, 'offchain_donation_' + Date.now());
+    await db.grantRewards(req.user.userId, -amount, 0);
+    await db.addDonationToAltar(amount, 'offchain_donation_' + Date.now());
 
-      res.json({
-        success: true,
-        message: 'Donation verified (Web2.5)',
-        donated: amount,
-      });
-
+    res.json({
+      success: true,
+      message: 'Donation verified (Web2.5)',
+      donated: amount,
+    });
   } catch (error) {
-      console.error('Altar donation error:', error);
-      res.status(500).json({ success: false, message: error.message });
+    console.error('Altar donation error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

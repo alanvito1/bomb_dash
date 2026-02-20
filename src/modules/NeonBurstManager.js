@@ -9,7 +9,9 @@ export default class NeonBurstManager {
 
   createEmitter() {
     if (!this.scene.textures.exists('particle_pixel')) {
-      console.warn('NeonBurstManager: particle_pixel texture missing. Aborting.');
+      console.warn(
+        'NeonBurstManager: particle_pixel texture missing. Aborting.'
+      );
       return null;
     }
 
@@ -21,7 +23,7 @@ export default class NeonBurstManager {
       rotate: { min: 0, max: 360 },
       gravityY: 0,
       blendMode: 'ADD',
-      tint: 0xFF5F1F, // Neon Orange
+      tint: 0xff5f1f, // Neon Orange
       emitting: false,
     });
 

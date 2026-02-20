@@ -31,29 +31,29 @@ export default class PowerupLogic {
         // 💫 LOOT POP (Juice)
         // 1. Pop Up & Bounce
         this.scene.tweens.add({
-            targets: powerup,
-            y: y - 40,
-            duration: 300,
-            ease: 'Back.out',
-            onComplete: () => {
+          targets: powerup,
+          y: y - 40,
+          duration: 300,
+          ease: 'Back.out',
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: powerup,
+              y: y,
+              duration: 500,
+              ease: 'Bounce.out',
+              onComplete: () => {
+                // 2. Start Float Loop
                 this.scene.tweens.add({
-                    targets: powerup,
-                    y: y,
-                    duration: 500,
-                    ease: 'Bounce.out',
-                    onComplete: () => {
-                        // 2. Start Float Loop
-                        this.scene.tweens.add({
-                            targets: powerup,
-                            y: y - 5,
-                            duration: 1000,
-                            yoyo: true,
-                            repeat: -1,
-                            ease: 'Sine.easeInOut'
-                        });
-                    }
+                  targets: powerup,
+                  y: y - 5,
+                  duration: 1000,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.easeInOut',
                 });
-            }
+              },
+            });
+          },
         });
 
         // 3. Pulse Scale Loop (Simultaneous)
@@ -93,18 +93,13 @@ export default class PowerupLogic {
     );
 
     if (this.scene.textures.exists('particle_pixel')) {
-      const p = this.scene.add.particles(
-        player.x,
-        player.y,
-        'particle_pixel',
-        {
-          speed: 100,
-          scale: { start: 1, end: 0 },
-          lifespan: 500,
-          blendMode: 'ADD',
-          emitting: false,
-        }
-      );
+      const p = this.scene.add.particles(player.x, player.y, 'particle_pixel', {
+        speed: 100,
+        scale: { start: 1, end: 0 },
+        lifespan: 500,
+        blendMode: 'ADD',
+        emitting: false,
+      });
       p.explode(10);
 
       this.scene.time.delayedCall(600, () => p.destroy());

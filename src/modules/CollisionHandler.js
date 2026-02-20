@@ -81,18 +81,23 @@ export default class CollisionHandler {
     const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
 
     if (currentLevel > prevLevel) {
-        // Use DamageTextManager for general notifications too if flexible, or keep createFloatingText?
-        // User asked for "Damage Text Manager". For system messages, maybe keep createFloatingText or adapt manager.
-        // Let's use the manager as it's cleaner.
-        if (this.scene.damageTextManager) {
-             this.scene.damageTextManager.show(impactX, impactY - 20, 'BOMB MASTERY UP!', true);
-        }
-        SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
+      // Use DamageTextManager for general notifications too if flexible, or keep createFloatingText?
+      // User asked for "Damage Text Manager". For system messages, maybe keep createFloatingText or adapt manager.
+      // Let's use the manager as it's cleaner.
+      if (this.scene.damageTextManager) {
+        this.scene.damageTextManager.show(
+          impactX,
+          impactY - 20,
+          'BOMB MASTERY UP!',
+          true
+        );
+      }
+      SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
     }
 
     // --- SPLASH DAMAGE LOGIC ---
     const range = this.scene.playerStats.bombRange || 1;
-    const explosionRadius = 20 + (range * 12);
+    const explosionRadius = 20 + range * 12;
     const scale = explosionRadius / 16; // Base 32px / 2 = 16px radius for scale 1.
 
     // Visual Explosion
@@ -102,15 +107,20 @@ export default class CollisionHandler {
 
     // Identify Targets
     // We use a simple distance check against all active enemies.
-    const targets = this.scene.enemies.getChildren().filter(target => {
-        if (!target.active) return false;
-        const dist = Phaser.Math.Distance.Between(impactX, impactY, target.x, target.y);
-        return dist <= explosionRadius;
+    const targets = this.scene.enemies.getChildren().filter((target) => {
+      if (!target.active) return false;
+      const dist = Phaser.Math.Distance.Between(
+        impactX,
+        impactY,
+        target.x,
+        target.y
+      );
+      return dist <= explosionRadius;
     });
 
     // Apply Damage
-    targets.forEach(target => {
-        this.applyDamage(target, baseDamage);
+    targets.forEach((target) => {
+      this.applyDamage(target, baseDamage);
     });
   }
 
@@ -122,32 +132,39 @@ export default class CollisionHandler {
 
     // Bestiary Bonus
     const enemyType = enemy.id || enemy.texture.key; // Prefer ID
-    const kills = (this.scene.bestiaryData && this.scene.bestiaryData[enemyType]) || 0;
+    const kills =
+      (this.scene.bestiaryData && this.scene.bestiaryData[enemyType]) || 0;
 
     let bonus = 0;
     if (kills >= 5000) bonus = 0.15;
-    else if (kills >= 1000) bonus = 0.10;
+    else if (kills >= 1000) bonus = 0.1;
     else if (kills >= 100) bonus = 0.05;
 
     let damage = baseDamage;
     if (bonus > 0) {
-        damage = Math.ceil(damage * (1 + bonus));
+      damage = Math.ceil(damage * (1 + bonus));
     }
 
     enemy.hp -= damage;
 
     if (enemy.isBoss) {
-        this.events.emit('update-boss-health', {
-            health: Math.max(0, enemy.hp),
-            maxHealth: enemy.maxHp
-        });
+      this.events.emit('update-boss-health', {
+        health: Math.max(0, enemy.hp),
+        maxHealth: enemy.maxHp,
+      });
     }
 
     // 4. Floating Combat Text
     if (this.scene.damageTextManager) {
-        // Critical if bonus > 0 or random chance
-        const isCrit = (bonus > 0);
-        this.scene.damageTextManager.show(enemy.x, enemy.y, damage, isCrit, enemy.isBoss);
+      // Critical if bonus > 0 or random chance
+      const isCrit = bonus > 0;
+      this.scene.damageTextManager.show(
+        enemy.x,
+        enemy.y,
+        damage,
+        isCrit,
+        enemy.isBoss
+      );
     }
 
     SoundManager.play(this.scene, 'hit_enemy');
@@ -161,30 +178,35 @@ export default class CollisionHandler {
     if (enemy.hp <= 0) {
       // 3. Screen Shake & Hit Pause
       if (enemy.isBoss) {
-          // Boss Death: Epic Shake & Long Pause
-          this.scene.cameras.main.shake(500, 0.03);
+        // Boss Death: Epic Shake & Long Pause
+        this.scene.cameras.main.shake(500, 0.03);
 
-          if (this.scene.physics.world.isPaused === false) {
-              this.scene.physics.pause();
-              // Slow motion / Freeze for 100ms
-              this.scene.time.delayedCall(100, () => {
-                  if (this.scene && !this.scene.gamePaused && !this.scene.bossDefeated) { // Ensure we don't resume if transitioning
-                      this.scene.physics.resume();
-                  }
-              });
-          }
+        if (this.scene.physics.world.isPaused === false) {
+          this.scene.physics.pause();
+          // Slow motion / Freeze for 100ms
+          this.scene.time.delayedCall(100, () => {
+            if (
+              this.scene &&
+              !this.scene.gamePaused &&
+              !this.scene.bossDefeated
+            ) {
+              // Ensure we don't resume if transitioning
+              this.scene.physics.resume();
+            }
+          });
+        }
       } else {
-          // Normal Death: Quick Shake (optional, or rely on impact shake?)
-          // User said: "Quando o Chefão morrer... shake(500, 0.03)".
-          // For impact/damage taken by hero: shake(100, 0.01).
-          // For normal enemy death, user asked for "Neon Burst".
-          // The current code had `shake(50, 0.005)` for death. Let's keep a tiny one.
-          this.scene.cameras.main.shake(50, 0.005);
+        // Normal Death: Quick Shake (optional, or rely on impact shake?)
+        // User said: "Quando o Chefão morrer... shake(500, 0.03)".
+        // For impact/damage taken by hero: shake(100, 0.01).
+        // For normal enemy death, user asked for "Neon Burst".
+        // The current code had `shake(50, 0.005)` for death. Let's keep a tiny one.
+        this.scene.cameras.main.shake(50, 0.005);
       }
 
       // 2. Neon Burst Particles (Global Emitter)
       if (this.scene.neonBurst) {
-          this.scene.neonBurst.explode(enemy.x, enemy.y, enemy.isBoss ? 50 : 20);
+        this.scene.neonBurst.explode(enemy.x, enemy.y, enemy.isBoss ? 50 : 20);
       }
 
       SoundManager.play(
@@ -203,25 +225,38 @@ export default class CollisionHandler {
 
       // Visual Feedback
       if (this.scene.damageTextManager) {
-          this.scene.damageTextManager.show(enemy.x, enemy.y - 20, `+${coinsGained} G`, true);
+        this.scene.damageTextManager.show(
+          enemy.x,
+          enemy.y - 20,
+          `+${coinsGained} G`,
+          true
+        );
       }
 
       // Update HUD to show SESSION LOOT (The "At Risk" Amount)
-      this.events.emit('update-bcoin', { balance: this.scene.sessionLoot.coins });
+      this.events.emit('update-bcoin', {
+        balance: this.scene.sessionLoot.coins,
+      });
 
       // Bestiary Collection (Session + Persistent)
       const type = enemy.id || enemy.texture.key;
 
       // Session (For Victory Display)
       if (!this.scene.sessionBestiary) this.scene.sessionBestiary = {};
-      this.scene.sessionBestiary[type] = (this.scene.sessionBestiary[type] || 0) + 1;
+      this.scene.sessionBestiary[type] =
+        (this.scene.sessionBestiary[type] || 0) + 1;
 
       // Persistent (Immediate) - Task Force Requirement
       playerStateService.incrementBestiaryKill(type);
 
       // Floating Text Feedback
       if (this.scene.damageTextManager) {
-          this.scene.damageTextManager.show(enemy.x, enemy.y - 40, 'Bestiary +1', false);
+        this.scene.damageTextManager.show(
+          enemy.x,
+          enemy.y - 40,
+          'Bestiary +1',
+          false
+        );
       }
 
       this.scene.enemiesKilled++;
@@ -236,7 +271,7 @@ export default class CollisionHandler {
       }
 
       if (this.scene.trySpawnLoot) {
-          this.scene.trySpawnLoot(enemy.x, enemy.y);
+        this.scene.trySpawnLoot(enemy.x, enemy.y);
       }
 
       enemy.destroy();

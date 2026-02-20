@@ -55,7 +55,6 @@ async function broadcastMessage(messageType, payload) {
 
     // Optimisation: reuse channel if possible, or create/destroy.
     // For now, let's try sending directly.
-
   } catch (error) {
     console.error('Error broadcasting message:', error);
   }

@@ -19,48 +19,30 @@ export default class AuthChoiceScene extends Phaser.Scene {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    this.add
-      .rectangle(
-        0,
-        0,
-        width,
-        height,
-        0x050505
-      )
-      .setOrigin(0);
+    this.add.rectangle(0, 0, width, height, 0x050505).setOrigin(0);
 
     // Title
     this.add
-      .text(
-        centerX,
-        height * 0.2,
-        LanguageManager.get('auth_title'),
-        {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '32px',
-          color: '#ffffff',
-          align: 'center',
-        }
-      )
+      .text(centerX, height * 0.2, LanguageManager.get('auth_title'), {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '32px',
+        color: '#ffffff',
+        align: 'center',
+      })
       .setOrigin(0.5);
 
     // --- "Connect Wallet" Button ---
     const connectButton = this.add
-      .text(
-        centerX,
-        centerY,
-        LanguageManager.get('auth_web3_login'),
-        {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '20px',
-          color: '#FF5F1F',
-          backgroundColor: '#050505',
-          padding: { x: 20, y: 10 },
-          align: 'center',
-          stroke: '#FF5F1F',
-          strokeThickness: 2
-        }
-      )
+      .text(centerX, centerY, LanguageManager.get('auth_web3_login'), {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '20px',
+        color: '#FF5F1F',
+        backgroundColor: '#050505',
+        padding: { x: 20, y: 10 },
+        align: 'center',
+        stroke: '#FF5F1F',
+        strokeThickness: 2,
+      })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .setName('web3LoginButton');
@@ -68,12 +50,11 @@ export default class AuthChoiceScene extends Phaser.Scene {
     // Manual border via padding hack or graphics? Text doesn't support border easily.
     // Let's add hover effects.
     connectButton.on('pointerover', () => {
-        connectButton.setStyle({ color: '#000000', backgroundColor: '#FF5F1F' });
+      connectButton.setStyle({ color: '#000000', backgroundColor: '#FF5F1F' });
     });
     connectButton.on('pointerout', () => {
-        connectButton.setStyle({ color: '#FF5F1F', backgroundColor: '#050505' });
+      connectButton.setStyle({ color: '#FF5F1F', backgroundColor: '#050505' });
     });
-
 
     // --- "Play As Guest" Button ---
     // Added back for testing/guest access
@@ -81,7 +62,7 @@ export default class AuthChoiceScene extends Phaser.Scene {
       .text(
         centerX,
         centerY + 80,
-        "PLAY AS GUEST", // Hardcoded fallback or add to en.json
+        'PLAY AS GUEST', // Hardcoded fallback or add to en.json
         {
           fontFamily: '"Press Start 2P"',
           fontSize: '16px',
@@ -90,18 +71,18 @@ export default class AuthChoiceScene extends Phaser.Scene {
           padding: { x: 20, y: 10 },
           align: 'center',
           stroke: '#00FFFF',
-          strokeThickness: 2
+          strokeThickness: 2,
         }
       )
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .setName('guestLoginButton');
 
-     guestButton.on('pointerover', () => {
-        guestButton.setStyle({ color: '#000000', backgroundColor: '#00FFFF' });
+    guestButton.on('pointerover', () => {
+      guestButton.setStyle({ color: '#000000', backgroundColor: '#00FFFF' });
     });
     guestButton.on('pointerout', () => {
-        guestButton.setStyle({ color: '#00FFFF', backgroundColor: '#050505' });
+      guestButton.setStyle({ color: '#00FFFF', backgroundColor: '#050505' });
     });
 
     // --- Status Text ---

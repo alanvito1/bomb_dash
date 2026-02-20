@@ -15,7 +15,7 @@ import SoundManager from '../utils/sound.js';
 export function createButton(scene, x, y, text, onClick) {
   const width = 280;
   const height = 50;
-  const glowColor = 0xFF5F1F; // Neon Orange
+  const glowColor = 0xff5f1f; // Neon Orange
   const baseColor = 0x050505; // Absolute Black
   const hoverColor = 0x331100; // Dark Orange
 
@@ -82,7 +82,7 @@ export function createButton(scene, x, y, text, onClick) {
 
   container.on('pointerover', () => {
     drawButton(true, false);
-    buttonText.setTint(0xFF5F1F); // Orange text on hover
+    buttonText.setTint(0xff5f1f); // Orange text on hover
     buttonText.setScale(1.05);
   });
 
@@ -184,11 +184,11 @@ export function createPanel(scene, x, y, width, height) {
   panel.fillRect(x, y, width, height);
 
   // Neon Border
-  panel.lineStyle(2, 0xFF5F1F, 1.0);
+  panel.lineStyle(2, 0xff5f1f, 1.0);
   panel.strokeRect(x, y, width, height);
 
   // Inner Glow
-  panel.lineStyle(4, 0xFF5F1F, 0.2);
+  panel.lineStyle(4, 0xff5f1f, 0.2);
   panel.strokeRect(x - 2, y - 2, width + 4, height + 4);
 
   return panel;
@@ -210,7 +210,7 @@ export function drawCyberpunkGrid(scene) {
   bg.fillRect(0, 0, width, height);
 
   // 2. Grid Lines
-  bg.lineStyle(1, 0xFF5F1F, 0.2); // Orange, low opacity
+  bg.lineStyle(1, 0xff5f1f, 0.2); // Orange, low opacity
 
   const gridSize = 50;
 

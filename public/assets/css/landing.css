@@ -6,14 +6,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
 
 :root {
-  --neon-primary: #FF5F1F;  /* Neon Orange */
-  --neon-glow: #FF3A00;     /* Intense Glow */
-  --color-void: #050505;    /* Absolute Black */
-  --color-panel: #050505;   /* Absolute Black */
-  --color-border: #FF5F1F;  /* Primary Border */
-  --color-text: #FFFFFF;    /* Pure White for body */
-  --neon-cyan: #00FFFF;     /* Secondary/Neutral */
-  --neon-magenta: #FF00FF;  /* Alerts/Rarity */
+  --neon-primary: #ff5f1f; /* Neon Orange */
+  --neon-glow: #ff3a00; /* Intense Glow */
+  --color-void: #050505; /* Absolute Black */
+  --color-panel: #050505; /* Absolute Black */
+  --color-border: #ff5f1f; /* Primary Border */
+  --color-text: #ffffff; /* Pure White for body */
+  --neon-cyan: #00ffff; /* Secondary/Neutral */
+  --neon-magenta: #ff00ff; /* Alerts/Rarity */
 
   --font-pixel: 'Press Start 2P', monospace;
   --font-body: 'Roboto', sans-serif;
@@ -137,7 +137,13 @@ body {
   /* Darkened background pattern */
   background-color: var(--color-void);
   background-image: linear-gradient(rgba(5, 5, 5, 0.7), rgba(5, 5, 5, 0.9)),
-    repeating-linear-gradient(45deg, #0a0a0a 0, #0a0a0a 10px, #050505 10px, #050505 20px);
+    repeating-linear-gradient(
+      45deg,
+      #0a0a0a 0,
+      #0a0a0a 10px,
+      #050505 10px,
+      #050505 20px
+    );
   background-size: cover;
   background-position: center;
   text-align: center;
@@ -181,10 +187,12 @@ body {
   border-radius: 0;
 
   /* Texto com núcleo branco e brilho laranja */
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-primary),
+    0 0 20px var(--neon-primary);
 
   /* Caixa com luz externa e interna */
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-primary), inset 0 0 20px var(--neon-primary);
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-primary),
+    inset 0 0 20px var(--neon-primary);
 
   /* Transições Suaves */
   transition: all 0.1s ease-in-out;
@@ -194,8 +202,10 @@ body {
 .form-button:hover,
 .btn-primary:hover {
   /* Aumenta a intensidade em 50% */
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-primary), 0 0 30px var(--neon-primary);
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-primary), inset 0 0 30px var(--neon-primary);
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-primary),
+    0 0 30px var(--neon-primary);
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-primary),
+    inset 0 0 30px var(--neon-primary);
 }
 
 .cta-button:active,
@@ -203,7 +213,8 @@ body {
 .btn-primary:active {
   /* Feedback tátil */
   transform: scale(0.96);
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-primary), inset 0 0 10px var(--neon-primary);
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-primary),
+    inset 0 0 10px var(--neon-primary);
 }
 
 /* --- NEON TUBE BUTTONS (Secondary/Cyan) --- */
@@ -222,8 +233,10 @@ body {
   border: 2px solid var(--neon-cyan);
   border-radius: 0;
 
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-cyan), inset 0 0 20px var(--neon-cyan);
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan);
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-cyan),
+    inset 0 0 20px var(--neon-cyan);
 
   transition: all 0.1s ease-in-out;
 }
@@ -231,15 +244,18 @@ body {
 .secondary-button:hover,
 .form-button.secondary:hover,
 .btn-cyan:hover {
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan);
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-cyan), inset 0 0 30px var(--neon-cyan);
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-cyan),
+    0 0 30px var(--neon-cyan);
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-cyan),
+    inset 0 0 30px var(--neon-cyan);
 }
 
 .secondary-button:active,
 .form-button.secondary:active,
 .btn-cyan:active {
   transform: scale(0.96);
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-cyan), inset 0 0 10px var(--neon-cyan);
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-cyan),
+    inset 0 0 10px var(--neon-cyan);
 }
 
 /* --- NEON TUBE BUTTONS (Magenta) --- */
@@ -256,20 +272,25 @@ body {
   border: 2px solid var(--neon-magenta);
   border-radius: 0;
 
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta);
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-magenta), inset 0 0 20px var(--neon-magenta);
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-magenta),
+    0 0 20px var(--neon-magenta);
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-magenta),
+    inset 0 0 20px var(--neon-magenta);
 
   transition: all 0.1s ease-in-out;
 }
 
 .btn-magenta:hover {
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-magenta), 0 0 30px var(--neon-magenta);
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-magenta), inset 0 0 30px var(--neon-magenta);
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-magenta),
+    0 0 30px var(--neon-magenta);
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-magenta),
+    inset 0 0 30px var(--neon-magenta);
 }
 
 .btn-magenta:active {
   transform: scale(0.96);
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-magenta), inset 0 0 10px var(--neon-magenta);
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-magenta),
+    inset 0 0 10px var(--neon-magenta);
 }
 
 /* News Section */

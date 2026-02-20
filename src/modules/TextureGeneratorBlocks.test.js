@@ -17,7 +17,7 @@ describe('TextureGenerator Blocks', () => {
       stroke: vi.fn(),
       strokePath: vi.fn(),
       destroy: vi.fn(),
-      clear: vi.fn()
+      clear: vi.fn(),
     };
 
     const mockScene = {
@@ -31,8 +31,12 @@ describe('TextureGenerator Blocks', () => {
 
     TextureGenerator.createSoftBlock(mockScene);
 
-    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x8B4513); // Base Brown
-    expect(mockGraphics.generateTexture).toHaveBeenCalledWith('soft_block', 32, 32);
+    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x8b4513); // Base Brown
+    expect(mockGraphics.generateTexture).toHaveBeenCalledWith(
+      'soft_block',
+      32,
+      32
+    );
   });
 
   it('should generate hard_block without crashing', () => {
@@ -50,7 +54,7 @@ describe('TextureGenerator Blocks', () => {
       stroke: vi.fn(),
       strokePath: vi.fn(),
       destroy: vi.fn(),
-      clear: vi.fn()
+      clear: vi.fn(),
     };
 
     const mockScene = {
@@ -65,6 +69,10 @@ describe('TextureGenerator Blocks', () => {
     TextureGenerator.createHardBlock(mockScene);
 
     expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x444444); // Base Grey
-    expect(mockGraphics.generateTexture).toHaveBeenCalledWith('hard_block', 32, 32);
+    expect(mockGraphics.generateTexture).toHaveBeenCalledWith(
+      'hard_block',
+      32,
+      32
+    );
   });
 });

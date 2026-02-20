@@ -1,10 +1,10 @@
 :root {
-  --neon-primary: #FF5F1F;  /* Neon Orange */
-  --neon-glow: #FF3A00;     /* Intense Glow */
-  --neon-cyan: #00ffff;     /* Secondary/Neutral */
-  --neon-magenta: #ff00ff;  /* Alerts/Rarity */
+  --neon-primary: #ff5f1f; /* Neon Orange */
+  --neon-glow: #ff3a00; /* Intense Glow */
+  --neon-cyan: #00ffff; /* Secondary/Neutral */
+  --neon-magenta: #ff00ff; /* Alerts/Rarity */
   --neon-yellow: #ffd700;
-  --bg-dark: #050505;       /* Absolute Black */
+  --bg-dark: #050505; /* Absolute Black */
   --grid-color: rgba(255, 95, 31, 0.15); /* Orange Grid */
 }
 
@@ -229,10 +229,12 @@ body {
   border-radius: 0;
 
   /* Texto com núcleo branco e brilho laranja */
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-primary),
+    0 0 20px var(--neon-primary);
 
   /* Caixa com luz externa e interna */
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-primary), inset 0 0 20px var(--neon-primary);
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-primary),
+    inset 0 0 20px var(--neon-primary);
 
   /* Transições Suaves */
   transition: all 0.1s ease-in-out;
@@ -240,15 +242,18 @@ body {
 
 .cyber-btn:hover {
   /* Aumenta a intensidade em 50% */
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-primary), 0 0 30px var(--neon-primary);
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-primary), inset 0 0 30px var(--neon-primary);
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-primary),
+    0 0 30px var(--neon-primary);
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-primary),
+    inset 0 0 30px var(--neon-primary);
   background-color: transparent; /* Ensure it stays transparent but glows */
 }
 
 .cyber-btn:active {
   /* Feedback tátil */
   transform: scale(0.96);
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-primary), inset 0 0 10px var(--neon-primary);
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-primary),
+    inset 0 0 10px var(--neon-primary);
 }
 
 .cyber-btn.disabled {
@@ -268,33 +273,43 @@ body {
 .btn-cyan {
   color: var(--neon-cyan) !important;
   border-color: var(--neon-cyan) !important;
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan) !important;
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-cyan), inset 0 0 20px var(--neon-cyan) !important;
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan) !important;
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-cyan),
+    inset 0 0 20px var(--neon-cyan) !important;
 }
 
 .btn-cyan:hover {
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan) !important;
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-cyan), inset 0 0 30px var(--neon-cyan) !important;
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-cyan),
+    0 0 30px var(--neon-cyan) !important;
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-cyan),
+    inset 0 0 30px var(--neon-cyan) !important;
 }
 
 .btn-cyan:active {
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-cyan), inset 0 0 10px var(--neon-cyan) !important;
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-cyan),
+    inset 0 0 10px var(--neon-cyan) !important;
 }
 
 .btn-magenta {
   color: var(--neon-magenta) !important;
   border-color: var(--neon-magenta) !important;
-  text-shadow: 0 0 2px #FFF, 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta) !important;
-  box-shadow: 0 0 5px #FFF, inset 0 0 5px #FFF, 0 0 20px var(--neon-magenta), inset 0 0 20px var(--neon-magenta) !important;
+  text-shadow: 0 0 2px #fff, 0 0 10px var(--neon-magenta),
+    0 0 20px var(--neon-magenta) !important;
+  box-shadow: 0 0 5px #fff, inset 0 0 5px #fff, 0 0 20px var(--neon-magenta),
+    inset 0 0 20px var(--neon-magenta) !important;
 }
 
 .btn-magenta:hover {
-  text-shadow: 0 0 3px #FFF, 0 0 15px var(--neon-magenta), 0 0 30px var(--neon-magenta) !important;
-  box-shadow: 0 0 7.5px #FFF, inset 0 0 7.5px #FFF, 0 0 30px var(--neon-magenta), inset 0 0 30px var(--neon-magenta) !important;
+  text-shadow: 0 0 3px #fff, 0 0 15px var(--neon-magenta),
+    0 0 30px var(--neon-magenta) !important;
+  box-shadow: 0 0 7.5px #fff, inset 0 0 7.5px #fff, 0 0 30px var(--neon-magenta),
+    inset 0 0 30px var(--neon-magenta) !important;
 }
 
 .btn-magenta:active {
-  box-shadow: 0 0 2px #FFF, inset 0 0 2px #FFF, 0 0 10px var(--neon-magenta), inset 0 0 10px var(--neon-magenta) !important;
+  box-shadow: 0 0 2px #fff, inset 0 0 2px #fff, 0 0 10px var(--neon-magenta),
+    inset 0 0 10px var(--neon-magenta) !important;
 }
 
 /* --- Checkbox --- */

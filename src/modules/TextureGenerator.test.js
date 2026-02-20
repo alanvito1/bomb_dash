@@ -25,18 +25,18 @@ describe('TextureGenerator', () => {
       fillGradientStyle: vi.fn(),
       fillEllipse: vi.fn(),
       destroy: vi.fn(),
-      clear: vi.fn()
+      clear: vi.fn(),
     };
 
     const mockRenderTexture = {
-        draw: vi.fn(),
-        saveTexture: vi.fn(),
-        destroy: vi.fn()
+      draw: vi.fn(),
+      saveTexture: vi.fn(),
+      destroy: vi.fn(),
     };
 
     const mockText = {
-        setOrigin: vi.fn().mockReturnThis(),
-        destroy: vi.fn()
+      setOrigin: vi.fn().mockReturnThis(),
+      destroy: vi.fn(),
     };
 
     const mockScene = {
@@ -46,7 +46,7 @@ describe('TextureGenerator', () => {
       make: {
         graphics: vi.fn().mockReturnValue(mockGraphics),
         renderTexture: vi.fn().mockReturnValue(mockRenderTexture),
-        text: vi.fn().mockReturnValue(mockText)
+        text: vi.fn().mockReturnValue(mockText),
       },
     };
 
@@ -59,7 +59,11 @@ describe('TextureGenerator', () => {
     expect(mockGraphics.lineTo).toHaveBeenCalled();
 
     // 2. Ensure createIronKatana generated its texture
-    expect(mockGraphics.generateTexture).toHaveBeenCalledWith('item_iron_katana', 32, 32);
+    expect(mockGraphics.generateTexture).toHaveBeenCalledWith(
+      'item_iron_katana',
+      32,
+      32
+    );
 
     // 3. Ensure we reached the end (createShadow)
     expect(mockGraphics.generateTexture).toHaveBeenCalledWith('shadow', 32, 16);
@@ -73,12 +77,12 @@ describe('TextureGenerator', () => {
 
   it('should catch errors and not crash', () => {
     const mockGraphics = {
-        fillStyle: vi.fn(),
-        // Missing everything else, will throw
+      fillStyle: vi.fn(),
+      // Missing everything else, will throw
     };
     const mockScene = {
-        textures: { exists: vi.fn().mockReturnValue(false) },
-        make: { graphics: vi.fn().mockReturnValue(mockGraphics) },
+      textures: { exists: vi.fn().mockReturnValue(false) },
+      make: { graphics: vi.fn().mockReturnValue(mockGraphics) },
     };
 
     // Spy on console.warn
@@ -88,7 +92,10 @@ describe('TextureGenerator', () => {
     expect(() => TextureGenerator.generate(mockScene)).not.toThrow();
 
     // Should have logged a warning
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('TextureGenerator: Failed'), expect.any(Error));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('TextureGenerator: Failed'),
+      expect.any(Error)
+    );
 
     consoleSpy.mockRestore();
   });
