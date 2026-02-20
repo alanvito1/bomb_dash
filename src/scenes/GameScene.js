@@ -3,7 +3,6 @@ import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import ExplosionEffect from '../modules/ExplosionEffect.js';
-// import HUD from '../modules/hud.js'; // SIF 21.3: Replaced by HUDScene
 import { showNextStageDialog as StageDialog } from '../modules/NextStageDialog.js';
 import PlayerController from '../modules/PlayerController.js';
 import PowerupLogic from '../modules/PowerupLogic.js';
@@ -13,6 +12,7 @@ import SoundManager from '../utils/sound.js';
 import GameEventEmitter from '../utils/GameEventEmitter.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import playerStateService from '../services/PlayerStateService.js';
+import { MOBS } from '../config/MobConfig.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -65,9 +65,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // This is the correct lifecycle location for scene initialization.
-    // The previous use of load.on('complete') here was incorrect and
-    // likely caused the scene to hang silently.
     this.events.on('shutdown', this.shutdown, this);
     this.chatWidget = new ChatWidget(this);
     this.initializeScene();
@@ -75,17 +72,12 @@ export default class GameScene extends Phaser.Scene {
 
   shutdown() {
     if (this.chatWidget) this.chatWidget.destroy();
-    // [VCL-09 FIX] Ensure HUDScene is stopped to prevent zombie listeners
     this.scene.stop('HUDScene');
   }
 
   async initializeScene() {
-    // FURIA-FS-04: Black box recorder for debugging disappearing enemies.
     window.enemyStateHistory = [];
     console.log('[VCL-09] GameScene: Starting initialization...');
-
-    // [VCL-09 FIX] Removed /api/admin/settings call to prevent 403 Forbidden.
-    // Using default local settings instead.
 
     this.pauseManager = new PauseManager(this);
     SoundManager.stop(this, 'menu_music');
@@ -93,7 +85,7 @@ export default class GameScene extends Phaser.Scene {
 
     let userAccountData = {};
     try {
-      const response = await api.fetch('/auth/me', {}, true); // Fetch latest user data
+      const response = await api.fetch('/auth/me', {}, true);
       if (response.success && response.user) {
         userAccountData = response.user;
       } else {
@@ -105,18 +97,15 @@ export default class GameScene extends Phaser.Scene {
         error
       );
       this.scene.start('MenuScene', { error: 'Could not load player data.' });
-      return; // Stop scene execution
+      return;
     }
 
     const selectedHero = this.registry.get('selectedHero');
 
-    // --- GUARD CLAUSE ---
-    // If no hero was selected or passed, the game cannot proceed.
     if (!selectedHero || !selectedHero.id) {
       console.error(
         '[GameScene] CRITICAL: Scene started without a valid selected hero. Aborting.'
       );
-      // We can't use LanguageManager here as it might not be ready.
       this.add
         .text(
           this.scale.width / 2,
@@ -135,68 +124,51 @@ export default class GameScene extends Phaser.Scene {
       this.time.delayedCall(3000, () => {
         this.scene.start('MenuScene');
       });
-      return; // Stop scene execution
+      return;
     }
 
     this.playerStats = {
       ...this.DEFAULT_STATS,
-      ...selectedHero, // Apply selected hero stats over defaults
+      ...selectedHero,
       hero_xp: selectedHero.xp || 0,
-      hero_xp_for_next_level: 100, // Hero level up logic is not in scope, use placeholder
-      // Apply fresh account data from API
+      hero_xp_for_next_level: 100,
       address: userAccountData.address,
       account_level: userAccountData.account_level,
       account_xp: userAccountData.account_xp,
       bcoin: userAccountData.coins,
     };
 
-    // --- PHASE 2: INJECT HERO STATS ---
-    // Extract hero stats (support both flat and nested 'stats' structure from PlayerStateService)
     const heroStats = selectedHero.stats || selectedHero;
     const heroSpeed = heroStats.speed || 1;
     const heroPower = heroStats.power || 1;
     const heroBombNum = heroStats.bomb_num || 1;
     const heroRange = heroStats.range || heroStats.bomb_range || 1;
 
-    // Apply Formulas
     const heroLevel = selectedHero.level || 1;
 
-    // Hybrid Linear Scaling: Power = Base + (Level - 1)
     this.playerStats.damage = heroPower + (heroLevel - 1);
 
-    // Hybrid Linear Scaling: Speed = Base * (1 + (Level - 1) * 0.02)
     const baseSpeed = 150 + (heroSpeed * 10);
     this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
 
     this.playerStats.bombNum = heroBombNum;
     this.playerStats.bombRange = heroRange;
 
-    // Apply Proficiency Bonuses
-    // Bomb Mastery: +0.1% Radius per level (Logarithmic Growth)
-    // Formula: Level = Math.floor(Math.sqrt(XP) / 2)
     const bombXp = selectedHero.bomb_mastery_xp || 0;
     const agilityXp = selectedHero.agility_xp || 0;
 
     const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
-    // this.playerStats.bombSize logic is replaced by bombRange in Phase 2, but we keep the mastery bonus as a multiplier if needed?
-    // Prompt says: "O jogador vai querer gastar moedas para upar isso." (referring to range).
-    // Let's keep bombSize logic as a visual scaler or separate bonus?
-    // Actually, Phase 2 replaces "Bomb Range (Splash Damage)" logic.
-    // Let's apply the mastery bonus to the range as well for consistency.
-    this.playerStats.bombRange *= (1 + bombLevel * 0.01); // +1% Range per level (boosted from 0.1% for visibility)
+    this.playerStats.bombRange *= (1 + bombLevel * 0.01);
 
-    // Agility: +0.1% Speed per level
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
-    this.playerStats.speed *= (1 + agilityLevel * 0.005); // +0.5% Speed per level (boosted)
+    this.playerStats.speed *= (1 + agilityLevel * 0.005);
 
-    // Task Force: Global Buff (Account Level)
     const accountLevel = playerStateService.getAccountLevel();
     const globalMultiplier = 1 + (accountLevel * 0.01);
     this.playerStats.damage *= globalMultiplier;
     this.playerStats.speed *= globalMultiplier;
     console.log(`[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(2)}`);
 
-    // Load Bestiary Data for Bonuses
     try {
       const bestiaryRes = await api.getBestiary();
       if (bestiaryRes.success) {
@@ -209,7 +181,6 @@ export default class GameScene extends Phaser.Scene {
 
     this.registry.remove('selectedHero');
 
-    // Use stage background if available, else default
     const bgAsset = this.stageConfig ? this.stageConfig.background_asset : 'bg1';
     this.bg = this.add
       .image(this.scale.width / 2, this.scale.height / 2, bgAsset)
@@ -227,7 +198,6 @@ export default class GameScene extends Phaser.Scene {
         heroXP: this.playerStats.hero_xp,
         heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
       });
-      // JF-02 FIX: Use the global event emitter to update the BCOIN balance in the HUD
       GameEventEmitter.emit('bcoin-balance-update', {
         balance: this.playerStats.bcoin,
       });
@@ -244,47 +214,39 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createUIButtons(this, this.playerStats);
-    // JF-01 FIX: Removed 'await' to prevent scene from hanging on audio load.
     SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
 
-    // [PRAGMATIC INPUT FIX] Delay shooting enablement to prevent Menu clicks from leaking
     this.canShoot = false;
     this.time.delayedCall(500, () => {
         this.canShoot = true;
     });
 
-    // FURIA-FS-01: Signal that initialization is complete and the update loop can run.
     this.isInitialized = true;
   }
 
   initializePveMatch() {
-    // LP-05: Initialize world and phase progression system
-    // Stage Routing: Map Stage ID to World ID for enemy scaling/assets
     this.world = this.stageConfig ? this.stageConfig.id : 1;
-    this.phase = 1;
 
-    // Determine max phases (waves) for this Node
-    this.maxPhases = (this.stageConfig && this.stageConfig.enemy_config)
-        ? this.stageConfig.enemy_config.wave_count
-        : 7; // Default to old 7-phase system if no config
+    // TASK FORCE STEP 2: 30-Wave Engine
+    this.currentWave = 1;
+    this.maxWaves = (this.stageConfig && this.stageConfig.enemy_config) ? this.stageConfig.enemy_config.wave_count : 30;
+    this.waveQuota = (this.stageConfig && this.stageConfig.enemy_config) ? this.stageConfig.enemy_config.wave_quota : 10;
+    this.waveKills = 0;
+    this.isBossLevel = false;
 
     this.waveStarted = false;
     this.enemiesSpawned = 0;
-    this.enemiesKilled = 0;
+    this.enemiesKilled = 0; // Total killed in session (kept for HUD compatibility)
     this.bossDefeated = false;
     this.bossSpawned = false;
     this.activePowerups = {};
-    // Phase 3: The Grind & Loot System
-    this.sessionLoot = []; // Array of { type: 'fragment', rarity: string, quantity: number }
-    this.sessionCoins = 0;
 
-    this.sessionBestiary = {}; // Phase 2: Bestiary
-    this.sessionBombHits = 0; // Phase 2: Proficiency
-    this.sessionDistance = 0; // Phase 2: Proficiency
-    this.coinsEarned = 0; // Legacy, kept for compatibility if needed
-    this.baseEnemyHp = 1;
-    this.baseBossHp = 100;
+    this.sessionLoot = { coins: 0, xp: 0, items: [] }; // Initialize as object for easier tracking
+    this.sessionBestiary = {};
+    this.sessionBombHits = 0;
+    this.sessionDistance = 0;
+    this.coinsEarned = 0;
 
     // ⚠️ RISK ZONE UI
     const riskText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 100, '⚠️ RISK ZONE ⚠️\nSurvive to Keep Loot!', {
@@ -321,25 +283,16 @@ export default class GameScene extends Phaser.Scene {
       delay: this.playerStats.fireRate,
       loop: true,
       callback: () => {
-        // CQ-02: Only fire if player state allows it
         if (this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
           this.firePlayerBomb(true);
         }
       },
     });
 
-    // LP-05: Call the new wave spawner with the world and phase
-    this.enemySpawner.spawnWave(this.world, this.phase);
+    // Start Wave 1
+    this.startWave(this.currentWave);
 
-    // LP-05: Emit initial wave update for the HUD
-    this.events.emit('update-wave', {
-      world: this.world,
-      phase: this.phase,
-      isBoss: this.phase === this.maxPhases, // Show boss UI on last wave?
-    });
-
-    // ⏱️ TIMER: 3 Minutes Survival Limit
-    this.matchTime = 180;
+    this.matchTime = 600; // 10 minutes
     if (this.matchTimerEvent) this.matchTimerEvent.remove();
     this.matchTimerEvent = this.time.addEvent({
       delay: 1000,
@@ -350,6 +303,125 @@ export default class GameScene extends Phaser.Scene {
     this.events.emit('update-timer', { time: this.matchTime });
   }
 
+  // New Method: startWave
+  startWave(wave) {
+      this.currentWave = wave;
+      this.waveKills = 0;
+      this.waveStartKills = this.enemiesKilled; // Baseline for quota check
+      this.isBossLevel = (wave === this.maxWaves);
+
+      // Update HUD
+      this.events.emit('update-wave', {
+          world: this.world,
+          phase: this.currentWave,
+          isBoss: this.isBossLevel
+      });
+
+      console.log(`[GameScene] Starting Wave ${wave}/${this.maxWaves} (Quota: ${this.waveQuota})`);
+
+      // Difficulty Scaling (Base Stage Difficulty + Wave Scaling)
+      const stageDiff = this.stageConfig?.difficulty_multiplier || 1.0;
+      const waveDiff = 1.0 + ((wave - 1) * 0.05); // +5% per wave
+      const totalDiff = parseFloat((stageDiff * waveDiff).toFixed(2));
+
+      // Select Mob
+      const config = this.stageConfig?.enemy_config;
+      if (!config) {
+          // Fallback
+          this.enemySpawner.startSpawning({ id: 'slime_green', asset_key: 'enemy1', base_hp: 10, base_speed: 50 }, totalDiff);
+          return;
+      }
+
+      // Logic: 1-15 Mob A, 16-29 Mob B, 30 Boss
+      if (this.isBossLevel) {
+          this.enemySpawner.spawnBoss(config.boss, totalDiff);
+      } else if (wave >= 16) {
+          this.enemySpawner.startSpawning(config.mob_b, totalDiff);
+      } else {
+          this.enemySpawner.startSpawning(config.mob_a, totalDiff);
+      }
+  }
+
+  prepareNextStage() {
+    // This is called when quota is met (Waves 1-29) OR when Boss defeated (via CollisionHandler -> StageDialog)
+
+    if (this.currentWave >= this.maxWaves) {
+        // Victory!
+        this.handleVictory();
+        return;
+    }
+
+    // Advance Wave
+    this.currentWave++;
+    this.startWave(this.currentWave);
+  }
+
+  updatePve() {
+    if (this.enemies && this.enemies.getChildren().length > 0) {
+      const enemyStates = this.enemies.getChildren().map((e) => ({
+        id: e.name,
+        x: e.x,
+        y: e.y,
+        active: e.active,
+        visible: e.visible,
+        hp: e.hp,
+        timestamp: this.time.now,
+      }));
+      window.enemyStateHistory.push(...enemyStates);
+    }
+    if (window.enemyStateHistory.length > 5000) {
+      window.enemyStateHistory.splice(0, window.enemyStateHistory.length - 5000);
+    }
+
+    const enemiesToProcess = this.enemies.getChildren().slice();
+    enemiesToProcess.forEach((enemy) => {
+      if (enemy?.active && enemy.y > this.scale.height + 20) {
+        enemy.destroy();
+
+        if (this.pauseManager.isPaused) return;
+        const damageTaken = 50;
+        this.playerStats.hp -= damageTaken;
+        this.events.emit('update-health', {
+          health: this.playerStats.hp,
+          maxHealth: this.playerStats.maxHp,
+        });
+        if (this.playerStats.hp <= 0) {
+          this.playerStats.extraLives--;
+          if (this.playerStats.extraLives >= 0) {
+            this.playerStats.hp = this.playerStats.maxHp;
+            SoundManager.play(this, 'player_hit');
+            this.events.emit('update-health', {
+              health: this.playerStats.hp,
+              maxHealth: this.playerStats.maxHp,
+            });
+          } else {
+            this.playerStats.hp = 0;
+            this.playerStats.extraLives = 0;
+            this.events.emit('update-health', {
+              health: 0,
+              maxHealth: this.playerStats.maxHp,
+            });
+            this.handleGameOver();
+          }
+        } else {
+          SoundManager.play(this, 'player_hit');
+        }
+      }
+    });
+
+    // CHECK WAVE PROGRESS
+    // Use waveStartKills offset
+    if (typeof this.waveStartKills === 'undefined') this.waveStartKills = 0;
+
+    const currentWaveKills = this.enemiesKilled - this.waveStartKills;
+
+    if (currentWaveKills >= this.waveQuota && !this.isBossLevel && !this.transitioning) {
+        // Make sure we increment waveStartKills so we don't trigger repeatedly
+        this.waveStartKills = this.enemiesKilled;
+        this.prepareNextStage();
+    }
+  }
+
   updateMatchTimer() {
     if (this.gamePaused || this.transitioning) return;
 
@@ -357,8 +429,7 @@ export default class GameScene extends Phaser.Scene {
     this.events.emit('update-timer', { time: this.matchTime });
 
     if (this.matchTime <= 0) {
-      // Time Up = Extraction/Victory
-      this.handleGameOver(true);
+      this.handleGameOver(false);
     }
   }
 
@@ -373,7 +444,6 @@ export default class GameScene extends Phaser.Scene {
     this.level = 'PvP';
     this.waveStarted = true;
 
-    // Construct the correct sprite key (e.g., 'witch_hero') from the opponent data
     const opponentSpriteKey = this.opponent.hero.sprite_name
       ? `${this.opponent.hero.sprite_name.toLowerCase()}_hero`
       : 'player_default';
@@ -414,7 +484,6 @@ export default class GameScene extends Phaser.Scene {
       delay: this.playerStats.fireRate,
       loop: true,
       callback: () => {
-        // CQ-02: Only fire if player state allows it
         if (this.player?.active && this.playerState === 'CAN_SHOOT') {
           this.firePlayerBomb(false);
         }
@@ -427,7 +496,6 @@ export default class GameScene extends Phaser.Scene {
       (opponent, bomb) => {
         bomb.destroy();
         new ExplosionEffect(this, opponent.x, opponent.y);
-        // TODO: Handle opponent health update via network
       }
     );
     this.physics.add.collider(
@@ -445,7 +513,6 @@ export default class GameScene extends Phaser.Scene {
       }
     );
 
-    // Loot Pickup Collider
     this.physics.add.overlap(
       this.player,
       this.lootGroup,
@@ -467,36 +534,23 @@ export default class GameScene extends Phaser.Scene {
   fireBomb(firer, bombGroup, velocityY, isOpponent = false) {
     if (this.gamePaused || !firer || !firer.active) return;
     const stats = isOpponent ? this.opponent.hero : this.playerStats;
-    // Defensive check: Ensure stats object exists before accessing properties
-    if (!stats) {
-      console.error('Attempted to fire a bomb for a firer with no stats.', {
-        isOpponent,
-      });
-      return;
-    }
-
-    // Phase 2: Firing Logic (Bomb Num)
-    // bombNum = 1: Single
-    // bombNum = 2: Dual Parallel
-    // bombNum >= 3: Fan/Spread
+    if (!stats) return;
 
     let count = stats.bombNum || 1;
-    // Fallback to legacy multiShot if bombNum not set
     if (!stats.bombNum && stats.multiShot !== undefined) {
         count = 1 + stats.multiShot;
     }
 
-    const bombSize = stats.bombSize || 1; // Visual scaler
+    const bombSize = stats.bombSize || 1;
     const bombDisplaySize = 8 * bombSize;
     const baseVelocity = Math.abs(velocityY);
-    const direction = velocityY > 0 ? 1 : -1; // 1 for down (enemy), -1 for up (player)
+    const direction = velocityY > 0 ? 1 : -1;
 
     const createBomb = (x, y, vx, vy) => {
         const bomb = bombGroup.create(x, y, 'bomb');
         bomb.setDisplaySize(bombDisplaySize, bombDisplaySize)
             .setVelocity(vx, vy);
 
-        // 💣 BOMB PULSE
         this.tweens.add({
             targets: bomb,
             scaleX: bomb.scaleX * 1.2,
@@ -506,7 +560,6 @@ export default class GameScene extends Phaser.Scene {
             repeat: -1,
         });
 
-        // Tint Logic
         if (isOpponent) {
              bomb.setTint(0xff8080);
         } else {
@@ -527,42 +580,26 @@ export default class GameScene extends Phaser.Scene {
     const startY = firer.y + (direction * 30);
 
     if (count === 1) {
-        // Single Shot
         createBomb(firer.x, startY, 0, direction * baseVelocity);
     } else if (count === 2) {
-        // Dual Parallel
         const spacing = 15;
         createBomb(firer.x - spacing, startY, 0, direction * baseVelocity);
         createBomb(firer.x + spacing, startY, 0, direction * baseVelocity);
     } else {
-        // Fan / Spread (>= 3)
-        // Center shot + angled side shots
-        // Total spread angle = 30 degrees?
-        // Let's distribute them evenly.
-        // E.g. 3 shots: -15, 0, +15 degrees
-        // E.g. 5 shots: -30, -15, 0, +15, +30
-
-        const totalSpread = 45; // Degrees
+        const totalSpread = 45;
         const step = totalSpread / (count - 1);
         const startAngle = -totalSpread / 2;
 
         for (let i = 0; i < count; i++) {
             const angleDeg = startAngle + (step * i);
-            const angleRad = Phaser.Math.DegToRad(angleDeg - 90 * direction); // -90 for up, +90 for down? No.
-            // Phaser coordinates: 0 is Right, -90 is Up, 90 is Down.
-            // If direction is -1 (Up), we want angles around -90. (-105, -90, -75)
-            // If direction is 1 (Down), we want angles around 90. (75, 90, 105)
-
             let finalAngle = 0;
             if (direction === -1) {
                  finalAngle = Phaser.Math.DegToRad(-90 + angleDeg);
             } else {
                  finalAngle = Phaser.Math.DegToRad(90 + angleDeg);
             }
-
             const vx = Math.cos(finalAngle) * baseVelocity;
             const vy = Math.sin(finalAngle) * baseVelocity;
-
             createBomb(firer.x, startY, vx, vy);
         }
     }
@@ -583,9 +620,6 @@ export default class GameScene extends Phaser.Scene {
     this.bossSpawned = false;
     this.waveStarted = false;
     this.transitioning = false;
-    // LP-05: Update background and music based on the current world
-    this.bg.setTexture(`bg${Math.min(this.world, 5)}`);
-    SoundManager.playWorldMusic(this, this.world);
   }
 
   async endMatch(result) {
@@ -605,10 +639,10 @@ export default class GameScene extends Phaser.Scene {
         });
 
         if (response.success) {
-          SoundManager.play(this, 'gameover'); // Use victory sound later
+          SoundManager.play(this, 'gameover');
           this.scene.stop('HUDScene');
           this.scene.start('GameOverScene', {
-            score: 1000, // Placeholder for PvP
+            score: 1000,
             coinsEarned: response.rewards ? response.rewards.bcoin || 0 : 0,
             finalScore: 1000,
             customMessage: response.message,
@@ -624,7 +658,6 @@ export default class GameScene extends Phaser.Scene {
         });
       }
     } else {
-      // Handle player loss
       this.scene.stop('HUDScene');
       this.scene.start('GameOverScene', {
         score: 0,
@@ -640,9 +673,8 @@ export default class GameScene extends Phaser.Scene {
       this.physics.pause();
       this.setPlayerState('CANNOT_SHOOT', 'Victory');
       SoundManager.stopAll(this);
-      SoundManager.play(this, 'level_up'); // Victory Sound
+      SoundManager.play(this, 'level_up');
 
-      // Visual Feedback
       const cx = this.cameras.main.centerX;
       const cy = this.cameras.main.centerY;
 
@@ -660,7 +692,7 @@ export default class GameScene extends Phaser.Scene {
           strokeThickness: 6
       }).setOrigin(0.5).setDepth(2001);
 
-      this.add.text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.length} Items`, {
+      this.add.text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.coins} Coins`, {
           fontFamily: '"Press Start 2P"',
           fontSize: '16px',
           color: '#ffffff',
@@ -668,7 +700,6 @@ export default class GameScene extends Phaser.Scene {
           lineSpacing: 10
       }).setOrigin(0.5).setDepth(2001);
 
-      // Task Force: Summoner's Journey XP Reward
       const xpGain = 50;
       const xpResult = playerStateService.addAccountXp(xpGain);
 
@@ -683,27 +714,24 @@ export default class GameScene extends Phaser.Scene {
           SoundManager.play(this, 'level_up');
       }
 
-      // Save to Persistent State
-      playerStateService.addSessionLoot(this.sessionLoot);
-
-      // Sync with Backend (Persist XP and Loot)
+      // Persist Loot (Coins)
       if (this.playerStats.id) {
          try {
-             // We pass empty droppedItems because sessionLoot is handled via separate API calls or purely local for now?
-             // Actually backend handles drops via 'droppedItems' param if needed, but 'grantRewards' handles coins/xp.
-             // We'll pass standard stats.
-             await api.completeMatch(this.playerStats.id, xpGain, this.sessionCoins, this.sessionBestiary, {}, []);
+             await api.completeMatch(this.playerStats.id, xpGain, this.sessionLoot.coins, this.sessionBestiary, {}, []);
          } catch(e) {
              console.warn('[GameScene] Failed to sync victory stats:', e);
          }
       }
 
-      // Unlock Next Node
       if (this.playerStats.id && this.stageConfig) {
           playerStateService.completeStage(this.playerStats.id, this.stageConfig.id);
       }
 
-      // Return to WorldMap after delay
+      // Save Session Loot Items (Fragments) to Inventory
+      if (this.sessionLoot.items && this.sessionLoot.items.length > 0) {
+          playerStateService.addSessionLoot(this.sessionLoot.items);
+      }
+
       this.time.delayedCall(3000, () => {
           this.scene.stop('HUDScene');
           this.scene.start('WorldMapScene');
@@ -711,10 +739,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   async handleGameOver(isVictory = false) {
-    // Note: isVictory argument is practically unused now for "Success" path which goes to handleVictory
-    // But kept for legacy or if we want to route victory here later.
-    // For now, handleGameOver is mostly for DEFEAT.
-
     if (this.gamePaused || this.transitioning) return;
     this.transitioning = true;
     this.gamePaused = true;
@@ -722,13 +746,10 @@ export default class GameScene extends Phaser.Scene {
     this.setPlayerState('CANNOT_SHOOT', 'Game over');
     SoundManager.stopAll(this);
 
-    // DEFEAT LOGIC: LOSE EVERYTHING
     SoundManager.play(this, 'gameover');
     const finalCoins = 0;
-    const finalItems = []; // Lost session loot
-    const finalXp = this.score; // Keep XP for kills? Let's say yes for progression.
+    const finalXp = this.score;
 
-    // Report to backend (for XP)
     const heroId = this.playerStats.id;
     if (heroId) {
       try {
@@ -739,13 +760,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.scene.stop('HUDScene');
-    // Go to WorldMapScene empty handed (or GameOverScene first)
-    // Prompt says "volta para a WorldMapScene de mãos vazias".
-    // I will route to GameOverScene with "DEFEAT" message, which then goes to Menu/Map.
     this.scene.start('GameOverScene', {
       score: this.score,
       world: this.world,
-      phase: this.phase,
+      phase: this.currentWave,
       coins: 0,
       xpGained: finalXp,
       isVictory: false,
@@ -754,128 +772,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    // FURIA-FS-01: Add guard clause to prevent update loop from running before async create() is complete.
-    if (
-      !this.isInitialized ||
-      this.pauseManager.isPaused ||
-      !this.player?.active
-    )
-      return;
+    if (!this.isInitialized || this.pauseManager.isPaused || !this.player?.active) return;
     this.playerController.update(this.cursors, this.playerStats.speed, delta);
 
     if (this.gameMode !== 'ranked') {
       this.updatePve();
-    }
-  }
-
-  prepareNextStage() {
-    // LP-05: This function is now the single point of logic for advancing waves.
-    this.phase++;
-
-    // Check if Node is complete
-    if (this.phase > this.maxPhases) {
-        // Victory!
-        this.handleGameOver(true);
-        return;
-    }
-
-    this.resetWaveState();
-    this.physics.resume();
-    this.setPlayerState('CAN_SHOOT', 'Next stage prepared');
-
-    // LP-05: Emit wave update for the HUD
-    this.events.emit('update-wave', {
-      world: this.world,
-      phase: this.phase,
-      isBoss: this.phase === this.maxPhases,
-    });
-
-    this.enemySpawner.spawnWave(this.world, this.phase);
-  }
-
-  updatePve() {
-    // FURIA-FS-04: Black box recorder for debugging disappearing enemies.
-    // We log the state of every enemy on every frame to a global array.
-    // If the bug occurs, we can inspect `window.enemyStateHistory` in the console.
-    if (this.enemies && this.enemies.getChildren().length > 0) {
-      const enemyStates = this.enemies.getChildren().map((e) => ({
-        id: e.name, // Assuming enemies have a unique name/ID
-        x: e.x,
-        y: e.y,
-        active: e.active,
-        visible: e.visible,
-        hp: e.hp,
-        timestamp: this.time.now,
-      }));
-      window.enemyStateHistory.push(...enemyStates);
-    }
-    // Keep history from getting too large
-    if (window.enemyStateHistory.length > 5000) {
-      window.enemyStateHistory.splice(
-        0,
-        window.enemyStateHistory.length - 5000
-      );
-    }
-
-    // HS1-02: The logic for advancing to the next stage after a boss is defeated
-    // has been moved entirely to CollisionHandler.js to ensure it's triggered
-    // at the exact moment of the boss's defeat. This prevents race conditions
-    // and bugs where the game state wasn't paused/resumed correctly.
-
-    // Use a temporary array to avoid issues with modifying the group while iterating
-    const enemiesToProcess = this.enemies.getChildren().slice();
-    enemiesToProcess.forEach((enemy) => {
-      if (enemy?.active && enemy.y > this.scale.height + 20) {
-        // JF-04 FIX: Destroy the enemy instead of deactivating it.
-        // The previous deactivation logic caused race conditions with the EnemySpawner's
-        // object pooling, leading to enemies disappearing mid-screen. Destroying them is a
-        // more robust solution that permanently fixes the bug.
-        enemy.destroy();
-
-        if (this.pauseManager.isPaused) return;
-        const damageTaken = 50;
-        this.playerStats.hp -= damageTaken;
-        this.events.emit('update-health', {
-          health: this.playerStats.hp,
-          maxHealth: this.playerStats.maxHp,
-        });
-        if (this.playerStats.hp <= 0) {
-          this.playerStats.extraLives--;
-          if (this.playerStats.extraLives >= 0) {
-            this.playerStats.hp = this.playerStats.maxHp;
-            SoundManager.play(this, 'player_hit');
-            this.events.emit('update-health', {
-              health: this.playerStats.hp,
-              maxHealth: this.playerStats.maxHp,
-            });
-          } else {
-            this.playerStats.hp = 0;
-            this.playerStats.extraLives = 0;
-            this.events.emit('update-health', {
-              health: 0,
-              maxHealth: this.playerStats.maxHp,
-            });
-            this.handleGameOver();
-          }
-        } else {
-          SoundManager.play(this, 'player_hit');
-        }
-      }
-    });
-
-    // Loot Drop Logic (20% Chance on Death)
-    // We hook here because we iterate enemies and destroy them here.
-    enemiesToProcess.forEach(enemy => {
-        if (!enemy.active && enemy.dropped === undefined) {
-             // Flag to prevent double drops if multiple things kill it
-             enemy.dropped = true;
-             this.trySpawnLoot(enemy.x, enemy.y);
-        }
-    });
-
-    // Phase 3: Grind Victory Condition (15 Kills)
-    if (this.enemiesKilled >= 15 && !this.transitioning) {
-        this.handleVictory();
     }
   }
 
@@ -931,9 +832,8 @@ export default class GameScene extends Phaser.Scene {
 
       loot.itemName = name;
       loot.isFragment = isFragment;
-      loot.color = tint; // For feedback text
+      loot.color = tint;
 
-      // Float Animation
       this.tweens.add({
           targets: loot,
           y: y - 5,
@@ -942,7 +842,6 @@ export default class GameScene extends Phaser.Scene {
           repeat: -1
       });
 
-      // Auto-destroy after 15s
       this.time.delayedCall(15000, () => {
           if (loot.active) loot.destroy();
       });
@@ -961,8 +860,9 @@ export default class GameScene extends Phaser.Scene {
       loot.destroy();
 
       if (isFragment) {
-          // Add to Session Loot (Risk & Reward)
-          this.sessionLoot.push({
+          // Add to Session Loot
+          if (!this.sessionLoot.items) this.sessionLoot.items = [];
+          this.sessionLoot.items.push({
               type: 'fragment',
               rarity: rarity,
               quantity: 1
@@ -971,7 +871,6 @@ export default class GameScene extends Phaser.Scene {
           this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
           SoundManager.play(this, 'coin_collect');
       } else {
-          // Instant Heal (Potion)
           const healAmount = Math.floor(this.playerStats.maxHp * 0.2);
           this.playerStats.hp = Math.min(this.playerStats.hp + healAmount, this.playerStats.maxHp);
           this.events.emit('update-health', { health: this.playerStats.hp, maxHealth: this.playerStats.maxHp });

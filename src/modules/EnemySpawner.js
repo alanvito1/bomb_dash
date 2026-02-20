@@ -1,159 +1,173 @@
 import SoundManager from '../utils/sound.js';
-
-const BOSS_PHASE = 7;
+import { MOBS } from '../config/MobConfig.js';
 
 /**
  * @class EnemySpawner
  * @description Manages the creation and progression of enemy waves.
- * It scales enemy count, health, and speed based on the player's current world, phase,
- * and account level, ensuring a balanced difficulty curve.
+ * Refactored for Task Force Step 2: 30-Wave Engine.
  */
 export default class EnemySpawner {
   /**
    * @constructor
    * @param {Phaser.Scene} scene - The main game scene instance.
-   * @param {number} [accountLevel=1] - The player's account level, used to calculate a difficulty multiplier.
    */
-  constructor(scene, accountLevel = 1) {
+  constructor(scene) {
     this.scene = scene;
-    this.accountLevel = accountLevel;
+    this.spawnTimer = null;
+    this.isSpawning = false;
+    this.currentMob = null;
+    this.difficultyMultiplier = 1.0;
     this.enemyIdCounter = 0;
-    this.difficultyMultiplier = 1 + (this.accountLevel - 1) * 0.07;
-
-    const manifest = this.scene.cache.json.get('assetManifest');
-    if (manifest && manifest.assets) {
-      this.enemyKeys = Object.keys(manifest.assets.enemies || {});
-      this.bossKeys = Object.keys(manifest.assets.bosses || {});
-    } else {
-      // Fallback to procedural assets if manifest is missing or empty
-      console.warn('EnemySpawner: Manifest missing/empty. Using procedural fallbacks.');
-      this.enemyKeys = ['enemy']; // Procedural red square
-      this.bossKeys = ['enemy'];  // Reuse for boss if needed
-    }
-
-    // Safety check: If keys are empty even after manifest load (e.g. empty json)
-    if (this.enemyKeys.length === 0) this.enemyKeys = ['enemy'];
-    if (this.bossKeys.length === 0) this.bossKeys = ['enemy'];
   }
 
   /**
-   * Spawns a complete wave of enemies or a boss, depending on the phase.
-   * @param {number} world - The current world number (e.g., 1, 2, 3).
-   * @param {number} phase - The current phase within the world (1-7).
+   * Starts continuous spawning of a specific mob type.
+   * @param {Object} mobConfig - The mob configuration object from MobConfig.js.
+   * @param {number} difficultyMultiplier - Multiplier for stats.
    */
-  spawnWave(world, phase) {
-    if (!this.scene || !this.scene.enemies) {
-      return;
-    }
+  startSpawning(mobConfig, difficultyMultiplier = 1.0) {
+    this.stopSpawning(); // Clear any existing timer
 
-    this.scene.enemies.clear(true, true);
-    this.scene.bossDefeated = false;
-    this.scene.bossSpawned = false;
-    this.scene.enemiesSpawned = 0;
-    this.scene.enemiesKilled = 0;
+    this.currentMob = mobConfig;
+    this.difficultyMultiplier = difficultyMultiplier;
+    this.isSpawning = true;
 
-    if (phase === BOSS_PHASE) {
-      this._spawnBossWave(world);
-    } else {
-      this._spawnRegularWave(world, phase);
-    }
+    // Initial Spawn
+    this.spawnEnemy();
 
-    SoundManager.play(this.scene, 'wave_start');
+    // Loop
+    // Spawn rate: Base 1.5s, decreases with difficulty?
+    // Let's use a fixed rate for now, e.g. 1000ms.
+    const spawnRate = Math.max(500, 1500 - (difficultyMultiplier * 100));
+
+    this.spawnTimer = this.scene.time.addEvent({
+        delay: spawnRate,
+        callback: this.spawnCheck,
+        callbackScope: this,
+        loop: true
+    });
+
+    console.log(`[EnemySpawner] Started spawning ${mobConfig.name} (x${difficultyMultiplier})`);
+  }
+
+  spawnCheck() {
+      if (!this.isSpawning) return;
+      if (this.scene.gamePaused) return;
+
+      // Concurrency Limit (Don't flood the screen)
+      const maxEnemies = 8;
+      const currentCount = this.scene.enemies.countActive();
+
+      if (currentCount < maxEnemies) {
+          this.spawnEnemy();
+      }
+  }
+
+  spawnEnemy() {
+      if (!this.scene.enemies) return;
+
+      const mob = this.currentMob;
+      if (!mob) return;
+
+      // Calculate Stats
+      const hp = Math.ceil(mob.base_hp * this.difficultyMultiplier);
+      const speed = mob.base_speed * (1 + ((this.difficultyMultiplier - 1) * 0.1));
+
+      const x = Phaser.Math.Between(50, this.scene.scale.width - 50);
+      const y = -50; // Top of screen
+
+      // Use asset_key from MobConfig
+      let key = mob.asset_key || 'enemy';
+
+      // Check texture exists
+      if (!this.scene.textures.exists(key)) {
+          console.warn(`[EnemySpawner] Missing texture for ${mob.id}: ${key}. Using fallback 'enemy'.`);
+          key = 'enemy';
+      }
+
+      const enemy = this.scene.enemies.create(x, y, key);
+      enemy.setDisplaySize(32, 32);
+      enemy.setVelocityY(speed);
+
+      enemy.hp = hp;
+      enemy.maxHp = hp; // Useful for UI if needed
+      enemy.id = mob.id; // Store mob ID for Bestiary
+      enemy.isBoss = false;
+      enemy.name = `${mob.id}_${this.enemyIdCounter++}`;
+
+      // Optional: Add simple zigzag or sine wave movement based on mob type?
+      // For now, straight down.
+  }
+
+  stopSpawning() {
+      this.isSpawning = false;
+      if (this.spawnTimer) {
+          this.spawnTimer.remove();
+          this.spawnTimer = null;
+      }
   }
 
   /**
-   * Spawns a standard wave of multiple enemies.
-   * @param {number} world - The current world number.
-   * @param {number} phase - The current phase number.
-   * @private
+   * Spawns the Boss for the current stage.
+   * @param {Object} bossConfig - The boss configuration object.
+   * @param {number} difficultyMultiplier - Multiplier for stats.
    */
-  _spawnRegularWave(world, phase) {
-    const enemySpriteKey =
-      this.enemyKeys[Math.min(world - 1, this.enemyKeys.length - 1)] ||
-      this.enemyKeys[0];
-    if (!enemySpriteKey) {
-      return;
-    }
+  spawnBoss(bossConfig, difficultyMultiplier = 1.0) {
+      this.stopSpawning(); // Ensure no mobs interfere
 
-    const baseCount = 3;
-    const enemyCount = baseCount + (world - 1) * 2 + phase;
-    const baseHp = 1;
-    const enemyHp = Math.ceil(
-      (baseHp + (world - 1) * 5 + (phase - 1) * 1) * this.difficultyMultiplier
-    );
-    const baseSpeed = 80;
-    const enemySpeed =
-      (baseSpeed + (world - 1) * 15 + (phase - 1) * 5) *
-      this.difficultyMultiplier;
-    const spawnInterval = Math.max(200, 800 - world * 50);
+      if (!bossConfig) return;
 
-    this.scene.enemiesSpawned = enemyCount;
+      const hp = Math.ceil(bossConfig.base_hp * difficultyMultiplier * 2); // Boss HP scaling
+      const speed = bossConfig.base_speed * 0.8; // Boss is slower?
+      let key = bossConfig.asset_key || 'boss1';
 
-    for (let i = 0; i < enemyCount; i++) {
-      this.scene.time.delayedCall(i * spawnInterval, () => {
-        this._spawnSingleEnemy(enemySpriteKey, enemyHp, enemySpeed);
+      const x = this.scene.scale.width / 2;
+      const y = -100;
+
+      if (!this.scene.textures.exists(key)) {
+          console.warn(`[EnemySpawner] Missing boss texture: ${key}. Using fallback 'boss1'.`);
+          key = 'boss1';
+      }
+
+      const boss = this.scene.enemies.create(x, y, key);
+      boss.setDisplaySize(64, 64); // Bigger boss
+      boss.setVelocityY(speed); // Fall in
+
+      boss.hp = hp;
+      boss.maxHp = hp;
+      boss.id = bossConfig.id;
+      boss.isBoss = true;
+      boss.name = `BOSS_${bossConfig.id}`;
+
+      // Boss Entry Tween
+      this.scene.tweens.add({
+          targets: boss,
+          y: 150, // Move to fixed position
+          duration: 2000,
+          ease: 'Power2',
+          onComplete: () => {
+             // Start Boss Logic (Movement Pattern)
+             boss.setVelocityY(0);
+             boss.setVelocityX(50);
+             boss.setCollideWorldBounds(true);
+             boss.setBounce(1, 1);
+
+             // Simple AI: Change direction randomly?
+             this.scene.time.addEvent({
+                 delay: 2000,
+                 callback: () => {
+                     if (boss.active) {
+                         boss.setVelocityX(Phaser.Math.Between(-80, 80));
+                         boss.setVelocityY(Phaser.Math.Between(-20, 20));
+                     }
+                 },
+                 loop: true
+             });
+          }
       });
-    }
-  }
 
-  /**
-   * Spawns a single, powerful boss enemy.
-   * @param {number} world - The current world number, which determines the boss type.
-   * @private
-   */
-  _spawnBossWave(world) {
-    const bossSpriteKey =
-      this.bossKeys[Math.min(world - 1, this.bossKeys.length - 1)] ||
-      this.bossKeys[0];
-    if (!bossSpriteKey) {
-      return;
-    }
-
-    const baseHp = 100;
-    const bossHp = Math.ceil(
-      (baseHp + (world - 1) * 150) * this.difficultyMultiplier
-    );
-    const bossSpeed = 28 + (world - 1) * 4;
-
-    this.scene.enemiesSpawned = 1;
-    this.scene.bossSpawned = true;
-
-    const boss = this.scene.enemies.create(
-      this.scene.scale.width / 2,
-      -50,
-      bossSpriteKey
-    );
-    boss.setVelocityY(bossSpeed);
-    boss.setDisplaySize(48, 48);
-    boss.hp = bossHp;
-    boss.isBoss = true;
-    boss.name = `boss_${this.enemyIdCounter++}`;
-
-    SoundManager.play(this.scene, 'boss_spawn');
-  }
-
-  /**
-   * Creates and configures a single enemy instance and adds it to the scene.
-   * @param {string} spriteKey - The asset key for the enemy's sprite.
-   * @param {number} hp - The health points for the enemy.
-   * @param {number} speed - The vertical speed for the enemy.
-   * @private
-   */
-  _spawnSingleEnemy(spriteKey, hp, speed) {
-    if (!this.scene.player || !this.scene.player.active) {
-      return;
-    }
-
-    const enemy = this.scene.enemies.create(
-      Phaser.Math.Between(50, this.scene.scale.width - 50),
-      -50,
-      spriteKey
-    );
-
-    enemy.setVelocityY(speed);
-    enemy.setDisplaySize(32, 32);
-    enemy.hp = hp;
-    enemy.isBoss = false;
-    enemy.name = `enemy_${this.enemyIdCounter++}`;
+      this.scene.bossSpawned = true;
+      SoundManager.play(this.scene, 'boss_spawn');
+      console.log(`[EnemySpawner] Spawned BOSS ${bossConfig.name} (HP: ${hp})`);
   }
 }
