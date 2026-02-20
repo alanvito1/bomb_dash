@@ -31,7 +31,7 @@ class NotificationScene extends Phaser.Scene {
     // Popup background
     this.popupBackground = this.add.graphics({
       fillStyle: { color: 0x050505 },
-      lineStyle: { width: 2, color: 0xFF5F1F },
+      lineStyle: { width: 2, color: 0xff5f1f },
     });
     this.popupBackground.fillRoundedRect(
       -popupWidth / 2,

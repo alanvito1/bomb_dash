@@ -12,7 +12,7 @@ export const MOCK_USER = {
   bcoin: 50000,
   account_level: 5,
   account_xp: 1500,
-  coins: 50000
+  coins: 50000,
 };
 
 export const MOCK_HEROES = [
@@ -30,7 +30,7 @@ export const MOCK_HEROES = [
     },
     status: 'idle',
     bomb_mastery_xp: 500,
-    agility_xp: 200
+    agility_xp: 200,
   },
   {
     id: 102,
@@ -46,50 +46,98 @@ export const MOCK_HEROES = [
     },
     status: 'idle',
     bomb_mastery_xp: 100,
-    agility_xp: 100
+    agility_xp: 100,
   },
 ];
 
 export const MOCK_INVENTORY = [
   {
-      id: 1,
-      quantity: 1,
-      Item: { id: 201, name: 'Rusty Sword', type: 'weapon', rarity: 'common', icon: 'item_rusty_sword' }
+    id: 1,
+    quantity: 1,
+    Item: {
+      id: 201,
+      name: 'Rusty Sword',
+      type: 'weapon',
+      rarity: 'common',
+      icon: 'item_rusty_sword',
+    },
   },
   {
-      id: 2,
-      quantity: 1,
-      Item: { id: 202, name: 'Iron Katana', type: 'weapon', rarity: 'uncommon', icon: 'item_iron_katana' }
+    id: 2,
+    quantity: 1,
+    Item: {
+      id: 202,
+      name: 'Iron Katana',
+      type: 'weapon',
+      rarity: 'uncommon',
+      icon: 'item_iron_katana',
+    },
   },
   {
-      id: 3,
-      quantity: 1,
-      Item: { id: 203, name: 'Leather Vest', type: 'armor', rarity: 'common', icon: 'item_leather_vest' }
+    id: 3,
+    quantity: 1,
+    Item: {
+      id: 203,
+      name: 'Leather Vest',
+      type: 'armor',
+      rarity: 'common',
+      icon: 'item_leather_vest',
+    },
   },
   {
-      id: 4,
-      quantity: 1,
-      Item: { id: 204, name: 'Nano Vest', type: 'armor', rarity: 'rare', icon: 'item_nano_vest' }
+    id: 4,
+    quantity: 1,
+    Item: {
+      id: 204,
+      name: 'Nano Vest',
+      type: 'armor',
+      rarity: 'rare',
+      icon: 'item_nano_vest',
+    },
   },
   {
-      id: 5,
-      quantity: 1,
-      Item: { id: 205, name: 'Neon Boots', type: 'boots', rarity: 'epic', icon: 'item_neon_boots' }
+    id: 5,
+    quantity: 1,
+    Item: {
+      id: 205,
+      name: 'Neon Boots',
+      type: 'boots',
+      rarity: 'epic',
+      icon: 'item_neon_boots',
+    },
   },
   {
-      id: 6,
-      quantity: 5,
-      Item: { id: 206, name: 'Health Potion', type: 'consumable', rarity: 'common', icon: 'item_health_potion' }
+    id: 6,
+    quantity: 5,
+    Item: {
+      id: 206,
+      name: 'Health Potion',
+      type: 'consumable',
+      rarity: 'common',
+      icon: 'item_health_potion',
+    },
   },
   {
-      id: 7,
-      quantity: 15,
-      Item: { id: 207, name: 'Scrap Metal', type: 'material', rarity: 'common', icon: 'item_scrap' }
+    id: 7,
+    quantity: 15,
+    Item: {
+      id: 207,
+      name: 'Scrap Metal',
+      type: 'material',
+      rarity: 'common',
+      icon: 'item_scrap',
+    },
   },
   {
-      id: 8,
-      quantity: 2,
-      Item: { id: 208, name: 'Cyber Core', type: 'material', rarity: 'rare', icon: 'item_cyber_core' }
+    id: 8,
+    quantity: 2,
+    Item: {
+      id: 208,
+      name: 'Cyber Core',
+      type: 'material',
+      rarity: 'rare',
+      icon: 'item_cyber_core',
+    },
   },
 ];
 
@@ -122,6 +170,6 @@ export const MOCK_NEWS = [
 ];
 
 export const MOCK_BESTIARY = {
-  'enemy': 50,
-  'boss': 2,
+  enemy: 50,
+  boss: 2,
 };

@@ -97,11 +97,11 @@ export default class TextureGenerator {
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
     // Base Brown
-    graphics.fillStyle(0x8B4513);
+    graphics.fillStyle(0x8b4513);
     graphics.fillRect(0, 0, 32, 32);
 
     // Inner Lighter Brown (Bevel)
-    graphics.fillStyle(0xA0522D);
+    graphics.fillStyle(0xa0522d);
     graphics.fillRect(2, 2, 28, 28);
 
     // Brick Pattern Lines
@@ -222,18 +222,18 @@ export default class TextureGenerator {
 
     // Vertical Lines
     for (let x = 0; x <= width; x += gridSize) {
-        graphics.beginPath();
-        graphics.moveTo(x, 0);
-        graphics.lineTo(x, height);
-        graphics.stroke();
+      graphics.beginPath();
+      graphics.moveTo(x, 0);
+      graphics.lineTo(x, height);
+      graphics.stroke();
     }
 
     // Horizontal Lines
     for (let y = 0; y <= height; y += gridSize) {
-        graphics.beginPath();
-        graphics.moveTo(0, y);
-        graphics.lineTo(width, y);
-        graphics.stroke();
+      graphics.beginPath();
+      graphics.moveTo(0, y);
+      graphics.lineTo(width, y);
+      graphics.stroke();
     }
 
     // Horizon Glow (Top) - Optional Cyberpunk touch
@@ -332,25 +332,27 @@ export default class TextureGenerator {
 
     // Background Shape (Circle/Hexagon-ish)
     bg.fillStyle(color, 1.0); // Solid color
-    bg.fillCircle(size/2, size/2, size/2 - 4);
+    bg.fillCircle(size / 2, size / 2, size / 2 - 4);
 
     // Border
     bg.lineStyle(4, 0xffffff, 1.0);
-    bg.strokeCircle(size/2, size/2, size/2 - 4);
+    bg.strokeCircle(size / 2, size / 2, size / 2 - 4);
 
     rt.draw(bg, 0, 0);
 
     // Text Label (High Contrast)
     // Using simple font available everywhere
-    const text = scene.make.text(size/2, size/2, label, {
+    const text = scene.make
+      .text(size / 2, size / 2, label, {
         fontSize: '20px',
         align: 'center',
         fontFamily: 'Arial, sans-serif',
         fontStyle: 'bold',
-        color: '#000000' // Black text on colored bg
-    }).setOrigin(0.5);
+        color: '#000000', // Black text on colored bg
+      })
+      .setOrigin(0.5);
 
-    rt.draw(text, size/2, size/2);
+    rt.draw(text, size / 2, size / 2);
 
     rt.saveTexture(key);
 
@@ -360,74 +362,74 @@ export default class TextureGenerator {
   }
 
   static createIconBase(scene, key) {
-    this.createGeometricIcon(scene, key, 'BASE', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'BASE', 0x00ffff);
   }
 
   static createIconHeroes(scene, key) {
-    this.createGeometricIcon(scene, key, 'HERO', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'HERO', 0x00ffff);
   }
 
   static createIconBattle(scene, key) {
-    this.createGeometricIcon(scene, key, 'PLAY', 0xFFFF00);
+    this.createGeometricIcon(scene, key, 'PLAY', 0xffff00);
   }
 
   static createIconShop(scene, key) {
-    this.createGeometricIcon(scene, key, 'SHOP', 0x00FF00);
+    this.createGeometricIcon(scene, key, 'SHOP', 0x00ff00);
   }
 
   static createIconRanking(scene, key) {
-    this.createGeometricIcon(scene, key, 'RANK', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'RANK', 0x00ffff);
   }
 
   static createIconForge(scene, key) {
-    this.createGeometricIcon(scene, key, 'FORG', 0xFF4500);
+    this.createGeometricIcon(scene, key, 'FORG', 0xff4500);
   }
 
   static createIconGold(scene, key) {
-    this.createGeometricIcon(scene, key, '$$$', 0xFFD700);
+    this.createGeometricIcon(scene, key, '$$$', 0xffd700);
   }
 
   static createIconBcoin(scene, key) {
-    this.createGeometricIcon(scene, key, 'B', 0x00FFFF);
+    this.createGeometricIcon(scene, key, 'B', 0x00ffff);
   }
 
   static createIconSettings(scene, key) {
-    this.createGeometricIcon(scene, key, 'SET', 0xAAAAAA);
+    this.createGeometricIcon(scene, key, 'SET', 0xaaaaaa);
   }
 
   static createIconWallet(scene, key) {
-    this.createGeometricIcon(scene, key, 'WAL', 0xCD7F32);
+    this.createGeometricIcon(scene, key, 'WAL', 0xcd7f32);
   }
 
   static createIconBook(scene, key) {
-    this.createGeometricIcon(scene, key, 'BOOK', 0xDC143C);
+    this.createGeometricIcon(scene, key, 'BOOK', 0xdc143c);
   }
 
   static createIconGuild(scene, key) {
-    this.createGeometricIcon(scene, key, 'GLD', 0xFF00FF);
+    this.createGeometricIcon(scene, key, 'GLD', 0xff00ff);
   }
 
   static createIconAltar(scene, key) {
-    this.createGeometricIcon(scene, key, 'ALT', 0xFFD700);
+    this.createGeometricIcon(scene, key, 'ALT', 0xffd700);
   }
 
   static createAvatar(scene, key) {
-     this.createGeometricIcon(scene, key, 'YOU', 0xCCCCCC);
+    this.createGeometricIcon(scene, key, 'YOU', 0xcccccc);
   }
 
   static createChest(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
     // Box
-    g.fillStyle(0x8B4513);
+    g.fillStyle(0x8b4513);
     g.fillRect(4, 10, 24, 16);
     // Lid (Arc)
-    g.fillStyle(0xA0522D);
+    g.fillStyle(0xa0522d);
     g.beginPath();
     g.arc(16, 10, 12, Math.PI, 0);
     g.fill();
     // Gold Bands
-    g.fillStyle(0xFFD700);
+    g.fillStyle(0xffd700);
     g.fillRect(14, 10, 4, 16); // Vertical lock strip
     g.fillRect(4, 10, 24, 2); // Lid seam
     g.generateTexture(key, 32, 32);
@@ -437,12 +439,12 @@ export default class TextureGenerator {
     // Reuse but fill
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xFF00FF);
+    g.fillStyle(0xff00ff);
     g.beginPath();
     g.arc(16, 20, 10, 0, Math.PI * 2);
     g.fill();
     g.fillRect(12, 4, 8, 8);
-    g.fillStyle(0xFFFFFF);
+    g.fillStyle(0xffffff);
     g.fillCircle(12, 16, 3);
     g.generateTexture(key, 32, 32);
   }
@@ -451,7 +453,7 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
     // Gem 1
-    g.fillStyle(0x00FFFF); // Cyan
+    g.fillStyle(0x00ffff); // Cyan
     g.beginPath();
     g.moveTo(16, 4);
     g.lineTo(24, 12);
@@ -543,7 +545,7 @@ export default class TextureGenerator {
     g.lineTo(24, 8);
     g.stroke();
     // Handle (Brown)
-    g.lineStyle(4, 0x8B4513);
+    g.lineStyle(4, 0x8b4513);
     g.beginPath();
     g.moveTo(6, 26);
     g.lineTo(10, 22);
@@ -555,7 +557,7 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
     // Blade (Silver/White)
-    g.lineStyle(2, 0xCCCCCC);
+    g.lineStyle(2, 0xcccccc);
     g.beginPath();
     g.moveTo(8, 24);
     g.lineTo(28, 4);
@@ -572,10 +574,10 @@ export default class TextureGenerator {
   static createLeatherVest(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x8B4513); // Brown
+    g.fillStyle(0x8b4513); // Brown
     g.fillRect(8, 8, 16, 20);
     // Neck cutout
-    g.fillStyle(0xA0522D);
+    g.fillStyle(0xa0522d);
     g.fillRect(10, 10, 12, 16);
     g.generateTexture(key, 32, 32);
   }
@@ -583,9 +585,9 @@ export default class TextureGenerator {
   static createNanoVest(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x00FFFF); // Cyan
+    g.fillStyle(0x00ffff); // Cyan
     g.fillRect(8, 8, 16, 20);
-    g.lineStyle(2, 0xFFFFFF);
+    g.lineStyle(2, 0xffffff);
     g.strokeRect(8, 8, 16, 20);
     g.generateTexture(key, 32, 32);
   }
@@ -593,7 +595,7 @@ export default class TextureGenerator {
   static createNeonBoots(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xFF00FF); // Neon Pink
+    g.fillStyle(0xff00ff); // Neon Pink
     // Left Boot
     g.fillRect(8, 16, 6, 12);
     g.fillRect(8, 28, 8, 4);
@@ -607,11 +609,11 @@ export default class TextureGenerator {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
     // Flask
-    g.fillStyle(0xFF0000); // Red
+    g.fillStyle(0xff0000); // Red
     g.fillCircle(16, 20, 8);
     // Neck
     g.fillRect(14, 8, 4, 6);
-    g.fillStyle(0xFFFFFF); // Shine
+    g.fillStyle(0xffffff); // Shine
     g.fillCircle(14, 18, 2);
     g.generateTexture(key, 32, 32);
   }
@@ -635,11 +637,11 @@ export default class TextureGenerator {
   static createCyberCore(scene, key) {
     if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x0000FF); // Blue Core
+    g.fillStyle(0x0000ff); // Blue Core
     g.fillCircle(16, 16, 10);
-    g.lineStyle(2, 0x00FFFF); // Cyan Glow
+    g.lineStyle(2, 0x00ffff); // Cyan Glow
     g.strokeCircle(16, 16, 10);
-    g.lineStyle(1, 0xFFFFFF);
+    g.lineStyle(1, 0xffffff);
     g.strokeCircle(16, 16, 6);
     g.generateTexture(key, 32, 32);
   }
@@ -653,7 +655,7 @@ export default class TextureGenerator {
       // Heroes
       this.createHero(scene, 'ninja');
       this.createHero(scene, 'ninja_hero'); // Alias/Same style
-      this.createHero(scene, 'witch');      // Reusing hero style (or could make variation)
+      this.createHero(scene, 'witch'); // Reusing hero style (or could make variation)
       this.createHero(scene, 'witch_hero'); // Alias
 
       // Mobs/Items
@@ -705,7 +707,10 @@ export default class TextureGenerator {
       this.createShadow(scene);
       this.createParticles(scene);
     } catch (e) {
-      console.warn('⚠️ TextureGenerator: Failed to generate procedural assets.', e);
+      console.warn(
+        '⚠️ TextureGenerator: Failed to generate procedural assets.',
+        e
+      );
     }
   }
 }

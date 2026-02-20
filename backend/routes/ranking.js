@@ -8,10 +8,10 @@ router.get('/', async (req, res) => {
   res.json({
     success: true,
     ranking: [
-      { name: "AlphaUser", score: 1000 },
-      { name: "BetaTester", score: 850 },
-      { name: "OmegaPlayer", score: 720 }
-    ]
+      { name: 'AlphaUser', score: 1000 },
+      { name: 'BetaTester', score: 850 },
+      { name: 'OmegaPlayer', score: 720 },
+    ],
   });
 });
 

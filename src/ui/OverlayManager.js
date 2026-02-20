@@ -19,8 +19,16 @@ export default class OverlayManager {
     this.audio.volume = 0.2;
     // this.audio.loop = true; // Optional: Loop background ambient?
 
+    // Check for previous acceptance
+    const termsAccepted = localStorage.getItem('termsAccepted');
+
+    if (termsAccepted === 'true') {
+      console.log('[Overlay] Terms already accepted. Launching Game directly.');
+      this.startGameDirectly();
+      return;
+    }
+
     // Ensure LanguageManager is ready before showing ToS
-    // We pass a mock scene because LanguageManager expects one to set registry
     const mockScene = { registry: { set: () => {} } };
 
     LanguageManager.init(mockScene)
@@ -33,10 +41,28 @@ export default class OverlayManager {
       });
   }
 
+  startGameDirectly() {
+    // Hide Overlay
+    this.container.style.display = 'none';
+
+    // Show Game Container
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+      gameContainer.style.display = 'block';
+    }
+
+    // Launch Game
+    if (window.launchGame) {
+      requestAnimationFrame(() => {
+        window.launchGame();
+      });
+    } else {
+      console.error('Game Launcher not found!');
+    }
+  }
+
   playSound(type) {
-    // Simple synth click if no file, or play specific file
     if (type === 'click') {
-      // Create a short beep for "mechanical click"
       this.playSynthClick();
     }
   }
@@ -67,28 +93,8 @@ export default class OverlayManager {
     }
   }
 
+  // Deprecated Flow: Only used if we explicitly want to show auth menu
   showAuthMenu() {
     this.authManager.init();
-  }
-
-  onAuthComplete() {
-    // Hide Overlay
-    this.container.style.display = 'none';
-
-    // Show Game Container
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer) {
-      gameContainer.style.display = 'block';
-    }
-
-    // Launch Game
-    if (window.launchGame) {
-      // Wait for DOM reflow
-      requestAnimationFrame(() => {
-        window.launchGame();
-      });
-    } else {
-      console.error('Game Launcher not found!');
-    }
   }
 }

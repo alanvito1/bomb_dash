@@ -14,14 +14,26 @@ export default class SettingsModal extends UIModal {
     const startY = -this.modalHeight / 2 + 100;
 
     // Sliders
-    this.createSlider(0, startY, 'Master Volume', SoundManager.masterVolume, (val) =>
-      SoundManager.setMasterVolume(this.scene, val)
+    this.createSlider(
+      0,
+      startY,
+      'Master Volume',
+      SoundManager.masterVolume,
+      (val) => SoundManager.setMasterVolume(this.scene, val)
     );
-    this.createSlider(0, startY + 80, 'Music', SoundManager.musicVolume, (val) =>
-      SoundManager.setMusicVolume(val)
+    this.createSlider(
+      0,
+      startY + 80,
+      'Music',
+      SoundManager.musicVolume,
+      (val) => SoundManager.setMusicVolume(val)
     );
-    this.createSlider(0, startY + 160, 'Sound Effects', SoundManager.sfxVolume, (val) =>
-      SoundManager.setSfxVolume(val)
+    this.createSlider(
+      0,
+      startY + 160,
+      'Sound Effects',
+      SoundManager.sfxVolume,
+      (val) => SoundManager.setSfxVolume(val)
     );
 
     // Retro Filter Toggle
@@ -40,10 +52,19 @@ export default class SettingsModal extends UIModal {
     const text = enabled ? 'RETRO FILTER: ON' : 'RETRO FILTER: OFF';
     const type = enabled ? 'neutral' : 'metal';
 
-    this.retroBtn = createRetroButton(this.scene, x, y, 220, 40, text, type, () => {
-      PostFXManager.toggle(this.scene);
-      this.refreshRetroButton(x, y);
-    });
+    this.retroBtn = createRetroButton(
+      this.scene,
+      x,
+      y,
+      220,
+      40,
+      text,
+      type,
+      () => {
+        PostFXManager.toggle(this.scene);
+        this.refreshRetroButton(x, y);
+      }
+    );
     this.windowContainer.add(this.retroBtn);
   }
 
@@ -194,21 +215,21 @@ export default class SettingsModal extends UIModal {
     });
 
     container.on('pointerover', () => {
-       bg.clear();
-       bg.fillStyle(0xaa0000, 1);
-       bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
-       bg.lineStyle(2, 0xff0000);
-       bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
-       text.setScale(1.05);
+      bg.clear();
+      bg.fillStyle(0xaa0000, 1);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+      bg.lineStyle(2, 0xff0000);
+      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+      text.setScale(1.05);
     });
 
     container.on('pointerout', () => {
-       bg.clear();
-       bg.fillStyle(0x880000, 1);
-       bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
-       bg.lineStyle(2, 0xff0000);
-       bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
-       text.setScale(1);
+      bg.clear();
+      bg.fillStyle(0x880000, 1);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+      bg.lineStyle(2, 0xff0000);
+      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+      text.setScale(1);
     });
 
     return container;

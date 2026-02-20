@@ -10,8 +10,10 @@ export default function ExplosionEffect(scene, x, y, scale = 2) {
   // 1. Ensure animation exists
   if (!scene.anims.exists('explosion_anim')) {
     if (!scene.textures.exists('explosion_sheet')) {
-       console.warn('[ExplosionEffect] Texture "explosion_sheet" missing. Skipping effect.');
-       return;
+      console.warn(
+        '[ExplosionEffect] Texture "explosion_sheet" missing. Skipping effect.'
+      );
+      return;
     }
 
     const texture = scene.textures.get('explosion_sheet');

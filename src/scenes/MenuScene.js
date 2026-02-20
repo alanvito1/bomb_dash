@@ -22,6 +22,7 @@ import ChatWidget from '../ui/ChatWidget.js';
 import BattleModal from '../ui/BattleModal.js';
 import playerStateService from '../services/PlayerStateService.js';
 import PostFXManager from '../modules/PostFXManager.js';
+import { getStageById } from '../config/Stages.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -98,22 +99,162 @@ export default class MenuScene extends Phaser.Scene {
     // --- CHAT ---
     this.chatWidget = new ChatWidget(this);
 
-    // --- DEBUG BYPASS ---
-    // Press ENTER to skip to GameScene
-    this.input.keyboard.on('keydown-ENTER', () => {
-        console.log('DEV START DETECTED (ENTER)');
-        this.scene.start(CST.SCENES.GAME, { userData: MOCK_USER });
-    });
-
-    // Hidden Button (Top Left Corner)
-    const devBtn = this.add.zone(0, 0, 100, 50).setOrigin(0).setInteractive();
-    devBtn.on('pointerdown', () => {
-         console.log('DEV START CLICKED');
-         this.scene.start(CST.SCENES.GAME, { userData: MOCK_USER });
-    });
+    // --- ADMIN / GOD MODE TOOLS ---
+    if (playerStateService.isAdmin) {
+      this.createAdminTools();
+    }
 
     // Apply Retro Filter
     PostFXManager.init(this);
+  }
+
+  createAdminTools() {
+    console.log('🌹 ADMIN TOOLS ACTIVATED 🌹');
+    const btn = this.add
+      .text(20, 100, '⚙️', { fontSize: '24px' })
+      .setInteractive({ useHandCursor: true });
+
+    btn.on('pointerdown', () => {
+      this.openGodPanel();
+    });
+  }
+
+  openGodPanel() {
+    if (this.godPanel) {
+      this.godPanel.destroy();
+      this.godPanel = null;
+      return;
+    }
+
+    const w = 300;
+    const h = 350;
+    const cx = this.scale.width / 2;
+    const cy = this.scale.height / 2;
+
+    this.godPanel = this.add.container(cx, cy).setDepth(9999);
+
+    // BG
+    const bg = createRetroPanel(this, 0, 0, w, h, 'dark');
+    this.godPanel.add(bg);
+
+    // Title
+    const title = this.add
+      .text(0, -h / 2 + 20, 'THE OVERSEER', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '16px',
+        color: '#ff0000',
+      })
+      .setOrigin(0.5);
+    this.godPanel.add(title);
+
+    // Buttons
+    let y = -h / 2 + 60;
+    const gap = 50;
+
+    // 1. +1000 Resources
+    const btn1 = createRetroButton(
+      this,
+      0,
+      y,
+      250,
+      40,
+      '+1000 XP & COINS',
+      'success',
+      () => {
+        playerStateService.addResources(1000, 1000);
+        this.bcoinText.setText(playerStateService.getUser().bcoin.toString());
+        // Refresh level text?
+        // For now just resource update is fine
+        SoundManager.play(this, 'coin_collect');
+      }
+    );
+    this.godPanel.add(btn1);
+
+    y += gap;
+
+    // 2. Reset Hero
+    const btn2 = createRetroButton(
+      this,
+      0,
+      y,
+      250,
+      40,
+      'RESET HERO LVL',
+      'danger',
+      () => {
+        const hero = this.registry.get('selectedHero');
+        if (hero) {
+          playerStateService.resetHero(hero.id);
+          SoundManager.play(this, 'powerup_collect');
+        }
+      }
+    );
+    this.godPanel.add(btn2);
+
+    y += gap;
+
+    // 3. God Mode Toggle
+    const isGod = playerStateService.godMode;
+    const btn3 = createRetroButton(
+      this,
+      0,
+      y,
+      250,
+      40,
+      `GOD MODE: ${isGod ? 'ON' : 'OFF'}`,
+      isGod ? 'primary' : 'neutral',
+      () => {
+        const newState = playerStateService.toggleGodMode();
+        // Update button text manually or recreate
+        // Simple way: Close and reopen or just accept toast
+        console.log('God Mode:', newState);
+        this.openGodPanel(); // Refresh
+      }
+    );
+    this.godPanel.add(btn3);
+
+    y += gap;
+
+    // 4. Stage 30 Skip
+    const btn4 = createRetroButton(
+      this,
+      0,
+      y,
+      250,
+      40,
+      'WARP TO BOSS (STG 30)',
+      'primary',
+      () => {
+        const stage30 = getStageById(30);
+        if (stage30) {
+          this.scene.start(CST.SCENES.GAME, {
+            stageConfig: stage30,
+            gameMode: 'solo',
+          });
+        } else {
+          console.error('Stage 30 not found');
+        }
+      }
+    );
+    this.godPanel.add(btn4);
+
+    y += gap;
+
+    // Close
+    const close = createRetroButton(
+      this,
+      0,
+      y,
+      100,
+      30,
+      'CLOSE',
+      'neutral',
+      () => {
+        this.godPanel.destroy();
+        this.godPanel = null;
+      }
+    );
+    this.godPanel.add(close);
   }
 
   async loadUserHero() {
@@ -131,8 +272,10 @@ export default class MenuScene extends Phaser.Scene {
         // Task Force: Load Selected Hero from User Data if available
         let hero = res.heroes[0];
         if (this.userData && this.userData.selectedHeroId) {
-            const found = res.heroes.find(h => h.id === this.userData.selectedHeroId);
-            if (found) hero = found;
+          const found = res.heroes.find(
+            (h) => h.id === this.userData.selectedHeroId
+          );
+          if (found) hero = found;
         }
 
         this.registry.set('selectedHero', hero);
@@ -158,52 +301,69 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createRewardPoolWidget(width) {
-      const container = this.add.container(width / 2, 90);
+    const container = this.add.container(width / 2, 90);
 
-      // Replaced Graphics with RetroPanel
-      const bg = createRetroPanel(this, 0, 0, 200, 30, 'dark');
+    // Replaced Graphics with RetroPanel
+    const bg = createRetroPanel(this, 0, 0, 200, 30, 'dark');
 
-      const label = this.add.text(0, -6, 'REWARD POOL', {
-          fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffd700'
-      }).setOrigin(0.5);
+    const label = this.add
+      .text(0, -6, 'REWARD POOL', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '8px',
+        fill: '#ffd700',
+      })
+      .setOrigin(0.5);
 
-      this.poolText = this.add.text(0, 6, 'Loading...', {
-          fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#fff'
-      }).setOrigin(0.5);
+    this.poolText = this.add
+      .text(0, 6, 'Loading...', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#fff',
+      })
+      .setOrigin(0.5);
 
-      this.trendArrow = this.add.text(85, 0, '-', {
-          fontSize: '12px', fill: '#00ff00'
-      }).setOrigin(0.5);
+    this.trendArrow = this.add
+      .text(85, 0, '-', {
+        fontSize: '12px',
+        fill: '#00ff00',
+      })
+      .setOrigin(0.5);
 
-      container.add([bg, label, this.poolText, this.trendArrow]);
+    container.add([bg, label, this.poolText, this.trendArrow]);
 
-      this.time.addEvent({ delay: 10000, callback: this.updateRewardPool, callbackScope: this, loop: true });
-      this.updateRewardPool();
+    this.time.addEvent({
+      delay: 10000,
+      callback: this.updateRewardPool,
+      callbackScope: this,
+      loop: true,
+    });
+    this.updateRewardPool();
   }
 
   async updateRewardPool() {
-      if (!this.poolText || !this.poolText.active) return;
-      try {
-          const res = await api.getRewardPool();
-          if (!this.sys || !this.scene) return;
-          if (res.success) {
-              const val = res.pool;
-              this.poolText.setText(`${val} BCOIN`);
+    if (!this.poolText || !this.poolText.active) return;
+    try {
+      const res = await api.getRewardPool();
+      if (!this.sys || !this.scene) return;
+      if (res.success) {
+        const val = res.pool;
+        this.poolText.setText(`${val} BCOIN`);
 
-              const prev = this.lastPoolValue !== undefined ? this.lastPoolValue : val;
-              if (val > prev) {
-                  this.trendArrow.setText('▲').setColor('#00ff00');
-              } else if (val < prev) {
-                  this.trendArrow.setText('▼').setColor('#ff0000');
-              } else {
-                  this.trendArrow.setText('-');
-                  this.trendArrow.setColor('#888888');
-              }
-              this.lastPoolValue = val;
-          }
-      } catch (e) {
-          console.warn(e);
+        const prev =
+          this.lastPoolValue !== undefined ? this.lastPoolValue : val;
+        if (val > prev) {
+          this.trendArrow.setText('▲').setColor('#00ff00');
+        } else if (val < prev) {
+          this.trendArrow.setText('▼').setColor('#ff0000');
+        } else {
+          this.trendArrow.setText('-');
+          this.trendArrow.setColor('#888888');
+        }
+        this.lastPoolValue = val;
       }
+    } catch (e) {
+      console.warn(e);
+    }
   }
 
   createTopBar(width) {
@@ -212,7 +372,14 @@ export default class MenuScene extends Phaser.Scene {
 
     // Retro Panel Background (Metal Style)
     // Centered at width/2, barHeight/2
-    const bg = createRetroPanel(this, width/2, barHeight/2, width, barHeight, 'metal');
+    const bg = createRetroPanel(
+      this,
+      width / 2,
+      barHeight / 2,
+      width,
+      barHeight,
+      'metal'
+    );
     container.add(bg);
 
     // --- LEFT: PLAYER INFO ---
@@ -249,11 +416,22 @@ export default class MenuScene extends Phaser.Scene {
     const progress = requiredXp > 0 ? Math.min(accountXp / requiredXp, 1) : 0;
 
     // Account Level (Lore Update)
-    const levelText = this.add.text(70 + nameText.width + 10, 25, LanguageManager.get('account_level', {level: accountLevel}, `Lvl ${accountLevel}`), {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '10px',
-        fill: '#00ff00',
-    }).setOrigin(0, 0.5);
+    const levelText = this.add
+      .text(
+        70 + nameText.width + 10,
+        25,
+        LanguageManager.get(
+          'account_level',
+          { level: accountLevel },
+          `Lvl ${accountLevel}`
+        ),
+        {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '10px',
+          fill: '#00ff00',
+        }
+      )
+      .setOrigin(0, 0.5);
 
     // XP Bar
     const xpY = 45;
@@ -308,7 +486,13 @@ export default class MenuScene extends Phaser.Scene {
       this.walletModal.open();
     });
 
-    container.add([goldIcon, this.goldText, bcoinBg, bcoinIcon, this.bcoinText]);
+    container.add([
+      goldIcon,
+      this.goldText,
+      bcoinBg,
+      bcoinIcon,
+      this.bcoinText,
+    ]);
 
     // --- FAR RIGHT: BUTTONS (Icons) ---
     const btnY = 30;
@@ -394,7 +578,14 @@ export default class MenuScene extends Phaser.Scene {
     const container = this.add.container(0, height - dockHeight);
 
     // Background (Metal Panel)
-    const bg = createRetroPanel(this, width/2, dockHeight/2, width, dockHeight, 'metal');
+    const bg = createRetroPanel(
+      this,
+      width / 2,
+      dockHeight / 2,
+      width,
+      dockHeight,
+      'metal'
+    );
     container.add(bg);
 
     const btnY = dockHeight / 2;
@@ -405,41 +596,91 @@ export default class MenuScene extends Phaser.Scene {
 
     // Calculated Centers for 480px width
     // Gaps approx 10px
-    const x1 = 43;   // Bestiary
-    const x2 = 138;  // Heroes
-    const x3 = 240;  // Play
-    const x4 = 342;  // Forge
-    const x5 = 437;  // Shop
+    const x1 = 43; // Bestiary
+    const x2 = 138; // Heroes
+    const x3 = 240; // Play
+    const x4 = 342; // Forge
+    const x5 = 437; // Shop
 
     // BESTIARY (Purple) - Text Only
-    const bestiaryBtn = createRetroButton(this, x1, btnY, sideBtnW, 50, 'BESTIARY', 'neutral', () => {
+    const bestiaryBtn = createRetroButton(
+      this,
+      x1,
+      btnY,
+      sideBtnW,
+      50,
+      'BESTIARY',
+      'neutral',
+      () => {
         SoundManager.playClick(this);
         this.bestiaryModal.open();
-    }, null); // Removed Icon
+      },
+      null
+    ); // Removed Icon
 
     // HEROES (Cyan) - Text Only
-    const heroesBtn = createRetroButton(this, x2, btnY, sideBtnW, 50, 'HEROES', 'neutral', () => {
+    const heroesBtn = createRetroButton(
+      this,
+      x2,
+      btnY,
+      sideBtnW,
+      50,
+      'HEROES',
+      'neutral',
+      () => {
         SoundManager.playClick(this);
         this.heroesModal.open();
-    }, null); // Removed Icon
+      },
+      null
+    ); // Removed Icon
 
     // PLAY (Primary/Yellow) - Icon + Text
-    const playBtn = createRetroButton(this, x3, btnY, playBtnW, 60, 'PLAY', 'primary', () => {
+    const playBtn = createRetroButton(
+      this,
+      x3,
+      btnY,
+      playBtnW,
+      60,
+      'PLAY',
+      'primary',
+      () => {
         SoundManager.playClick(this);
         this.battleModal.open();
-    }, 'icon_play');
+      },
+      'icon_play'
+    );
 
     // FORGE (Orange) - Text Only
-    const forgeBtn = createRetroButton(this, x4, btnY, sideBtnW, 50, 'FORGE', 'danger', () => {
+    const forgeBtn = createRetroButton(
+      this,
+      x4,
+      btnY,
+      sideBtnW,
+      50,
+      'FORGE',
+      'danger',
+      () => {
         SoundManager.playClick(this);
         this.forgeModal.open();
-    }, null); // Removed Icon
+      },
+      null
+    ); // Removed Icon
 
     // SHOP (Green) - Text Only
-    const shopBtn = createRetroButton(this, x5, btnY, sideBtnW, 50, 'SHOP', 'success', () => {
+    const shopBtn = createRetroButton(
+      this,
+      x5,
+      btnY,
+      sideBtnW,
+      50,
+      'SHOP',
+      'success',
+      () => {
         SoundManager.playClick(this);
         this.shopModal.open();
-    }, null); // Removed Icon
+      },
+      null
+    ); // Removed Icon
 
     container.add([bestiaryBtn, heroesBtn, playBtn, forgeBtn, shopBtn]);
   }
@@ -449,18 +690,13 @@ export default class MenuScene extends Phaser.Scene {
     const addr = this.userData.walletAddress;
     const shortAddr = `${addr.substring(0, 6)}...`;
     if (this.userData.guildTag) {
-        return `[${this.userData.guildTag}] ${shortAddr}`;
+      return `[${this.userData.guildTag}] ${shortAddr}`;
     }
     return shortAddr;
   }
 
   handleBalanceUpdate(data) {
-    if (
-      !this.scene ||
-      !this.sys ||
-      !this.bcoinText ||
-      !this.bcoinText.active
-    ) {
+    if (!this.scene || !this.sys || !this.bcoinText || !this.bcoinText.active) {
       return;
     }
     if (data.error) {

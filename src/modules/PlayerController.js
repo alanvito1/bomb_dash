@@ -76,26 +76,32 @@ export default class PlayerController {
 
     // Proficiency: Agility
     if (isMoving) {
-        // Distance = speed (pixels/sec) * delta (ms) / 1000
-        const distance = speed * (delta / 1000);
-        this.scene.sessionDistance = (this.scene.sessionDistance || 0) + distance;
+      // Distance = speed (pixels/sec) * delta (ms) / 1000
+      const distance = speed * (delta / 1000);
+      this.scene.sessionDistance = (this.scene.sessionDistance || 0) + distance;
 
-        // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
-        const startXp = this.scene.playerStats.agility_xp || 0;
-        const currentDistance = this.scene.sessionDistance;
-        const currentXp = startXp + Math.floor(currentDistance / 100); // 100 distance = 1 XP
+      // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
+      const startXp = this.scene.playerStats.agility_xp || 0;
+      const currentDistance = this.scene.sessionDistance;
+      const currentXp = startXp + Math.floor(currentDistance / 100); // 100 distance = 1 XP
 
-        const prevDistance = currentDistance - distance;
-        const prevXp = startXp + Math.floor(prevDistance / 100);
+      const prevDistance = currentDistance - distance;
+      const prevXp = startXp + Math.floor(prevDistance / 100);
 
-        // Calculate Levels
-        const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
-        const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
+      // Calculate Levels
+      const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
+      const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
 
-        if (currentLevel > prevLevel) {
-            createFloatingText(this.scene, this.player.x, this.player.y - 40, 'AGILITY UP!', '#00ff00');
-            SoundManager.play(this.scene, 'powerup_collect');
-        }
+      if (currentLevel > prevLevel) {
+        createFloatingText(
+          this.scene,
+          this.player.x,
+          this.player.y - 40,
+          'AGILITY UP!',
+          '#00ff00'
+        );
+        SoundManager.play(this.scene, 'powerup_collect');
+      }
     }
 
     // Impede movimento vertical

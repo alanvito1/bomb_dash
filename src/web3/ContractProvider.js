@@ -100,11 +100,13 @@ class ContractProvider {
             this.addresses
           );
         } else {
-          throw new Error(data.message || 'Failed to fetch contract addresses.');
+          throw new Error(
+            data.message || 'Failed to fetch contract addresses.'
+          );
         }
       } catch (err) {
         if (err.name === 'AbortError') {
-           throw new Error('ContractProvider initialization timed out (5s).');
+          throw new Error('ContractProvider initialization timed out (5s).');
         }
         throw err;
       }

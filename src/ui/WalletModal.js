@@ -158,12 +158,12 @@ export default class WalletModal extends UIModal {
     const { balance } = await bcoinService.getBalance(true); // Force update to be fresh
     const val = parseFloat(balance);
     if (!isNaN(val)) {
-        this.balanceText.setText(val.toFixed(2));
-        const usd = (val * 0.25).toFixed(2);
-        this.usdText.setText(`≈ $${usd} USD`);
+      this.balanceText.setText(val.toFixed(2));
+      const usd = (val * 0.25).toFixed(2);
+      this.usdText.setText(`≈ $${usd} USD`);
     } else {
-        this.balanceText.setText("Error");
-        this.usdText.setText("-");
+      this.balanceText.setText('Error');
+      this.usdText.setText('-');
     }
   }
 }

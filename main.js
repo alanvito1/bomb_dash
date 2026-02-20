@@ -12,6 +12,8 @@ import api from './src/api.js';
 import nftService from './src/web3/nft-service.js';
 import bcoinService from './src/web3/bcoin-service.js';
 import GameEventEmitter from './src/utils/GameEventEmitter.js';
+import playerStateService from './src/services/PlayerStateService.js'; // Imported Service
+
 import TermsScene from './src/scenes/TermsScene.js';
 import HomeScene from './src/scenes/HomeScene.js';
 import LoadingScene from './src/scenes/LoadingScene.js';
@@ -33,35 +35,29 @@ import TournamentBracketScene from './src/scenes/TournamentBracketScene.js';
 import OverlayManager from './src/ui/OverlayManager.js';
 
 // --- Hardcoded Debug Mode ---
-// This constant provides a simple, reliable way to toggle debug features
-// without relying on the broken Vite environment variable system.
 window.DEBUG_MODE = true;
 // --------------------------
 
 // ⚙️ Configurações gerais do Phaser
 const config = {
   type: Phaser.AUTO,
-  parent: 'game-container', // Ensure canvas is attached to our controlled container
+  parent: 'game-container',
   width: 480,
   height: 800,
   backgroundColor: '#050505',
   physics: {
     default: 'arcade',
     arcade: {
-      // Definitive Fix: Set debug mode directly and safely based on the global constant.
-      // This removes the unreliable preBoot callback that was causing the crash.
       debug: window.DEBUG_MODE,
       gravity: { y: 0 },
     },
   },
   dom: {
     createContainer: true,
-    parent: 'phaser-dom-container', // Especifica o contêiner pai
+    parent: 'phaser-dom-container',
   },
   scene: [
-    // NEW ENTRY POINT: HomeScene provides a lightweight landing page.
-    HomeScene,
-    // LoadingScene follows, handling heavy asset loading and initialization.
+    HomeScene, // Entry
     LoadingScene,
     TermsScene,
     StartScene,
@@ -92,30 +88,36 @@ const config = {
 };
 
 // 🎬 Start Game Logic
-window.launchGame = function () {
+window.launchGame = async function () {
   console.log(
     '%cCreated with passion by AVRE 🌹',
     'color: #FF5F1F; font-weight: bold; font-size: 16px;'
   );
   console.log('🚀 Launching Phaser...');
 
+  // Initialize Player State (Guest Mode by default if no auth)
+  await playerStateService.init();
+
   // 🚀 Criação da instância do jogo
   const game = new Phaser.Game(config);
-  window.game = game; // Expose for testing and automation
+  window.game = game;
+
+  // Pre-seed Registry for "Direct to Game" Flow
+  // We can't access registry immediately because scenes aren't started.
+  // We will let LoadingScene handle the reading of PlayerStateService.
 };
 
 // Esperar o DOM estar completamente carregado
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM loaded. Waiting for user interaction...');
 
-  // Set up wallet event listeners as the app starts
   setupWalletListeners();
 
-  // Expose services for E2E testing
   window.nftService = nftService;
   window.api = api;
   window.bcoinService = bcoinService;
   window.GameEventEmitter = GameEventEmitter;
+  window.playerStateService = playerStateService; // Expose
 
   // Setup Landing Page Button
   const startBtn = document.getElementById('start-game-btn');
@@ -124,56 +126,29 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('🚀 Entering Arcade Mode...');
       const landingPage = document.getElementById('landing-page');
 
-      // Hide Landing Page
       if (landingPage) {
         landingPage.style.display = 'none';
       }
 
-      // Initialize Overlay Manager
       try {
         const overlayManager = new OverlayManager();
+        window.overlayManager = overlayManager; // Expose globally for GameScene triggers
         overlayManager.init();
       } catch (error) {
         console.error('CRITICAL: Failed to initialize Overlay.', error);
-        alert('System Error: Overlay failed to load. Checking console.');
-        // Fallback or recovery could go here
+        alert('System Error: Overlay failed to load.');
       }
     });
   }
 
-  // 🧪 Captura de erros em tempo de execução (útil para debug em produção)
   window.onerror = function (msg, url, lineNo, columnNo, error) {
     console.warn('Erro capturado no jogo: ' + msg);
-    console.error(
-      'Detalhes do Erro:',
-      msg,
-      'Arquivo:',
-      url,
-      'Linha:',
-      lineNo,
-      'Coluna:',
-      columnNo,
-      'Erro Obj:',
-      error
-    );
   };
 });
 
-/**
- * Sets up listeners for critical wallet events like account or network changes.
- * To ensure the application state stays synchronized with the user's wallet,
- * the page is reloaded upon detection of these events.
- */
 function setupWalletListeners() {
   if (window.ethereum) {
-    window.ethereum.on('accountsChanged', (accounts) => {
-      console.log('Account changed, reloading page...');
-      window.location.reload();
-    });
-
-    window.ethereum.on('chainChanged', (chainId) => {
-      console.log('Network changed, reloading page...');
-      window.location.reload();
-    });
+    window.ethereum.on('accountsChanged', () => window.location.reload());
+    window.ethereum.on('chainChanged', () => window.location.reload());
   }
 }

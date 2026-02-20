@@ -163,8 +163,8 @@ router.get('/me', verifyToken, async (req, res) => {
 
     // 4. Fetch Guild Info
     const guildMember = await db.GuildMember.findOne({
-        where: { user_id: user.id },
-        include: [{ model: db.Guild, attributes: ['tag', 'name'] }]
+      where: { user_id: user.id },
+      include: [{ model: db.Guild, attributes: ['tag', 'name'] }],
     });
 
     // 5. Combine all data into a single response object
@@ -179,7 +179,7 @@ router.get('/me', verifyToken, async (req, res) => {
         highest_wave_reached: checkpoint,
         heroes: heroes, // Include the list of heroes
         guildTag: guildMember ? guildMember.Guild.tag : null,
-        guildName: guildMember ? guildMember.Guild.name : null
+        guildName: guildMember ? guildMember.Guild.name : null,
       },
     });
   } catch (error) {

@@ -70,7 +70,7 @@ export default class HUDScene extends Phaser.Scene {
         align: 'center',
         fontSize: '12px',
         stroke: '#FF5F1F',
-        strokeThickness: 4
+        strokeThickness: 4,
       })
       .setOrigin(0.5, 0);
 
@@ -81,7 +81,7 @@ export default class HUDScene extends Phaser.Scene {
         fill: '#ffffff',
         align: 'center',
         stroke: '#FF5F1F',
-        strokeThickness: 4
+        strokeThickness: 4,
       })
       .setOrigin(0.5, 0);
 
@@ -165,34 +165,58 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   createHealthBar(x, y) {
-      // Container
-      this.healthBarContainer = this.add.container(x, y);
+    // Container
+    this.healthBarContainer = this.add.container(x, y);
 
-      // Label
-      const label = this.add.text(0, 8, 'HP', {
-          fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#00FFFF'
-      }).setOrigin(0, 0.5);
+    // Label
+    const label = this.add
+      .text(0, 8, 'HP', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '12px',
+        fill: '#00FFFF',
+      })
+      .setOrigin(0, 0.5);
 
-      // Bar Background (Black with Border)
-      const barX = 30;
-      const barW = 150;
-      const barH = 16;
+    // Bar Background (Black with Border)
+    const barX = 30;
+    const barW = 150;
+    const barH = 16;
 
-      this.healthBarBg = this.add.nineslice(barX + barW/2, 8, 'ui_panel', 0, barW, barH, 5, 5, 5, 5);
-      this.healthBarBg.setTint(0x00FFFF); // Cyan Border
+    this.healthBarBg = this.add.nineslice(
+      barX + barW / 2,
+      8,
+      'ui_panel',
+      0,
+      barW,
+      barH,
+      5,
+      5,
+      5,
+      5
+    );
+    this.healthBarBg.setTint(0x00ffff); // Cyan Border
 
-      // Bar Fill (Graphics)
-      this.healthBarFill = this.add.graphics();
+    // Bar Fill (Graphics)
+    this.healthBarFill = this.add.graphics();
 
-      // Text Value
-      this.healthValueText = this.add.text(barX + barW/2, 8, '', {
-           fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff'
-      }).setOrigin(0.5);
+    // Text Value
+    this.healthValueText = this.add
+      .text(barX + barW / 2, 8, '', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '8px',
+        fill: '#ffffff',
+      })
+      .setOrigin(0.5);
 
-      this.healthBarContainer.add([label, this.healthBarBg, this.healthBarFill, this.healthValueText]);
+    this.healthBarContainer.add([
+      label,
+      this.healthBarBg,
+      this.healthBarFill,
+      this.healthValueText,
+    ]);
 
-      // Store dimensions for update
-      this.healthBarDims = { x: barX, y: 0, w: barW, h: barH };
+    // Store dimensions for update
+    this.healthBarDims = { x: barX, y: 0, w: barW, h: barH };
   }
 
   updateHealth({ health, maxHealth }) {
@@ -203,82 +227,99 @@ export default class HUDScene extends Phaser.Scene {
 
     this.healthBarFill.clear();
     // Fill
-    this.healthBarFill.fillStyle(0x00FFFF, 1);
+    this.healthBarFill.fillStyle(0x00ffff, 1);
     this.healthBarFill.fillRect(x + 2, y + 2, (w - 4) * pct, h - 4);
 
     this.healthValueText.setText(`${Math.max(0, health)}/${maxHealth}`);
   }
 
   createBossHealthBar() {
-      const w = 300;
-      const h = 24;
-      const x = this.scale.width / 2;
-      const y = 80; // Below HUD
+    const w = 300;
+    const h = 24;
+    const x = this.scale.width / 2;
+    const y = 80; // Below HUD
 
-      this.bossHealthContainer = this.add.container(x, y);
-      this.bossHealthContainer.setVisible(false);
+    this.bossHealthContainer = this.add.container(x, y);
+    this.bossHealthContainer.setVisible(false);
 
-      // Label
-      const label = this.add.text(0, -20, 'BOSS', {
-          fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FF5F1F', stroke: '#000000', strokeThickness: 4
-      }).setOrigin(0.5);
+    // Label
+    const label = this.add
+      .text(0, -20, 'BOSS', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '12px',
+        fill: '#FF5F1F',
+        stroke: '#000000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
 
-      // Bg
-      const bg = this.add.nineslice(0, 0, 'ui_panel', 0, w, h, 8, 8, 8, 8);
-      bg.setTint(0xFF5F1F); // Orange Border
+    // Bg
+    const bg = this.add.nineslice(0, 0, 'ui_panel', 0, w, h, 8, 8, 8, 8);
+    bg.setTint(0xff5f1f); // Orange Border
 
-      // Fill
-      this.bossHealthFill = this.add.graphics();
+    // Fill
+    this.bossHealthFill = this.add.graphics();
 
-      // Text
-      this.bossHealthText = this.add.text(0, 0, '', {
-          fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffffff'
-      }).setOrigin(0.5);
+    // Text
+    this.bossHealthText = this.add
+      .text(0, 0, '', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#ffffff',
+      })
+      .setOrigin(0.5);
 
-      this.bossHealthContainer.add([label, bg, this.bossHealthFill, this.bossHealthText]);
-      this.bossHealthDims = { w, h };
+    this.bossHealthContainer.add([
+      label,
+      bg,
+      this.bossHealthFill,
+      this.bossHealthText,
+    ]);
+    this.bossHealthDims = { w, h };
   }
 
   showBossHealth({ name, maxHealth }) {
-      if (this.bossHealthContainer) {
-          this.bossHealthContainer.setVisible(true);
-          this.bossHealthText.setText(`${maxHealth}/${maxHealth}`);
-          this.updateBossHealth({ health: maxHealth, maxHealth });
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.setVisible(true);
+      this.bossHealthText.setText(`${maxHealth}/${maxHealth}`);
+      this.updateBossHealth({ health: maxHealth, maxHealth });
 
-          // Animate in?
-          this.bossHealthContainer.setAlpha(0);
-          this.tweens.add({
-              targets: this.bossHealthContainer,
-              alpha: 1,
-              duration: 500
-          });
-      }
+      // Animate in?
+      this.bossHealthContainer.setAlpha(0);
+      this.tweens.add({
+        targets: this.bossHealthContainer,
+        alpha: 1,
+        duration: 500,
+      });
+    }
   }
 
   updateBossHealth({ health, maxHealth }) {
-      if (!this.bossHealthContainer || !this.bossHealthContainer.visible) return;
+    if (!this.bossHealthContainer || !this.bossHealthContainer.visible) return;
 
-      const pct = Phaser.Math.Clamp(health / maxHealth, 0, 1);
-      const { w, h } = this.bossHealthDims;
+    const pct = Phaser.Math.Clamp(health / maxHealth, 0, 1);
+    const { w, h } = this.bossHealthDims;
 
-      this.bossHealthFill.clear();
-      this.bossHealthFill.fillStyle(0xFF5F1F, 1);
-      // Centered fill requires offset logic or just fillRect relative to center
-      // Bg is centered at 0,0. Left is -w/2.
-      this.bossHealthFill.fillRect(-w/2 + 4, -h/2 + 4, (w - 8) * pct, h - 8);
+    this.bossHealthFill.clear();
+    this.bossHealthFill.fillStyle(0xff5f1f, 1);
+    // Centered fill requires offset logic or just fillRect relative to center
+    // Bg is centered at 0,0. Left is -w/2.
+    this.bossHealthFill.fillRect(-w / 2 + 4, -h / 2 + 4, (w - 8) * pct, h - 8);
 
-      this.bossHealthText.setText(`${Math.max(0, Math.ceil(health))}/${maxHealth}`);
+    this.bossHealthText.setText(
+      `${Math.max(0, Math.ceil(health))}/${maxHealth}`
+    );
   }
 
   hideBossHealth() {
-      if (this.bossHealthContainer) {
-          this.tweens.add({
-              targets: this.bossHealthContainer,
-              alpha: 0,
-              duration: 500,
-              onComplete: () => this.bossHealthContainer.setVisible(false)
-          });
-      }
+    if (this.bossHealthContainer) {
+      this.tweens.add({
+        targets: this.bossHealthContainer,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => this.bossHealthContainer.setVisible(false),
+      });
+    }
   }
 
   updateXP({ accountLevel, accountXP }) {

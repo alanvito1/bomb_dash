@@ -144,7 +144,7 @@ export default class SoundManager {
         const data = buffer.getChannelData(0);
 
         for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
+          data[i] = Math.random() * 2 - 1;
         }
 
         const noise = ctx.createBufferSource();
@@ -228,7 +228,11 @@ export default class SoundManager {
         osc2.stop(now + 0.4);
       }
       // --- ERROR (Locked/Buzz): Low Sawtooth ---
-      else if (key.includes('error') || key.includes('buzz') || key.includes('locked')) {
+      else if (
+        key.includes('error') ||
+        key.includes('buzz') ||
+        key.includes('locked')
+      ) {
         const osc = ctx.createOscillator();
         osc.connect(gain);
 
@@ -243,7 +247,11 @@ export default class SoundManager {
         osc.stop(now + 0.2);
       }
       // --- POWERUP (Bonus): Sine Wave Rising ---
-      else if (key.includes('powerup') || key.includes('wave') || key.includes('coin')) {
+      else if (
+        key.includes('powerup') ||
+        key.includes('wave') ||
+        key.includes('coin')
+      ) {
         const osc = ctx.createOscillator();
         osc.connect(gain);
 

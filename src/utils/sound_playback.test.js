@@ -16,17 +16,29 @@ global.AudioContext = class {
       start: vi.fn(),
       stop: vi.fn(),
       type: '',
-      frequency: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }
+      frequency: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
     };
   }
   createGain() {
     return {
       connect: vi.fn(),
-      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
     };
   }
-  get currentTime() { return 0; }
-  get destination() { return {}; }
+  get currentTime() {
+    return 0;
+  }
+  get destination() {
+    return {};
+  }
 };
 
 describe('SoundManager Playback & Safety', () => {
@@ -43,14 +55,14 @@ describe('SoundManager Playback & Safety', () => {
     mockScene = {
       cache: {
         audio: {
-          exists: vi.fn()
-        }
+          exists: vi.fn(),
+        },
       },
       sound: {
         add: vi.fn(),
         volume: 1,
-        context: new AudioContext()
-      }
+        context: new AudioContext(),
+      },
     };
   });
 
@@ -81,13 +93,16 @@ describe('SoundManager Playback & Safety', () => {
     // Should not throw
     expect(() => SoundManager.play(mockScene, 'existing_sound')).not.toThrow();
 
-    expect(mockScene.sound.add).toHaveBeenCalledWith('existing_sound', expect.any(Object));
+    expect(mockScene.sound.add).toHaveBeenCalledWith(
+      'existing_sound',
+      expect.any(Object)
+    );
   });
 
   it('play() should play sound normally if exists and add succeeds', () => {
     const mockSound = {
       play: vi.fn(),
-      isDecoded: true
+      isDecoded: true,
     };
     mockScene.cache.audio.exists.mockReturnValue(true);
     mockScene.sound.add.mockReturnValue(mockSound);

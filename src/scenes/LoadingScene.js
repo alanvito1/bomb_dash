@@ -4,17 +4,17 @@ import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import AssetLoader from '../utils/AssetLoader.js';
 import { MockHeroes } from '../config/MockNFTData.js';
+import playerStateService from '../services/PlayerStateService.js';
+import { Stages } from '../config/Stages.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
     super('LoadingScene');
-    console.log('✅ LoadingScene: Constructor has been called!');
     this.contractsInitializedPromise = null;
   }
 
   preload() {
     console.log('🔄 LoadingScene: Preload is starting...');
-    // --- E2E Test Reliability Fix ---
     LanguageManager.init(this);
     this.contractsInitializedPromise = contractProvider.initialize();
 
@@ -33,19 +33,8 @@ export default class LoadingScene extends Phaser.Scene {
       .text(centerX, centerY - 80, 'ESTABLISHING LINK...', textStyle)
       .setOrigin(0.5);
 
-    const loadingMessages = [
-      'Calibrating Bombs...',
-      'Mining BCOIN...',
-      'Summoning Heroes...',
-      'Synchronizing Blockchain...',
-      'Loading Pixel Assets...',
-      'Generating World...',
-    ];
-    const randomMsg =
-      loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-
     const loadingText = this.add
-      .text(centerX, centerY + 40, randomMsg, {
+      .text(centerX, centerY + 40, 'Loading Assets...', {
         ...textStyle,
         fontSize: '10px',
         color: '#aaaaaa',
@@ -55,7 +44,7 @@ export default class LoadingScene extends Phaser.Scene {
     // Progress Bar
     const progressBox = this.add.graphics();
     progressBox.fillStyle(0x050505, 1);
-    progressBox.lineStyle(2, 0xFF5F1F, 1);
+    progressBox.lineStyle(2, 0xff5f1f, 1);
     progressBox.fillRoundedRect(centerX - 150, centerY - 10, 300, 20, 4);
     progressBox.strokeRoundedRect(centerX - 150, centerY - 10, 300, 20, 4);
 
@@ -63,7 +52,7 @@ export default class LoadingScene extends Phaser.Scene {
 
     this.load.on('progress', (value) => {
       progressBar.clear();
-      progressBar.fillStyle(0xFF5F1F, 1);
+      progressBar.fillStyle(0xff5f1f, 1);
       progressBar.fillRoundedRect(
         centerX - 148,
         centerY - 8,
@@ -75,24 +64,20 @@ export default class LoadingScene extends Phaser.Scene {
 
     // --- ROBUST FALLBACK SYSTEM ---
     this.load.on('loaderror', (fileObj) => {
-      console.warn('⚠️ Asset failed to load, creating fallback:', fileObj.key, fileObj.url);
+      console.warn('⚠️ Asset failed to load, creating fallback:', fileObj.key);
       if (fileObj.type === 'image' || fileObj.type === 'spritesheet') {
         const key = fileObj.key;
         if (!this.textures.exists(key)) {
-            // Generate a 32x32 Placeholder Texture
-            // Color code based on type for visual debugging
-            let color = 0xff00ff; // Magenta = Error
-            if (key.includes('hero')) color = 0x00ff00; // Green = Hero
-            if (key.includes('enemy')) color = 0xff0000; // Red = Enemy
-            if (key.includes('boss')) color = 0x880000; // Dark Red = Boss
-            if (key.includes('item') || key.includes('powerup')) color = 0xffff00; // Yellow = Item
+          let color = 0xff00ff;
+          if (key.includes('hero')) color = 0x00ff00;
+          if (key.includes('enemy')) color = 0xff0000;
+          if (key.includes('boss')) color = 0x880000;
+          if (key.includes('item')) color = 0xffff00;
 
-            const graphics = this.make.graphics({x:0, y:0, add:false});
-            graphics.fillStyle(color);
-            graphics.fillRect(0,0,32,32);
-            graphics.lineStyle(2, 0xffffff);
-            graphics.strokeRect(0,0,32,32);
-            graphics.generateTexture(key, 32, 32);
+          const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+          graphics.fillStyle(color);
+          graphics.fillRect(0, 0, 32, 32);
+          graphics.generateTexture(key, 32, 32);
         }
       }
     });
@@ -103,190 +88,166 @@ export default class LoadingScene extends Phaser.Scene {
       'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
     );
 
-    // 1. Dynamic Hero Loading (Optimization: Load only user heroes)
-    console.log('🔄 Loading Heroes from MockData...');
-    MockHeroes.forEach(hero => {
-        const { skin, color } = hero.visuals;
-        const key = `hero_s${skin}_c${color}`;
-        const path = `assets/heroes/hero_s${skin}_c${color}.png`;
-        this.load.image(key, path);
-        // Also map standard hero keys if needed
-        if (hero.sprite_name && hero.sprite_name !== key) {
-           // We will handle sprite_name remapping in GameScene or via a helper,
-           // but for now, let's load the asset.
-        }
+    // Heroes
+    MockHeroes.forEach((hero) => {
+      const { skin, color } = hero.visuals;
+      this.load.image(
+        `hero_s${skin}_c${color}`,
+        `assets/heroes/hero_s${skin}_c${color}.png`
+      );
     });
-    // Load Legacy/Default Heroes as fallback
-    this.load.image('ninja_hero', 'assets/heroes/hero_s1_c2.png'); // Default Ninja
-    this.load.image('witch_hero', 'assets/heroes/hero_s5_c4.png'); // Default Witch
+    this.load.image('ninja_hero', 'assets/heroes/hero_s1_c2.png');
+    this.load.image('witch_hero', 'assets/heroes/hero_s5_c4.png');
 
-    // 2. Enemies
+    // Enemies & Bosses
     for (let i = 1; i <= 5; i++) {
-        this.load.image(`enemy${i}`, `assets/enemies/enemy${i}.png`);
+      this.load.image(`enemy${i}`, `assets/enemies/enemy${i}.png`);
     }
-    // Map generic 'enemy' to enemy1 for backward compatibility
     this.load.image('enemy', 'assets/enemies/enemy1.png');
-
-    // 3. Bosses (Standardized Keys)
     this.load.image('boss_robot', 'assets/bosses/Robot/robot_front-(1).png');
     this.load.image('boss_tank', 'assets/bosses/boss_tank/down (1).png');
-    this.load.image('boss_golzilla', 'assets/bosses/golzilla/golzilla_small_front (1).png');
+    this.load.image(
+      'boss_golzilla',
+      'assets/bosses/golzilla/golzilla_small_front (1).png'
+    );
     this.load.image('boss_soldier', 'assets/bosses/soldier/soldier (1).png');
     this.load.image('boss5', 'assets/bosses/boss5.png');
 
-    // 4. Powerups
-    const powerups = [
-        { key: 'rapid_fire', file: 'powerup1.png' },
-        { key: 'multi_shot', file: 'powerup2.png' },
-        { key: 'power_bomb', file: 'powerup3.png' },
-        { key: 'mega_bomb', file: 'powerup4.png' },
-        { key: 'energy_shield', file: 'powerup5.png' }
-    ];
-    powerups.forEach(p => {
-        this.load.image(p.key, `assets/items/powerups/${p.file}`);
-    });
-
-    // 5. VFX & Projectiles
+    // VFX & Items
     this.load.image('bomb', 'assets/vfx/bomb.png');
-    this.load.spritesheet('explosion_sheet', 'assets/vfx/explosion_sheet.png', { frameWidth: 32, frameHeight: 32 });
-    // Fallback if sheet is missing, load raw and we'll slice it? No, raw is 160x32, Phaser handles sheets well.
-    // Ensure path matches Inventory: public/assets/vfx/explosion.png (Wait, inventory said explosion.png)
-    // Checking memory: "The explosion texture is generated as 'explosion_sheet' ... source asset is .../explosion.png"
-    // The previous loader loaded from icons/explosion_sheet.png.
-    // I need to be careful here. I will try loading 'assets/vfx/explosion.png' as a spritesheet.
-    this.load.spritesheet('explosion', 'assets/vfx/explosion.png', { frameWidth: 32, frameHeight: 32 });
-
-    // 6. Backgrounds & UI
-    this.load.image('floor_grid', 'assets/backgrounds/menu_bg_vertical.png'); // Temp grid
+    this.load.spritesheet('explosion_sheet', 'assets/vfx/explosion_sheet.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet('explosion', 'assets/vfx/explosion.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.image('floor_grid', 'assets/backgrounds/menu_bg_vertical.png');
     for (let i = 1; i <= 5; i++) {
-        this.load.image(`bg${i}`, `assets/backgrounds/bg${i}.png`);
+      this.load.image(`bg${i}`, `assets/backgrounds/bg${i}.png`);
     }
-    this.load.image('menu_bg_vertical', 'assets/backgrounds/menu_bg_vertical.png');
+    this.load.image(
+      'menu_bg_vertical',
+      'assets/backgrounds/menu_bg_vertical.png'
+    );
 
-    // UI Icons
     const uiIcons = [
-        'btn_menu', 'btn_pause'
+      'btn_menu',
+      'btn_pause',
+      'icon_heroes',
+      'icon_play',
+      'icon_shop',
+      'icon_forge',
+      'icon_summoner',
+      'icon_gold',
+      'icon_bcoin',
+      'icon_avatar',
     ];
-    uiIcons.forEach(icon => {
+    uiIcons.forEach((icon) => {
+      if (!icon.startsWith('assets'))
         this.load.image(icon, `assets/ui/${icon}.png`);
     });
-
-    // New Menu Icons (Task Force: UI Polish)
+    // Fix paths for new icons
     this.load.image('icon_heroes', 'assets/icons/HeroSIcon.png');
     this.load.image('icon_play', 'assets/icons/shield_lightning.png');
     this.load.image('icon_shop', 'assets/icons/token.png');
     this.load.image('icon_forge', 'assets/icons/bhouse.webp');
     this.load.image('icon_summoner', 'assets/icons/Icon_L.png');
-
-    // Resource Icons
     this.load.image('icon_gold', 'assets/icons/token.png');
     this.load.image('icon_bcoin', 'assets/icons/sen_token.png');
-    this.load.image('icon_avatar', 'assets/icons/Icon_L.png'); // Default avatar
 
-    // Load Rarity/Leaderboard assets if needed later (skipping for now to save bandwidth/time, will load on demand or in Menu)
+    const powerups = [
+      'rapid_fire',
+      'multi_shot',
+      'power_bomb',
+      'mega_bomb',
+      'energy_shield',
+    ];
+    powerups.forEach((p, i) =>
+      this.load.image(p, `assets/items/powerups/powerup${i + 1}.png`)
+    );
 
     this.load.on('complete', () => {
       console.log('✅ All assets finished loading.');
-
-      // --- ASSET RECOVERY SYSTEM ---
-      // Checks if critical keys exist, generates blocks
       AssetLoader.ensureAssets(this);
-
-      const handleFontLoaded = () => {
-        this.checkSessionAndProceed(loadingText);
-      };
-
       if (window.WebFont) {
         WebFont.load({
           google: { families: ['Press Start 2P'] },
-          active: () => {
-            console.log('✅ Custom font "Press Start 2P" loaded.');
-            handleFontLoaded();
-          },
-          inactive: () => {
-            console.error('🔥 Failed to load custom font.');
-            handleFontLoaded();
-          },
+          active: () => this.checkSessionAndProceed(loadingText),
+          inactive: () => this.checkSessionAndProceed(loadingText),
         });
       } else {
-        handleFontLoaded();
+        this.checkSessionAndProceed(loadingText);
       }
     });
   }
 
   async checkSessionAndProceed(loadingText) {
+    loadingText.setText('INITIALIZING SYSTEM...');
+
+    // Ensure PlayerStateService is initialized
+    // NOTE: This now handles Supabase Session check internally if we implemented it right
+    // or we check supabase session here and pass it.
+
+    // Check for Supabase Session (Google Login Return)
+    let sessionUser = null;
     try {
-      console.log('⏳ LoadingScene: Waiting for ContractProvider...');
-      try {
-        await this.contractsInitializedPromise;
-        console.log('✅ LoadingScene: Contracts Initialized.');
-      } catch (e) {
-        console.error('⚠️ LoadingScene: Contract Initialization Failed/Timed Out.', e);
-      }
+      const { supabase } = await import('../lib/supabaseClient.js');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        console.log(
+          '[LoadingScene] Supabase Session Detected:',
+          session.user.email
+        );
+        // Re-init PlayerState with this user
+        await playerStateService.init(session.user.id, session.user.email);
 
-      loadingText.setText('VERIFYING SESSION...');
-
-      if (api.hasSession()) {
-        console.log('[LoadingScene] Session detected. Attempting to validate...');
-        try {
-          const loginStatus = await api.checkLoginStatus();
-          if (loginStatus.success) {
-            this.registry.set('loggedInUser', loginStatus.user);
-            this.scene.start('MenuScene');
-            return;
-          }
-        } catch (e) {
-          console.warn('[LoadingScene] API Validation failed, entering Offline Mode.', e);
+        // TASK FORCE: MERGE GUEST DATA
+        if (localStorage.getItem('guest_state')) {
+          loadingText.setText('SYNCING OFFLINE DATA...');
+          await playerStateService.mergeGuestData({
+            walletAddress: session.user.id,
+            email: session.user.email,
+          });
         }
-
-        console.log('[LoadingScene] Bypassing AuthChoice (Fail-Safe).');
-        const mockUser = {
-          walletAddress: 'OFFLINE-MODE',
-          isGuest: true,
-          isOffline: true,
-        };
-        this.registry.set('loggedInUser', mockUser);
-        this.scene.start('MenuScene');
-        return;
-      }
-
-      console.log('[LoadingScene] No session found. Showing Overlay Prompt.');
-      this.showLoginOverlayPrompt(loadingText);
-    } catch (error) {
-      console.error('[LoadingScene] Critical Initialization Error:', error);
-      if (api.hasSession()) {
-        const mockUser = { walletAddress: 'EMERGENCY-MODE', isGuest: true };
-        this.registry.set('loggedInUser', mockUser);
-        this.scene.start('MenuScene');
       } else {
-        this.showLoginOverlayPrompt(loadingText);
+        await playerStateService.init(); // Guest
       }
+    } catch (e) {
+      console.warn('[LoadingScene] Session Check Error', e);
+      await playerStateService.init(); // Fallback to Guest
     }
-  }
 
-  showLoginOverlayPrompt(loadingText) {
-    if (loadingText) loadingText.destroy();
+    const user = playerStateService.getUser();
+    const heroes = playerStateService.getHeroes();
 
-    const centerX = this.cameras.main.centerX;
-    const centerY = this.cameras.main.centerY;
+    // Set Registry for Game Scenes
+    this.registry.set('loggedInUser', user);
+    this.registry.set('selectedHero', heroes[0]); // Default Hero
 
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.9);
-    overlay.fillRect(0, 0, this.scale.width, this.scale.height);
+    // CHECK FRICTIONLESS ONBOARDING
+    const termsAccepted = localStorage.getItem('termsAccepted');
 
-    this.add.text(centerX, centerY - 20, 'SESSION NOT FOUND', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '16px',
-      color: '#ff0000',
-      align: 'center'
-    }).setOrigin(0.5);
+    // Logic: If guest AND terms accepted -> Go straight to game (Stage 1)
+    if (playerStateService.isGuest && termsAccepted === 'true') {
+      console.log(
+        '[LoadingScene] Guest + Terms Accepted -> Launching GameScene directly.'
+      );
 
-    this.add.text(centerX, centerY + 20, 'Please Login via the HTML Overlay\nand Reload the Page.', {
-      fontFamily: '"Press Start 2P"',
-      fontSize: '10px',
-      color: '#ffffff',
-      align: 'center',
-      lineSpacing: 10
-    }).setOrigin(0.5);
+      // Setup Stage 1
+      const stage1 = Stages.find((s) => s.id === 1);
+
+      this.scene.start('GameScene', {
+        stageConfig: stage1,
+        gameMode: 'solo',
+      });
+      return;
+    }
+
+    // Normal Flow (or returning user)
+    this.scene.start('MenuScene');
   }
 }

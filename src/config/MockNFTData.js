@@ -10,39 +10,39 @@
 // ==========================================
 
 export const RARITY = {
-  0: "Common",
-  1: "Rare",
-  2: "Super Rare",
-  3: "Epic",
-  4: "Legend",
-  5: "SP Legend"
+  0: 'Common',
+  1: 'Rare',
+  2: 'Super Rare',
+  3: 'Epic',
+  4: 'Legend',
+  5: 'SP Legend',
 };
 
 export const ATTRIBUTES = {
-  POWER: "bomb_power",
-  SPEED: "speed",
-  STAMINA: "stamina",
-  BOMB_NUM: "bomb_count",
-  RANGE: "bomb_range"
+  POWER: 'bomb_power',
+  SPEED: 'speed',
+  STAMINA: 'stamina',
+  BOMB_NUM: 'bomb_count',
+  RANGE: 'bomb_range',
 };
 
 export const SPELLS = {
-  1: { name: "Treasure Hunter", desc: "+02 DMG to Chests" },
-  2: { name: "Jail Breaker", desc: "+05 DMG to Prisons" },
-  3: { name: "Pierce Block", desc: "Explode through Blocks" },
-  4: { name: "Save Battery", desc: "20% chance not to lose Stamina" },
-  5: { name: "Fast Charge", desc: "+0.5 Stamina/Min Rest" },
-  6: { name: "Bomb Pass", desc: "Walk through Bombs" },
-  7: { name: "Block Pass", desc: "Walk through Blocks" }
+  1: { name: 'Treasure Hunter', desc: '+02 DMG to Chests' },
+  2: { name: 'Jail Breaker', desc: '+05 DMG to Prisons' },
+  3: { name: 'Pierce Block', desc: 'Explode through Blocks' },
+  4: { name: 'Save Battery', desc: '20% chance not to lose Stamina' },
+  5: { name: 'Fast Charge', desc: '+0.5 Stamina/Min Rest' },
+  6: { name: 'Bomb Pass', desc: 'Walk through Bombs' },
+  7: { name: 'Block Pass', desc: 'Walk through Blocks' },
 };
 
 export const HOUSE_TYPES = {
-  0: { name: "Tiny House", slots: 4, charge: 2 },
-  1: { name: "Mini House", slots: 6, charge: 5 },
-  2: { name: "Lux House", slots: 8, charge: 8 },
-  3: { name: "PentHouse", slots: 10, charge: 11 },
-  4: { name: "Villa", slots: 12, charge: 14 },
-  5: { name: "Super Villa", slots: 14, charge: 17 }
+  0: { name: 'Tiny House', slots: 4, charge: 2 },
+  1: { name: 'Mini House', slots: 6, charge: 5 },
+  2: { name: 'Lux House', slots: 8, charge: 8 },
+  3: { name: 'PentHouse', slots: 10, charge: 11 },
+  4: { name: 'Villa', slots: 12, charge: 14 },
+  5: { name: 'Super Villa', slots: 14, charge: 17 },
 };
 
 // ==========================================
@@ -65,15 +65,15 @@ export const MockHeroes = [
       speed: 2,
       stamina: 5,
       bomb_num: 1,
-      range: 1
+      range: 1,
     },
     visuals: {
       skin: 1, // Frog
-      color: 2 // Green
+      color: 2, // Green
     },
     sprite_name: 'ninja_hero', // Placeholder
     spells: [],
-    max_stage: 1
+    max_stage: 1,
   },
   {
     id: 1002,
@@ -86,15 +86,15 @@ export const MockHeroes = [
       speed: 4,
       stamina: 8,
       bomb_num: 2,
-      range: 2
+      range: 2,
     },
     visuals: {
       skin: 2, // Knight
-      color: 1 // Blue
+      color: 1, // Blue
     },
     sprite_name: 'witch_hero', // Placeholder
     spells: [1], // Treasure Hunter
-    max_stage: 1
+    max_stage: 1,
   },
   {
     id: 1003,
@@ -107,15 +107,15 @@ export const MockHeroes = [
       speed: 6,
       stamina: 10,
       bomb_num: 3,
-      range: 2
+      range: 2,
     },
     visuals: {
       skin: 3, // Man
-      color: 3 // Cyan
+      color: 3, // Cyan
     },
     sprite_name: 'ninja_hero', // Placeholder
     spells: [1, 2], // Treasure Hunter, Jail Breaker
-    max_stage: 1
+    max_stage: 1,
   },
   {
     id: 1004,
@@ -128,15 +128,15 @@ export const MockHeroes = [
       speed: 8,
       stamina: 12,
       bomb_num: 3,
-      range: 3
+      range: 3,
     },
     visuals: {
       skin: 4, // Lady
-      color: 5 // Red
+      color: 5, // Red
     },
     sprite_name: 'witch_hero', // Placeholder
     spells: [1, 2, 4], // TH, JB, Save Battery
-    max_stage: 1
+    max_stage: 1,
   },
   {
     id: 1005,
@@ -149,15 +149,15 @@ export const MockHeroes = [
       speed: 10,
       stamina: 15,
       bomb_num: 4,
-      range: 4
+      range: 4,
     },
     visuals: {
       skin: 5, // Witch
-      color: 4 // Purple
+      color: 4, // Purple
     },
     sprite_name: 'ninja_hero', // Placeholder
     spells: [3, 5, 7], // Pierce, Fast Charge, Block Pass
-    max_stage: 1
+    max_stage: 1,
   },
   {
     id: 1006,
@@ -170,16 +170,16 @@ export const MockHeroes = [
       speed: 15,
       stamina: 20,
       bomb_num: 5,
-      range: 5
+      range: 5,
     },
     visuals: {
       skin: 6, // Special
-      color: 6 // Gold
+      color: 6, // Gold
     },
     sprite_name: 'witch_hero', // Placeholder
     spells: [3, 5, 6, 7], // Pierce, Fast Charge, Bomb Pass, Block Pass
-    max_stage: 10 // Let the golden god have access to everything for testing
-  }
+    max_stage: 10, // Let the golden god have access to everything for testing
+  },
 ];
 
 /**
@@ -192,8 +192,8 @@ export const MockHouses = [
     name: HOUSE_TYPES[0].name,
     stats: {
       slots: HOUSE_TYPES[0].slots,
-      recovery_rate: HOUSE_TYPES[0].charge
-    }
+      recovery_rate: HOUSE_TYPES[0].charge,
+    },
   },
   {
     id: 5002,
@@ -201,13 +201,13 @@ export const MockHouses = [
     name: HOUSE_TYPES[4].name,
     stats: {
       slots: HOUSE_TYPES[4].slots,
-      recovery_rate: HOUSE_TYPES[4].charge
-    }
-  }
+      recovery_rate: HOUSE_TYPES[4].charge,
+    },
+  },
 ];
 
 // Helper to calculate final damage with level bonus
 export const calculatePower = (hero) => {
-    const levelBonuses = {1:0, 2:1, 3:2, 4:3, 5:5, 10:10};
-    return hero.stats.power + (levelBonuses[hero.level] || 0);
+  const levelBonuses = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 5, 10: 10 };
+  return hero.stats.power + (levelBonuses[hero.level] || 0);
 };

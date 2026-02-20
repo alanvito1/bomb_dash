@@ -54,7 +54,8 @@ export default class ChatWidget {
       cursor: 'pointer',
       backgroundColor: 'rgba(0, 255, 255, 0.1)',
     });
-    header.innerHTML = '<span>GLOBAL CHAT</span> <span id="chat-toggle-icon">▲</span>';
+    header.innerHTML =
+      '<span>GLOBAL CHAT</span> <span id="chat-toggle-icon">▲</span>';
     header.onclick = () => this.toggle();
     this.container.appendChild(header);
 
@@ -98,17 +99,18 @@ export default class ChatWidget {
     };
     // Stop propagation on focus to prevent game controls firing
     this.inputElement.onfocus = () => {
-        if (this.scene.input) this.scene.input.keyboard.enabled = false;
+      if (this.scene.input) this.scene.input.keyboard.enabled = false;
     };
     this.inputElement.onblur = () => {
-        if (this.scene.input) this.scene.input.keyboard.enabled = true;
+      if (this.scene.input) this.scene.input.keyboard.enabled = true;
     };
 
     inputContainer.appendChild(this.inputElement);
     this.container.appendChild(inputContainer);
 
     // Append to game container
-    const gameContainer = document.getElementById('game-container') || document.body;
+    const gameContainer =
+      document.getElementById('game-container') || document.body;
     gameContainer.appendChild(this.container);
 
     this.inputContainer = inputContainer;
@@ -157,8 +159,13 @@ export default class ChatWidget {
     msgDiv.style.marginBottom = '5px';
     msgDiv.style.wordWrap = 'break-word';
 
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const tag = data.tag ? `[<span style="color:#ffd700">${data.tag}</span>] ` : '';
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const tag = data.tag
+      ? `[<span style="color:#ffd700">${data.tag}</span>] `
+      : '';
     const name = `<span style="color:#00ffff">${data.user}</span>`;
 
     msgDiv.innerHTML = `<span style="color:#888; font-size:8px;">${timestamp}</span> ${tag}${name}: ${data.text}`;
@@ -192,10 +199,10 @@ export default class ChatWidget {
     let tag = '';
 
     if (user && user.success) {
-        username = user.user.walletAddress.substring(0, 6);
-        // Fetch Guild Tag if not present in user object (might need to fetch 'my-guild' or store in session)
-        // Ideally we store this. For now, let's try to get it.
-        // Optimization: Fetch guild tag on init and store in class.
+      username = user.user.walletAddress.substring(0, 6);
+      // Fetch Guild Tag if not present in user object (might need to fetch 'my-guild' or store in session)
+      // Ideally we store this. For now, let's try to get it.
+      // Optimization: Fetch guild tag on init and store in class.
     }
 
     // Send via Channel
@@ -209,8 +216,8 @@ export default class ChatWidget {
       payload: {
         user: username,
         tag: this.guildTag || '', // To do: fetch guild tag
-        text: text
-      }
+        text: text,
+      },
     });
 
     this.inputElement.value = '';
