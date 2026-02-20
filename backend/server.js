@@ -117,8 +117,8 @@ async function performInitialization() {
   AVRE.info('System active... Initializing Game Server.');
 
   try {
-    await db.initDb();
-    AVRE.success('Database connection established.');
+    await db.seedEconomy();
+    AVRE.success('Economy seeded & Database connected (Supabase).');
 
     supabaseService.initSupabase();
     AVRE.success('Supabase service initialized.');

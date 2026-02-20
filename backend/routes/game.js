@@ -2,31 +2,31 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database.js');
-const { Item, UserItem } = require('../database.js');
-const admin = require('../admin.js');
-const oracle = require('../oracle.js');
 const { ethers } = require('ethers');
-// const soloRewardService = require('../solo_reward_service.js'); // Removed
 
 // Define hero upgrades logic (moved from external or previous inline)
 const heroUpgrades = {
   damage: {
     cost: (hero) => 10 * hero.level, // Example cost formula
-    effect: (hero) => ({ damage: hero.damage + 1 }),
+    effect: (hero) => ({ damage: (hero.damage || 0) + 1 }),
   },
   health: {
     cost: (hero) => 10 * hero.level,
-    effect: (hero) => ({ maxHp: hero.maxHp + 10, hp: hero.maxHp + 10 }),
+    effect: (hero) => ({ maxHp: (hero.max_hp || hero.maxHp || 100) + 10, hp: (hero.max_hp || hero.maxHp || 100) + 10 }),
   },
   speed: {
     cost: (hero) => 15 * hero.level,
-    effect: (hero) => ({ speed: hero.speed + 5 }),
+    effect: (hero) => ({ speed: (hero.speed || 0) + 5 }),
   },
 };
 
 router.get('/settings', async (req, res) => {
   try {
-    const settings = await admin.getGameSettings();
+    // Basic settings stub
+    const settings = [
+        { key: 'xp_multiplier', value: '1.0' },
+        { key: 'global_reward_pool', value: '1000000' }
+    ];
     res.json({ success: true, settings });
   } catch (error) {
     console.error('Erro em /api/game/settings:', error);
@@ -101,7 +101,8 @@ router.post('/matches/complete', async (req, res) => {
 
   try {
     const heroes = await db.getHeroesByUserId(req.user.userId);
-    const heroExists = heroes.some((h) => h.id === heroId);
+    // Note: getHeroesByUserId returns camelCase props now
+    const heroExists = heroes.some((h) => h.id.toString() === heroId.toString());
 
     if (!heroExists) {
       return res.status(403).json({
@@ -111,45 +112,30 @@ router.post('/matches/complete', async (req, res) => {
       });
     }
 
-    // Award Hero XP
+    // 1. Award Hero XP
     await db.addXpToHero(heroId, xpGained);
 
-    // Award User XP and Coins (Session Loot)
+    // 2. Award User XP and Coins (Session Loot)
     // Note: grantRewards handles level-ups internally
     await db.grantRewards(req.user.userId, coins, xpGained);
 
-    // --- Dropped Items Processing ---
-    // If client sends dropped items (Option A: Client-Side Loot), verify and add them.
-    // In a production secure env, we would validate RNG seeds here.
+    // 3. Process Dropped Items
     if (droppedItems && Array.isArray(droppedItems) && droppedItems.length > 0) {
       for (const itemName of droppedItems) {
         // Find item by name (Client sends names like "Rusty Sword", "Scrap Metal")
-        const itemDef = await Item.findOne({ where: { name: itemName } });
+        const itemDef = await db.getItemByName(itemName);
         if (itemDef) {
-           const existingStack = await UserItem.findOne({
-             where: { user_id: req.user.userId, item_id: itemDef.id }
-           });
-           if (existingStack) {
-             existingStack.quantity += 1;
-             await existingStack.save();
-           } else {
-             await UserItem.create({
-               user_id: req.user.userId,
-               item_id: itemDef.id,
-               quantity: 1
-             });
-           }
+           await db.addItemToUser(req.user.userId, itemDef.id, 1);
         }
       }
     }
 
-    // --- Phase 2: Infinite Grind ---
-    // 1. Update Bestiary
+    // 4. Update Bestiary
     if (bestiary && typeof bestiary === 'object') {
       await db.updateBestiary(req.user.userId, bestiary);
     }
 
-    // 2. Update Proficiency
+    // 5. Update Proficiency
     if (proficiency) {
       const { bombHits = 0, distance = 0 } = proficiency;
 
@@ -168,7 +154,7 @@ router.post('/matches/complete', async (req, res) => {
     }
 
     const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
-    const updatedHero = updatedHeroes.find((h) => h.id === heroId);
+    const updatedHero = updatedHeroes.find((h) => h.id.toString() === heroId.toString());
 
     res.json({
       success: true,
@@ -186,12 +172,12 @@ router.post('/matches/complete', async (req, res) => {
 });
 
 router.post('/user/stats', async (req, res) => {
-  const { heroId, upgradeType, txHash } = req.body;
+  const { heroId, upgradeType } = req.body; // Removed txHash for Web2.5
 
-  if (!heroId || !upgradeType || !txHash) {
+  if (!heroId || !upgradeType) {
     return res.status(400).json({
       success: false,
-      message: 'heroId, upgradeType, and txHash are required.',
+      message: 'heroId and upgradeType are required.',
     });
   }
 
@@ -212,14 +198,18 @@ router.post('/user/stats', async (req, res) => {
       });
     }
 
+    // Web 2.5 Logic: Pay with BCOIN directly
     const expectedCost = heroUpgrades[upgradeType].cost(hero);
+    const user = await db.getUserById(req.user.userId);
 
-    await oracle.verifyUpgradeTransaction(
-      txHash,
-      req.user.address,
-      expectedCost
-    );
+    if (user.coins < expectedCost) {
+        return res.status(400).json({ success: false, message: `Insufficient BCOIN. Need ${expectedCost}.` });
+    }
 
+    // Deduct Cost
+    await db.grantRewards(req.user.userId, -expectedCost, 0);
+
+    // Apply Upgrade
     const newStats = heroUpgrades[upgradeType].effect(hero);
     await db.updateHeroStats(heroId, newStats);
 
@@ -235,19 +225,9 @@ router.post('/user/stats', async (req, res) => {
     });
   } catch (error) {
     console.error(
-      `Error processing upgrade for hero ${heroId} with tx ${txHash}:`,
+      `Error processing upgrade for hero ${heroId}:`,
       error
     );
-    if (
-      error.message.includes('mismatch') ||
-      error.message.includes('not found') ||
-      error.message.includes('failed')
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: `Transaction verification failed: ${error.message}`,
-      });
-    }
     res.status(500).json({
       success: false,
       message: 'Internal server error during hero upgrade.',
@@ -256,88 +236,33 @@ router.post('/user/stats', async (req, res) => {
 });
 
 router.post('/altar/donate', async (req, res) => {
-  const { txHash, amount } = req.body;
-  if (!txHash || !amount) {
-    return res.status(400).json({
-      success: false,
-      message: 'txHash and amount are required',
-    });
+  // Stubbed for Web 2.5 - Accepting any donation as a simulation or disabled
+  // If we want to simulate:
+  const { amount } = req.body;
+
+  if (!amount) {
+      return res.status(400).json({ success: false, message: 'Amount required' });
   }
 
   try {
-    let provider = oracle.getProvider();
-    if (!provider) {
-      await oracle.initOracle();
-      provider = oracle.getProvider();
-    }
+      // Logic: Deduct BCOIN from user instead of verifying on-chain tx
+      const user = await db.getUserById(req.user.userId);
+      if (user.coins < amount) {
+          return res.status(400).json({ success: false, message: 'Insufficient BCOIN' });
+      }
 
-    if (!provider) {
-      throw new Error('Blockchain provider not available');
-    }
+      await db.grantRewards(req.user.userId, -amount, 0);
+      await db.addDonationToAltar(amount, 'offchain_donation_' + Date.now());
 
-    const receipt = await provider.getTransactionReceipt(txHash);
-    if (!receipt || receipt.status !== 1) {
-      throw new Error('Transaction failed or not found');
-    }
+      res.json({
+        success: true,
+        message: 'Donation verified (Web2.5)',
+        donated: amount,
+      });
 
-    // BCOIN Transfer Event Signature: Transfer(address indexed from, address indexed to, uint256 value)
-    // Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-    const TRANSFER_TOPIC =
-      '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-    const ALTAR_ADDRESS = process.env.ALTAR_WALLET_ADDRESS;
-
-    if (!ALTAR_ADDRESS) throw new Error('ALTAR_WALLET_ADDRESS not configured');
-
-    // Normalize addresses for comparison (remove 0x, lowercase)
-    const altarLower = ALTAR_ADDRESS.toLowerCase().replace('0x', '');
-    const userLower = req.user.address.toLowerCase().replace('0x', '');
-
-    // Find relevant log: Transfer to Altar
-    // Topics: [Signature, From, To] (To is index 2)
-    const log = receipt.logs.find(
-      (l) =>
-        l.topics[0] === TRANSFER_TOPIC &&
-        l.topics[2].toLowerCase().includes(altarLower)
-    );
-
-    if (!log) {
-      throw new Error('No transfer to Altar found in this transaction');
-    }
-
-    // Verify 'from' (topic 1) matches user
-    if (!log.topics[1].toLowerCase().includes(userLower)) {
-      throw new Error('Transaction sender does not match user address');
-    }
-
-    // Verify amount (data is hex)
-    const value = BigInt(log.data);
-    // Assume input 'amount' is sent as string representing Wei/Raw units
-    // or verify logic based on game design. Let's assume input is BCOIN float for now?
-    // User input is usually what they claimed to send.
-    // If we expect "10" BCOIN, we check 10 * 10^18.
-
-    const expectedWei = ethers.parseEther(amount.toString());
-
-    if (value < expectedWei) {
-      throw new Error(
-        `Transfer amount ${ethers.formatEther(
-          value
-        )} is less than declared ${amount}`
-      );
-    }
-
-    // Update DB (storing as Integer BCOIN)
-    const bcoinAmount = Math.floor(parseFloat(ethers.formatEther(value)));
-    await db.addDonationToAltar(bcoinAmount, txHash);
-
-    res.json({
-      success: true,
-      message: 'Donation verified',
-      donated: bcoinAmount,
-    });
   } catch (error) {
-    console.error('Altar donation error:', error);
-    res.status(400).json({ success: false, message: error.message });
+      console.error('Altar donation error:', error);
+      res.status(500).json({ success: false, message: error.message });
   }
 });
 
