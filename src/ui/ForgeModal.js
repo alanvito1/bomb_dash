@@ -1,4 +1,5 @@
 import UIModal from './UIModal.js';
+import UIHelper from '../utils/UIHelper.js';
 import playerStateService from '../services/PlayerStateService.js';
 import SoundManager from '../utils/sound.js';
 
@@ -45,13 +46,13 @@ export default class ForgeModal extends UIModal {
     createResourcesHeader() {
         const y = -this.modalHeight / 2 + 60;
 
-        // Background Panel for Resources
-        const bg = this.scene.add.graphics();
-        bg.fillStyle(0x222222, 0.8);
-        bg.fillRoundedRect(-200, y - 20, 400, 40, 4);
-        bg.lineStyle(1, 0x444444);
-        bg.strokeRoundedRect(-200, y - 20, 400, 40, 4);
-        this.windowContainer.add(bg);
+        // Background Panel for Resources (9-Slice)
+        // Center x=0. createPanel creates at 0,0. We need to center it?
+        // nineslice origin is 0.5 by default in Phaser 3? No, usually 0.5.
+        // My UIHelper creates nineslice. By default origin is 0.5.
+        const panel = UIHelper.createPanel(this.scene, 400, 40, 0x00FFFF);
+        panel.y = y;
+        this.windowContainer.add(panel);
 
         // Common Fragments
         const commonCount = playerStateService.getFragmentCount('Common');
@@ -105,13 +106,19 @@ export default class ForgeModal extends UIModal {
     createLevelUpSection() {
         const y = 100;
 
-        // Panel
-        const bg = this.scene.add.graphics();
-        bg.fillStyle(0x000000, 0.5);
-        bg.fillRoundedRect(-250, y - 50, 500, 200, 8);
-        bg.lineStyle(2, 0x444444);
-        bg.strokeRoundedRect(-250, y - 50, 500, 200, 8);
-        this.windowContainer.add(bg);
+        // Panel (9-Slice)
+        const panel = UIHelper.createPanel(this.scene, 500, 200, 0x444444);
+        panel.y = y + 50; // Adjust for center offset?
+        // Original was y-50 for top left? No, fillRoundedRect with negative offsets implies center is 0,y.
+        // y is 100. Height 200. Top is 0, Bottom 200.
+        // If center is 0,100. Then rect -250, 50, 500, 200 draws from 50 to 250?
+        // Wait, original: `fillRoundedRect(-250, y - 50, ...)` where y=100. -> y starts at 50.
+        // Height 200. Ends at 250.
+        // Center of that rect is 150.
+        // UIHelper.createPanel creates a nineslice. Origin 0.5.
+        // So we want panel.y = 150.
+        panel.y = 150;
+        this.windowContainer.add(panel);
 
         // Next Level Preview
         const nextLevel = (this.selectedHero.level || 1) + 1;
@@ -127,9 +134,14 @@ export default class ForgeModal extends UIModal {
 
         const btnY = y + 80;
 
-        const btn = this.createButton(0, btnY, `LEVEL UP HERO\nCOST: ${costBcoin} BCOIN + ${costFrags} FRAG`, 300, 60, () => {
-             this.handleLevelUp();
-        });
+        const btn = UIHelper.createNeonButton(
+            this.scene,
+            0, btnY,
+            `LEVEL UP\n${costBcoin} BC + ${costFrags} FG`,
+            300, 60,
+            () => this.handleLevelUp(),
+            0x00FF00 // Green for Upgrade
+        );
 
         this.windowContainer.add(btn);
     }
@@ -179,45 +191,4 @@ export default class ForgeModal extends UIModal {
         this.windowContainer.add(t);
     }
 
-    createButton(x, y, label, w, h, callback) {
-        const container = this.scene.add.container(x, y);
-        const bg = this.scene.add.graphics();
-
-        // Retro Button Style
-        bg.fillStyle(0xFF4500, 1); // Orange/Red
-        bg.fillRect(-w/2, -h/2, w, h);
-
-        // Highlight
-        bg.fillStyle(0xFF8C00, 1);
-        bg.fillRect(-w/2, -h/2, w, 4);
-
-        // Shadow
-        bg.fillStyle(0x8B0000, 1);
-        bg.fillRect(-w/2, h/2 - 4, w, 4);
-
-        // Border
-        bg.lineStyle(2, 0x000000);
-        bg.strokeRect(-w/2, -h/2, w, h);
-
-        const text = this.scene.add.text(0, 0, label, {
-             fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#fff', align: 'center', lineSpacing: 6
-        }).setOrigin(0.5);
-
-        container.add([bg, text]);
-        container.setSize(w, h);
-        container.setInteractive({ useHandCursor: true });
-
-        container.on('pointerdown', () => {
-             bg.y = 2; text.y = 2; // Press effect
-        });
-        container.on('pointerout', () => {
-             bg.y = 0; text.y = 0;
-        });
-        container.on('pointerup', () => {
-             bg.y = 0; text.y = 0;
-             callback();
-        });
-
-        return container;
-    }
 }

@@ -169,5 +169,11 @@ export default class EnemySpawner {
       this.scene.bossSpawned = true;
       SoundManager.play(this.scene, 'boss_spawn');
       console.log(`[EnemySpawner] Spawned BOSS ${bossConfig.name} (HP: ${hp})`);
+
+      // Update HUD
+      this.scene.events.emit('show-boss-health', {
+          name: bossConfig.name,
+          maxHealth: hp
+      });
   }
 }

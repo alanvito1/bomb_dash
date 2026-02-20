@@ -461,6 +461,76 @@ export default class TextureGenerator {
     g.generateTexture(key, 32, 32);
   }
 
+  /**
+   * Generates a 9-slice compatible UI Panel (32x32).
+   * Outer 2px Border (White), Inner 28x28 Center (Black).
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   */
+  static createUIPanel(scene, key = 'ui_panel') {
+    if (scene.textures.exists(key)) return;
+
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // 1. Fill Black Center
+    graphics.fillStyle(0x000000, 1);
+    graphics.fillRect(2, 2, 28, 28);
+
+    // 2. Draw White Border (for Tinting)
+    graphics.fillStyle(0xffffff, 1);
+    // Top
+    graphics.fillRect(0, 0, 32, 2);
+    // Bottom
+    graphics.fillRect(0, 30, 32, 2);
+    // Left
+    graphics.fillRect(0, 0, 2, 32);
+    // Right
+    graphics.fillRect(30, 0, 2, 32);
+
+    // 3. Cyberpunk Corners (Extra pixels)
+    graphics.fillRect(2, 2, 4, 2);
+    graphics.fillRect(2, 2, 2, 4);
+
+    graphics.fillRect(26, 2, 4, 2);
+    graphics.fillRect(28, 2, 2, 4);
+
+    graphics.fillRect(2, 28, 4, 2);
+    graphics.fillRect(2, 26, 2, 4);
+
+    graphics.fillRect(26, 28, 4, 2);
+    graphics.fillRect(28, 26, 2, 4);
+
+    graphics.generateTexture(key, 32, 32);
+    console.log(`✅ Generated procedural UI PANEL: ${key}`);
+  }
+
+  /**
+   * Generates a generic button background (32x32).
+   * Filled White for full tinting.
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   */
+  static createButtonBackground(scene, key = 'ui_button') {
+    if (scene.textures.exists(key)) return;
+
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Fill White
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(0, 0, 32, 32);
+
+    // Inner bevel/shadow for depth (Grey)
+    graphics.fillStyle(0xcccccc, 1);
+    graphics.fillRect(2, 2, 28, 28);
+
+    // Center lighter
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(4, 4, 24, 24);
+
+    graphics.generateTexture(key, 32, 32);
+    console.log(`✅ Generated procedural BUTTON BG: ${key}`);
+  }
+
   // --- NEW RPG ITEMS ---
 
   static createRustySword(scene, key) {
@@ -625,6 +695,10 @@ export default class TextureGenerator {
       this.createHealthPotion(scene, 'item_health_potion');
       this.createScrap(scene, 'item_scrap');
       this.createCyberCore(scene, 'item_cyber_core');
+
+      // UI Assets (Task Force Step 3)
+      this.createUIPanel(scene, 'ui_panel');
+      this.createButtonBackground(scene, 'ui_button');
 
       // Additional assets needed for full game functionality
       this.createHearts(scene);

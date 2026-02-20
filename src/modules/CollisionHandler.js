@@ -132,6 +132,13 @@ export default class CollisionHandler {
 
     enemy.hp -= damage;
 
+    if (enemy.isBoss) {
+        this.events.emit('update-boss-health', {
+            health: Math.max(0, enemy.hp),
+            maxHealth: enemy.maxHp
+        });
+    }
+
     // Show Critical Hit if bonus applies? Or just normal text.
     const color = bonus > 0 ? '#ff00ff' : '#ff4d4d'; // Purple for knowledge bonus
     createFloatingText(this.scene, enemy.x, enemy.y, `-${damage}`, color);
@@ -218,6 +225,7 @@ export default class CollisionHandler {
       this.scene.enemiesKilled++;
 
       if (enemy.isBoss) {
+        this.events.emit('hide-boss-health');
         this.scene.bossDefeated = true;
         this.scene.bossSpawned = false;
         this.scene.physics.pause();
