@@ -1,4 +1,5 @@
 import UIModal from './UIModal.js';
+import UIHelper from '../utils/UIHelper.js';
 import SoundManager from '../utils/sound.js';
 import api from '../api.js';
 import { MOBS } from '../config/MobConfig.js';
@@ -80,19 +81,17 @@ export default class BestiaryModal extends UIModal {
         const isCompleted = kills >= 5000;
         const isDiscovered = kills > 0;
 
-        // Slot Bg
-        const bg = this.scene.add.graphics();
-        // If completed: Gold/Platinum Background
+        // Slot Bg (9-Slice)
+        const tint = isCompleted ? 0xffd700 : 0x444444;
+        const panel = UIHelper.createPanel(this.scene, size, size, tint);
+
         if (isCompleted) {
-             bg.fillStyle(0x332200, 1);
-             bg.lineStyle(3, 0xffd700); // Gold Border
-        } else {
-             bg.fillStyle(0x222222, 1);
-             bg.lineStyle(2, 0x444444);
+             // Add a background fill for completed items
+             const fill = this.scene.add.rectangle(0, 0, size - 4, size - 4, 0x332200);
+             container.add(fill);
         }
-        bg.fillRect(0, 0, size, size);
-        bg.strokeRect(0, 0, size, size);
-        container.add(bg);
+
+        container.add(panel);
 
         // Enemy Icon
         const assetKey = mob.asset_key || 'enemy';

@@ -32,18 +32,8 @@ export default class HUDScene extends Phaser.Scene {
     const valueStyle = { ...textStyle, fontSize: '12px', fill: '#ffffff' };
 
     // --- Left Side (Player Stats) ---
-    // Health (Hearts)
-    this.add.text(margin, margin, 'HP', {
-      ...textStyle,
-      fill: '#ff4d4d',
-    });
-
-    // Pixel Art Hearts Group
-    this.heartsGroup = this.add.group();
-    // Create 5 hearts placeholders
-    for (let i = 0; i < 5; i++) {
-      this.heartsGroup.create(margin + 40 + i * 18, margin + 8, 'heart_empty');
-    }
+    // Health Bar (Cyan Neon)
+    this.createHealthBar(margin, margin);
 
     // XP Bar
     this.levelText = this.add.text(margin, margin + 35, `Lvl: 1`, {
@@ -79,6 +69,8 @@ export default class HUDScene extends Phaser.Scene {
         fill: '#ffffff',
         align: 'center',
         fontSize: '12px',
+        stroke: '#FF5F1F',
+        strokeThickness: 4
       })
       .setOrigin(0.5, 0);
 
@@ -88,8 +80,13 @@ export default class HUDScene extends Phaser.Scene {
         fontSize: '16px',
         fill: '#ffffff',
         align: 'center',
+        stroke: '#FF5F1F',
+        strokeThickness: 4
       })
       .setOrigin(0.5, 0);
+
+    // Boss Health Bar (Hidden by default)
+    this.createBossHealthBar();
 
     // Initial population
     this.updateHealth({ health: 0, maxHealth: 0 });
@@ -104,6 +101,11 @@ export default class HUDScene extends Phaser.Scene {
       gameScene.events.on('update-wave', this.updateWave, this);
       gameScene.events.on('update-timer', this.updateTimer, this);
       gameScene.events.on('update-bcoin', this.handleBalanceUpdate, this);
+
+      // Boss Events
+      gameScene.events.on('show-boss-health', this.showBossHealth, this);
+      gameScene.events.on('update-boss-health', this.updateBossHealth, this);
+      gameScene.events.on('hide-boss-health', this.hideBossHealth, this);
     }
     GameEventEmitter.on('bcoin-balance-update', this.handleBalanceUpdate, this);
   }
@@ -162,24 +164,121 @@ export default class HUDScene extends Phaser.Scene {
     });
   }
 
+  createHealthBar(x, y) {
+      // Container
+      this.healthBarContainer = this.add.container(x, y);
+
+      // Label
+      const label = this.add.text(0, 8, 'HP', {
+          fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#00FFFF'
+      }).setOrigin(0, 0.5);
+
+      // Bar Background (Black with Border)
+      const barX = 30;
+      const barW = 150;
+      const barH = 16;
+
+      this.healthBarBg = this.add.nineslice(barX + barW/2, 8, 'ui_panel', 0, barW, barH, 5, 5, 5, 5);
+      this.healthBarBg.setTint(0x00FFFF); // Cyan Border
+
+      // Bar Fill (Graphics)
+      this.healthBarFill = this.add.graphics();
+
+      // Text Value
+      this.healthValueText = this.add.text(barX + barW/2, 8, '', {
+           fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff'
+      }).setOrigin(0.5);
+
+      this.healthBarContainer.add([label, this.healthBarBg, this.healthBarFill, this.healthValueText]);
+
+      // Store dimensions for update
+      this.healthBarDims = { x: barX, y: 0, w: barW, h: barH };
+  }
+
   updateHealth({ health, maxHealth }) {
-    if (!this.heartsGroup) return;
+    if (!this.healthBarFill) return;
 
-    // Logic: 5 Hearts total.
-    const healthPercentage =
-      maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
-    const heartsToFill = Math.ceil(healthPercentage * 5);
+    const pct = maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
+    const { x, y, w, h } = this.healthBarDims;
 
-    const hearts = this.heartsGroup.getChildren();
-    hearts.forEach((heart, index) => {
-      if (index < heartsToFill) {
-        heart.setTexture('heart_full');
-        heart.setVisible(true);
-      } else {
-        heart.setTexture('heart_empty');
-        heart.setVisible(true);
+    this.healthBarFill.clear();
+    // Fill
+    this.healthBarFill.fillStyle(0x00FFFF, 1);
+    this.healthBarFill.fillRect(x + 2, y + 2, (w - 4) * pct, h - 4);
+
+    this.healthValueText.setText(`${Math.max(0, health)}/${maxHealth}`);
+  }
+
+  createBossHealthBar() {
+      const w = 300;
+      const h = 24;
+      const x = this.scale.width / 2;
+      const y = 80; // Below HUD
+
+      this.bossHealthContainer = this.add.container(x, y);
+      this.bossHealthContainer.setVisible(false);
+
+      // Label
+      const label = this.add.text(0, -20, 'BOSS', {
+          fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FF5F1F', stroke: '#000000', strokeThickness: 4
+      }).setOrigin(0.5);
+
+      // Bg
+      const bg = this.add.nineslice(0, 0, 'ui_panel', 0, w, h, 8, 8, 8, 8);
+      bg.setTint(0xFF5F1F); // Orange Border
+
+      // Fill
+      this.bossHealthFill = this.add.graphics();
+
+      // Text
+      this.bossHealthText = this.add.text(0, 0, '', {
+          fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#ffffff'
+      }).setOrigin(0.5);
+
+      this.bossHealthContainer.add([label, bg, this.bossHealthFill, this.bossHealthText]);
+      this.bossHealthDims = { w, h };
+  }
+
+  showBossHealth({ name, maxHealth }) {
+      if (this.bossHealthContainer) {
+          this.bossHealthContainer.setVisible(true);
+          this.bossHealthText.setText(`${maxHealth}/${maxHealth}`);
+          this.updateBossHealth({ health: maxHealth, maxHealth });
+
+          // Animate in?
+          this.bossHealthContainer.setAlpha(0);
+          this.tweens.add({
+              targets: this.bossHealthContainer,
+              alpha: 1,
+              duration: 500
+          });
       }
-    });
+  }
+
+  updateBossHealth({ health, maxHealth }) {
+      if (!this.bossHealthContainer || !this.bossHealthContainer.visible) return;
+
+      const pct = Phaser.Math.Clamp(health / maxHealth, 0, 1);
+      const { w, h } = this.bossHealthDims;
+
+      this.bossHealthFill.clear();
+      this.bossHealthFill.fillStyle(0xFF5F1F, 1);
+      // Centered fill requires offset logic or just fillRect relative to center
+      // Bg is centered at 0,0. Left is -w/2.
+      this.bossHealthFill.fillRect(-w/2 + 4, -h/2 + 4, (w - 8) * pct, h - 8);
+
+      this.bossHealthText.setText(`${Math.max(0, Math.ceil(health))}/${maxHealth}`);
+  }
+
+  hideBossHealth() {
+      if (this.bossHealthContainer) {
+          this.tweens.add({
+              targets: this.bossHealthContainer,
+              alpha: 0,
+              duration: 500,
+              onComplete: () => this.bossHealthContainer.setVisible(false)
+          });
+      }
   }
 
   updateXP({ accountLevel, accountXP }) {
@@ -233,6 +332,9 @@ export default class HUDScene extends Phaser.Scene {
       gameScene.events.off('update-wave', this.updateWave, this);
       gameScene.events.off('update-timer', this.updateTimer, this);
       gameScene.events.off('update-bcoin', this.handleBalanceUpdate, this);
+      gameScene.events.off('show-boss-health', this.showBossHealth, this);
+      gameScene.events.off('update-boss-health', this.updateBossHealth, this);
+      gameScene.events.off('hide-boss-health', this.hideBossHealth, this);
     }
     GameEventEmitter.off(
       'bcoin-balance-update',

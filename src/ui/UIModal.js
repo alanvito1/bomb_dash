@@ -29,22 +29,16 @@ export default class UIModal extends Phaser.GameObjects.Container {
     this.windowContainer = scene.add.container(screenW / 2, screenH / 2);
     this.add(this.windowContainer);
 
-    // 3. Window Background (Neon Cyberpunk Style)
-    const bg = scene.add.graphics();
-    bg.fillStyle(0x000000, 1.0); // Solid Black
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
-
-    // Border
-    bg.lineStyle(2, 0x00ffff, 1);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
-
-    // Glow effect (simulated with multiple strokes or alpha)
-    bg.lineStyle(4, 0x00ffff, 0.3);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
-
-    // Interactive Hit Area for Background (Blocks clicks)
-    const hitArea = new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height);
-    bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+    // 3. Window Background (9-Slice Neon Style)
+    // Using 'ui_panel' (White Border, Black Center)
+    const bg = scene.add.nineslice(
+        0, 0,
+        'ui_panel', 0,
+        width, height,
+        10, 10, 10, 10
+    );
+    bg.setTint(0xFF5F1F); // Neon Orange Tint (Default)
+    bg.setInteractive(); // Block clicks through
 
     this.windowContainer.add(bg);
 
@@ -52,25 +46,23 @@ export default class UIModal extends Phaser.GameObjects.Container {
     const titleText = scene.add.text(0, -height / 2 + 25, title.toUpperCase(), {
       fontFamily: '"Press Start 2P"',
       fontSize: '16px',
-      fill: '#00ffff',
-      align: 'center'
+      fill: '#ffffff',
+      align: 'center',
+      stroke: '#FF5F1F',
+      strokeThickness: 4
     }).setOrigin(0.5);
-
-    // Glow Effect
-    titleText.setShadow(0, 0, '#00ffff', 8, true, true);
 
     // Title underline
     const line = scene.add.graphics();
-    line.lineStyle(2, 0x00ffff, 0.5);
+    line.lineStyle(2, 0xFF5F1F, 1);
     line.beginPath();
-    line.moveTo(-width / 2 + 20, -height / 2 + 50);
-    line.lineTo(width / 2 - 20, -height / 2 + 50);
+    line.moveTo(-width / 2 + 20, -height / 2 + 45);
+    line.lineTo(width / 2 - 20, -height / 2 + 45);
     line.strokePath();
 
     this.windowContainer.add([titleText, line]);
 
-    // 5. Close Button (X)
-    const closeBtnSize = 50; // Increased size
+    // 5. Close Button (X) - Tactile
     const closeBtnX = width / 2 - 25;
     const closeBtnY = -height / 2 + 25;
 
@@ -84,20 +76,27 @@ export default class UIModal extends Phaser.GameObjects.Container {
     }).setOrigin(0.5);
 
     closeBtn.add([btnBg, xText]);
-    // Larger interactive area
-    closeBtn.setInteractive(new Phaser.Geom.Rectangle(-40, -40, 80, 80), Phaser.Geom.Rectangle.Contains);
+    closeBtn.setInteractive(new Phaser.Geom.Rectangle(-20, -20, 40, 40), Phaser.Geom.Rectangle.Contains);
 
     closeBtn.on('pointerover', () => {
         btnBg.setFillStyle(0xff0000, 0.5);
         xText.setColor('#ffffff');
+        scene.input.setDefaultCursor('pointer');
     });
 
     closeBtn.on('pointerout', () => {
         btnBg.setFillStyle(0xff0000, 0.2);
         xText.setColor('#ff0000');
+        scene.input.setDefaultCursor('default');
+        closeBtn.setScale(1);
     });
 
     closeBtn.on('pointerdown', () => {
+        closeBtn.setScale(0.95);
+    });
+
+    closeBtn.on('pointerup', () => {
+        closeBtn.setScale(1);
         this.close();
     });
 
