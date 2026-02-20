@@ -33,7 +33,8 @@ class PlayerStateService {
             houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
             inventory: [
                 { type: 'fragment', rarity: 'Common', quantity: 200 } // Pre-seed 200 Common Fragments
-            ]
+            ],
+            bestiary: {} // Track kills per Mob ID
         };
     }
 
@@ -83,6 +84,33 @@ class PlayerStateService {
     }
 
     // --- ACTIONS ---
+
+    incrementBestiaryKill(mobId, amount = 1) {
+        if (!this.state.bestiary) this.state.bestiary = {};
+        if (!this.state.bestiary[mobId]) this.state.bestiary[mobId] = 0;
+
+        this.state.bestiary[mobId] += amount;
+
+        // Cap is implicitly tracked by checking >= 5000 in UI/Logic
+        // We do not stop counting at 5000 in case we want "Prestige" later.
+
+        this.saveState();
+        return {
+            success: true,
+            mobId,
+            newCount: this.state.bestiary[mobId],
+            completed: this.state.bestiary[mobId] >= 5000
+        };
+    }
+
+    getBestiaryStatus(mobId) {
+        const count = (this.state.bestiary && this.state.bestiary[mobId]) || 0;
+        return {
+            count,
+            target: 5000,
+            completed: count >= 5000
+        };
+    }
 
     setSelectedHero(heroId) {
         const hero = this.state.heroes.find(h => h.id === heroId);
