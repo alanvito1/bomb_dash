@@ -15,9 +15,9 @@ import SoundManager from '../utils/sound.js';
 export function createButton(scene, x, y, text, onClick) {
   const width = 280;
   const height = 50;
-  const glowColor = 0x00ffff; // Neon Cyan
-  const baseColor = 0x000033; // Dark Blue
-  const hoverColor = 0x000066; // Slightly lighter blue
+  const glowColor = 0xFF5F1F; // Neon Orange
+  const baseColor = 0x050505; // Absolute Black
+  const hoverColor = 0x331100; // Dark Orange
 
   const container = scene.add.container(x, y);
 
@@ -82,7 +82,7 @@ export function createButton(scene, x, y, text, onClick) {
 
   container.on('pointerover', () => {
     drawButton(true, false);
-    buttonText.setTint(0xffd700); // Gold text on hover
+    buttonText.setTint(0xFF5F1F); // Orange text on hover
     buttonText.setScale(1.05);
   });
 
@@ -153,13 +153,13 @@ export function createTitle(scene, x, y, text) {
     .text(x, y, text, {
       fontFamily: '"Press Start 2P"',
       fontSize: '28px',
-      fill: '#FFD700',
+      fill: '#FF5F1F',
       stroke: '#000',
       strokeThickness: 4,
       shadow: {
         offsetX: 2,
         offsetY: 2,
-        color: '#FFD700',
+        color: '#FF5F1F',
         blur: 10,
         fill: true,
       },
@@ -180,15 +180,15 @@ export function createPanel(scene, x, y, width, height) {
   const panel = scene.add.graphics();
 
   // Background
-  panel.fillStyle(0x000000, 0.85);
+  panel.fillStyle(0x050505, 1.0);
   panel.fillRect(x, y, width, height);
 
   // Neon Border
-  panel.lineStyle(2, 0x00ffff, 0.8);
+  panel.lineStyle(2, 0xFF5F1F, 1.0);
   panel.strokeRect(x, y, width, height);
 
   // Inner Glow
-  panel.lineStyle(4, 0x00ffff, 0.2);
+  panel.lineStyle(4, 0xFF5F1F, 0.2);
   panel.strokeRect(x - 2, y - 2, width + 4, height + 4);
 
   return panel;
@@ -206,11 +206,11 @@ export function drawCyberpunkGrid(scene) {
   const bg = scene.add.graphics();
 
   // 1. Solid Dark Background
-  bg.fillStyle(0x050010, 1); // Very dark purple/blue
+  bg.fillStyle(0x050505, 1); // Absolute Black
   bg.fillRect(0, 0, width, height);
 
   // 2. Grid Lines
-  bg.lineStyle(1, 0x9900ff, 0.2); // Purple, low opacity
+  bg.lineStyle(1, 0xFF5F1F, 0.2); // Orange, low opacity
 
   const gridSize = 50;
 

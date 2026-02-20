@@ -15,14 +15,14 @@ export default class HomeScene extends Phaser.Scene {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    // Background - Dark Burgundy/Black
-    this.add.rectangle(centerX, centerY, width, height, 0x110011);
+    // Background - Absolute Black
+    this.add.rectangle(centerX, centerY, width, height, 0x050505);
 
     // Title
     const titleStyle = {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '40px',
-      fill: '#DC143C', // Crimson
+      fill: '#FF5F1F', // Neon Orange
       align: 'center',
       stroke: '#000000',
       strokeThickness: 6,
@@ -53,18 +53,25 @@ export default class HomeScene extends Phaser.Scene {
     const playBtn = this.add.container(centerX, btnY);
 
     const btnBg = this.add
-      .rectangle(0, 0, btnWidth, btnHeight, 0xdc143c)
+      .rectangle(0, 0, btnWidth, btnHeight, 0x000000)
+      .setStrokeStyle(2, 0xFF5F1F)
       .setInteractive({ useHandCursor: true });
 
     // Hover effect
-    btnBg.on('pointerover', () => btnBg.setFillStyle(0xff0000));
-    btnBg.on('pointerout', () => btnBg.setFillStyle(0xdc143c));
+    btnBg.on('pointerover', () => {
+      btnBg.setFillStyle(0xFF5F1F);
+      btnText.setColor('#000000');
+    });
+    btnBg.on('pointerout', () => {
+      btnBg.setFillStyle(0x000000);
+      btnText.setColor('#FF5F1F');
+    });
 
     const btnText = this.add
       .text(0, 0, 'PLAY', {
         fontFamily: 'monospace',
         fontSize: '24px',
-        fill: '#FFFFFF',
+        fill: '#FF5F1F',
       })
       .setOrigin(0.5);
 
@@ -82,17 +89,24 @@ export default class HomeScene extends Phaser.Scene {
     const connectY = btnY + 80;
     const connectBtn = this.add.container(centerX, connectY);
     const connectBg = this.add
-      .rectangle(0, 0, btnWidth, btnHeight, 0x333333)
+      .rectangle(0, 0, btnWidth, btnHeight, 0x050505)
+      .setStrokeStyle(2, 0x00FFFF)
       .setInteractive({ useHandCursor: true });
 
-    connectBg.on('pointerover', () => connectBg.setFillStyle(0x444444));
-    connectBg.on('pointerout', () => connectBg.setFillStyle(0x333333));
+    connectBg.on('pointerover', () => {
+       connectBg.setFillStyle(0x00FFFF);
+       connectText.setColor('#000000');
+    });
+    connectBg.on('pointerout', () => {
+       connectBg.setFillStyle(0x050505);
+       connectText.setColor('#00FFFF');
+    });
 
     const connectText = this.add
       .text(0, 0, 'CONNECT WALLET', {
         fontFamily: 'monospace',
         fontSize: '14px',
-        fill: '#AAAAAA',
+        fill: '#00FFFF',
       })
       .setOrigin(0.5);
 

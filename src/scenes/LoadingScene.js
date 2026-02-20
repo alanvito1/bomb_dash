@@ -54,8 +54,8 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Progress Bar
     const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x000033, 0.8);
-    progressBox.lineStyle(2, 0x00ffff, 1);
+    progressBox.fillStyle(0x050505, 1);
+    progressBox.lineStyle(2, 0xFF5F1F, 1);
     progressBox.fillRoundedRect(centerX - 150, centerY - 10, 300, 20, 4);
     progressBox.strokeRoundedRect(centerX - 150, centerY - 10, 300, 20, 4);
 
@@ -63,7 +63,7 @@ export default class LoadingScene extends Phaser.Scene {
 
     this.load.on('progress', (value) => {
       progressBar.clear();
-      progressBar.fillStyle(0x00ffff, 1);
+      progressBar.fillStyle(0xFF5F1F, 1);
       progressBar.fillRoundedRect(
         centerX - 148,
         centerY - 8,

@@ -45,10 +45,10 @@ export function createRetroPanel(scene, x, y, width, height, style = 'wood') {
             borderColor = 0x000000;
             break;
         case 'dark':
-            mainColor = 0x222222;
-            lightColor = 0x444444;
-            darkColor = 0x111111;
-            borderColor = 0x000000;
+            mainColor = 0x050505;
+            lightColor = 0x111111;
+            darkColor = 0x000000;
+            borderColor = 0xFF5F1F; // Neon Orange Border
             break;
         default:
             mainColor = 0x8B4513;
@@ -120,18 +120,18 @@ export function createRetroButton(scene, x, y, width, height, text, type = 'prim
     // Colors
     let topColor, mainColor, bottomColor;
     switch(type) {
-        case 'primary': // Yellow/Gold
-            topColor = 0xFFFACD; mainColor = 0xFFD700; bottomColor = 0xB8860B; break;
+        case 'primary': // Neon Orange
+            topColor = 0xFFAD85; mainColor = 0xFF5F1F; bottomColor = 0xCC4400; break;
         case 'success': // Green
             topColor = 0x90EE90; mainColor = 0x32CD32; bottomColor = 0x006400; break;
         case 'danger': // Red
             topColor = 0xFFC1C1; mainColor = 0xFF4500; bottomColor = 0x8B0000; break;
-        case 'neutral': // Cyan/Blue
-            topColor = 0xE0FFFF; mainColor = 0x00BFFF; bottomColor = 0x00008B; break;
+        case 'neutral': // Cyan
+            topColor = 0xE0FFFF; mainColor = 0x00FFFF; bottomColor = 0x008B8B; break;
         case 'metal':   // Grey
             topColor = 0xD3D3D3; mainColor = 0xA9A9A9; bottomColor = 0x696969; break;
         default:
-            topColor = 0xFFFACD; mainColor = 0xFFD700; bottomColor = 0xB8860B;
+            topColor = 0xFFAD85; mainColor = 0xFF5F1F; bottomColor = 0xCC4400;
     }
 
     const bg = scene.add.graphics();

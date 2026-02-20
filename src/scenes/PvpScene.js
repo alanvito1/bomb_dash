@@ -213,8 +213,10 @@ export default class PvpScene extends Phaser.Scene {
   createTierCard(x, y, tier) {
     const card = this.add.container(x, y).setSize(650, 90);
     const bg = this.add.graphics({
-      fillStyle: { color: 0x1a1a1a, alpha: 0.8 },
+      fillStyle: { color: 0x050505, alpha: 0.9 },
     });
+    bg.lineStyle(1, 0x333333);
+    bg.strokeRect(-325, -45, 650, 90);
     bg.fillRect(-325, -45, 650, 90);
     card.add(bg);
     card.setData({ tier, bg });
@@ -241,11 +243,12 @@ export default class PvpScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.selectTier(card))
       .on('pointerover', () =>
-        bg.lineStyle(2, 0xffd700).strokeRect(-325, -45, 650, 90)
+        bg.lineStyle(2, 0xFF5F1F).strokeRect(-325, -45, 650, 90)
       )
       .on('pointerout', () => {
-        if (this.selectedTierCard !== card)
-          bg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-325, -45, 650, 90);
+        if (this.selectedTierCard !== card) {
+          bg.clear().lineStyle(1, 0x333333).strokeRect(-325, -45, 650, 90).fillStyle(0x050505, 0.9).fillRect(-325, -45, 650, 90);
+        }
       });
 
     return card;
@@ -261,7 +264,9 @@ export default class PvpScene extends Phaser.Scene {
       c
         .getData('bg')
         .clear()
-        .fillStyle(0x1a1a1a, 0.8)
+        .lineStyle(1, 0x333333)
+        .strokeRect(-325, -45, 650, 90)
+        .fillStyle(0x050505, 0.9)
         .fillRect(-325, -45, 650, 90)
     );
     card.getData('bg').lineStyle(2, 0x00ffff).strokeRect(-325, -45, 650, 90);
@@ -326,10 +331,12 @@ export default class PvpScene extends Phaser.Scene {
 
   createHeroCard(x, y, hero, isSelectable) {
     const card = this.add.container(x, y).setSize(500, 80);
-    const bgColor = isSelectable ? 0x1a1a1a : 0x330000;
+    const bgColor = isSelectable ? 0x050505 : 0x220000;
     const textColor = isSelectable ? '#FFFFFF' : '#888888';
 
-    const bg = this.add.graphics({ fillStyle: { color: bgColor, alpha: 0.8 } });
+    const bg = this.add.graphics({ fillStyle: { color: bgColor, alpha: 0.9 } });
+    bg.lineStyle(1, 0x333333);
+    bg.strokeRect(-250, -40, 500, 80);
     bg.fillRect(-250, -40, 500, 80);
     card.add(bg);
     card.setData({ hero, bg, isSelectable });
@@ -352,11 +359,11 @@ export default class PvpScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.selectHeroForWager(card))
         .on('pointerover', () =>
-          bg.lineStyle(2, 0xffd700).strokeRect(-250, -40, 500, 80)
+          bg.lineStyle(2, 0xFF5F1F).strokeRect(-250, -40, 500, 80)
         )
         .on('pointerout', () => {
           if (this.selectedHeroCard !== card)
-            bg.clear().fillStyle(bgColor, 0.8).fillRect(-250, -40, 500, 80);
+            bg.clear().lineStyle(1, 0x333333).strokeRect(-250, -40, 500, 80).fillStyle(bgColor, 0.9).fillRect(-250, -40, 500, 80);
         });
     }
     return card;
@@ -368,7 +375,7 @@ export default class PvpScene extends Phaser.Scene {
   selectHeroForWager(card) {
     if (this.selectedHeroCard) {
       const oldBg = this.selectedHeroCard.getData('bg');
-      oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-250, -40, 500, 80);
+      oldBg.clear().lineStyle(1, 0x333333).strokeRect(-250, -40, 500, 80).fillStyle(0x050505, 0.9).fillRect(-250, -40, 500, 80);
     }
 
     this.selectedHeroCard = card;
@@ -520,8 +527,10 @@ export default class PvpScene extends Phaser.Scene {
         .container(this.game.config.width / 2, startY + index * 120)
         .setSize(400, 100);
       const heroBg = this.add.graphics({
-        fillStyle: { color: 0x1a1a1a, alpha: 0.8 },
+        fillStyle: { color: 0x050505, alpha: 0.9 },
       });
+      heroBg.lineStyle(1, 0x333333);
+      heroBg.strokeRect(-200, -50, 400, 100);
       heroBg.fillRect(-200, -50, 400, 100);
       heroCard.add(heroBg);
 
@@ -542,10 +551,10 @@ export default class PvpScene extends Phaser.Scene {
         this.selectHero(hero, heroCard);
       });
       heroCard.on('pointerover', () =>
-        heroBg.lineStyle(2, 0xffd700).strokeRect(-200, -50, 400, 100)
+        heroBg.lineStyle(2, 0xFF5F1F).strokeRect(-200, -50, 400, 100)
       );
       heroCard.on('pointerout', () =>
-        heroBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-200, -50, 400, 100)
+        heroBg.clear().lineStyle(1, 0x333333).strokeRect(-200, -50, 400, 100).fillStyle(0x050505, 0.9).fillRect(-200, -50, 400, 100)
       );
 
       this.add.existing(heroCard);
@@ -555,7 +564,7 @@ export default class PvpScene extends Phaser.Scene {
   selectHero(hero, card) {
     if (this.selectedCard) {
       const oldBg = this.selectedCard.list[0];
-      oldBg.clear().fillStyle(0x1a1a1a, 0.8).fillRect(-200, -50, 400, 100);
+      oldBg.clear().lineStyle(1, 0x333333).strokeRect(-200, -50, 400, 100).fillStyle(0x050505, 0.9).fillRect(-200, -50, 400, 100);
     }
 
     this.selectedHero = hero;
@@ -563,7 +572,7 @@ export default class PvpScene extends Phaser.Scene {
     this.registry.set('selectedHero', hero); // Store hero for GameScene
 
     const newBg = card.list[0];
-    newBg.clear().fillStyle(0x3a3a3a, 0.9).fillRect(-200, -50, 400, 100);
+    newBg.clear().fillStyle(0x050505, 1).fillRect(-200, -50, 400, 100);
     newBg.lineStyle(2, 0x00ffff).strokeRect(-200, -50, 400, 100);
 
     this.showEnterQueueButton();
