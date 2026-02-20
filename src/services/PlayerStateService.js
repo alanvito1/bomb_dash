@@ -1,23 +1,86 @@
-import { MOCK_USER } from '../config/MockData.js';
-import { MockHeroes, MockHouses, SPELLS, RARITY } from '../config/MockNFTData.js';
+import axios from 'axios';
+import { supabase } from '../lib/supabaseClient.js';
+import { MOCK_USER, MOCK_HEROES, MOCK_INVENTORY } from '../config/MockData.js';
+import { MockHeroes, MockHouses, SPELLS } from '../config/MockNFTData.js';
 
 const STORAGE_KEY = 'sandbox_state';
 
 class PlayerStateService {
     constructor() {
-        this.state = this.loadState();
+        // Initialize with default/mock state to prevent UI crashes before auth
+        this.state = this.getDefaultState();
+        this.isInitialized = false;
+        this.walletAddress = null;
     }
 
-    loadState() {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                return JSON.parse(stored);
-            }
-        } catch (e) {
-            console.warn('Failed to load local state, resetting to defaults.', e);
+    /**
+     * Loads the initial state from Supabase (READ).
+     * @param {string} walletAddress - The user's wallet address.
+     */
+    async init(walletAddress) {
+        if (!walletAddress) {
+            console.error('[PlayerState] Init failed: No wallet address provided');
+            return;
         }
-        return this.getDefaultState();
+
+        console.log(`[PlayerState] Initializing for ${walletAddress}...`);
+        this.walletAddress = walletAddress;
+
+        try {
+            // 1. Fetch User
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('wallet_address', walletAddress)
+                .single();
+
+            if (userError || !userData) {
+                console.warn('[PlayerState] User not found, using Mock/Default.', userError);
+                // In a real app, we might trigger a registration flow here
+            } else {
+                this.state.user = this._mapUserFromDB(userData);
+            }
+
+            // 2. Fetch Heroes
+            const { data: heroesData, error: heroesError } = await supabase
+                .from('heroes')
+                .select('*')
+                .eq('user_id', this.state.user.id || 0); // Handle missing user ID safely
+
+            if (!heroesError && heroesData) {
+                this.state.heroes = heroesData.map(h => this._mapHeroFromDB(h));
+            }
+
+            // 3. Fetch Inventory
+            // We join user_items with items to get details
+            const { data: inventoryData, error: inventoryError } = await supabase
+                .from('user_items')
+                .select('quantity, item:items(name, type, rarity)')
+                .eq('user_id', this.state.user.id || 0);
+
+            if (!inventoryError && inventoryData) {
+                this.state.inventory = inventoryData.map(i => this._mapItemFromDB(i));
+            }
+
+            // 4. Fetch Bestiary
+            const { data: bestiaryData, error: bestiaryError } = await supabase
+                .from('user_bestiary')
+                .select('enemy_type, kill_count')
+                .eq('user_id', this.state.user.id || 0);
+
+            if (!bestiaryError && bestiaryData) {
+                this.state.bestiary = {};
+                bestiaryData.forEach(b => {
+                    this.state.bestiary[b.enemy_type] = b.kill_count;
+                });
+            }
+
+            this.isInitialized = true;
+            console.log('[PlayerState] Initialization Complete.', this.state);
+
+        } catch (e) {
+            console.error('[PlayerState] Initialization Error:', e);
+        }
     }
 
     getDefaultState() {
@@ -26,43 +89,73 @@ class PlayerStateService {
             user: {
                 ...MOCK_USER,
                 selectedHeroId: heroes[0] ? heroes[0].id : null,
-                accountLevel: 1, // Task Force: Summoner's Journey
-                accountXp: 0
-            }, // Copy to avoid mutation issues
-            heroes: heroes, // Deep copy
-            houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
+                accountLevel: 1,
+                accountXp: 0,
+                bcoin: 1000 // Default Mock Balance
+            },
+            heroes: heroes,
+            houses: JSON.parse(JSON.stringify(MockHouses)),
             inventory: [
-                { type: 'fragment', rarity: 'Common', quantity: 200 } // Pre-seed 200 Common Fragments
+                { type: 'fragment', rarity: 'Common', quantity: 200 }
             ],
-            bestiary: {} // Track kills per Mob ID
+            bestiary: {}
         };
     }
 
-    saveState() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-        } catch (e) {
-            console.error('Failed to save state', e);
-        }
+    // --- ADAPTERS (Snake -> Camel) ---
+
+    _mapUserFromDB(dbUser) {
+        return {
+            id: dbUser.id,
+            walletAddress: dbUser.wallet_address,
+            bcoin: dbUser.coins, // Map 'coins' to 'bcoin'
+            accountLevel: dbUser.account_level,
+            accountXp: dbUser.account_xp,
+            selectedHeroId: this.state.user.selectedHeroId // Persist selection locally for now
+        };
     }
 
-    // --- GETTERS ---
-
-    getUser() {
-        return this.state.user;
+    _mapHeroFromDB(dbHero) {
+        return {
+            id: dbHero.id,
+            genotype: dbHero.genotype || 'Unknown',
+            level: dbHero.level,
+            xp: dbHero.xp,
+            rarity: this._mapRarityToInt(dbHero.rarity), // Map String to Int
+            max_stage: dbHero.max_stage,
+            stats: {
+                power: dbHero.damage,
+                speed: dbHero.speed,
+                hp: dbHero.hp,
+                // Add other stats if they exist in DB or default
+            },
+            spells: [], // TODO: Persist spells in DB
+            name: dbHero.sprite_name // Use sprite name as name or separate field
+        };
     }
 
-    getHeroes() {
-        return this.state.heroes;
+    _mapItemFromDB(userItem) {
+        // userItem is { quantity, item: { name, type, rarity } }
+        const itemDef = userItem.item;
+        return {
+            type: itemDef.type, // e.g. 'fragment', 'weapon'
+            rarity: itemDef.rarity, // 'Common'
+            quantity: userItem.quantity,
+            name: itemDef.name
+        };
     }
 
-    getHouses() {
-        return this.state.houses;
+    _mapRarityToInt(rarityString) {
+        const map = { 'Common': 0, 'Rare': 1, 'Super Rare': 2, 'Epic': 3, 'Legend': 4, 'Super Legend': 5 };
+        return map[rarityString] || 0;
     }
 
-    getInventory() {
-        return this.state.inventory || [];
-    }
+    // --- GETTERS (Sync - from Memory) ---
+
+    getUser() { return this.state.user; }
+    getHeroes() { return this.state.heroes; }
+    getHouses() { return this.state.houses; }
+    getInventory() { return this.state.inventory || []; }
 
     getHeroStage(heroId) {
         const hero = this.state.heroes.find(h => h.id === heroId);
@@ -71,30 +164,46 @@ class PlayerStateService {
 
     getFragmentCount(rarity) {
         if (!this.state.inventory) return 0;
-        const item = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === rarity);
+        // Support both specific fragment types or generic 'fragment'
+        const item = this.state.inventory.find(i =>
+            (i.type === 'fragment' || i.name?.includes('Fragment')) && i.rarity === rarity
+        );
         return item ? item.quantity : 0;
     }
 
-    getAccountLevel() {
-        return this.state.user.accountLevel || 1;
+    getAccountLevel() { return this.state.user.accountLevel || 1; }
+    getAccountXp() { return this.state.user.accountXp || 0; }
+
+    getBestiaryStatus(mobId) {
+        const count = (this.state.bestiary && this.state.bestiary[mobId]) || 0;
+        return { count, target: 5000, completed: count >= 5000 };
     }
 
-    getAccountXp() {
-        return this.state.user.accountXp || 0;
+    setSelectedHero(heroId) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        if (!hero) throw new Error('Hero not found');
+        this.state.user.selectedHeroId = heroId;
+        return { success: true, hero };
     }
 
-    // --- ACTIONS ---
+    // --- ACTIONS (Async - Write to API) ---
 
-    incrementBestiaryKill(mobId, amount = 1) {
+    async incrementBestiaryKill(mobId, amount = 1) {
+        // Optimistic Update
         if (!this.state.bestiary) this.state.bestiary = {};
         if (!this.state.bestiary[mobId]) this.state.bestiary[mobId] = 0;
-
         this.state.bestiary[mobId] += amount;
 
-        // Cap is implicitly tracked by checking >= 5000 in UI/Logic
-        // We do not stop counting at 5000 in case we want "Prestige" later.
+        try {
+            // Fire and forget - or queue
+            await axios.post('/api/game/bestiary/update', {
+                walletAddress: this.walletAddress,
+                updates: { [mobId]: amount }
+            });
+        } catch (e) {
+            console.error('Failed to sync Bestiary', e);
+        }
 
-        this.saveState();
         return {
             success: true,
             mobId,
@@ -103,248 +212,112 @@ class PlayerStateService {
         };
     }
 
-    getBestiaryStatus(mobId) {
-        const count = (this.state.bestiary && this.state.bestiary[mobId]) || 0;
-        return {
-            count,
-            target: 5000,
-            completed: count >= 5000
-        };
-    }
-
-    setSelectedHero(heroId) {
+    async completeStage(heroId, stageId) {
         const hero = this.state.heroes.find(h => h.id === heroId);
         if (!hero) throw new Error('Hero not found');
 
-        this.state.user.selectedHeroId = heroId;
-        this.saveState();
-        return { success: true, hero };
-    }
-
-    completeStage(heroId, stageId) {
-        const hero = this.state.heroes.find(h => h.id === heroId);
-        if (!hero) throw new Error('Hero not found');
-
-        // Initialize max_stage if missing
+        // Optimistic Update
+        let unlocked = false;
         if (!hero.max_stage) hero.max_stage = 1;
-
-        // Unlock next stage logic
         if (stageId >= hero.max_stage) {
             hero.max_stage = stageId + 1;
-            console.log(`[PlayerState] Hero ${hero.name} unlocked Stage ${hero.max_stage}`);
-            this.saveState();
-            return { success: true, newMaxStage: hero.max_stage, unlocked: true };
+            unlocked = true;
         }
 
-        return { success: true, newMaxStage: hero.max_stage, unlocked: false };
+        try {
+             await axios.post('/api/game/stage/complete', {
+                walletAddress: this.walletAddress,
+                heroId,
+                stageId
+            });
+        } catch (e) {
+            console.error('Failed to save Stage Progress', e);
+        }
+
+        return { success: true, newMaxStage: hero.max_stage, unlocked };
     }
 
-    upgradeHeroStat(heroId) {
-        // Deprecated: Kept for legacy compatibility if needed
-        const hero = this.state.heroes.find(h => h.id === heroId);
-        if (!hero) throw new Error('Hero not found');
-
-        const cost = 500;
-        if (this.state.user.bcoin < cost) {
-            throw new Error('Insufficient BCOIN');
-        }
-
-        // Deduct Balance
-        this.state.user.bcoin -= cost;
-
-        // Upgrade Random Stat
-        const stats = ['power', 'speed', 'stamina', 'bomb_num', 'range'];
-        const randomStat = stats[Math.floor(Math.random() * stats.length)];
-
-        // Initialize if missing (safety)
-        if (!hero.stats) hero.stats = {};
-        if (!hero.stats[randomStat]) hero.stats[randomStat] = 1;
-
-        hero.stats[randomStat] += 1;
-
-        this.saveState();
-        return { success: true, hero, statUpgraded: randomStat };
-    }
-
-    upgradeHeroStatWithFragments(heroId, statName) {
-         // Deprecated: Kept for legacy compatibility if needed
-        const hero = this.state.heroes.find(h => h.id === heroId);
-        if (!hero) throw new Error('Hero not found');
-
-        // Valid stats to upgrade via this method
-        if (!['power', 'speed'].includes(statName)) {
-             throw new Error('Invalid stat for upgrade');
-        }
-
-        const rarity = 'Common';
-        const cost = 50;
-
-        const fragmentCount = this.getFragmentCount(rarity);
-        if (fragmentCount < cost) {
-            return { success: false, message: 'Insufficient Fragments' };
-        }
-
-        // Deduct Fragments
-        const item = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === rarity);
-        if (item) {
-            item.quantity -= cost;
-        }
-
-        // Upgrade Stat
-        if (!hero.stats) hero.stats = {};
-        if (!hero.stats[statName]) hero.stats[statName] = 1;
-
-        hero.stats[statName] += 1;
-
-        this.saveState();
-        return { success: true, hero, newStatValue: hero.stats[statName], remainingFragments: item ? item.quantity : 0 };
-    }
-
-    // NEW: Hero Level Up System
-    upgradeHeroLevel(heroId) {
+    /**
+     * Upgrades Hero Level securely via API (WRITE).
+     */
+    async upgradeHeroLevel(heroId) {
+        // Optimistic checks
         const hero = this.state.heroes.find(h => h.id === heroId);
         if (!hero) throw new Error('Hero not found');
 
         const bcoinCost = 1;
         const fragmentCost = 50;
-        const fragmentRarity = 'Common';
 
-        // Check BCOIN
         if (this.state.user.bcoin < bcoinCost) {
-            return { success: false, message: 'Insufficient BCOIN (Need 1)' };
+            return { success: false, message: 'Insufficient BCOIN' };
         }
 
-        // Check Fragments
-        const fragmentItem = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === fragmentRarity);
-        const currentFragments = fragmentItem ? fragmentItem.quantity : 0;
+        try {
+            // Call API to execute transaction
+            const response = await axios.post('/api/heroes/levelup', {
+                walletAddress: this.walletAddress,
+                heroId
+            });
 
-        if (currentFragments < fragmentCost) {
-            return { success: false, message: `Insufficient Fragments (Need ${fragmentCost})` };
+            if (response.data.success) {
+                // Update local state with authoritative data from backend
+                const { hero: updatedHero, newBalance, remainingFragments } = response.data;
+
+                // Merge updates
+                Object.assign(hero, this._mapHeroFromDB(updatedHero));
+                this.state.user.bcoin = newBalance;
+
+                // Update fragments in inventory
+                const fragmentItem = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === 'Common');
+                if (fragmentItem) fragmentItem.quantity = remainingFragments;
+
+                return {
+                    success: true,
+                    hero,
+                    newLevel: hero.level,
+                    remainingBcoin: this.state.user.bcoin,
+                    remainingFragments: fragmentItem ? fragmentItem.quantity : 0
+                };
+            } else {
+                return { success: false, message: response.data.message || 'Level up failed' };
+            }
+        } catch (e) {
+            console.error('Level Up API Error:', e);
+            return { success: false, message: 'Network Error' };
         }
-
-        // Deduct Costs
-        this.state.user.bcoin -= bcoinCost;
-        fragmentItem.quantity -= fragmentCost;
-
-        // Level Up Logic
-        if (!hero.level) hero.level = 1;
-        hero.level += 1;
-
-        // Save
-        this.saveState();
-
-        return {
-            success: true,
-            hero,
-            newLevel: hero.level,
-            remainingBcoin: this.state.user.bcoin,
-            remainingFragments: fragmentItem.quantity
-        };
     }
 
-    rerollHeroSpells(heroId) {
-        const hero = this.state.heroes.find(h => h.id === heroId);
-        if (!hero) throw new Error('Hero not found');
-
-        const cost = 1000;
-        if (this.state.user.bcoin < cost) {
-            throw new Error('Insufficient BCOIN');
-        }
-
-        // Deduct Balance
-        this.state.user.bcoin -= cost;
-
-        // Determine number of spells based on rarity
-        // Common(0): 0-1, Rare(1): 1, SR(2): 1-2, Epic(3): 2-3, Legend(4): 3, SP(5): 4
-        let minSpells = 0;
-        let maxSpells = 1;
-
-        switch (hero.rarity) {
-            case 0: minSpells = 0; maxSpells = 1; break;
-            case 1: minSpells = 1; maxSpells = 1; break;
-            case 2: minSpells = 1; maxSpells = 2; break;
-            case 3: minSpells = 2; maxSpells = 3; break;
-            case 4: minSpells = 3; maxSpells = 3; break;
-            case 5: minSpells = 4; maxSpells = 4; break;
-            default: minSpells = 1; maxSpells = 1;
-        }
-
-        const numSpells = Math.floor(Math.random() * (maxSpells - minSpells + 1)) + minSpells;
-
-        // Pick random unique spells
-        const allSpellIds = Object.keys(SPELLS).map(k => parseInt(k));
-        const newSpells = [];
-
-        // Simple shuffle and pick
-        for (let i = allSpellIds.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allSpellIds[i], allSpellIds[j]] = [allSpellIds[j], allSpellIds[i]];
-        }
-
-        hero.spells = allSpellIds.slice(0, numSpells);
-
-        this.saveState();
-        return { success: true, hero, newSpells: hero.spells };
-    }
-
-    addAccountXp(amount) {
-        if (!this.state.user.accountLevel) this.state.user.accountLevel = 1;
-        if (!this.state.user.accountXp) this.state.user.accountXp = 0;
-
-        this.state.user.accountXp += amount;
-        let leveledUp = false;
-        let requiredXp = this.state.user.accountLevel * 100;
-
-        while (this.state.user.accountXp >= requiredXp) {
-            this.state.user.accountXp -= requiredXp;
-            this.state.user.accountLevel++;
-            requiredXp = this.state.user.accountLevel * 100;
-            leveledUp = true;
-        }
-
-        this.saveState();
-        return {
-            success: true,
-            leveledUp: leveledUp,
-            newLevel: this.state.user.accountLevel,
-            currentXp: this.state.user.accountXp
-        };
-    }
-
-    /**
-     * Phase 3: Merges session loot into persistent inventory.
-     * @param {Array} sessionLoot - Array of { type, rarity, quantity } objects.
-     */
-    addSessionLoot(sessionLoot) {
+    async addSessionLoot(sessionLoot) {
         if (!sessionLoot || !Array.isArray(sessionLoot)) return;
 
+        // Optimistic Update
         if (!this.state.inventory) this.state.inventory = [];
-
         sessionLoot.forEach(item => {
-            const existingItem = this.state.inventory.find(
-                i => i.type === item.type && i.rarity === item.rarity
-            );
-
-            if (existingItem) {
-                existingItem.quantity = (existingItem.quantity || 0) + (item.quantity || 1);
-            } else {
-                this.state.inventory.push({
-                    type: item.type,
-                    rarity: item.rarity,
-                    quantity: item.quantity || 1
-                });
-            }
+            const existing = this.state.inventory.find(i => i.type === item.type && i.rarity === item.rarity);
+            if (existing) existing.quantity += (item.quantity || 1);
+            else this.state.inventory.push(item);
         });
 
-        console.log('[PlayerState] Inventory Updated:', this.state.inventory);
-        this.saveState();
+        try {
+            await axios.post('/api/game/loot/sync', {
+                walletAddress: this.walletAddress,
+                loot: sessionLoot
+            });
+        } catch (e) {
+            console.error('Failed to sync loot', e);
+        }
+
         return { success: true, inventory: this.state.inventory };
     }
 
-    resetState() {
-        this.state = this.getDefaultState();
-        this.saveState();
-    }
+    // --- Legacy / Deprecated Methods (Kept for compatibility) ---
+
+    saveState() { /* No-op: State is now DB-managed */ }
+    resetState() { this.state = this.getDefaultState(); }
+
+    upgradeHeroStat(heroId) { return { success: false, message: "Use Level Up" }; }
+    upgradeHeroStatWithFragments(heroId) { return { success: false, message: "Use Level Up" }; }
+    rerollHeroSpells(heroId) { return { success: false, message: "Coming Soon" }; }
 }
 
 const playerStateService = new PlayerStateService();
