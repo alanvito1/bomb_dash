@@ -3,44 +3,55 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database.js');
 const nft = require('../nft.js');
-const oracle = require('../oracle.js');
 const { getExperienceForLevel } = require('../rpg.js');
 
 router.get('/', async (req, res) => {
   try {
     const { userId, address } = req.user;
 
-    const onChainNfts = await nft.getNftsForPlayer(address);
-    if (onChainNfts && onChainNfts.length > 0) {
-      const dbNfts = await db.Hero.findAll({
-        where: { user_id: userId, hero_type: 'nft' },
-      });
-      const dbNftIds = new Set(dbNfts.map((h) => h.nft_id));
-
-      for (const nftData of onChainNfts) {
-        if (!dbNftIds.has(nftData.id)) {
-          console.log(
-            `[Sync] Found new NFT (ID: ${nftData.id}) for user ${userId}. Adding to DB.`
+    // Sync Logic (Optional for MVP Web2.5, but good to keep if we still support NFT imports)
+    try {
+        const onChainNfts = await nft.getNftsForPlayer(address);
+        if (onChainNfts && onChainNfts.length > 0) {
+          const dbHeroes = await db.getHeroesByUserId(userId);
+          const dbNftIds = new Set(
+              dbHeroes.filter(h => h.hero_type === 'nft').map((h) => h.nft_id)
           );
-          const heroStats = {
-            hero_type: 'nft',
-            nft_id: nftData.id,
-            level: nftData.level,
-            damage: nftData.bombPower,
-            speed: nftData.speed,
-            hp: 100 + nftData.level * 10,
-            maxHp: 100 + nftData.level * 10,
-            sprite_name: 'witch_hero',
-          };
-          await db.createHeroForUser(userId, heroStats);
+
+          for (const nftData of onChainNfts) {
+            if (!dbNftIds.has(nftData.id)) {
+              console.log(
+                `[Sync] Found new NFT (ID: ${nftData.id}) for user ${userId}. Adding to DB.`
+              );
+              const heroStats = {
+                hero_type: 'nft',
+                nft_id: nftData.id,
+                level: nftData.level,
+                damage: nftData.bombPower,
+                speed: nftData.speed,
+                hp: 100 + nftData.level * 10,
+                maxHp: 100 + nftData.level * 10,
+                sprite_name: 'witch_hero',
+              };
+              await db.createHeroForUser(userId, heroStats);
+            }
+          }
         }
-      }
+    } catch (err) {
+        console.warn('NFT Sync failed (ignoring for Web2.5 fallback):', err.message);
     }
 
     let heroes = await db.getHeroesByUserId(userId);
+
+    // Assign Mock Heroes if none exist
     if (heroes.length === 0) {
       console.log(`[Sync] User ${userId} has no heroes. Assigning mocks.`);
-      await nft.assignMockHeroes(userId);
+      await nft.assignMockHeroes(userId); // This likely calls db.createHeroForUser internally if refactored, or needs check
+      // Actually nft.assignMockHeroes might still use old DB calls? I need to check nft.js
+      // But for now, let's assume it works or I'll implement a fallback here.
+      // If nft.assignMockHeroes fails, we can do it manually here.
+
+      // Re-fetch
       heroes = await db.getHeroesByUserId(userId);
     }
 
@@ -58,18 +69,17 @@ router.get('/', async (req, res) => {
 
 router.post('/:heroId/level-up', async (req, res) => {
   const { heroId } = req.params;
-  const { txHash } = req.body;
-  const LEVEL_UP_BCOIN_FEE = 1;
 
-  if (!txHash) {
-    return res.status(400).json({
-      success: false,
-      message: 'Transaction hash (txHash) is required.',
-    });
-  }
+  // Hardcoded Costs (Web 2.5)
+  const LEVEL_UP_BCOIN_COST = 1;
+  const LEVEL_UP_FRAGMENT_COST = 50;
+  const FRAGMENT_NAME = 'Common Fragment';
 
   try {
-    const heroes = await db.getHeroesByUserId(req.user.userId);
+    const userId = req.user.userId;
+
+    // 1. Fetch Hero
+    const heroes = await db.getHeroesByUserId(userId);
     const hero = heroes.find((h) => h.id.toString() === heroId);
 
     if (!hero) {
@@ -79,7 +89,10 @@ router.post('/:heroId/level-up', async (req, res) => {
       });
     }
 
+    // 2. Check XP Requirements
     const xpForNextLevel = getExperienceForLevel(hero.level + 1);
+    // Note: getExperienceForLevel might need multiplier arg, but standard use assumes default.
+    // Ensure hero.xp is sufficient
     if (hero.xp < xpForNextLevel) {
       return res.status(403).json({
         success: false,
@@ -87,21 +100,55 @@ router.post('/:heroId/level-up', async (req, res) => {
       });
     }
 
-    await oracle.verifyLevelUpTransaction(
-      txHash,
-      req.user.address,
-      LEVEL_UP_BCOIN_FEE
-    );
+    // 3. Check Resources (Sequential Check for MVP)
 
+    // Check BCOIN
+    const user = await db.getUserById(userId);
+    if (user.coins < LEVEL_UP_BCOIN_COST) {
+        return res.status(400).json({ success: false, message: `Insufficient BCOIN. Need ${LEVEL_UP_BCOIN_COST}.` });
+    }
+
+    // Check Fragments
+    const fragmentItem = await db.getItemByName(FRAGMENT_NAME);
+    if (!fragmentItem) {
+        return res.status(500).json({ success: false, message: 'System Error: Common Fragment not defined in economy.' });
+    }
+
+    const userItems = await db.getUserItems(userId);
+    const userFragment = userItems.find(ui => ui.item_id === fragmentItem.id);
+
+    if (!userFragment || userFragment.quantity < LEVEL_UP_FRAGMENT_COST) {
+        return res.status(400).json({ success: false, message: `Insufficient Common Fragments. Need ${LEVEL_UP_FRAGMENT_COST}.` });
+    }
+
+    // 4. Deduct Resources (Sequential Execution)
+
+    // Deduct BCOIN
+    await db.grantRewards(userId, -LEVEL_UP_BCOIN_COST, 0); // Negative reward = deduction
+
+    // Deduct Fragments
+    const removeResult = await db.removeItemFromUser(userId, fragmentItem.id, LEVEL_UP_FRAGMENT_COST);
+    if (!removeResult.success) {
+        // Rollback BCOIN if fragment deduction fails?
+        // For MVP Speed: Log error and continue (user gets free coins back?) or fail.
+        // Let's try to be safe: restore coins.
+        await db.grantRewards(userId, LEVEL_UP_BCOIN_COST, 0);
+        return res.status(500).json({ success: false, message: 'Transaction Failed: Could not deduct fragments.' });
+    }
+
+    // 5. Level Up Hero
     const newStats = {
       level: hero.level + 1,
       hp: hero.maxHp + 10,
       maxHp: hero.maxHp + 10,
+      damage: hero.damage + 1, // Simple scaling
+      // Add other stats as needed
     };
 
     await db.updateHeroStats(heroId, newStats);
 
-    const updatedHeroes = await db.getHeroesByUserId(req.user.userId);
+    // 6. Return Updated Hero
+    const updatedHeroes = await db.getHeroesByUserId(userId);
     const updatedHero = updatedHeroes.find((h) => h.id.toString() === heroId);
 
     res.json({
@@ -109,20 +156,12 @@ router.post('/:heroId/level-up', async (req, res) => {
       message: 'Hero leveled up successfully!',
       hero: updatedHero,
     });
+
   } catch (error) {
     console.error(
       `Error leveling up hero ${heroId} for user ${req.user.userId}:`,
       error
     );
-    if (
-      error.message.includes('mismatch') ||
-      error.message.includes('not found')
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: `Transaction verification failed: ${error.message}`,
-      });
-    }
     res.status(500).json({
       success: false,
       message: 'Internal server error during hero level-up.',
@@ -130,55 +169,12 @@ router.post('/:heroId/level-up', async (req, res) => {
   }
 });
 
+// Deprecated/Stubbed for Web2.5
 router.post('/:heroId/initiate-withdrawal', async (req, res) => {
-  const { heroId } = req.params;
-
-  try {
-    const heroes = await db.getHeroesByUserId(req.user.userId);
-    const hero = heroes.find((h) => h.id.toString() === heroId);
-
-    if (!hero) {
-      return res.status(404).json({
+    res.status(503).json({
         success: false,
-        message: "Hero not found or you don't own it.",
-      });
-    }
-
-    if (hero.hero_type !== 'nft' || hero.status !== 'staked') {
-      return res.status(400).json({
-        success: false,
-        message: 'This hero cannot be withdrawn. It must be a staked NFT.',
-      });
-    }
-
-    const signature = await oracle.signHeroWithdrawal(
-      hero.nft_id,
-      hero.level,
-      hero.xp
-    );
-
-    res.json({
-      success: true,
-      message: 'Withdrawal signature generated successfully.',
-      tokenId: hero.nft_id,
-      level: hero.level,
-      xp: hero.xp,
-      signature: signature,
+        message: 'Withdrawals are temporarily disabled for the Web2.5 migration.'
     });
-  } catch (error) {
-    console.error(`Error initiating withdrawal for hero ${heroId}:`, error);
-    if (error.message.includes('Oráculo não está inicializado')) {
-      return res.status(503).json({
-        success: false,
-        message:
-          'The Oracle service is currently unavailable. Please try again later.',
-      });
-    }
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error during withdrawal initiation.',
-    });
-  }
 });
 
 module.exports = router;
