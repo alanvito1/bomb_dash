@@ -2,6 +2,7 @@ import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
 import { createFloatingText } from './FloatingText.js';
 import { showNextStageDialog as StageDialog } from './NextStageDialog.js';
+import playerStateService from '../services/PlayerStateService.js';
 
 /**
  * @class CollisionHandler
@@ -116,7 +117,7 @@ export default class CollisionHandler {
     if (!enemy.active) return;
 
     // Bestiary Bonus
-    const enemyType = enemy.texture.key;
+    const enemyType = enemy.id || enemy.texture.key; // Prefer ID
     const kills = (this.scene.bestiaryData && this.scene.bestiaryData[enemyType]) || 0;
 
     let bonus = 0;
@@ -201,10 +202,15 @@ export default class CollisionHandler {
       // Update HUD to show SESSION LOOT (The "At Risk" Amount)
       this.events.emit('update-bcoin', { balance: this.scene.sessionLoot.coins });
 
-      // Bestiary Collection
-      const type = enemy.texture.key;
+      // Bestiary Collection (Session + Persistent)
+      const type = enemy.id || enemy.texture.key;
+
+      // Session (For Victory Display)
       if (!this.scene.sessionBestiary) this.scene.sessionBestiary = {};
       this.scene.sessionBestiary[type] = (this.scene.sessionBestiary[type] || 0) + 1;
+
+      // Persistent (Immediate) - Task Force Requirement
+      playerStateService.incrementBestiaryKill(type);
 
       // Floating Text Feedback
       createFloatingText(this.scene, enemy.x, enemy.y - 40, 'Bestiary +1', '#00ffff');
@@ -217,6 +223,10 @@ export default class CollisionHandler {
         this.scene.physics.pause();
         this.scene.setPlayerState('CANNOT_SHOOT', 'Boss defeated');
         StageDialog(this.scene, () => this.scene.prepareNextStage());
+      }
+
+      if (this.scene.trySpawnLoot) {
+          this.scene.trySpawnLoot(enemy.x, enemy.y);
       }
 
       enemy.destroy();

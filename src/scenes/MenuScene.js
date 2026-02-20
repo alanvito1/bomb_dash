@@ -341,9 +341,9 @@ export default class MenuScene extends Phaser.Scene {
     addBtn('icon_settings', () => this.settingsModal.open(), 0xaaaaaa);
     addBtn('icon_wallet', () => this.walletModal.open(), 0xcd7f32);
     addBtn('icon_altar', () => this.altarModal.open(), 0xffd700);
-    addBtn('icon_book', () => this.bestiaryModal.open(), 0xdc143c);
+    // addBtn('icon_book', () => this.bestiaryModal.open(), 0xdc143c); // Moved to Dock
     addBtn('icon_guild', () => this.socialModal.open(), 0xff00ff);
-    addBtn('icon_forge', () => this.forgeModal.open(), 0xff4500);
+    // addBtn('icon_forge', () => this.forgeModal.open(), 0xff4500); // Moved to Dock
     addBtn('icon_house', () => this.housesModal.open(), 0x00ffff);
 
     // Guest Dot
@@ -394,41 +394,50 @@ export default class MenuScene extends Phaser.Scene {
     container.add(bg);
 
     const btnY = dockHeight / 2;
-    const btnW = 90;
-    const playBtnW = 110;
+    // 5 Buttons Layout
+    // Bestiary | Heroes | Play | Forge | Shop
+    const sideBtnW = 85;
+    const playBtnW = 100;
 
-    // Positions
-    const x1 = width * 0.14;
-    const x2 = width * 0.38;
-    const x3 = width * 0.62;
-    const x4 = width * 0.86;
+    // Calculated Centers for 480px width
+    // Gaps approx 10px
+    const x1 = 43;   // Bestiary
+    const x2 = 138;  // Heroes
+    const x3 = 240;  // Play
+    const x4 = 342;  // Forge
+    const x5 = 437;  // Shop
 
-    // --- RETRO BUTTONS ---
-    // Heroes (Neutral/Cyan)
-    const heroesBtn = createRetroButton(this, x1, btnY, btnW, 50, 'HEROES', 'neutral', () => {
+    // BESTIARY (Purple) - Text Only
+    const bestiaryBtn = createRetroButton(this, x1, btnY, sideBtnW, 50, 'BESTIARY', 'neutral', () => {
+        SoundManager.playClick(this);
+        this.bestiaryModal.open();
+    }, null); // Removed Icon
+
+    // HEROES (Cyan) - Text Only
+    const heroesBtn = createRetroButton(this, x2, btnY, sideBtnW, 50, 'HEROES', 'neutral', () => {
         SoundManager.playClick(this);
         this.heroesModal.open();
-    }, 'icon_heroes');
+    }, null); // Removed Icon
 
-    // FORGE (Danger/Orange)
-    const forgeBtn = createRetroButton(this, x2, btnY, btnW, 50, 'FORGE', 'danger', () => {
-        SoundManager.playClick(this);
-        this.forgeModal.open();
-    }, 'icon_forge');
-
-    // PLAY (Primary/Yellow)
+    // PLAY (Primary/Yellow) - Icon + Text
     const playBtn = createRetroButton(this, x3, btnY, playBtnW, 60, 'PLAY', 'primary', () => {
         SoundManager.playClick(this);
         this.battleModal.open();
     }, 'icon_play');
 
-    // Shop (Success/Green)
-    const shopBtn = createRetroButton(this, x4, btnY, btnW, 50, 'SHOP', 'success', () => {
+    // FORGE (Orange) - Text Only
+    const forgeBtn = createRetroButton(this, x4, btnY, sideBtnW, 50, 'FORGE', 'danger', () => {
+        SoundManager.playClick(this);
+        this.forgeModal.open();
+    }, null); // Removed Icon
+
+    // SHOP (Green) - Text Only
+    const shopBtn = createRetroButton(this, x5, btnY, sideBtnW, 50, 'SHOP', 'success', () => {
         SoundManager.playClick(this);
         this.shopModal.open();
-    }, 'icon_shop');
+    }, null); // Removed Icon
 
-    container.add([heroesBtn, forgeBtn, playBtn, shopBtn]);
+    container.add([bestiaryBtn, heroesBtn, playBtn, forgeBtn, shopBtn]);
   }
 
   getShortName() {

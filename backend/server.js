@@ -261,7 +261,8 @@ app.get('/api/contracts', (req, res) => {
 });
 
 // [PRAGMATIC FIX] Catch-All Middleware for unhandled API routes to prevent 404s
-app.use('/api/*', (req, res) => {
+// Express 5 / path-to-regexp compatibility: Use /api prefix directly or regex
+app.use('/api', (req, res) => {
     console.warn(`[Mock Middleware] Rota não implementada acessada: ${req.method} ${req.originalUrl}`);
     res.json({ success: true, mocked: true, data: [], message: "Stub auto-gerado" });
 });
