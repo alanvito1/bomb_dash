@@ -4,7 +4,7 @@ import SoundManager from '../utils/sound.js';
 
 export default class ForgeModal extends UIModal {
     constructor(scene) {
-        super(scene, 600, 600, 'THE UPGRADE FORGE');
+        super(scene, 600, 600, 'ETERNAL FORGE');
         this.selectedHero = null;
         this.populate();
     }
@@ -38,8 +38,8 @@ export default class ForgeModal extends UIModal {
         // 2. Hero Showcase (Sprite + Stats)
         this.createHeroShowcase();
 
-        // 3. Upgrade Controls
-        this.createUpgradeControls();
+        // 3. Level Up Section
+        this.createLevelUpSection();
     }
 
     createResourcesHeader() {
@@ -60,14 +60,13 @@ export default class ForgeModal extends UIModal {
             fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#AAAAAA'
         }).setOrigin(0, 0.5);
 
-        // Rare Fragments
-        const rareCount = playerStateService.getFragmentCount('Rare');
-        const rIcon = this.scene.add.circle(50, y, 8, 0x00FF00); // Green dot
-        const rText = this.scene.add.text(70, y, `RARE: ${rareCount}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#00FF00'
+        // BCOIN Balance (Mocked check from service)
+        const user = playerStateService.getUser();
+        const bcoinText = this.scene.add.text(50, y, `BCOIN: ${user.bcoin}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#FFD700'
         }).setOrigin(0, 0.5);
 
-        this.windowContainer.add([cIcon, cText, rIcon, rText]);
+        this.windowContainer.add([cIcon, cText, bcoinText]);
     }
 
     createHeroShowcase() {
@@ -76,11 +75,11 @@ export default class ForgeModal extends UIModal {
         // Hero Sprite
         const spriteKey = this.selectedHero.sprite_name || 'ninja_hero';
         if (this.scene.textures.exists(spriteKey)) {
-            const sprite = this.scene.add.image(0, y, spriteKey).setScale(2);
+            const sprite = this.scene.add.image(0, y, spriteKey).setScale(3);
             // Floating animation
             this.scene.tweens.add({
                 targets: sprite,
-                y: y - 5,
+                y: y - 10,
                 duration: 1500,
                 yoyo: true,
                 repeat: -1,
@@ -90,62 +89,54 @@ export default class ForgeModal extends UIModal {
         }
 
         // Hero Name
-        this.addText(0, y + 60, this.selectedHero.name || 'Unknown Hero', '#FFFFFF', '14px');
+        this.addText(0, y + 80, this.selectedHero.name || 'Unknown Hero', '#FFFFFF', '16px');
 
-        // Level / XP ?
-        // Keep it simple as per prompt: "Display do Herói: Mostre... atributos atuais"
+        // Current Level Display
+        const currentLevel = this.selectedHero.level || 1;
+        this.addText(0, y + 110, `LEVEL ${currentLevel}`, '#00FFFF', '20px');
     }
 
-    createUpgradeControls() {
-        const y = 80;
-        const gap = 80;
+    createLevelUpSection() {
+        const y = 100;
 
-        // Ensure stats object exists
-        const stats = this.selectedHero.stats || {};
-        const power = stats.power || 0;
-        const speed = stats.speed || 0;
+        // Panel
+        const bg = this.scene.add.graphics();
+        bg.fillStyle(0x000000, 0.5);
+        bg.fillRoundedRect(-250, y - 50, 500, 200, 8);
+        bg.lineStyle(2, 0x444444);
+        bg.strokeRoundedRect(-250, y - 50, 500, 200, 8);
+        this.windowContainer.add(bg);
 
-        // POWER ROW
-        this.createStatRow(y, 'POWER', power, 'power');
+        // Next Level Preview
+        const nextLevel = (this.selectedHero.level || 1) + 1;
+        this.addText(0, y - 20, `NEXT LEVEL: ${nextLevel}`, '#AAAAAA', '12px');
 
-        // SPEED ROW
-        this.createStatRow(y + gap, 'SPEED', speed, 'speed');
-    }
-
-    createStatRow(y, label, value, statKey) {
-        const xStart = -180;
-
-        // Label
-        const lbl = this.scene.add.text(xStart, y, label, {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FFD700'
-        }).setOrigin(0, 0.5);
-        this.windowContainer.add(lbl);
-
-        // Value
-        const val = this.scene.add.text(xStart + 100, y, `${value}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#FFF'
-        }).setOrigin(0, 0.5);
-        this.windowContainer.add(val);
+        // Bonus Preview
+        const bonusText = `BONUS: Power +1, Speed +2%`;
+        this.addText(0, y + 10, bonusText, '#00FF00', '12px');
 
         // Upgrade Button
-        const cost = 50;
-        const btnX = 100;
+        const costBcoin = 1;
+        const costFrags = 50;
 
-        const btn = this.createButton(btnX, y, `UPGRADE (+1)\nCOST: ${cost} Common`, 180, 40, () => {
-             this.handleUpgrade(statKey);
+        const btnY = y + 80;
+
+        const btn = this.createButton(0, btnY, `LEVEL UP HERO\nCOST: ${costBcoin} BCOIN + ${costFrags} FRAG`, 300, 60, () => {
+             this.handleLevelUp();
         });
 
         this.windowContainer.add(btn);
     }
 
-    handleUpgrade(statKey) {
-        const res = playerStateService.upgradeHeroStatWithFragments(this.selectedHero.id, statKey);
+    handleLevelUp() {
+        const res = playerStateService.upgradeHeroLevel(this.selectedHero.id);
 
         if (res.success) {
-            SoundManager.play(this.scene, 'powerup_collect'); // Or 'upgrade' if exists
+            SoundManager.play(this.scene, 'level_up'); // Victory sound as placeholder for awesome upgrade
 
             // Visual feedback
-            // Show "+1" floating text
+            this.showFloatingText(0, 0, "LEVEL UP!", "#00FF00");
+
             // Update local hero reference
             this.selectedHero = res.hero;
 
@@ -155,9 +146,24 @@ export default class ForgeModal extends UIModal {
             // Refresh UI
             this.refreshUI();
         } else {
-            SoundManager.play(this.scene, 'error'); // Or 'explosion'
-            alert(res.message); // Simple feedback for now
+            SoundManager.play(this.scene, 'error');
+            alert(res.message);
         }
+    }
+
+    showFloatingText(x, y, message, color) {
+        const text = this.scene.add.text(x, y, message, {
+            fontFamily: '"Press Start 2P"', fontSize: '24px', fill: color, stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5);
+        this.windowContainer.add(text);
+
+        this.scene.tweens.add({
+            targets: text,
+            y: y - 100,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => text.destroy()
+        });
     }
 
     addText(x, y, text, color, size='12px') {
@@ -188,7 +194,7 @@ export default class ForgeModal extends UIModal {
         bg.strokeRect(-w/2, -h/2, w, h);
 
         const text = this.scene.add.text(0, 0, label, {
-             fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#fff', align: 'center', lineSpacing: 4
+             fontFamily: '"Press Start 2P"', fontSize: '12px', fill: '#fff', align: 'center', lineSpacing: 6
         }).setOrigin(0.5);
 
         container.add([bg, text]);
