@@ -564,27 +564,20 @@ async function addXpToUser(address, xpAmount) {
     });
     if (!user) throw new Error(`User not found with address ${address}`);
 
-    const setting = await GameSetting.findOne({
-      where: { key: 'xp_multiplier' },
-      transaction: t,
-    });
-    const multiplier = parseFloat(setting ? setting.value : '1.0');
+    // Task Force: Summoner's Journey Logic
+    // XP Required = accountLevel * 100
+    // Deduct XP on Level Up
+    user.account_xp += xpAmount;
+    let requiredXp = user.account_level * 100;
 
-    let newXp = user.account_xp + xpAmount;
-    let newLevel = user.account_level;
-
-    while (true) {
-      const xpForNextLevel = getExperienceForLevel(newLevel + 1, multiplier);
-      if (newXp >= xpForNextLevel) {
-        newLevel++;
-      } else {
-        break;
-      }
+    while (user.account_xp >= requiredXp) {
+        user.account_xp -= requiredXp;
+        user.account_level++;
+        requiredXp = user.account_level * 100;
     }
-    user.account_xp = newXp;
-    user.account_level = newLevel;
+
     await user.save({ transaction: t });
-    return { success: true, newXp, newLevel };
+    return { success: true, newXp: user.account_xp, newLevel: user.account_level };
   });
 }
 
@@ -622,40 +615,29 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
       finalCoinReward = Math.floor(finalCoinReward * 1.1);
     }
 
-    // Update Winner
+    // Update Winner (Summoner's Journey Logic)
     winner.coins += finalCoinReward;
     winner.account_xp += finalXpReward;
-    let winnerNewLevel = winner.account_level;
-    while (true) {
-      const xpForNextLevel = getExperienceForLevel(
-        winnerNewLevel + 1,
-        multiplier
-      );
-      if (winner.account_xp >= xpForNextLevel) {
-        winnerNewLevel++;
-      } else {
-        break;
-      }
+    let winReq = winner.account_level * 100;
+    while (winner.account_xp >= winReq) {
+        winner.account_xp -= winReq;
+        winner.account_level++;
+        winReq = winner.account_level * 100;
     }
-    winner.account_level = winnerNewLevel;
     await winner.save({ transaction: t });
 
-    // Update Loser
+    // Update Loser (De-level Logic)
     loser.coins -= tier.bcoin_cost;
-    loser.account_xp = Math.max(0, loser.account_xp - tier.xp_cost);
-    let loserNewLevel = loser.account_level;
-    while (loserNewLevel > 1) {
-      const xpForCurrentLevel = getExperienceForLevel(
-        loserNewLevel,
-        multiplier
-      );
-      if (loser.account_xp < xpForCurrentLevel) {
-        loserNewLevel--;
-      } else {
-        break;
-      }
+    loser.account_xp -= tier.xp_cost;
+
+    // Handle Negative XP (De-Leveling)
+    while (loser.account_xp < 0 && loser.account_level > 1) {
+        loser.account_level--;
+        const prevLevelReq = loser.account_level * 100;
+        loser.account_xp += prevLevelReq;
     }
-    loser.account_level = loserNewLevel;
+    if (loser.account_xp < 0) loser.account_xp = 0; // Cap at 0 for Level 1
+
     await loser.save({ transaction: t });
 
     return {
@@ -669,7 +651,7 @@ async function processWagerMatchResult(winnerAddress, loserAddress, tier) {
         address: loserAddress,
         newXp: loser.account_xp,
         newCoins: loser.coins,
-        newLevel: loserNewLevel,
+        newLevel: loser.account_level,
       },
     };
   });
@@ -994,12 +976,15 @@ async function grantRewards(userId, bcoinReward, accountXpReward) {
     }
 
     user.coins += bcoinReward;
-    user.account_xp += accountXpReward;
 
-    // Recalculate account level based on new XP
-    const newLevel = getLevelFromExperience(user.account_xp); // Assuming base multiplier
-    if (newLevel > user.account_level) {
-      user.account_level = newLevel;
+    // Summoner's Journey Logic
+    user.account_xp += accountXpReward;
+    let requiredXp = user.account_level * 100;
+
+    while (user.account_xp >= requiredXp) {
+        user.account_xp -= requiredXp;
+        user.account_level++;
+        requiredXp = user.account_level * 100;
     }
 
     await user.save({ transaction: t });

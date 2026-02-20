@@ -189,6 +189,13 @@ export default class GameScene extends Phaser.Scene {
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
     this.playerStats.speed *= (1 + agilityLevel * 0.005); // +0.5% Speed per level (boosted)
 
+    // Task Force: Global Buff (Account Level)
+    const accountLevel = playerStateService.getAccountLevel();
+    const globalMultiplier = 1 + (accountLevel * 0.01);
+    this.playerStats.damage *= globalMultiplier;
+    this.playerStats.speed *= globalMultiplier;
+    console.log(`[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(2)}`);
+
     // Load Bestiary Data for Bonuses
     try {
       const bestiaryRes = await api.getBestiary();
@@ -661,8 +668,35 @@ export default class GameScene extends Phaser.Scene {
           lineSpacing: 10
       }).setOrigin(0.5).setDepth(2001);
 
+      // Task Force: Summoner's Journey XP Reward
+      const xpGain = 50;
+      const xpResult = playerStateService.addAccountXp(xpGain);
+
+      this.add.text(cx, cy + 60, `+${xpGain} SUMMONER XP`, {
+          fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#00ffff'
+      }).setOrigin(0.5).setDepth(2001);
+
+      if (xpResult.leveledUp) {
+          this.add.text(cx, cy + 85, `LEVEL UP! (${xpResult.newLevel})`, {
+              fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ffd700'
+          }).setOrigin(0.5).setDepth(2001);
+          SoundManager.play(this, 'level_up');
+      }
+
       // Save to Persistent State
       playerStateService.addSessionLoot(this.sessionLoot);
+
+      // Sync with Backend (Persist XP and Loot)
+      if (this.playerStats.id) {
+         try {
+             // We pass empty droppedItems because sessionLoot is handled via separate API calls or purely local for now?
+             // Actually backend handles drops via 'droppedItems' param if needed, but 'grantRewards' handles coins/xp.
+             // We'll pass standard stats.
+             await api.completeMatch(this.playerStats.id, xpGain, this.sessionCoins, this.sessionBestiary, {}, []);
+         } catch(e) {
+             console.warn('[GameScene] Failed to sync victory stats:', e);
+         }
+      }
 
       // Unlock Next Node
       if (this.playerStats.id && this.stageConfig) {

@@ -94,6 +94,12 @@ export default class ForgeModal extends UIModal {
         // Current Level Display
         const currentLevel = this.selectedHero.level || 1;
         this.addText(0, y + 110, `LEVEL ${currentLevel}`, '#00FFFF', '20px');
+
+        // Task Force: Summoner's Journey Bonus
+        const accountLevel = playerStateService.getAccountLevel();
+        if (accountLevel > 0) {
+            this.addText(0, y + 135, `SUMMONER BUFF: +${accountLevel}% STATS`, '#00FF00', '10px');
+        }
     }
 
     createLevelUpSection() {
