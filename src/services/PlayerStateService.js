@@ -29,7 +29,9 @@ class PlayerStateService {
             }, // Copy to avoid mutation issues
             heroes: heroes, // Deep copy
             houses: JSON.parse(JSON.stringify(MockHouses)), // Deep copy
-            inventory: [] // Phase 3: Grind & Loot System
+            inventory: [
+                { type: 'fragment', rarity: 'Common', quantity: 200 } // Pre-seed 200 Common Fragments
+            ]
         };
     }
 
@@ -100,6 +102,7 @@ class PlayerStateService {
     }
 
     upgradeHeroStat(heroId) {
+        // Deprecated: Kept for legacy compatibility if needed
         const hero = this.state.heroes.find(h => h.id === heroId);
         if (!hero) throw new Error('Hero not found');
 
@@ -126,6 +129,7 @@ class PlayerStateService {
     }
 
     upgradeHeroStatWithFragments(heroId, statName) {
+         // Deprecated: Kept for legacy compatibility if needed
         const hero = this.state.heroes.find(h => h.id === heroId);
         if (!hero) throw new Error('Hero not found');
 
@@ -156,6 +160,48 @@ class PlayerStateService {
 
         this.saveState();
         return { success: true, hero, newStatValue: hero.stats[statName], remainingFragments: item ? item.quantity : 0 };
+    }
+
+    // NEW: Hero Level Up System
+    upgradeHeroLevel(heroId) {
+        const hero = this.state.heroes.find(h => h.id === heroId);
+        if (!hero) throw new Error('Hero not found');
+
+        const bcoinCost = 1;
+        const fragmentCost = 50;
+        const fragmentRarity = 'Common';
+
+        // Check BCOIN
+        if (this.state.user.bcoin < bcoinCost) {
+            return { success: false, message: 'Insufficient BCOIN (Need 1)' };
+        }
+
+        // Check Fragments
+        const fragmentItem = this.state.inventory.find(i => i.type === 'fragment' && i.rarity === fragmentRarity);
+        const currentFragments = fragmentItem ? fragmentItem.quantity : 0;
+
+        if (currentFragments < fragmentCost) {
+            return { success: false, message: `Insufficient Fragments (Need ${fragmentCost})` };
+        }
+
+        // Deduct Costs
+        this.state.user.bcoin -= bcoinCost;
+        fragmentItem.quantity -= fragmentCost;
+
+        // Level Up Logic
+        if (!hero.level) hero.level = 1;
+        hero.level += 1;
+
+        // Save
+        this.saveState();
+
+        return {
+            success: true,
+            hero,
+            newLevel: hero.level,
+            remainingBcoin: this.state.user.bcoin,
+            remainingFragments: fragmentItem.quantity
+        };
     }
 
     rerollHeroSpells(heroId) {

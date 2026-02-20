@@ -159,8 +159,15 @@ export default class GameScene extends Phaser.Scene {
     const heroRange = heroStats.range || heroStats.bomb_range || 1;
 
     // Apply Formulas
-    this.playerStats.speed = 150 + (heroSpeed * 10);
-    this.playerStats.damage = heroPower;
+    const heroLevel = selectedHero.level || 1;
+
+    // Hybrid Linear Scaling: Power = Base + (Level - 1)
+    this.playerStats.damage = heroPower + (heroLevel - 1);
+
+    // Hybrid Linear Scaling: Speed = Base * (1 + (Level - 1) * 0.02)
+    const baseSpeed = 150 + (heroSpeed * 10);
+    this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
+
     this.playerStats.bombNum = heroBombNum;
     this.playerStats.bombRange = heroRange;
 
