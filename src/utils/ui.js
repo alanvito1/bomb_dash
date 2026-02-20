@@ -1,3 +1,5 @@
+import SoundManager from './sound.js';
+
 /**
  * Creates a standardized, interactive button for UI scenes.
  * The button is a container consisting of a rounded rectangle background and centered text.
@@ -215,6 +217,7 @@ export function createRetroButton(scene, x, y, width, height, text, type = 'prim
         drawButton(false);
         label.y = 0;
         if (icon) icon.y = 0;
+        SoundManager.playClick(scene);
         if (onClick) onClick();
     });
 

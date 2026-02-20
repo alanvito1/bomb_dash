@@ -1,5 +1,7 @@
 import UIModal from './UIModal.js';
 import SoundManager from '../utils/sound.js';
+import PostFXManager from '../modules/PostFXManager.js';
+import { createRetroButton } from '../utils/ui.js';
 
 export default class SettingsModal extends UIModal {
   constructor(scene) {
@@ -22,9 +24,27 @@ export default class SettingsModal extends UIModal {
       SoundManager.setSfxVolume(val)
     );
 
+    // Retro Filter Toggle
+    this.refreshRetroButton(0, startY + 240);
+
     // Reset Data Button (Red)
     const resetBtn = this.createResetButton(0, this.modalHeight / 2 - 60);
     this.windowContainer.add(resetBtn);
+  }
+
+  refreshRetroButton(x, y) {
+    if (this.retroBtn) {
+      this.retroBtn.destroy();
+    }
+    const enabled = PostFXManager.getEnabled();
+    const text = enabled ? 'RETRO FILTER: ON' : 'RETRO FILTER: OFF';
+    const type = enabled ? 'neutral' : 'metal';
+
+    this.retroBtn = createRetroButton(this.scene, x, y, 220, 40, text, type, () => {
+      PostFXManager.toggle(this.scene);
+      this.refreshRetroButton(x, y);
+    });
+    this.windowContainer.add(this.retroBtn);
   }
 
   createSlider(x, y, label, initialValue, callback) {
