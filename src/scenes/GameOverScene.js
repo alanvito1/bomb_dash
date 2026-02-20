@@ -1,5 +1,6 @@
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
+import UIHelper from '../utils/UIHelper.js';
 import { CST } from '../CST.js';
 
 export default class GameOverScene extends Phaser.Scene {
@@ -11,12 +12,17 @@ export default class GameOverScene extends Phaser.Scene {
     const centerX = this.cameras.main.centerX;
     const centerY = this.cameras.main.centerY;
 
-    // --- Background ---
-    this.add
-      .image(centerX, centerY, 'gameover_bg')
-      .setOrigin(0.5)
-      .setDisplaySize(this.scale.width, this.scale.height)
-      .setAlpha(0.7);
+    // --- Background (Dark & Solid) ---
+    this.cameras.main.setBackgroundColor('#050505');
+
+    // Optional: Add image if available, but keep dark bg as base
+    if (this.textures.exists('gameover_bg')) {
+        this.add
+          .image(centerX, centerY, 'gameover_bg')
+          .setOrigin(0.5)
+          .setDisplaySize(this.scale.width, this.scale.height)
+          .setAlpha(0.7);
+    }
 
     // --- Data from GameScene ---
     const score = data.score || 0;
@@ -90,42 +96,38 @@ export default class GameOverScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    // --- Buttons ---
+    // --- Buttons (Using UIHelper Neon Buttons) ---
     const buttonY = centerY + 150;
-    const buttonSpacing = 180;
+    const buttonSpacing = 200; // Wider spacing for large buttons
 
     // Restart Button
-    const restartButton = this.add
-      .image(centerX - buttonSpacing / 2, buttonY, 'btn_menu')
-      .setInteractive({ useHandCursor: true });
-    this.add
-      .text(
-        restartButton.x,
-        restartButton.y,
-        LanguageManager.get('pause_restart', {}, 'Restart'),
-        textStyle
-      )
-      .setOrigin(0.5);
-    restartButton.on('pointerdown', () => {
-      SoundManager.play(this, 'click');
-      this.scene.start(CST.SCENES.GAME);
-    });
+    UIHelper.createNeonButton(
+        this,
+        centerX - buttonSpacing / 2,
+        buttonY,
+        LanguageManager.get('pause_restart', {}, 'RESTART'),
+        160,
+        50,
+        () => {
+            SoundManager.play(this, 'click');
+            this.scene.start(CST.SCENES.GAME);
+        },
+        0x00ffff // Cyan for Secondary/Action
+    );
 
     // Menu Button
-    const menuButton = this.add
-      .image(centerX + buttonSpacing / 2, buttonY, 'btn_menu')
-      .setInteractive({ useHandCursor: true });
-    this.add
-      .text(
-        menuButton.x,
-        menuButton.y,
-        LanguageManager.get('menu_title', {}, 'Menu'),
-        textStyle
-      )
-      .setOrigin(0.5);
-    menuButton.on('pointerdown', () => {
-      SoundManager.play(this, 'click');
-      this.scene.start(CST.SCENES.MENU);
-    });
+    UIHelper.createNeonButton(
+        this,
+        centerX + buttonSpacing / 2,
+        buttonY,
+        LanguageManager.get('menu_title', {}, 'MENU'),
+        160,
+        50,
+        () => {
+            SoundManager.play(this, 'click');
+            this.scene.start(CST.SCENES.MENU);
+        },
+        0xff5f1f // Orange for Primary
+    );
   }
 }

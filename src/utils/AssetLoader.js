@@ -34,12 +34,18 @@ export default class AssetLoader {
       'icon_gold',
       'icon_bcoin',
       'icon_avatar',
+      'icon_heroes',
+      'icon_shop',
+      'icon_ranking',
+      'icon_battle',
+      'icon_base',
+      'ui_panel', // Ensure UI panel exists
+      'ui_button', // Ensure UI button exists
     ];
+
     uiIcons.forEach((key) => {
       if (!scene.textures.exists(key)) {
-        // Capitalize first letter for label (e.g. icon_forge -> Forge -> FORG)
-        // But TextureGenerator has specific methods, let's use them if possible.
-        // Or generic mapping.
+        // Try specific generators first
         switch (key) {
           case 'icon_settings':
             TextureGenerator.createIconSettings(scene, key);
@@ -71,19 +77,47 @@ export default class AssetLoader {
           case 'icon_avatar':
             TextureGenerator.createAvatar(scene, key);
             break;
+          case 'icon_heroes':
+            TextureGenerator.createIconHeroes(scene, key);
+            break;
+          case 'icon_shop':
+            TextureGenerator.createIconShop(scene, key);
+            break;
+          case 'icon_ranking':
+            TextureGenerator.createIconRanking(scene, key);
+            break;
+          case 'icon_battle':
+            TextureGenerator.createIconBattle(scene, key);
+            break;
+          case 'icon_base':
+            TextureGenerator.createIconBase(scene, key);
+            break;
+          case 'ui_panel':
+            TextureGenerator.createUIPanel(scene, key);
+            break;
+          case 'ui_button':
+            TextureGenerator.createButtonBackground(scene, key);
+            break;
+          default:
+            // Generic Fallback
+            console.warn(`⚠️ Missing UI Icon: ${key}. Generating generic fallback.`);
+            TextureGenerator.createGeometricIcon(scene, key, key.substring(5, 8).toUpperCase(), 0xff00ff);
+            break;
         }
       }
     });
 
     // 3. Critical Game Assets (Verify Only)
-    const critical = ['bomb', 'explosion', 'enemy', 'ninja_hero'];
+    const critical = ['bomb', 'explosion_sheet', 'enemy', 'ninja_hero', 'bg1', 'floor_grid'];
     critical.forEach((key) => {
       if (!scene.textures.exists(key)) {
         console.warn(`⚠️ Critical Asset Missing: ${key}. Generating fallback.`);
         if (key === 'bomb') TextureGenerator.createBomb(scene, 'bomb');
         if (key === 'enemy') TextureGenerator.createEnemy(scene, 'enemy');
-        if (key === 'ninja_hero')
-          TextureGenerator.createHero(scene, 'ninja_hero');
+        if (key === 'ninja_hero') TextureGenerator.createHero(scene, 'ninja_hero');
+        if (key === 'explosion_sheet') TextureGenerator.createExplosion(scene, 'explosion_sheet');
+        if (key === 'bg1') TextureGenerator.createGridBackground(scene, 'bg1');
+        if (key === 'floor_grid') TextureGenerator.createGridBackground(scene, 'floor_grid');
       }
     });
 
@@ -92,6 +126,24 @@ export default class AssetLoader {
       console.log('✨ Generating Procedural Particles...');
       TextureGenerator.createParticles(scene);
     }
+
+    // 5. Ensure Heart & Shadow
+    if (!scene.textures.exists('heart_full')) {
+        TextureGenerator.createHearts(scene);
+    }
+    if (!scene.textures.exists('shadow')) {
+        TextureGenerator.createShadow(scene);
+    }
+
+    // 6. Shop Items
+    const shopItems = ['item_chest', 'item_potion', 'item_gems'];
+    shopItems.forEach(key => {
+        if (!scene.textures.exists(key)) {
+             if (key === 'item_chest') TextureGenerator.createChest(scene, key);
+             else if (key === 'item_potion') TextureGenerator.createPotion(scene, key);
+             else if (key === 'item_gems') TextureGenerator.createGemPack(scene, key);
+        }
+    });
 
     console.log('✅ AssetLoader: Asset verification complete.');
   }

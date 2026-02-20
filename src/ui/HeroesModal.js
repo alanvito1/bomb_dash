@@ -2,6 +2,7 @@ import UIModal from './UIModal.js';
 import UIHelper from '../utils/UIHelper.js';
 import SoundManager from '../utils/sound.js';
 import LanguageManager from '../utils/LanguageManager.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 import api from '../api.js';
 import bcoinService from '../web3/bcoin-service.js';
 import { SPELLS, RARITY } from '../config/MockNFTData.js';
@@ -116,27 +117,26 @@ export default class HeroesModal extends UIModal {
     }
 
     // 2. Avatar
-    if (hero.sprite_name && this.scene.textures.exists(hero.sprite_name)) {
-      const avatar = this.scene.add.image(0, -20, hero.sprite_name);
-      // Scale to fit width/height safely
-      const maxDim = Math.min(w, h) * 0.7;
-      const scale = maxDim / Math.max(avatar.width, avatar.height);
-      avatar.setScale(scale);
-      container.add(avatar);
-    } else {
-      const initials = (hero.name || 'H').substring(0, 2).toUpperCase();
-      const txt = this.scene.add
-        .text(0, -20, initials, {
-          fontSize: '32px',
-          fill: '#555',
-        })
-        .setOrigin(0.5);
-      container.add(txt);
+    let avatarKey = hero.sprite_name;
+    if (!this.scene.textures.exists(avatarKey)) {
+        // Fallback: Generate procedural hero if missing
+        // Use a unique key based on ID to avoid conflicts if needed,
+        // but 'ninja_hero' etc are standard.
+        // If the sprite_name is unknown, force generate it using the generic hero generator.
+        console.warn(`Texture ${avatarKey} missing. Generating fallback.`);
+        TextureGenerator.createHero(this.scene, avatarKey);
     }
 
-    // 3. Name Label
+    const avatar = this.scene.add.image(0, -20, avatarKey);
+    // Scale to fit width/height safely
+    const maxDim = Math.min(w, h) * 0.7;
+    const scale = maxDim / Math.max(avatar.width, avatar.height);
+    avatar.setScale(scale);
+    container.add(avatar);
+
+    // 3. Name Label (Moved down to avoid overlap)
     const nameText = this.scene.add
-      .text(0, 20, hero.name.toUpperCase(), {
+      .text(0, 35, hero.name.toUpperCase(), {
         fontFamily: '"Press Start 2P"',
         fontSize: '8px',
         color: isSelected ? '#00ff00' : '#ffffff',
@@ -295,10 +295,6 @@ export default class HeroesModal extends UIModal {
     // --- ACTION BUTTONS (Upgrade / Reroll) ---
     const btnY = 140;
 
-    // Note: UIHelper.createNeonButton takes a standard label.
-    // We need multi-line label or custom text?
-    // Let's format the label string to match requirements
-
     // Upgrade
     const upgBtn = UIHelper.createNeonButton(
       this.scene,
@@ -307,13 +303,6 @@ export default class HeroesModal extends UIModal {
       `UPGRADE\n500 BC`,
       140,
       40,
-      // We need to pass the "text object" to update it to "..."?
-      // The helper doesn't expose the text object easily unless we store it.
-      // But we can just rebuild the button or accept simple click callback.
-      // For now, let's just trigger the action.
-      // But the original logic updated text to "..." and "Err".
-      // That's complex UI logic inside a helper button.
-      // I'll wrap the callback.
       () => this.handleUpgradeSimple(),
       0x00ff00
     );
@@ -334,10 +323,9 @@ export default class HeroesModal extends UIModal {
     this.windowContainer.add(this.detailsContainer);
   }
 
-  // Refactored handlers to be simpler (no text object manipulation for now, or just alert)
   async handleUpgradeSimple() {
     try {
-      SoundManager.play(this.scene, 'upgrade'); // Optimistic sound
+      SoundManager.play(this.scene, 'upgrade');
       const res = await api.upgradeHeroStat(this.selectedHero.id);
       if (!this.scene || !this.active) return;
 
@@ -377,68 +365,7 @@ export default class HeroesModal extends UIModal {
     }
   }
 
-  // Legacy method removed: createActionButton
-
-  async handleUpgrade(btnContainer, costText) {
-    const originalText = costText.text;
-    costText.setText('...');
-
-    try {
-      const res = await api.upgradeHeroStat(this.selectedHero.id);
-      if (!this.scene || !this.active) return;
-
-      if (res.success) {
-        SoundManager.play(this.scene, 'upgrade');
-        this.selectedHero = res.hero;
-
-        // Update list
-        const idx = this.heroes.findIndex((h) => h.id === res.hero.id);
-        if (idx !== -1) this.heroes[idx] = res.hero;
-
-        this.renderDetails();
-        bcoinService.updateBalance();
-      } else {
-        costText.setText('Err');
-        SoundManager.play(this.scene, 'error');
-        this.scene.time.delayedCall(1000, () => costText.setText(originalText));
-      }
-    } catch (e) {
-      console.error(e);
-      costText.setText('Err');
-    }
-  }
-
-  async handleReroll(btnContainer, costText) {
-    const originalText = costText.text;
-    costText.setText('...');
-
-    try {
-      const res = await api.rerollHeroSpells(this.selectedHero.id);
-      if (!this.scene || !this.active) return;
-
-      if (res.success) {
-        SoundManager.play(this.scene, 'upgrade');
-        this.selectedHero = res.hero;
-
-        // Update list
-        const idx = this.heroes.findIndex((h) => h.id === res.hero.id);
-        if (idx !== -1) this.heroes[idx] = res.hero;
-
-        this.renderDetails();
-        bcoinService.updateBalance();
-      } else {
-        costText.setText('Err');
-        SoundManager.play(this.scene, 'error');
-        this.scene.time.delayedCall(1000, () => costText.setText(originalText));
-      }
-    } catch (e) {
-      console.error(e);
-      costText.setText('Err');
-    }
-  }
-
   showError(msg) {
-    // Implement simple toast or error text
     console.warn(msg);
   }
 }
