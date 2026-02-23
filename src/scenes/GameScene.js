@@ -79,7 +79,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     this.events.on('shutdown', this.shutdown, this);
     this.chatWidget = new ChatWidget(this);
-    PostFXManager.init(this);
+    // PostFXManager.init(this); // Clean UI: Removed CRT filter
     this.initializeScene();
   }
 
@@ -288,6 +288,16 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
 
+    // Auto-Fire Toggle State
+    this.autoFire = true;
+
+    // Manual Fire Listener
+    this.input.on('pointerdown', () => {
+        if (!this.autoFire && this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
+            this.firePlayerBomb(true);
+        }
+    });
+
     this.canShoot = false;
     this.time.delayedCall(500, () => {
       this.canShoot = true;
@@ -372,6 +382,7 @@ export default class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         if (
+          this.autoFire &&
           this.player?.active &&
           this.playerState === 'CAN_SHOOT' &&
           this.canShoot
@@ -477,22 +488,22 @@ export default class GameScene extends Phaser.Scene {
     const enemiesToProcess = this.enemies.getChildren().slice();
     enemiesToProcess.forEach((enemy) => {
       if (enemy?.active && enemy.y > this.scale.height + 20) {
-        enemy.destroy();
-
-        if (this.pauseManager.isPaused) return;
+        // Punish player based on enemy remaining HP
+        const damageTaken = enemy.hp || 50;
 
         // GOD MODE CHECK
         if (this.godMode) {
           console.log('[GodMode] Damage Prevented');
+          enemy.destroy();
           return;
         }
 
-        const damageTaken = 50;
         this.playerStats.hp -= damageTaken;
         this.events.emit('update-health', {
           health: this.playerStats.hp,
           maxHealth: this.playerStats.maxHp,
         });
+
         if (this.playerStats.hp <= 0) {
           this.playerStats.extraLives--;
           if (this.playerStats.extraLives >= 0) {
@@ -514,6 +525,8 @@ export default class GameScene extends Phaser.Scene {
         } else {
           SoundManager.play(this, 'player_hit');
         }
+
+        enemy.destroy();
       }
     });
 
@@ -1011,6 +1024,11 @@ export default class GameScene extends Phaser.Scene {
 
   togglePause() {
     this.pauseManager.pause();
+  }
+
+  toggleAutoFire() {
+    this.autoFire = !this.autoFire;
+    return this.autoFire;
   }
 
   trySpawnLoot(x, y) {

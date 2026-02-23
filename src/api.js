@@ -193,8 +193,8 @@ class ApiClient {
 
   async rerollHeroSpells(heroId) {
     // Legacy method, not implemented in current service
-    console.warn('[MockAPI] rerollHeroSpells not supported');
-    return this._mockResponse({ success: false, message: 'Not implemented' });
+    console.log('[MockAPI] rerollHeroSpells requested (Mock Success)');
+    return this._mockResponse({ success: true, message: 'Spells rerolled (Mock)' });
   }
 
   async updateUserStats(heroId, upgradeType, txHash) {
