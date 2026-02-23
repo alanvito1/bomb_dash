@@ -1107,13 +1107,15 @@ export default class GameScene extends Phaser.Scene {
       // Persist Loot (Coins)
       if (this.playerStats.id) {
         try {
+          // Task Force: Pass Wave (30) for history
           await api.completeMatch(
             this.playerStats.id,
             xpGain,
             this.sessionLoot.coins,
             this.sessionBestiary,
             {},
-            []
+            [],
+            30
           );
         } catch (e) {
           console.warn('[GameScene] Failed to sync victory stats:', e);
@@ -1164,13 +1166,15 @@ export default class GameScene extends Phaser.Scene {
       const heroId = this.playerStats.id;
       if (heroId) {
         try {
+          // Task Force: Pass Current Wave for history
           await api.completeMatch(
             heroId,
             finalXp,
             finalCoins,
             this.sessionBestiary || {},
             {},
-            []
+            [],
+            this.currentWave
           );
         } catch (e) {
           console.warn('Failed to report defeat stats', e);

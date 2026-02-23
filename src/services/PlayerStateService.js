@@ -40,6 +40,9 @@ class PlayerStateService {
       this.isGuest = false;
       await this.loadCloudState(walletAddress);
     }
+
+    // --- Analytics: Days Logged In ---
+    this.checkDailyLogin();
   }
 
   checkAdmin(email) {
@@ -59,6 +62,16 @@ class PlayerStateService {
     }
   }
 
+  checkDailyLogin() {
+    const today = new Date().toDateString();
+    if (this.state.user.lastLoginDate !== today) {
+        this.state.user.daysLogged = (this.state.user.daysLogged || 0) + 1;
+        this.state.user.lastLoginDate = today;
+        this.saveLocalState();
+        console.log(`[PlayerState] Daily Login Recorded. Days: ${this.state.user.daysLogged}`);
+    }
+  }
+
   loadLocalState() {
     try {
       const json = localStorage.getItem(GUEST_STATE_KEY);
@@ -66,6 +79,12 @@ class PlayerStateService {
         const savedState = JSON.parse(json);
         // Merge with default to ensure structure integrity
         this.state = { ...this.getDefaultState(), ...savedState };
+        // Ensure new fields exist if loading old state
+        if (!this.state.user.matchHistory) this.state.user.matchHistory = [];
+        if (this.state.user.totalEarned === undefined) this.state.user.totalEarned = 0;
+        if (this.state.user.totalSpent === undefined) this.state.user.totalSpent = 0;
+        if (this.state.user.daysLogged === undefined) this.state.user.daysLogged = 1;
+
         console.log('[PlayerState] Loaded Local Guest State');
       } else {
         this.state = this.getDefaultState();
@@ -147,39 +166,27 @@ class PlayerStateService {
     }
   }
 
-  /**
-   * Merges Guest Data into the authenticated Cloud Account.
-   * Call this immediately after Login.
-   */
   async mergeGuestData(user) {
     console.log('[PlayerState] Merging Guest Data to Cloud...');
     const guestState = JSON.parse(localStorage.getItem(GUEST_STATE_KEY));
     if (!guestState) return;
 
-    // 1. Merge Currencies & XP
-    // In a real app, you'd call a backend endpoint to do this securely.
-    // For now, we'll update the cloud state locally and fire an API call.
     const gainedXp = guestState.user.accountXp || 0;
-    const gainedCoins = guestState.user.bcoin - 1000; // Subtract default starting amount?
-    // Actually, just add whatever they have earned.
-    // Simplified: Just add the guest's XP/Coins to the cloud user.
+    const gainedCoins = guestState.user.bcoin - 0; // Guest starts with 0 now
 
     try {
-      // Call API to sync "offline progress"
       await axios.post('/api/game/sync-offline', {
-        walletAddress: user.walletAddress, // or email
+        walletAddress: user.walletAddress,
         xp: gainedXp,
         coins: Math.max(0, gainedCoins),
         items: guestState.inventory || [],
         bestiary: guestState.bestiary || {},
       });
 
-      // Clear local guest state after successful merge
       localStorage.removeItem(GUEST_STATE_KEY);
-      localStorage.removeItem('termsAccepted'); // Reset terms? No, keep terms.
+      localStorage.removeItem('termsAccepted');
       console.log('[PlayerState] Merge Complete. Guest State Cleared.');
 
-      // Reload Cloud State
       await this.init(user.walletAddress, user.email);
     } catch (e) {
       console.error('[PlayerState] Failed to merge guest data', e);
@@ -196,18 +203,24 @@ class PlayerStateService {
         selectedHeroId: heroes[0] ? heroes[0].id : null,
         accountLevel: 1,
         accountXp: 0,
-        bcoin: 1000,
+        bcoin: 0, // Starts with 0
+        totalEarned: 0,
+        totalSpent: 0,
+        daysLogged: 1,
+        lastLoginDate: new Date().toDateString(),
+        lastFaucetClaim: 0,
+        matchHistory: [], // { wave: number, bcoin: number, timestamp: number }
       },
-      heroes: heroes, // Guest gets default heroes
+      heroes: heroes,
       houses: JSON.parse(JSON.stringify(MockHouses)),
       inventory: [
-        { type: 'fragment', rarity: 'Common', quantity: 200 }, // Starter pack
+        { type: 'fragment', rarity: 'Common', quantity: 200 },
       ],
       bestiary: {},
     };
   }
 
-  // --- ADAPTERS (Snake -> Camel) ---
+  // --- ADAPTERS ---
 
   _mapUserFromDB(dbUser) {
     return {
@@ -216,7 +229,13 @@ class PlayerStateService {
       bcoin: dbUser.coins,
       accountLevel: dbUser.account_level,
       accountXp: dbUser.account_xp,
-      selectedHeroId: this.state.user.selectedHeroId, // Keep local selection
+      selectedHeroId: this.state.user.selectedHeroId,
+      // Fallback for missing fields in DB (MVP Mock)
+      totalEarned: dbUser.total_earned || 0,
+      totalSpent: dbUser.total_spent || 0,
+      daysLogged: dbUser.days_logged || 1,
+      lastLoginDate: new Date().toDateString(), // Refresh on load
+      matchHistory: [], // TODO: Load from DB if needed
     };
   }
 
@@ -274,6 +293,12 @@ class PlayerStateService {
   getInventory() {
     return this.state.inventory || [];
   }
+  getMatchHistory() {
+      return this.state.user.matchHistory || [];
+  }
+  isEndGame() {
+      return this.state.user.accountLevel >= 8;
+  }
 
   getHeroStage(heroId) {
     const hero = this.state.heroes.find((h) => h.id === heroId);
@@ -296,6 +321,11 @@ class PlayerStateService {
   getAccountXp() {
     return this.state.user.accountXp || 0;
   }
+  getNextLevelXp() {
+      const level = this.state.user.accountLevel;
+      // Hardcore Formula: 1000 * (1.5 ^ Level)
+      return Math.floor(1000 * Math.pow(1.5, level));
+  }
 
   getBestiaryStatus(mobId) {
     const count = (this.state.bestiary && this.state.bestiary[mobId]) || 0;
@@ -312,8 +342,55 @@ class PlayerStateService {
 
   // --- ACTIONS ---
 
+  async claimDailyFaucet() {
+      const now = Date.now();
+      const lastClaim = this.state.user.lastFaucetClaim || 0;
+      const cooldown = 24 * 60 * 60 * 1000; // 24 Hours
+
+      if (now - lastClaim < cooldown) {
+          const remaining = Math.ceil((cooldown - (now - lastClaim)) / (60 * 60 * 1000));
+          return { success: false, message: `Wait ${remaining}h` };
+      }
+
+      const amount = 5;
+      this.state.user.bcoin += amount;
+      this.state.user.totalEarned = (this.state.user.totalEarned || 0) + amount;
+      this.state.user.lastFaucetClaim = now;
+      this.saveLocalState();
+
+      console.log(`[PlayerState] Daily Faucet Claimed: +${amount} BCOIN`);
+      return { success: true, newBalance: this.state.user.bcoin };
+  }
+
+  async recordMatch(result) {
+      // result: { wave, bcoin, xp }
+      const { wave, bcoin, xp } = result;
+
+      // 1. Add History (Keep last 5)
+      if (!this.state.user.matchHistory) this.state.user.matchHistory = [];
+      this.state.user.matchHistory.unshift({
+          wave,
+          bcoin,
+          timestamp: Date.now()
+      });
+      if (this.state.user.matchHistory.length > 5) {
+          this.state.user.matchHistory.pop();
+      }
+
+      // 2. Add Stats
+      this.state.user.totalEarned = (this.state.user.totalEarned || 0) + bcoin;
+      this.state.user.bcoin += bcoin;
+
+      // 3. Add XP (Use internal method to handle leveling)
+      const levelResult = this.addAccountXp(xp);
+
+      this.saveLocalState();
+      console.log('[PlayerState] Match Recorded:', result);
+
+      return { success: true, levelResult };
+  }
+
   async incrementBestiaryKill(mobId, amount = 1) {
-    // Optimistic Update
     if (!this.state.bestiary) this.state.bestiary = {};
     if (!this.state.bestiary[mobId]) this.state.bestiary[mobId] = 0;
     this.state.bestiary[mobId] += amount;
@@ -342,21 +419,23 @@ class PlayerStateService {
   addAccountXp(amount) {
     this.state.user.accountXp = (this.state.user.accountXp || 0) + amount;
 
-    // Simple Level Up Logic
-    const requiredXp = this.state.user.accountLevel * 100;
+    // Hardcore Level Up Logic
+    // XP Required = 1000 * (1.5 ^ Level)
+    const getReqXp = (lvl) => Math.floor(1000 * Math.pow(1.5, lvl));
+
+    let requiredXp = getReqXp(this.state.user.accountLevel);
     let leveledUp = false;
-    if (this.state.user.accountXp >= requiredXp) {
-      this.state.user.accountLevel++;
+
+    // While loop to handle multiple level ups (rare but possible with big XP chunks)
+    while (this.state.user.accountXp >= requiredXp) {
       this.state.user.accountXp -= requiredXp;
+      this.state.user.accountLevel++;
       leveledUp = true;
+      requiredXp = getReqXp(this.state.user.accountLevel);
+      console.log(`[PlayerState] LEVEL UP! New Level: ${this.state.user.accountLevel}`);
     }
 
     this.saveLocalState();
-
-    // If cloud, API call would happen in completeMatch usually,
-    // but if this is called separately, we might need a sync.
-    // For now, we assume `completeMatch` handles the persistence.
-
     return { success: true, newLevel: this.state.user.accountLevel, leveledUp };
   }
 
@@ -364,7 +443,6 @@ class PlayerStateService {
     const hero = this.state.heroes.find((h) => h.id === heroId);
     if (!hero) throw new Error('Hero not found');
 
-    // Optimistic
     let unlocked = false;
     if (!hero.max_stage) hero.max_stage = 1;
     if (stageId >= hero.max_stage) {
@@ -402,8 +480,9 @@ class PlayerStateService {
     // Logic split: Guest vs Cloud
     if (this.isGuest) {
       this.state.user.bcoin -= bcoinCost;
+      this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
+
       hero.level++;
-      // Update stats linearly
       hero.stats.power += 1;
       hero.stats.speed += 1;
 
@@ -413,7 +492,7 @@ class PlayerStateService {
         hero,
         newLevel: hero.level,
         remainingBcoin: this.state.user.bcoin,
-        remainingFragments: 0, // Mock
+        remainingFragments: 0,
       };
     } else {
       try {
@@ -426,6 +505,9 @@ class PlayerStateService {
           const { hero: updatedHero, newBalance } = response.data;
           Object.assign(hero, this._mapHeroFromDB(updatedHero));
           this.state.user.bcoin = newBalance;
+          // Optimistic spent tracking for analytics (approx)
+          this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
+
           return {
             success: true,
             hero,
@@ -444,7 +526,6 @@ class PlayerStateService {
   async addSessionLoot(sessionLoot) {
     if (!sessionLoot || !Array.isArray(sessionLoot)) return;
 
-    // Optimistic
     if (!this.state.inventory) this.state.inventory = [];
     sessionLoot.forEach((item) => {
       const existing = this.state.inventory.find(
@@ -453,9 +534,6 @@ class PlayerStateService {
       if (existing) existing.quantity += item.quantity || 1;
       else this.state.inventory.push(item);
     });
-
-    // Also update coins if passed in sessionLoot?
-    // Usually sessionLoot is just items. Coins are handled via completeMatch.
 
     this.saveLocalState();
 
@@ -478,12 +556,11 @@ class PlayerStateService {
   addResources(xp, coins) {
     console.log(`[Admin] Adding ${xp} XP and ${coins} Coins`);
     this.state.user.bcoin += coins;
+    this.state.user.totalEarned = (this.state.user.totalEarned || 0) + coins;
     this.addAccountXp(xp);
     this.saveLocalState();
-    // If connected, should probably sync, but Admin Mode implies testing.
-    // We will force a sync if not guest.
+
     if (!this.isGuest) {
-      // Mock API call or real one
       axios
         .post('/api/admin/grant-resources', {
           walletAddress: this.walletAddress,
@@ -503,7 +580,7 @@ class PlayerStateService {
     const hero = this.state.heroes.find((h) => h.id === heroId);
     if (hero) {
       hero.level = 1;
-      hero.stats = { power: 1, speed: 1, hp: 100 }; // Reset to base
+      hero.stats = { power: 1, speed: 1, hp: 100 };
       this.saveLocalState();
       return { success: true, hero };
     }

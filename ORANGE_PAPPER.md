@@ -16,18 +16,42 @@ The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments
   - **Nothing:** 70%
   - **Common Fragment:** 25% (Crafting Material)
   - **BCOIN:** 5% (Premium Currency)
+- **Daily Faucet (MVP Feature):**
+  - **Action:** Player can claim **5 BCOIN** once every 24 hours.
+  - **Location:** Profile Modal / Main Menu.
+  - **Purpose:** Ensure players have resources to test Forge upgrades daily.
 
-### Spending Costs (Current Code Implementation)
+### Spending Costs
 - **Hero Level Up (Eternal Forge):**
-  - **Code Requirement:** `1 BCOIN` (Hardcoded in `PlayerStateService.js`).
-  - **UI Display:** `1 BCOIN + 50 Common Fragments` (ForgeModal) OR `500 BCOIN` (HeroesModal - Legacy).
-  - *Note: Guest Mode currently ignores fragment costs.*
+  - **Cost:** `1 BCOIN` + `50 Common Fragments` per level.
+  - *Note: Guest Mode currently mocks fragment costs but enforces BCOIN.*
 
 - **Spell Reroll (Heroes Modal):**
-  - **Code Requirement:** **FREE** (Mock API returns success immediately).
+  - **Cost:** **FREE** (Mock API returns success immediately for MVP).
   - **UI Display:** `1000 BCOIN`.
 
-## 3. Solo Mode Mechanics (PvE)
+## 3. Summoner Progression (Metagame)
+The account level dictates feature access and global power.
+
+### Hardcore XP Curve
+Leveling up is designed to be exponential and punitive, inspired by classic MMOs (e.g., Tibia x2).
+- **Formula:** `XP_Required = 1000 * (1.5 ^ Level)`
+- **Progression:**
+  - Level 1 -> 2: Fast.
+  - Level 8 -> 9: Requires days of grind.
+
+### Level Gating (Feature Unlocks)
+To prevent overwhelming new players, features are unlocked in stages:
+- **Level 1 - 7 (The Grind):**
+  - **Unlocked:** Solo Mode (PvE), Heroes Menu (Roster).
+  - **Locked:** Forge (Upgrades), Shop (Marketplace).
+  - *Goal:* Focus purely on gameplay mechanics and XP accumulation.
+- **Level 8+ (The End-Game):**
+  - **Unlocked:** ALL Features (Forge, Shop, Trading).
+  - **Status:** `isEndGame: true`.
+  - **Bonus:** Exclusive drop chance for "Rare Items" (e.g., Boss Fragments) in Solo Mode.
+
+## 4. Solo Mode Mechanics (PvE)
 The core gameplay happens in `GameScene.js`.
 
 ### Match Rules
@@ -51,7 +75,7 @@ The difficulty multiplier scales exponentially:
   - At Wave 30 (Diff ~66x): `100 * 66 = 6600 HP` (Approx).
 - **Leak Penalty:** If an enemy passes the bottom screen edge, it deals damage equal to its remaining HP to the player.
 
-## 4. NFT Attributes (Hero Stats)
+## 5. NFT Attributes (Hero Stats)
 Hero stats are derived from base NFT metadata and scaled by Level and Account Buffs.
 
 ### Combat Formulas (`GameScene.js`)
@@ -69,7 +93,7 @@ Hero stats are derived from base NFT metadata and scaled by Level and Account Bu
 - **Source:** `PlayerStateService.getAccountLevel()`.
 - *Note:* Currently applies to Speed and HP. Damage uses the specific formula above. Range is strict.
 
-## 5. Spells & Abilities
+## 6. Spells & Abilities
 Spells are special modifiers attached to heroes.
 
 - **Multishot (`multishot`):**
@@ -80,3 +104,9 @@ Spells are special modifiers attached to heroes.
   - **Effect:** Applies a green tint and Damage-over-Time (DoT).
   - **Damage:** 3 Ticks of `5% MaxHP` (or 1 dmg min) over 3 seconds.
   - **Logic:** `CollisionHandler.applyPoison`.
+
+## 7. Analytics & Admin Tools
+To facilitate balancing, the Admin Panel tracks key metrics:
+- **Summoner Level:** Current account progression.
+- **Economy:** Total BCOIN Earned vs. Spent.
+- **Engagement:** Days Logged In.
