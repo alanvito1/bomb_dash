@@ -159,14 +159,28 @@ export default class GameScene extends Phaser.Scene {
 
     const heroLevel = selectedHero.level || 1;
 
+    // Task Force: Hero Genetics -> Combat Math
     this.playerStats.damage = heroPower + (heroLevel - 1);
 
     const baseSpeed = 150 + heroSpeed * 10;
     this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
 
+    // HP from Hero Stats (or Stamina fallback)
+    const baseHp = (heroStats.hp || (heroStats.stamina || 10) * 100);
+    this.playerStats.maxHp = baseHp;
+    this.playerStats.hp = baseHp;
+
     this.playerStats.bombNum = heroBombNum;
     this.playerStats.bombRange = heroRange;
 
+    // Task Force: Spell Interpreter
+    this.playerStats.spells = selectedHero.spells || [];
+    if (this.playerStats.spells.includes('multishot')) {
+        this.playerStats.multiShot = 2; // Fires 3 projectiles (1 + 2)
+        console.log('[Spell Interpreter] Multishot Activated');
+    }
+
+    // Proficiency scaling
     const bombXp = selectedHero.bomb_mastery_xp || 0;
     const agilityXp = selectedHero.agility_xp || 0;
 
@@ -176,10 +190,37 @@ export default class GameScene extends Phaser.Scene {
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
     this.playerStats.speed *= 1 + agilityLevel * 0.005;
 
+    // Task Force: Global Summoner Buff (+1% per Account Level)
     const accountLevel = playerStateService.getAccountLevel();
     const globalMultiplier = 1 + accountLevel * 0.01;
+
     this.playerStats.damage *= globalMultiplier;
     this.playerStats.speed *= globalMultiplier;
+    this.playerStats.maxHp = Math.floor(this.playerStats.maxHp * globalMultiplier);
+    this.playerStats.hp = this.playerStats.maxHp;
+    this.playerStats.bombRange *= globalMultiplier;
+
+    // UI Feedback
+    this.time.delayedCall(1000, () => {
+        const buffText = this.add.text(this.scale.width / 2, 120, `Summoner Buff: +${accountLevel}%`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#00ffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5).setDepth(2000).setAlpha(0);
+
+        this.tweens.add({
+            targets: buffText,
+            y: 80,
+            alpha: 1,
+            yoyo: true,
+            hold: 2000,
+            duration: 500,
+            onComplete: () => buffText.destroy()
+        });
+    });
+
     console.log(
       `[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(
         2
@@ -267,7 +308,7 @@ export default class GameScene extends Phaser.Scene {
     this.waveQuota =
       this.stageConfig && this.stageConfig.enemy_config
         ? this.stageConfig.enemy_config.wave_quota
-        : 10;
+        : 6; // Task Force: Adjusted for 9s Wave Pacing
     this.waveKills = 0;
     this.isBossLevel = false;
 
@@ -343,7 +384,7 @@ export default class GameScene extends Phaser.Scene {
     // Start Wave 1
     this.startWave(this.currentWave);
 
-    this.matchTime = 600; // 10 minutes
+    this.matchTime = 270; // Task Force: 4.5 Minutes
     if (this.matchTimerEvent) this.matchTimerEvent.remove();
     this.matchTimerEvent = this.time.addEvent({
       delay: 1000,
@@ -374,7 +415,8 @@ export default class GameScene extends Phaser.Scene {
 
     // Difficulty Scaling (Base Stage Difficulty + Wave Scaling)
     const stageDiff = this.stageConfig?.difficulty_multiplier || 1.0;
-    const waveDiff = 1.0 + (wave - 1) * 0.05; // +5% per wave
+    // Task Force: Exponential Scaling (1.15 ^ Wave)
+    const waveDiff = Math.pow(1.15, wave);
     const totalDiff = parseFloat((stageDiff * waveDiff).toFixed(2));
 
     // Select Mob
