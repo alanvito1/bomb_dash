@@ -1,4 +1,3 @@
-import ExplosionEffect from './ExplosionEffect.js';
 import SoundManager from '../utils/sound.js';
 import { showNextStageDialog as StageDialog } from './NextStageDialog.js';
 import playerStateService from '../services/PlayerStateService.js';
@@ -66,7 +65,7 @@ export default class CollisionHandler {
     if (!enemy.active) return;
     const impactX = bomb.x;
     const impactY = bomb.y;
-    bomb.destroy();
+    bomb.deactivate();
 
     // Proficiency: Bomb Mastery
     this.scene.sessionBombHits = (this.scene.sessionBombHits || 0) + 1;
@@ -101,7 +100,9 @@ export default class CollisionHandler {
     const scale = explosionRadius / 16; // Base 32px / 2 = 16px radius for scale 1.
 
     // Visual Explosion
-    ExplosionEffect(this.scene, impactX, impactY, scale);
+    if (this.scene.explosionManager) {
+      this.scene.explosionManager.spawn(impactX, impactY, scale);
+    }
 
     const baseDamage = this.scene.playerStats.damage || 1;
 
@@ -179,7 +180,7 @@ export default class CollisionHandler {
       // 3. Screen Shake & Hit Pause
       if (enemy.isBoss) {
         // Boss Death: Epic Shake & Long Pause
-        this.scene.cameras.main.shake(500, 0.03);
+        this.scene.shakeCamera(500, 0.03);
 
         if (this.scene.physics.world.isPaused === false) {
           this.scene.physics.pause();
@@ -201,7 +202,7 @@ export default class CollisionHandler {
         // For impact/damage taken by hero: shake(100, 0.01).
         // For normal enemy death, user asked for "Neon Burst".
         // The current code had `shake(50, 0.005)` for death. Let's keep a tiny one.
-        this.scene.cameras.main.shake(50, 0.005);
+        this.scene.shakeCamera(50, 0.005);
       }
 
       // 2. Neon Burst Particles (Global Emitter)
@@ -295,7 +296,7 @@ export default class CollisionHandler {
     });
 
     // User requested: shake(100, 0.01)
-    this.scene.cameras.main.shake(100, 0.01);
+    this.scene.shakeCamera(100, 0.01);
 
     const stats = this.scene.playerStats;
     stats.hp -= 100;
