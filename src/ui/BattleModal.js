@@ -10,25 +10,32 @@ export default class BattleModal extends UIModal {
 
   createButtons() {
     // SOLO RUN Button
-    this.createModeButton(0, -40, 'SOLO RUN', 0x00ff00, (event) => {
+    this.createModeButton(0, -80, 'SOLO RUN', 0x00ff00, (event) => {
       console.log('Starting World Map');
       // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      // REMOVED: this.scene.input.clear() caused crash (input undefined context)
       this.scene.scene.start('WorldMapScene');
     });
 
     // PVP MATCH Button
-    this.createModeButton(0, 50, 'PVP MATCH', 0xff4500, (event) => {
+    this.createModeButton(0, 10, 'PVP MATCH', 0xff4500, (event) => {
       console.log('Starting PvP Match');
       // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      // REMOVED: this.scene.input.clear() caused crash
       this.scene.scene.start(CST.SCENES.PVP);
+    });
+
+    // BATTLE ROYALE Button
+    this.createModeButton(0, 100, 'BATTLE ROYALE', 0xffff00, (event) => {
+      console.log('Starting Battle Royale');
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+      this.scene.scene.start(CST.SCENES.BATTLE_ROYALE);
     });
   }
 

@@ -28,6 +28,7 @@ export const CST = {
     PVP: 'PvpScene',
     TOURNAMENT_LOBBY: 'TournamentLobbyScene',
     TOURNAMENT_BRACKET: 'TournamentBracketScene',
+    BATTLE_ROYALE: 'BattleRoyaleScene',
   },
   /**
    * @memberof CST
