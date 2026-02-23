@@ -210,8 +210,16 @@ export function createRetroButton(
 
   // Icon Logic
   let icon = null;
-  if (iconKey && scene.textures.exists(iconKey)) {
-    icon = scene.add.image(0, 0, iconKey);
+  if (iconKey) {
+      if (scene.textures.exists(iconKey)) {
+          // console.log(`[UI] Adding icon ${iconKey} to button ${text}`);
+          icon = scene.add.image(0, 0, iconKey);
+      } else {
+          console.warn(`[UI] Icon ${iconKey} missing for button ${text}`);
+      }
+  }
+
+  if (icon) {
 
     // Scale icon to fit height (max 60% of button height)
     const maxIconH = height * 0.6;

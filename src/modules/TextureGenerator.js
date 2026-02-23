@@ -428,7 +428,7 @@ export default class TextureGenerator {
         y: size / 2,
         text: symbol,
         style: {
-            fontFamily: '"Press Start 2P", sans-serif',
+            fontFamily: 'Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
             fontSize: '32px',
             color: '#' + color.toString(16).padStart(6, '0'),
             align: 'center'
