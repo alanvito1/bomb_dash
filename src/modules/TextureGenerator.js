@@ -401,49 +401,34 @@ export default class TextureGenerator {
   // ==================================================================================
 
   /**
-   * Helper to generate a simple geometric icon with text.
+   * Helper to generate a simple geometric icon (simplified for stability).
    * @param {Phaser.Scene} scene
    * @param {string} key
-   * @param {string} label (Max 3 chars if possible)
+   * @param {string} label (Unused in simplified version)
    * @param {number} color
    */
   static createGeometricIcon(scene, key, label, color) {
     if (scene.textures.exists(key)) return;
 
     const size = 64;
-    const rt = scene.make.renderTexture({ width: size, height: size }, false);
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const bg = scene.make.graphics({ add: false });
-
-    // Background Shape (Circle/Hexagon-ish)
-    bg.fillStyle(color, 1.0); // Solid color
-    bg.fillCircle(size / 2, size / 2, size / 2 - 4);
+    // Background Shape (Circle)
+    graphics.fillStyle(color, 1.0);
+    graphics.fillCircle(size / 2, size / 2, size / 2 - 4);
 
     // Border
-    bg.lineStyle(4, 0xffffff, 1.0);
-    bg.strokeCircle(size / 2, size / 2, size / 2 - 4);
+    graphics.lineStyle(4, 0xffffff, 1.0);
+    graphics.strokeCircle(size / 2, size / 2, size / 2 - 4);
 
-    rt.draw(bg, 0, 0);
+    // Simple geometric center (Square) instead of Text to avoid font crashes
+    graphics.fillStyle(0xffffff, 0.5);
+    graphics.fillRect(size / 2 - 8, size / 2 - 8, 16, 16);
 
-    // Text Label (High Contrast)
-    // Using simple font available everywhere
-    const text = scene.make
-      .text(size / 2, size / 2, label, {
-        fontSize: '20px',
-        align: 'center',
-        fontFamily: 'Arial, sans-serif',
-        fontStyle: 'bold',
-        color: '#000000', // Black text on colored bg
-      })
-      .setOrigin(0.5);
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
 
-    rt.draw(text, size / 2, size / 2);
-
-    rt.saveTexture(key);
-
-    bg.destroy();
-    text.destroy();
-    rt.destroy();
+    console.log(`✅ Generated procedural ICON: ${key}`);
   }
 
   static createIconBase(scene, key) {
