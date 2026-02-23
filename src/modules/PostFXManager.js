@@ -42,7 +42,10 @@ export default class PostFXManager {
     // Ensure we don't double apply
     this.remove(scene);
 
-    // Phaser 3.60+ PostFX Pipeline
+    // [HOTFIX] Production Bug Bash
+    // Disable native PostFX due to "addScanlines is not a function" crash on some devices/versions.
+    // Forcing Graphics Fallback for stability.
+    /*
     if (scene.cameras.main.postFX) {
       try {
         // Scanlines (Black lines)
@@ -63,6 +66,10 @@ export default class PostFXManager {
     } else {
       this.applyFallback(scene);
     }
+    */
+
+    // Force Fallback
+    this.applyFallback(scene);
   }
 
   static remove(scene) {
@@ -71,11 +78,15 @@ export default class PostFXManager {
     // Remove PostFX
     if (scene.cameras?.main?.postFX) {
       if (scene.scanlinesEffect) {
-        scene.cameras.main.postFX.remove(scene.scanlinesEffect);
+        try {
+            scene.cameras.main.postFX.remove(scene.scanlinesEffect);
+        } catch (e) { /* ignore */ }
         scene.scanlinesEffect = null;
       }
       if (scene.vignetteEffect) {
-        scene.cameras.main.postFX.remove(scene.vignetteEffect);
+        try {
+            scene.cameras.main.postFX.remove(scene.vignetteEffect);
+        } catch (e) { /* ignore */ }
         scene.vignetteEffect = null;
       }
     }
