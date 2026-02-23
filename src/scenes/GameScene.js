@@ -3,6 +3,7 @@ import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import Bomb from '../modules/Bomb.js';
+import ClassicBomb from '../modules/BattleRoyale/ClassicBomb.js'; // Task Force: Grid Bomb
 import ExplosionManager from '../modules/ExplosionManager.js';
 import DamageTextManager from '../modules/DamageTextManager.js';
 import NeonBurstManager from '../modules/NeonBurstManager.js';
@@ -18,6 +19,7 @@ import playerStateService from '../services/PlayerStateService.js';
 import { MOBS } from '../config/MobConfig.js';
 import PostFXManager from '../modules/PostFXManager.js';
 import { createRetroButton, createRetroPanel } from '../utils/ui.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -46,6 +48,11 @@ export default class GameScene extends Phaser.Scene {
     };
 
     this.gameSettings = { monsterScaleFactor: 7 };
+
+    // Task Force: Grid Config
+    this.TILE_SIZE = 48; // Matches BattleRoyale and Asset scale
+    this.GRID_W = 10; // 480 / 48 = 10 columns
+    this.GRID_H = 16; // ~800 / 48 = 16.6 rows
   }
 
   setPlayerState(newState, reason) {
@@ -306,8 +313,88 @@ export default class GameScene extends Phaser.Scene {
     this.isInitialized = true;
   }
 
+  generateMap() {
+      // Create Groups
+      this.hardGroup = this.physics.add.staticGroup();
+      this.softGroup = this.physics.add.staticGroup();
+
+      // Ensure Textures exist (using Generators if needed)
+      if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
+      if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
+
+      // 1. Hard Blocks (Outer Border + Grid Pattern)
+      // Grid dimensions: 10x16 (approx 480x800 with 48px tiles)
+
+      // BORDER: Left, Right, Top. Bottom is OPEN for "Leak Penalty".
+      for (let y = 0; y < this.GRID_H; y++) {
+          // Left Wall
+          this.placeBlock(0, y, true);
+          // Right Wall
+          this.placeBlock(this.GRID_W - 1, y, true);
+      }
+      for (let x = 1; x < this.GRID_W - 1; x++) {
+          // Top Wall
+          this.placeBlock(x, 0, true);
+      }
+
+      // 2. Inner Hard Blocks (Grid Pattern)
+      // Every even X and even Y
+      for (let y = 2; y < this.GRID_H - 1; y += 2) {
+          for (let x = 2; x < this.GRID_W - 2; x += 2) {
+              this.placeBlock(x, y, true);
+          }
+      }
+
+      // 3. Soft Blocks (Random Scatter)
+      // Avoid Player Start (Bottom Center)
+      const playerGridX = Math.floor(this.player.x / this.TILE_SIZE);
+      const playerGridY = Math.floor(this.player.y / this.TILE_SIZE);
+
+      for (let y = 1; y < this.GRID_H - 1; y++) {
+          for (let x = 1; x < this.GRID_W - 1; x++) {
+              // Skip if Hard Block exists (simplistic check: even/even logic matches above)
+              if (x % 2 === 0 && y % 2 === 0) continue;
+
+              // Safe Zone around Player
+              if (Math.abs(x - playerGridX) < 2 && Math.abs(y - playerGridY) < 2) continue;
+
+              // Chance to spawn Soft Block
+              if (Math.random() < 0.3) {
+                  this.placeBlock(x, y, false);
+              }
+          }
+      }
+  }
+
+  placeBlock(gridX, gridY, isHard) {
+      const x = gridX * this.TILE_SIZE + this.TILE_SIZE / 2;
+      const y = gridY * this.TILE_SIZE + this.TILE_SIZE / 2;
+
+      const texture = isHard ? 'block_hard' : 'block_soft';
+      const group = isHard ? this.hardGroup : this.softGroup;
+
+      const block = group.create(x, y, texture);
+      block.setDisplaySize(this.TILE_SIZE, this.TILE_SIZE);
+      block.refreshBody(); // Update static body
+
+      block.gridX = gridX;
+      block.gridY = gridY;
+  }
+
   initializePveMatch() {
     this.world = this.stageConfig ? this.stageConfig.id : 1;
+
+    // TASK FORCE: Generate Grid Map
+    this.generateMap();
+
+    // TASK FORCE: Grid Collisions
+    // Player vs Walls
+    this.physics.add.collider(this.player, this.hardGroup);
+    this.physics.add.collider(this.player, this.softGroup);
+
+    // Enemies vs Walls
+    this.physics.add.collider(this.enemies, this.hardGroup);
+    this.physics.add.collider(this.enemies, this.softGroup);
 
     // TASK FORCE STEP 2: 30-Wave Engine
     this.currentWave = 1;
@@ -362,7 +449,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.bombs = this.physics.add.group({
-      classType: Bomb,
+      classType: Bomb, // Keeping generic for now, but will use ClassicBomb mostly
       runChildUpdate: true,
     });
     this.enemies = this.physics.add.group();
@@ -487,6 +574,7 @@ export default class GameScene extends Phaser.Scene {
 
     const enemiesToProcess = this.enemies.getChildren().slice();
     enemiesToProcess.forEach((enemy) => {
+      // LEAK PENALTY (Bottom Screen)
       if (enemy?.active && enemy.y > this.scale.height + 20) {
         // Punish player based on enemy remaining HP
         const damageTaken = enemy.hp || 50;
@@ -558,6 +646,7 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // --- PVP SUPPORT (RESTORED) ---
   initializePvpMatch() {
     if (!this.opponent) {
       console.error(
@@ -616,7 +705,7 @@ export default class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         if (this.player?.active && this.playerState === 'CAN_SHOOT') {
-          this.firePlayerBomb(false);
+          this.firePlayerBomb(false); // False for PvP (Shooting)
         }
       },
     });
@@ -653,13 +742,41 @@ export default class GameScene extends Phaser.Scene {
     );
   }
 
-  firePlayerBomb(isPve) {
-    const bombGroup = isPve ? this.bombs : this.playerBombs;
-    this.fireBomb(this.player, bombGroup, -300, false);
-  }
-
   fireOpponentBomb() {
     this.fireBomb(this.opponentPlayer, this.opponentBombs, 300, true);
+  }
+
+  firePlayerBomb(isPve) {
+      // TASK FORCE: GRID SNAPPING & STATIC PLACEMENT (PvE)
+      if (this.gamePaused || !this.player || !this.player.active) return;
+
+      // BRANCH: PvE (Classic) vs PvP (Shooter)
+      if (isPve) {
+          const count = 1 + (this.playerStats.multiShot || 0);
+          const tile = this.TILE_SIZE;
+          const gridX = Math.floor(this.player.x / tile);
+          const gridY = Math.floor(this.player.y / tile);
+
+          const x = gridX * tile + tile / 2;
+          const y = gridY * tile + tile / 2;
+
+          // Check if bomb already exists there
+          const existing = this.bombs.getChildren().find(b =>
+              Math.abs(b.x - x) < 10 && Math.abs(b.y - y) < 10 && b.active
+          );
+
+          if (existing) return; // Cannot stack
+
+          const bomb = new ClassicBomb(this, x, y, this.playerStats.bombRange, this.playerStats);
+          this.bombs.add(bomb);
+          bomb.startTimer(3000);
+
+          SoundManager.play(this, 'bomb_fire');
+      } else {
+          // PvP Logic: Shoot Projectile
+          const bombGroup = this.bombs; // Or playerBombs if distinct
+          this.fireBomb(this.player, this.playerBombs || this.bombs, -300, false);
+      }
   }
 
   fireBomb(firer, bombGroup, velocityY, isOpponent = false) {
@@ -673,7 +790,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const bombSize = stats.bombSize || 1;
-    const bombDisplaySize = 8 * bombSize;
     const baseVelocity = Math.abs(velocityY);
     const direction = velocityY > 0 ? 1 : -1;
 
@@ -718,6 +834,77 @@ export default class GameScene extends Phaser.Scene {
         this.lastBombSoundTime = now;
       }
     }
+  }
+
+  triggerExplosion(x, y, range, owner) {
+      // TASK FORCE: CROSS EXPLOSION LOGIC
+      const tile = this.TILE_SIZE;
+      const gridX = Math.floor(x / tile);
+      const gridY = Math.floor(y / tile);
+
+      // Center Explosion
+      this.explosionManager.spawn(x, y, 1.5);
+      this.damageAt(x, y, owner);
+
+      const directions = [
+          {x: 0, y: -1}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 1, y: 0}
+      ];
+
+      directions.forEach(dir => {
+          for (let i = 1; i <= range; i++) {
+              const tx = gridX + dir.x * i;
+              const ty = gridY + dir.y * i;
+
+              const px = tx * tile + tile / 2;
+              const py = ty * tile + tile / 2;
+
+              // Bounds Check
+              if (tx < 0 || tx >= this.GRID_W || ty < 0 || ty >= this.GRID_H) break;
+
+              // Check Hard Block
+              const hardBlock = this.hardGroup.getChildren().find(b =>
+                  b.active && Math.abs(b.x - px) < 10 && Math.abs(b.y - py) < 10
+              );
+              if (hardBlock) break; // Stop Ray
+
+              // Visual
+              this.explosionManager.spawn(px, py, 1.5);
+
+              // Damage
+              this.damageAt(px, py, owner);
+
+              // Check Soft Block
+              const softBlock = this.softGroup.getChildren().find(b =>
+                  b.active && Math.abs(b.x - px) < 10 && Math.abs(b.y - py) < 10
+              );
+
+              if (softBlock) {
+                  softBlock.destroy();
+                  // Drop Loot?
+                  if (Math.random() < 0.3) this.trySpawnLoot(px, py);
+                  break; // Stop Ray
+              }
+          }
+      });
+  }
+
+  damageAt(x, y, owner) {
+      // Damage Enemies
+      // Use overlap circle small
+      const radius = 20;
+      this.enemies.getChildren().forEach(enemy => {
+         if (enemy.active && Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) < radius) {
+             const damage = this.playerStats.damage;
+             this.collisionHandler.applyDamage(enemy, damage);
+         }
+      });
+
+      // Damage Player?
+      if (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < radius) {
+          if (!this.godMode) {
+              this.collisionHandler.onHit(this.player, null);
+          }
+      }
   }
 
   resetWaveState() {

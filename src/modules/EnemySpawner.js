@@ -91,7 +91,22 @@ export default class EnemySpawner {
 
     const enemy = this.scene.enemies.create(x, y, key);
     enemy.setDisplaySize(32, 32);
+
+    // TASK FORCE: FLUID ENEMY PHYSICS
+    // 1. Reduced Hitbox (24px for 32px sprite -> ~25% reduction)
+    // 2. Enable World Bounds & Bounce
+    enemy.body.setSize(24, 24);
+    // Center the hitbox? Default offset is 0,0.
+    // If sprite is 32x32 (Display), body is 24x24.
+    // Center offset = (32-24)/2 = 4.
+    enemy.body.setOffset(4, 4);
+
+    enemy.setCollideWorldBounds(true);
+    enemy.setBounce(1, 1);
+
+    // Initial Velocity (add slight horizontal drift for "AI" feel)
     enemy.setVelocityY(speed);
+    enemy.setVelocityX(Phaser.Math.Between(-20, 20));
 
     enemy.hp = hp;
     enemy.maxHp = hp; // Useful for UI if needed
@@ -100,7 +115,7 @@ export default class EnemySpawner {
     enemy.name = `${mob.id}_${this.enemyIdCounter++}`;
 
     // Optional: Add simple zigzag or sine wave movement based on mob type?
-    // For now, straight down.
+    // For now, straight down with drift.
   }
 
   stopSpawning() {
@@ -142,6 +157,12 @@ export default class EnemySpawner {
 
     const boss = this.scene.enemies.create(x, y, key);
     boss.setDisplaySize(64, 64); // Bigger boss
+
+    // TASK FORCE: BOSS HITBOX
+    // 64px sprite -> 48px hitbox (25% reduction)
+    boss.body.setSize(48, 48);
+    boss.body.setOffset(8, 8); // (64-48)/2 = 8
+
     boss.setVelocityY(speed); // Fall in
 
     boss.hp = hp;

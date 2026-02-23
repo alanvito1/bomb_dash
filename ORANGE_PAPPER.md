@@ -35,6 +35,11 @@ The core gameplay happens in `GameScene.js`.
 - **Wave Quota:** 6 Kills (Base) to advance wave (adjusted dynamically).
 - **Boss Fight:** Occurs at **Wave 30**.
 
+### Physics & Controls (Fluid Grid System)
+- **Player Hitbox:** Reduced to **20x20px** (offset Y+20) to prevent corner snagging in corridors.
+- **Enemy Hitbox:** Reduced by ~25% (24x24px for Mobs, 48x48px for Bosses) for better AI navigation.
+- **Bomb Placement:** Bombs use **Grid Snapping** (Center of 48x48 Tile) to ensure consistent Cross Explosions.
+
 ### Difficulty Scaling
 The difficulty multiplier scales exponentially:
 - Formula: `TotalDifficulty = StageMultiplier * (1.15 ^ WaveIndex)`
