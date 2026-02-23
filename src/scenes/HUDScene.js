@@ -35,17 +35,8 @@ export default class HUDScene extends Phaser.Scene {
     // Health Bar (Cyan Neon)
     this.createHealthBar(margin, margin);
 
-    // XP Bar
-    this.levelText = this.add.text(margin, margin + 35, `Lvl: 1`, {
-      ...textStyle,
-      fill: '#00ff00',
-      fontSize: '10px',
-    });
-    this.xpBar = this.add.graphics();
-    this.xpText = this.add.text(margin + 40, margin + 50, '', {
-      ...valueStyle,
-      fontSize: '10px',
-    });
+    // XP Bar (Green Neon) - Positioned below Health Bar
+    this.createXPBar(margin, margin + 30);
 
     // --- Right Side (Currency & Buffs) ---
     this.bcoinText = this.add
@@ -174,25 +165,24 @@ export default class HUDScene extends Phaser.Scene {
         fontFamily: '"Press Start 2P"',
         fontSize: '12px',
         fill: '#00FFFF',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0, 0.5);
 
     // Bar Background (Black with Border)
     const barX = 30;
     const barW = 150;
-    const barH = 16;
+    const barH = 18;
 
     this.healthBarBg = this.add.nineslice(
       barX + barW / 2,
-      8,
+      8, // Center Y
       'ui_panel',
       0,
       barW,
       barH,
-      5,
-      5,
-      5,
-      5
+      6, 6, 6, 6
     );
     this.healthBarBg.setTint(0x00ffff); // Cyan Border
 
@@ -203,8 +193,10 @@ export default class HUDScene extends Phaser.Scene {
     this.healthValueText = this.add
       .text(barX + barW / 2, 8, '', {
         fontFamily: '"Press Start 2P"',
-        fontSize: '8px',
+        fontSize: '10px',
         fill: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2,
       })
       .setOrigin(0.5);
 
@@ -215,8 +207,7 @@ export default class HUDScene extends Phaser.Scene {
       this.healthValueText,
     ]);
 
-    // Store dimensions for update
-    this.healthBarDims = { x: barX, y: 0, w: barW, h: barH };
+    this.healthBarDims = { x: barX, y: 8 - barH / 2, w: barW, h: barH };
   }
 
   updateHealth({ health, maxHealth }) {
@@ -226,11 +217,106 @@ export default class HUDScene extends Phaser.Scene {
     const { x, y, w, h } = this.healthBarDims;
 
     this.healthBarFill.clear();
-    // Fill
-    this.healthBarFill.fillStyle(0x00ffff, 1);
-    this.healthBarFill.fillRect(x + 2, y + 2, (w - 4) * pct, h - 4);
+    // Background of bar (Darker Cyan)
+    this.healthBarFill.fillStyle(0x003333, 1);
+    this.healthBarFill.fillRect(x + 4, y + 4, w - 8, h - 8);
 
-    this.healthValueText.setText(`${Math.max(0, health)}/${maxHealth}`);
+    // Fill (Bright Cyan Gradient-ish)
+    this.healthBarFill.fillStyle(0x00ffff, 1);
+    this.healthBarFill.fillRect(x + 4, y + 4, (w - 8) * pct, h - 8);
+
+    // Shine (Top half)
+    this.healthBarFill.fillStyle(0xffffff, 0.3);
+    this.healthBarFill.fillRect(x + 4, y + 4, (w - 8) * pct, (h - 8) / 2);
+
+    this.healthValueText.setText(`${Math.max(0, Math.floor(health))}/${maxHealth}`);
+  }
+
+  createXPBar(x, y) {
+    this.xpBarContainer = this.add.container(x, y);
+
+    // Label "Lvl: X"
+    this.levelText = this.add.text(0, 8, 'Lv.1', {
+      fontFamily: '"Press Start 2P"',
+      fontSize: '10px',
+      fill: '#00FF00', // Green
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0, 0.5);
+
+    // Bar Config
+    const barX = 45; // Start after 'Lv.X'
+    const barW = 135; // Slightly narrower than HP
+    const barH = 14;  // Thinner than HP
+
+    // Background Panel
+    this.xpBarBg = this.add.nineslice(
+      barX + barW / 2,
+      8,
+      'ui_panel',
+      0,
+      barW,
+      barH,
+      4, 4, 4, 4
+    );
+    this.xpBarBg.setTint(0x00ff00); // Green Border
+
+    // Bar Fill
+    this.xpBarFill = this.add.graphics();
+
+    // Text Value
+    this.xpText = this.add.text(barX + barW / 2, 8, '', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '8px',
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    this.xpBarContainer.add([
+      this.levelText,
+      this.xpBarBg,
+      this.xpBarFill,
+      this.xpText
+    ]);
+
+    this.xpBarDims = { x: barX, y: 8 - barH / 2, w: barW, h: barH };
+  }
+
+  updateXP({ accountLevel, accountXP }) {
+    if (!this.xpBarFill) return;
+
+    // Update Label
+    this.levelText.setText(`Lv.${accountLevel}`);
+
+    // Calculation
+    const xpForCurrentLevel = getExperienceForLevel(accountLevel);
+    const xpForNextLevel = getExperienceForLevel(accountLevel + 1);
+    const xpEarnedInLevel = accountXP - xpForCurrentLevel;
+    const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
+
+    // Update Text
+    this.xpText.setText(`${xpEarnedInLevel}/${xpNeededForLevel}`);
+
+    // Update Fill
+    const pct = xpNeededForLevel > 0
+      ? Phaser.Math.Clamp(xpEarnedInLevel / xpNeededForLevel, 0, 1)
+      : 0;
+
+    const { x, y, w, h } = this.xpBarDims;
+
+    this.xpBarFill.clear();
+    // Background (Dark Green)
+    this.xpBarFill.fillStyle(0x003300, 1);
+    this.xpBarFill.fillRect(x + 3, y + 3, w - 6, h - 6);
+
+    // Fill (Bright Green)
+    this.xpBarFill.fillStyle(0x00ff00, 1);
+    this.xpBarFill.fillRect(x + 3, y + 3, (w - 6) * pct, h - 6);
+
+    // Shine
+    this.xpBarFill.fillStyle(0xffffff, 0.3);
+    this.xpBarFill.fillRect(x + 3, y + 3, (w - 6) * pct, (h - 6) / 2);
   }
 
   createBossHealthBar() {
@@ -320,32 +406,6 @@ export default class HUDScene extends Phaser.Scene {
         onComplete: () => this.bossHealthContainer.setVisible(false),
       });
     }
-  }
-
-  updateXP({ accountLevel, accountXP }) {
-    const barWidth = 180;
-    const barHeight = 16;
-    const barX = 100;
-    const barY = 60;
-
-    this.levelText.setText(`Lvl: ${accountLevel}`);
-
-    const xpForCurrentLevel = getExperienceForLevel(accountLevel);
-    const xpForNextLevel = getExperienceForLevel(accountLevel + 1);
-    const xpEarnedInLevel = accountXP - xpForCurrentLevel;
-    const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
-
-    this.xpText.setText(`${xpEarnedInLevel} / ${xpNeededForLevel}`);
-
-    const xpPercentage =
-      xpNeededForLevel > 0
-        ? Phaser.Math.Clamp(xpEarnedInLevel / xpNeededForLevel, 0, 1)
-        : 0;
-    this.xpBar.clear();
-    this.xpBar.fillStyle(0x000000, 0.5);
-    this.xpBar.fillRect(barX, barY, barWidth, barHeight);
-    this.xpBar.fillStyle(0x00ff00);
-    this.xpBar.fillRect(barX, barY, barWidth * xpPercentage, barHeight);
   }
 
   updateWave({ world, phase, isBoss }) {

@@ -3,6 +3,7 @@ import LanguageManager from '../utils/LanguageManager.js';
 import contractProvider from '../web3/ContractProvider.js';
 import api from '../api.js';
 import AssetLoader from '../utils/AssetLoader.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 import { MockHeroes } from '../config/MockNFTData.js';
 import playerStateService from '../services/PlayerStateService.js';
 import { Stages } from '../config/Stages.js';
@@ -68,16 +69,16 @@ export default class LoadingScene extends Phaser.Scene {
       if (fileObj.type === 'image' || fileObj.type === 'spritesheet') {
         const key = fileObj.key;
         if (!this.textures.exists(key)) {
-          let color = 0xff00ff;
-          if (key.includes('hero')) color = 0x00ff00;
-          if (key.includes('enemy')) color = 0xff0000;
-          if (key.includes('boss')) color = 0x880000;
-          if (key.includes('item')) color = 0xffff00;
-
-          const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-          graphics.fillStyle(color);
-          graphics.fillRect(0, 0, 32, 32);
-          graphics.generateTexture(key, 32, 32);
+          if (key.includes('hero')) {
+            TextureGenerator.createHero(this, key);
+          } else if (key.includes('enemy')) {
+            TextureGenerator.createEnemy(this, key);
+          } else if (key === 'bomb') {
+            TextureGenerator.createBomb(this, key);
+          } else {
+            // Generic Fallback
+            TextureGenerator.createGeometricIcon(this, key, 'ERR', 0xff00ff);
+          }
         }
       }
     });

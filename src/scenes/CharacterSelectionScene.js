@@ -8,6 +8,7 @@ import {
   createTitle,
   createPanel,
 } from '../modules/UIGenerator.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 export default class CharacterSelectionScene extends Phaser.Scene {
   constructor() {
@@ -200,6 +201,8 @@ export default class CharacterSelectionScene extends Phaser.Scene {
       const isLocked =
         (hero.rarity && hero.rarity !== 'Common') ||
         (hero.nft_type && hero.nft_type === 'HOUSE');
+
+      TextureGenerator.ensureHero(this, hero.sprite_name);
 
       const heroSprite = this.add
         .sprite(0, -80, hero.sprite_name)

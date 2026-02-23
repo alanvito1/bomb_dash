@@ -1,5 +1,6 @@
 import { createFloatingText } from './FloatingText.js';
 import SoundManager from '../utils/sound.js';
+import TextureGenerator from './TextureGenerator.js';
 
 export default class PlayerController {
   constructor(scene) {
@@ -13,6 +14,8 @@ export default class PlayerController {
     const textureKey = playerStats.sprite_name
       ? `${playerStats.sprite_name.toLowerCase()}_hero`
       : 'player_default';
+
+    TextureGenerator.ensureHero(this.scene, textureKey);
 
     this.player = this.scene.physics.add.sprite(
       this.scene.scale.width / 2,
