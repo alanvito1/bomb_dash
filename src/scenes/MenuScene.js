@@ -626,7 +626,7 @@ export default class MenuScene extends Phaser.Scene {
     const x4 = 342; // Forge
     const x5 = 437; // Shop
 
-    // BESTIARY (Purple) - Text Only
+    // BESTIARY (Purple) - Icon + Text
     const bestiaryBtn = createRetroButton(
       this,
       x1,
@@ -639,10 +639,10 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.playClick(this);
         this.bestiaryModal.open();
       },
-      null
-    ); // Removed Icon
+      'icon_book'
+    );
 
-    // HEROES (Cyan) - Text Only
+    // HEROES (Cyan) - Icon + Text
     const heroesBtn = createRetroButton(
       this,
       x2,
@@ -655,8 +655,8 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.playClick(this);
         this.heroesModal.open();
       },
-      null
-    ); // Removed Icon
+      'icon_heroes'
+    );
 
     // PLAY (Primary/Yellow) - Icon + Text
     const playBtn = createRetroButton(
@@ -674,7 +674,7 @@ export default class MenuScene extends Phaser.Scene {
       'icon_play'
     );
 
-    // FORGE (Orange) - Text Only
+    // FORGE (Orange) - Icon + Text
     const forgeBtn = createRetroButton(
       this,
       x4,
@@ -687,10 +687,10 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.playClick(this);
         this.forgeModal.open();
       },
-      null
-    ); // Removed Icon
+      'icon_forge'
+    );
 
-    // SHOP (Green) - Text Only
+    // SHOP (Green) - Icon + Text
     const shopBtn = createRetroButton(
       this,
       x5,
@@ -703,8 +703,8 @@ export default class MenuScene extends Phaser.Scene {
         SoundManager.playClick(this);
         this.shopModal.open();
       },
-      null
-    ); // Removed Icon
+      'icon_shop'
+    );
 
     container.add([bestiaryBtn, heroesBtn, playBtn, forgeBtn, shopBtn]);
   }

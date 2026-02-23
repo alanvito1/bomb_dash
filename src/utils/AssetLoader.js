@@ -66,7 +66,7 @@ export default class AssetLoader {
             TextureGenerator.createIconForge(scene, key);
             break;
           case 'icon_house':
-            TextureGenerator.createGeometricIcon(scene, key, 'HOUSE', 0x00ffff);
+            TextureGenerator.createIconBase(scene, key);
             break;
           case 'icon_gold':
             TextureGenerator.createIconGold(scene, key);
@@ -101,7 +101,7 @@ export default class AssetLoader {
           default:
             // Generic Fallback
             console.warn(`⚠️ Missing UI Icon: ${key}. Generating generic fallback.`);
-            TextureGenerator.createGeometricIcon(scene, key, key.substring(5, 8).toUpperCase(), 0xff00ff);
+            TextureGenerator.createAsciiIcon(scene, key, '❓', 0xff00ff);
             break;
         }
       }

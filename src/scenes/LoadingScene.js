@@ -77,7 +77,7 @@ export default class LoadingScene extends Phaser.Scene {
             TextureGenerator.createBomb(this, key);
           } else {
             // Generic Fallback
-            TextureGenerator.createGeometricIcon(this, key, 'ERR', 0xff00ff);
+            TextureGenerator.createAsciiIcon(this, key, '❓', 0xff00ff);
           }
         }
       }

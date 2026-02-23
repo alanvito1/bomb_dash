@@ -9,3 +9,7 @@
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
 7:34:59 PM [vite] page reload src/scenes/GameScene.js
+7:42:12 PM [vite] page reload src/scenes/LoadingScene.js
+7:43:24 PM [vite] page reload src/modules/TextureGenerator.js
+7:43:32 PM [vite] page reload src/utils/AssetLoader.js
+Killed
