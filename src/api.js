@@ -62,6 +62,24 @@ class ApiClient {
     });
   }
 
+  async guestLogin() {
+    console.log('[MockAPI] Guest Login requested. simulating success.');
+    // Ensure guest state is initialized
+    if (!playerStateService.isInitialized) {
+      await playerStateService.init(null);
+    }
+    // We don't set a token for Guest Mode usually, or maybe a dummy one
+    // But api logic checks for token in hasSession()
+    // For now, let's pretend guest has a session token locally
+    this.setJwtToken('guest-session-token');
+
+    return this._mockResponse({
+      success: true,
+      token: 'guest-session-token',
+      user: playerStateService.getUser(),
+    });
+  }
+
   async web3Login() {
     console.log('[MockAPI] Web3 Login requested. simulating success.');
     this.setJwtToken('mock-jwt-token');
@@ -162,11 +180,11 @@ class ApiClient {
 
   async upgradeHeroStat(heroId) {
     try {
-      const result = playerStateService.upgradeHeroStat(heroId);
+      const result = await playerStateService.upgradeHeroLevel(heroId);
       return this._mockResponse({
         success: true,
         hero: result.hero,
-        stat: result.statUpgraded,
+        level: result.newLevel,
       });
     } catch (e) {
       return this._mockResponse({ success: false, message: e.message });
@@ -174,23 +192,16 @@ class ApiClient {
   }
 
   async rerollHeroSpells(heroId) {
-    try {
-      const result = playerStateService.rerollHeroSpells(heroId);
-      return this._mockResponse({
-        success: true,
-        hero: result.hero,
-        spells: result.newSpells,
-      });
-    } catch (e) {
-      return this._mockResponse({ success: false, message: e.message });
-    }
+    // Legacy method, not implemented in current service
+    console.warn('[MockAPI] rerollHeroSpells not supported');
+    return this._mockResponse({ success: false, message: 'Not implemented' });
   }
 
   async updateUserStats(heroId, upgradeType, txHash) {
     console.log(`[MockAPI] Update stats hero ${heroId}`);
     // Mapping to new service logic for consistency
     try {
-      const result = playerStateService.upgradeHeroStat(heroId);
+      const result = await playerStateService.upgradeHeroLevel(heroId);
       return this._mockResponse({ success: true, hero: result.hero });
     } catch (e) {
       return this._mockResponse({ success: false, message: e.message });
