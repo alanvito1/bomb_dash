@@ -19,23 +19,22 @@ export default class BattleModal extends UIModal {
       this.scene.scene.start('WorldMapScene');
     });
 
-    // PVP MATCH Button
-    this.createModeButton(0, 10, 'PVP MATCH', 0xff4500, (event) => {
-      console.log('Starting PvP Match');
-      // [PRAGMATIC INPUT FIX] Stop event propagation using native DOM event
+    // PVP MATCH Button (LOCKED)
+    this.createModeButton(0, 10, 'PVP MATCH\n(LOCKED)', 0x555555, (event) => {
+      console.log('PvP Match is currently locked.');
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      this.scene.scene.start(CST.SCENES.PVP);
+      // No action
     });
 
-    // BATTLE ROYALE Button
-    this.createModeButton(0, 100, 'BATTLE ROYALE', 0xffff00, (event) => {
-      console.log('Starting Battle Royale');
+    // BATTLE ROYALE Button (COMING SOON)
+    this.createModeButton(0, 100, 'BATTLE ROYALE\n(Q3 2026)', 0x555555, (event) => {
+      console.log('Battle Royale coming soon in Q3 2026.');
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      this.scene.scene.start(CST.SCENES.BATTLE_ROYALE);
+      // No action
     });
   }
 
