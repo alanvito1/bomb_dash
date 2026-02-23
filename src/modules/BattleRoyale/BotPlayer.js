@@ -1,8 +1,8 @@
 import BattleRoyalePlayer from './BattleRoyalePlayer.js';
 
 export default class BotPlayer extends BattleRoyalePlayer {
-    constructor(scene, x, y, texture, stats) {
-        super(scene, x, y, texture, stats);
+    constructor(scene, x, y, texture, stats, matchStats) {
+        super(scene, x, y, texture, stats, matchStats);
         this.nextActionTime = 0;
         this.moveDirection = new Phaser.Math.Vector2(0, 0);
         this.fleeing = false;

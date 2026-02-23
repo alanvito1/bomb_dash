@@ -1,5 +1,5 @@
 export default class BattleRoyalePlayer extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, texture, stats) {
+    constructor(scene, x, y, texture, stats, matchStats) {
         super(scene, x, y, texture);
 
         scene.add.existing(this);
@@ -12,6 +12,7 @@ export default class BattleRoyalePlayer extends Phaser.Physics.Arcade.Sprite {
         this.body.setOffset(12, 20); // Center bottom-ish
 
         this.stats = stats || { speed: 160, bombRange: 2, bombCount: 1 };
+        this.matchStats = matchStats || {};
 
         this.activeBombs = 0;
         this.collectedBcoins = 0;

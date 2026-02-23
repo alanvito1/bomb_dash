@@ -14,9 +14,21 @@ export default class BattleRoyaleScene extends Phaser.Scene {
     create() {
         console.log('⚔️ BATTLE ROYALE STARTED ⚔️');
 
+        // Hotfix: Texture Fallback for BCOIN
+        if (!this.textures.exists('icon_bcoin')) {
+             const g = this.make.graphics({ x: 0, y: 0, add: false });
+             g.fillStyle(0xffff00, 1);
+             g.fillCircle(12, 12, 12);
+             g.generateTexture('icon_bcoin', 24, 24);
+        }
+
+        // Initialize Analytics
+        this.matchStats = [];
+
         // Economy: Entry Fee (Mock)
-        if (playerStateService.user.bcoin >= 10) {
-             playerStateService.user.bcoin -= 10;
+        const user = playerStateService.getUser();
+        if (user && user.bcoin >= 10) {
+             user.bcoin -= 10;
         }
 
         // Map Config
@@ -196,7 +208,21 @@ export default class BattleRoyaleScene extends Phaser.Scene {
 
         const texture = heroData.sprite_name ? `${heroData.sprite_name.toLowerCase()}_hero` : 'player_default';
 
-        this.hero = new BattleRoyalePlayer(this, startX, startY, texture, stats);
+        // Analytics for Hero
+        const user = playerStateService.getUser();
+        const heroStats = {
+             id: 'hero',
+             name: user.username || 'Summoner',
+             isUser: true,
+             blocksDestroyed: 0,
+             bcoinsCollected: 0,
+             bcoinsLost: 0,
+             killerName: '-',
+             placement: 16
+        };
+        this.matchStats.push(heroStats);
+
+        this.hero = new BattleRoyalePlayer(this, startX, startY, texture, stats, heroStats);
         this.playersGroup.add(this.hero);
 
         // 2. Bots (15)
@@ -221,11 +247,23 @@ export default class BattleRoyaleScene extends Phaser.Scene {
                     const px = rx * this.TILE_SIZE + this.TILE_SIZE / 2;
                     const py = ry * this.TILE_SIZE + this.TILE_SIZE / 2;
 
+                    const botStats = {
+                        id: `bot_${index}`,
+                        name: `Bot #${index + 1}`,
+                        isUser: false,
+                        blocksDestroyed: 0,
+                        bcoinsCollected: 0,
+                        bcoinsLost: 0,
+                        killerName: '-',
+                        placement: 16
+                    };
+                    this.matchStats.push(botStats);
+
                     const bot = new BotPlayer(this, px, py, 'player_default', {
                         speed: 140, // Slightly slower than hero
                         bombRange: 2,
                         bombCount: 1
-                    });
+                    }, botStats);
                     this.playersGroup.add(bot);
                     this.botGroup.add(bot);
                     placed = true;
@@ -280,7 +318,7 @@ export default class BattleRoyaleScene extends Phaser.Scene {
 
         // Center Explosion
         this.createExplosionSprite(x, y);
-        this.damageAt(gridX, gridY);
+        this.damageAt(gridX, gridY, owner);
 
         // Arms
         directions.slice(1).forEach(dir => {
@@ -304,11 +342,11 @@ export default class BattleRoyaleScene extends Phaser.Scene {
                 );
 
                 // Damage
-                this.damageAt(tx, ty);
+                this.damageAt(tx, ty, owner);
 
                 if (cell === 2) { // Soft Block
                     // Destroy block
-                    this.destroyBlock(tx, ty);
+                    this.destroyBlock(tx, ty, owner);
                     break; // Stop ray after breaking block
                 }
             }
@@ -325,7 +363,7 @@ export default class BattleRoyaleScene extends Phaser.Scene {
         sprite.on('animationcomplete', () => sprite.destroy());
     }
 
-    damageAt(gridX, gridY) {
+    damageAt(gridX, gridY, killer) {
         // Check players at this grid cell
         const px = gridX * this.TILE_SIZE + this.TILE_SIZE / 2;
         const py = gridY * this.TILE_SIZE + this.TILE_SIZE / 2;
@@ -337,24 +375,25 @@ export default class BattleRoyaleScene extends Phaser.Scene {
             if (p.active && p.isAlive) {
                 if (Phaser.Geom.Rectangle.Contains(zone, p.x, p.y) ||
                     Phaser.Geom.Intersects.RectangleToRectangle(zone, p.body)) {
-                    this.killPlayer(p);
+                    this.killPlayer(p, killer);
                 }
             }
         });
     }
 
-    killPlayer(p) {
+    killPlayer(p, killer) {
         if (!p.isAlive) return;
         p.die();
         this.PLAYERS_ALIVE--;
 
-        // Drop Loot
-        // Rule: If > 3 alive, drop 100%. If <= 3, keep safe (no drop).
-        // Wait, "Se um jogador... morre, mas NÃO derruba nada... Ele 'garante' o que coletou".
-        // So we only drop if rank > 3.
-
         const rank = this.PLAYERS_ALIVE + 1; // +1 because we just decremented
         console.log(`Player died. Rank: ${rank}`);
+
+        // Update Stats
+        if (p.matchStats) {
+            p.matchStats.placement = rank;
+            p.matchStats.killerName = killer && killer.matchStats ? killer.matchStats.name : 'Zone';
+        }
 
         if (rank > 3) {
             // Drop Everything
@@ -362,13 +401,19 @@ export default class BattleRoyaleScene extends Phaser.Scene {
             if (coins > 0) {
                 this.spawnItem(p.x, p.y, coins);
                 p.collectedBcoins = 0;
+
+                if (p.matchStats) {
+                    p.matchStats.bcoinsLost = coins;
+                }
             }
         } else {
-            // Keep loot (Add to secure wallet? Or just end game with it?)
-            // If it's the hero, we secure it.
+            // Keep loot
             if (p === this.hero) {
                 console.log("HERO SECURED LOOT via Rank Top 3!");
-                playerStateService.user.bcoin += p.collectedBcoins;
+                const user = playerStateService.getUser();
+                if (user) {
+                    user.bcoin += p.collectedBcoins;
+                }
                 // Notify User
                 this.add.text(this.hero.x, this.hero.y - 40, "SECURED!", { fontSize: '10px', color: '#00ff00' }).setOrigin(0.5);
             }
@@ -382,7 +427,7 @@ export default class BattleRoyaleScene extends Phaser.Scene {
         }
     }
 
-    destroyBlock(gridX, gridY) {
+    destroyBlock(gridX, gridY, destroyer) {
         this.grid[gridY][gridX] = 0; // Clear grid
 
         // Find sprite
@@ -398,6 +443,11 @@ export default class BattleRoyaleScene extends Phaser.Scene {
             }
             return false;
         });
+
+        // Update Stats
+        if (destroyer && destroyer.matchStats) {
+            destroyer.matchStats.blocksDestroyed++;
+        }
 
         // Drop Item (100% chance for BCOIN in this mode as per spec "160 BCOINs... 160 Soft Blocks")
         this.spawnItem(px, py, 1);
@@ -420,7 +470,11 @@ export default class BattleRoyaleScene extends Phaser.Scene {
 
     collectItem(player, item) {
         if (!item.active) return;
-        player.collectedBcoins += (item.value || 1);
+        const val = (item.value || 1);
+        player.collectedBcoins += val;
+        if (player.matchStats) {
+            player.matchStats.bcoinsCollected += val;
+        }
         item.destroy();
         SoundManager.play(this, 'coin_collect');
     }
@@ -460,38 +514,37 @@ export default class BattleRoyaleScene extends Phaser.Scene {
 
     handleWin() {
         console.log("VICTORY!");
-        // Hero is the last one alive?
         if (this.hero && this.hero.isAlive) {
-            // Top 1 Bonus?
-            // "O 1º lugar (último vivo) vence a partida, leva o que coletou"
-            // We already secured loot if they were Top 3? No, we secure on death if Top 3.
-            // If they WIN, they haven't died, so we must secure now.
-
+            // Update Hero Stats
             const loot = this.hero.collectedBcoins;
-            playerStateService.user.bcoin += loot;
+            if (this.hero.matchStats) {
+                 this.hero.matchStats.placement = 1;
+            }
 
-            this.scene.start(CST.SCENES.GAME_OVER, {
-                isVictory: true,
-                score: 1000,
-                coinsEarned: loot,
-                customMessage: "VICTORY ROYALE!"
+            // Secure Loot
+            const user = playerStateService.getUser();
+            if (user) {
+                 user.bcoin += loot;
+            }
+
+            this.time.delayedCall(2000, () => {
+                this.scene.start(CST.SCENES.POST_MATCH, {
+                    isVictory: true,
+                    stats: this.matchStats,
+                    heroStats: this.hero.matchStats
+                });
             });
-        } else {
-            // Bot won. Hero died earlier.
-            // Already handled in killPlayer.
         }
     }
 
     handleGameOver(rank) {
         console.log("GAME OVER. Rank:", rank);
-        const loot = (rank <= 3) ? this.hero.collectedBcoins : 0;
 
         this.time.delayedCall(2000, () => {
-            this.scene.start(CST.SCENES.GAME_OVER, {
-                isVictory: false,
-                score: (17 - rank) * 100,
-                coinsEarned: loot,
-                customMessage: rank <= 3 ? "SECURED!" : "ELIMINATED"
+            this.scene.start(CST.SCENES.POST_MATCH, {
+                isVictory: rank === 1,
+                stats: this.matchStats,
+                heroStats: this.hero.matchStats
             });
         });
     }
