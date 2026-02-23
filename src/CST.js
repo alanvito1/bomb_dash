@@ -29,6 +29,7 @@ export const CST = {
     TOURNAMENT_LOBBY: 'TournamentLobbyScene',
     TOURNAMENT_BRACKET: 'TournamentBracketScene',
     BATTLE_ROYALE: 'BattleRoyaleScene',
+    POST_MATCH: 'PostMatchScene',
   },
   /**
    * @memberof CST
