@@ -121,7 +121,12 @@ export default class EnemySpawner {
 
     if (!bossConfig) return;
 
-    const hp = Math.ceil(bossConfig.base_hp * difficultyMultiplier * 2); // Boss HP scaling
+    // Task Force: Boss HP Rule -> 5x Common Mob HP (Base 20)
+    // Formula: 5 * (20 * 1.15^Wave)
+    // Since difficultyMultiplier passed is already (1.15^Wave), we use:
+    const COMMON_BASE_HP = 20;
+    const hp = Math.ceil(5 * COMMON_BASE_HP * difficultyMultiplier);
+
     const speed = bossConfig.base_speed * 0.8; // Boss is slower?
     let key = bossConfig.asset_key || 'boss1';
 

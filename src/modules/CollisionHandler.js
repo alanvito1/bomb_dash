@@ -122,13 +122,52 @@ export default class CollisionHandler {
     // Apply Damage
     targets.forEach((target) => {
       this.applyDamage(target, baseDamage);
+
+      // Task Force: Poison Spell
+      if (this.scene.playerStats.spells && this.scene.playerStats.spells.includes('poison_bomb')) {
+          this.applyPoison(target);
+      }
     });
+  }
+
+  applyPoison(enemy) {
+      if (enemy.poisoned || !enemy.active) return;
+
+      enemy.poisoned = true;
+      enemy.setTint(0x00ff00); // Green Tint
+
+      // 3 Ticks over 3 seconds
+      this.scene.time.addEvent({
+          delay: 1000,
+          repeat: 2,
+          callback: () => {
+              if (enemy.active) {
+                  // Poison Damage (Flat or Scaled? Let's use 10% of MaxHP or flat 5)
+                  const dmg = Math.max(1, Math.floor(enemy.maxHp * 0.05));
+                  this.applyDamage(enemy, dmg, true); // true = isDoT
+
+                  // Visual
+                  if (this.scene.damageTextManager) {
+                      // Custom color for poison? Default is white/crit red.
+                      // We can assume standard usage for now.
+                  }
+              }
+          }
+      });
+
+      // Cleanup
+      this.scene.time.delayedCall(3500, () => {
+          if (enemy.active) {
+              enemy.poisoned = false;
+              enemy.clearTint();
+          }
+      });
   }
 
   /**
    * Applies damage to a specific enemy, handling bonuses and death logic.
    */
-  applyDamage(enemy, baseDamage) {
+  applyDamage(enemy, baseDamage, isDoT = false) {
     if (!enemy.active) return;
 
     // Bestiary Bonus
@@ -171,10 +210,15 @@ export default class CollisionHandler {
     SoundManager.play(this.scene, 'hit_enemy');
 
     // ⚪ HIT FLASH
-    enemy.setTint(0xffffff);
-    this.scene.time.delayedCall(100, () => {
-      if (enemy.active) enemy.clearTint();
-    });
+    if (!isDoT) {
+        enemy.setTint(0xffffff);
+        this.scene.time.delayedCall(100, () => {
+            if (enemy.active) {
+                if (enemy.poisoned) enemy.setTint(0x00ff00);
+                else enemy.clearTint();
+            }
+        });
+    }
 
     if (enemy.hp <= 0) {
       // 3. Screen Shake & Hit Pause

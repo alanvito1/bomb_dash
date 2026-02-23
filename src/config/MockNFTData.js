@@ -93,7 +93,7 @@ export const MockHeroes = [
       color: 1, // Blue
     },
     sprite_name: 'witch_hero', // Placeholder
-    spells: [1], // Treasure Hunter
+    spells: ['multishot'], // Task Force: Multishot Spell
     max_stage: 1,
   },
   {
@@ -114,7 +114,7 @@ export const MockHeroes = [
       color: 3, // Cyan
     },
     sprite_name: 'ninja_hero', // Placeholder
-    spells: [1, 2], // Treasure Hunter, Jail Breaker
+    spells: ['poison_bomb'], // Task Force: Poison Spell
     max_stage: 1,
   },
   {
