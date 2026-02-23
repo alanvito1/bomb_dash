@@ -203,8 +203,13 @@ class TermsScene extends Phaser.Scene {
     this.acceptButton.setInteractive({ useHandCursor: true });
 
     this.acceptButton.on('pointerdown', () => {
-      console.log('Terms accepted. Transitioning to AuthChoiceScene.');
-      this.scene.start(CST.SCENES.AUTH_CHOICE);
+      console.log('Terms accepted. Transitioning to LoadingScene for auto-login.');
+      // 1. Save Acceptance
+      localStorage.setItem('termsAccepted', 'true');
+
+      // 2. Return to LoadingScene to handle "Frictionless Onboarding" check
+      // This will trigger the logic: if (guest && termsAccepted) -> GameScene
+      this.scene.start(CST.SCENES.LOADING);
     });
 
     this.acceptButton.on('pointerover', () => {

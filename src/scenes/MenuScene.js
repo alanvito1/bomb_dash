@@ -48,13 +48,22 @@ export default class MenuScene extends Phaser.Scene {
 
     this.userData = this.registry.get('loggedInUser');
 
-    // --- GUARD CLAUSE ---
+    // --- ROBUST FALLBACK ---
     if (!this.userData) {
-      console.error(
-        'CRITICAL: MenuScene started without loggedInUser data. Returning to AuthChoiceScene.'
+      console.warn(
+        'MenuScene: loggedInUser missing in registry. Fetching from PlayerStateService.'
       );
-      this.scene.start(CST.SCENES.AUTH_CHOICE);
-      return;
+      this.userData = playerStateService.getUser();
+
+      // If still missing (shouldn't happen if initialized), then critical error
+      if (!this.userData) {
+          console.error('CRITICAL: PlayerStateService not initialized. Redirecting to Loading.');
+          this.scene.start(CST.SCENES.LOADING);
+          return;
+      }
+
+      // Fix Registry
+      this.registry.set('loggedInUser', this.userData);
     }
 
     const { width, height } = this.scale;
@@ -537,11 +546,23 @@ export default class MenuScene extends Phaser.Scene {
     // addBtn('icon_forge', () => this.forgeModal.open(), 0xff4500); // Moved to Dock
     addBtn('icon_house', () => this.housesModal.open(), 0x00ffff);
 
-    // Guest Dot
+    // Guest "SAVE" Button
     if (this.userData.isGuest) {
-      const walletX = width - 20 - 36;
-      const dot = this.add.circle(walletX + 10, btnY - 10, 4, 0xff0000);
-      container.add(dot);
+      const saveBtn = createRetroButton(
+        this,
+        width - 150, // Position to the left of icons
+        btnY,
+        80,
+        30,
+        'SAVE',
+        'danger', // Red for attention
+        () => {
+            SoundManager.playClick(this);
+            // Open Auth Choice as a Scene (it will handle return to Menu)
+            this.scene.start(CST.SCENES.AUTH_CHOICE);
+        }
+      );
+      container.add(saveBtn);
     }
   }
 
