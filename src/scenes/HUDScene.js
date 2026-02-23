@@ -53,6 +53,43 @@ export default class HUDScene extends Phaser.Scene {
       margin + 30
     );
 
+    // --- Controls ---
+    const controlsY = margin + 60;
+
+    // Auto Fire Toggle
+    this.autoBtn = this.add.text(this.scale.width - margin, controlsY, 'AUTO: ON', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#00ff00',
+        stroke: '#000000',
+        strokeThickness: 3
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+    this.autoBtn.on('pointerdown', () => {
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene) {
+            const newState = gameScene.toggleAutoFire();
+            this.autoBtn.setText(`AUTO: ${newState ? 'ON' : 'OFF'}`);
+            this.autoBtn.setColor(newState ? '#00ff00' : '#ff0000');
+        }
+    });
+
+    // Pause Button
+    this.pauseBtn = this.add.text(this.scale.width - margin, controlsY + 20, 'PAUSE', {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '10px',
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+    this.pauseBtn.on('pointerdown', () => {
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene && gameScene.pauseManager) {
+            gameScene.pauseManager.pause();
+        }
+    });
+
     // --- Center (Wave Info & Timer) ---
     this.waveText = this.add
       .text(this.scale.width / 2, margin, '', {

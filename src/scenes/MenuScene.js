@@ -115,7 +115,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     // Apply Retro Filter
-    PostFXManager.init(this);
+    // PostFXManager.init(this); // Clean UI: Removed CRT filter
   }
 
   createAdminTools() {

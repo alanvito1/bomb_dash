@@ -401,90 +401,105 @@ export default class TextureGenerator {
   // ==================================================================================
 
   /**
-   * Helper to generate a simple geometric icon (simplified for stability).
+   * Helper to generate a simple ASCII/Unicode icon.
    * @param {Phaser.Scene} scene
    * @param {string} key
-   * @param {string} label (Unused in simplified version)
+   * @param {string} symbol
    * @param {number} color
    */
-  static createGeometricIcon(scene, key, label, color) {
+  static createAsciiIcon(scene, key, symbol, color) {
     if (scene.textures.exists(key)) return;
 
     const size = 64;
-    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+    const rt = scene.make.renderTexture({ width: size, height: size, add: false });
 
-    // Background Shape (Circle)
-    graphics.fillStyle(color, 1.0);
-    graphics.fillCircle(size / 2, size / 2, size / 2 - 4);
+    // Background (Dark Square with Colored Border)
+    const bg = scene.make.graphics({ x: 0, y: 0, add: false });
+    bg.fillStyle(0x050505, 1);
+    bg.fillRect(0, 0, size, size);
+    bg.lineStyle(4, color, 1);
+    bg.strokeRect(0, 0, size, size);
 
-    // Border
-    graphics.lineStyle(4, 0xffffff, 1.0);
-    graphics.strokeCircle(size / 2, size / 2, size / 2 - 4);
+    rt.draw(bg, 0, 0);
 
-    // Simple geometric center (Square) instead of Text to avoid font crashes
-    graphics.fillStyle(0xffffff, 0.5);
-    graphics.fillRect(size / 2 - 8, size / 2 - 8, 16, 16);
+    // Text Symbol
+    const text = scene.make.text({
+        x: size / 2,
+        y: size / 2,
+        text: symbol,
+        style: {
+            fontFamily: '"Press Start 2P", sans-serif',
+            fontSize: '32px',
+            color: '#' + color.toString(16).padStart(6, '0'),
+            align: 'center'
+        }
+    }).setOrigin(0.5);
 
-    graphics.generateTexture(key, size, size);
-    graphics.destroy();
+    rt.draw(text, size / 2, size / 2);
 
-    console.log(`✅ Generated procedural ICON: ${key}`);
+    rt.saveTexture(key);
+
+    bg.destroy();
+    text.destroy();
+    rt.destroy();
+
+    console.log(`✅ Generated procedural ASCII ICON: ${key} [${symbol}]`);
   }
 
   static createIconBase(scene, key) {
-    this.createGeometricIcon(scene, key, 'BASE', 0x00ffff);
+    this.createAsciiIcon(scene, key, '🏠', 0x00ffff);
   }
 
   static createIconHeroes(scene, key) {
-    this.createGeometricIcon(scene, key, 'HERO', 0x00ffff);
+    this.createAsciiIcon(scene, key, '⚔️', 0x00ffff);
   }
 
   static createIconBattle(scene, key) {
-    this.createGeometricIcon(scene, key, 'PLAY', 0xffff00);
+    this.createAsciiIcon(scene, key, '🎮', 0xffff00);
   }
 
   static createIconShop(scene, key) {
-    this.createGeometricIcon(scene, key, 'SHOP', 0x00ff00);
+    this.createAsciiIcon(scene, key, '🛒', 0x00ff00);
   }
 
   static createIconRanking(scene, key) {
-    this.createGeometricIcon(scene, key, 'RANK', 0x00ffff);
+    this.createAsciiIcon(scene, key, '🏆', 0x00ffff);
   }
 
   static createIconForge(scene, key) {
-    this.createGeometricIcon(scene, key, 'FORG', 0xff4500);
+    this.createAsciiIcon(scene, key, '🔨', 0xff4500);
   }
 
   static createIconGold(scene, key) {
-    this.createGeometricIcon(scene, key, '$$$', 0xffd700);
+    this.createAsciiIcon(scene, key, '💰', 0xffd700);
   }
 
   static createIconBcoin(scene, key) {
-    this.createGeometricIcon(scene, key, 'B', 0x00ffff);
+    this.createAsciiIcon(scene, key, '₿', 0x00ffff);
   }
 
   static createIconSettings(scene, key) {
-    this.createGeometricIcon(scene, key, 'SET', 0xaaaaaa);
+    this.createAsciiIcon(scene, key, '⚙️', 0xaaaaaa);
   }
 
   static createIconWallet(scene, key) {
-    this.createGeometricIcon(scene, key, 'WAL', 0xcd7f32);
+    this.createAsciiIcon(scene, key, '💳', 0xcd7f32);
   }
 
   static createIconBook(scene, key) {
-    this.createGeometricIcon(scene, key, 'BOOK', 0xdc143c);
+    this.createAsciiIcon(scene, key, '📖', 0xdc143c);
   }
 
   static createIconGuild(scene, key) {
-    this.createGeometricIcon(scene, key, 'GLD', 0xff00ff);
+    this.createAsciiIcon(scene, key, '🛡️', 0xff00ff);
   }
 
   static createIconAltar(scene, key) {
-    this.createGeometricIcon(scene, key, 'ALT', 0xffd700);
+    this.createAsciiIcon(scene, key, '⛩️', 0xffd700);
   }
 
   static createAvatar(scene, key) {
-    this.createGeometricIcon(scene, key, 'YOU', 0xcccccc);
+    this.createAsciiIcon(scene, key, '👤', 0xcccccc);
   }
 
   static createChest(scene, key) {
