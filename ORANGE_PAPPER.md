@@ -12,9 +12,10 @@ The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments
 ### Earnings
 - **Solo Run Victory:** Awards **50 Account XP** + **Looted Coins** (Session Coins).
 - **Boss Defeat:** Bosses drop significant coins (5x normal mob) and XP (3x normal mob).
-- **Loot Drop Chance:** 30% Global Chance for fragments/items.
-  - **Health Potion:** 5% chance.
-  - **Fragments:** Rarity based (85% Common, 10% Rare, etc.).
+- **Loot Drop Chance (Soft Blocks):**
+  - **Nothing:** 70%
+  - **Common Fragment:** 25% (Crafting Material)
+  - **BCOIN:** 5% (Premium Currency)
 
 ### Spending Costs (Current Code Implementation)
 - **Hero Level Up (Eternal Forge):**
@@ -53,15 +54,20 @@ The difficulty multiplier scales exponentially:
 ## 4. NFT Attributes (Hero Stats)
 Hero stats are derived from base NFT metadata and scaled by Level and Account Buffs.
 
-### Formulas (`GameScene.js`)
-- **Damage (POW):** `(BasePower + (Level - 1)) * GlobalBuff`
+### Combat Formulas (`GameScene.js`)
+- **Damage (POW):** `(10 * HeroPOW) + AccountLevel`
+  - *Base Bomb Damage:* 10
+  - *Hero POW:* From NFT Stats.
+  - *Account Level:* Flat bonus.
 - **Speed (SPD):** `(150 + BaseSpeed * 10) * (1 + (Level - 1) * 0.02) * GlobalBuff`
 - **Max HP:** `(BaseStamina * 100) * GlobalBuff`
-- **Bomb Range (RNG):** `BaseRange * (1 + ProficiencyLevel * 0.01) * GlobalBuff`
+- **Bomb Range (RNG):** `HeroRNG` (Strict NFT Stat)
+  - *Logic:* Explosion covers Center + `RNG` tiles in each direction (Up, Down, Left, Right).
 
 ### Global Summoner Buff
 - **Effect:** +1% to ALL stats per **Account Level**.
 - **Source:** `PlayerStateService.getAccountLevel()`.
+- *Note:* Currently applies to Speed and HP. Damage uses the specific formula above. Range is strict.
 
 ## 5. Spells & Abilities
 Spells are special modifiers attached to heroes.

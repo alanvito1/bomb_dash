@@ -732,6 +732,71 @@ export default class TextureGenerator {
   }
 
   /**
+   * Generates a 32x32 Gold Coin Sprite for Gameplay Drops.
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   */
+  static createBcoinSprite(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Outer Border (Dark Gold)
+    g.fillStyle(0xffa500);
+    g.fillCircle(16, 16, 12);
+
+    // Inner Face (Gold)
+    g.fillStyle(0xffd700);
+    g.fillCircle(16, 16, 10);
+
+    // Shine (White)
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(12, 12, 3);
+
+    // "B" Symbol (Simplified as a rect or line for readability at small scale)
+    g.fillStyle(0xcc9900);
+    g.fillRect(14, 10, 4, 12);
+
+    g.generateTexture(key, 32, 32);
+    console.log(`✅ Generated procedural BCOIN SPRITE: ${key}`);
+  }
+
+  /**
+   * Generates a 32x32 Crystal Fragment Sprite for Gameplay Drops.
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   */
+  static createFragmentSprite(scene, key) {
+    if (scene.textures.exists(key)) return;
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // Crystal Shape (Rhombus/Diamond)
+    g.fillStyle(0x9932cc); // Dark Orchid / Purple
+    g.beginPath();
+    g.moveTo(16, 4);  // Top
+    g.lineTo(24, 16); // Right
+    g.lineTo(16, 28); // Bottom
+    g.lineTo(8, 16);  // Left
+    g.closePath();
+    g.fill();
+
+    // Facet Highlight (Lighter Purple)
+    g.fillStyle(0xda70d6, 0.8);
+    g.beginPath();
+    g.moveTo(16, 4);
+    g.lineTo(24, 16);
+    g.lineTo(16, 16);
+    g.closePath();
+    g.fill();
+
+    // Shine
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(16, 8, 2);
+
+    g.generateTexture(key, 32, 32);
+    console.log(`✅ Generated procedural FRAGMENT SPRITE: ${key}`);
+  }
+
+  /**
    * Helper to generate all common missing assets.
    * @param {Phaser.Scene} scene
    */
@@ -782,6 +847,10 @@ export default class TextureGenerator {
       this.createHealthPotion(scene, 'item_health_potion');
       this.createScrap(scene, 'item_scrap');
       this.createCyberCore(scene, 'item_cyber_core');
+
+      // Loot Drops (Task Force: Bomb Genetics)
+      this.createBcoinSprite(scene, 'item_bcoin');
+      this.createFragmentSprite(scene, 'item_fragment');
 
       // UI Assets (Task Force Step 3)
       this.createUIPanel(scene, 'ui_panel');

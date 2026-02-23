@@ -167,7 +167,12 @@ export default class GameScene extends Phaser.Scene {
     const heroLevel = selectedHero.level || 1;
 
     // Task Force: Hero Genetics -> Combat Math
-    this.playerStats.damage = heroPower + (heroLevel - 1);
+    // Task Force Update: Strict Formula from ORANGE_PAPPER.md
+    // Damage = (BaseBombDamage * HeroPOW) + AccountLevel
+    const baseBombDamage = 10;
+    const accountLevel = playerStateService.getAccountLevel();
+
+    this.playerStats.damage = (baseBombDamage * heroPower) + accountLevel;
 
     const baseSpeed = 150 + heroSpeed * 10;
     this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
@@ -178,6 +183,7 @@ export default class GameScene extends Phaser.Scene {
     this.playerStats.hp = baseHp;
 
     this.playerStats.bombNum = heroBombNum;
+    // Task Force Update: Strict Range (No Multipliers)
     this.playerStats.bombRange = heroRange;
 
     // Task Force: Spell Interpreter
@@ -191,21 +197,25 @@ export default class GameScene extends Phaser.Scene {
     const bombXp = selectedHero.bomb_mastery_xp || 0;
     const agilityXp = selectedHero.agility_xp || 0;
 
-    const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
-    this.playerStats.bombRange *= 1 + bombLevel * 0.01;
+    // NOTE: Bomb Range Proficiency disabled to enforce strict NFT stats as requested.
+    // const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
+    // this.playerStats.bombRange *= 1 + bombLevel * 0.01;
 
     const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
     this.playerStats.speed *= 1 + agilityLevel * 0.005;
 
     // Task Force: Global Summoner Buff (+1% per Account Level)
-    const accountLevel = playerStateService.getAccountLevel();
     const globalMultiplier = 1 + accountLevel * 0.01;
 
-    this.playerStats.damage *= globalMultiplier;
+    // Damage is now calculated via formula above, not multiplier.
+    // this.playerStats.damage *= globalMultiplier;
+
     this.playerStats.speed *= globalMultiplier;
     this.playerStats.maxHp = Math.floor(this.playerStats.maxHp * globalMultiplier);
     this.playerStats.hp = this.playerStats.maxHp;
-    this.playerStats.bombRange *= globalMultiplier;
+
+    // Range is strict.
+    // this.playerStats.bombRange *= globalMultiplier;
 
     // UI Feedback
     this.time.delayedCall(1000, () => {
@@ -1219,7 +1229,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   trySpawnLoot(x, y) {
-    // 1. Health Potion (5% Chance - Coexists)
+    // 1. Health Potion (5% Chance - Independent Roll)
     if (Math.random() < 0.05) {
       this.spawnLootItem(
         x,
@@ -1231,50 +1241,44 @@ export default class GameScene extends Phaser.Scene {
       );
     }
 
-    // 2. Global Drop System (30% Chance)
-    if (Math.random() > 0.3) return;
-
-    // 3. Rarity Roll (The Roulette)
+    // Task Force: New Drop Logic (70% None, 25% Fragment, 5% BCOIN)
     const roll = Math.random() * 100;
-    let rarity = 'Common';
-    let color = 0xaaaaaa;
 
-    if (roll < 85) {
-      rarity = 'Common';
-      color = 0xaaaaaa;
-    } else if (roll < 95) {
-      rarity = 'Rare';
-      color = 0x00ff00;
-    } else if (roll < 99) {
-      rarity = 'Super Rare';
-      color = 0x0000ff;
-    } else if (roll < 99.8) {
-      rarity = 'Epic';
-      color = 0x800080;
-    } else if (roll < 99.99) {
-      rarity = 'Legendary';
-      color = 0xffa500;
-    } else {
-      rarity = 'Super Legendary';
-      color = 0xff0000;
+    if (roll >= 70 && roll < 95) {
+        // 25% Fragment Drop
+        const rarityRoll = Math.random() * 100;
+        let rarity = 'Common';
+        let color = 0xcccccc; // Silver/Common
+
+        if (rarityRoll < 60) {
+            rarity = 'Common'; color = 0xcccccc;
+        } else if (rarityRoll < 85) {
+            rarity = 'Rare'; color = 0x00ff00;
+        } else if (rarityRoll < 95) {
+            rarity = 'Epic'; color = 0x800080;
+        } else {
+            rarity = 'Legendary'; color = 0xffa500;
+        }
+
+        const loot = this.spawnLootItem(x, y, 'item_fragment', `${rarity} Fragment`, color, true);
+        loot.lootType = 'fragment';
+        loot.rarity = rarity;
+
+    } else if (roll >= 95) {
+        // 5% BCOIN Drop
+        const loot = this.spawnLootItem(x, y, 'item_bcoin', 'BCOIN', null, false);
+        loot.lootType = 'bcoin';
     }
-
-    // Spawn Token
-    const loot = this.spawnLootItem(
-      x,
-      y,
-      'token',
-      `${rarity} Fragment`,
-      color,
-      true
-    );
-    loot.rarity = rarity;
   }
 
   spawnLootItem(x, y, key, name, tint, isFragment) {
     const loot = this.lootGroup.create(x, y, key);
+    // Task Force: 32x32 sprites already generated, no need to resize if key matches
+    // But existing code sets display size to 24x24 which is fine for "drop" scale.
     loot.setDisplaySize(24, 24);
+
     if (tint) loot.setTint(tint);
+
     loot.setVelocity(
       Phaser.Math.Between(-50, 50),
       Phaser.Math.Between(-50, 50)
@@ -1303,15 +1307,33 @@ export default class GameScene extends Phaser.Scene {
   handleLootPickup(player, loot) {
     if (!loot.active) return;
 
-    const isFragment = loot.isFragment;
-    const rarity = loot.rarity;
-    const colorInt = loot.color || 0xffffff;
-    const colorHex = '#' + colorInt.toString(16).padStart(6, '0');
+    const type = loot.lootType;
+    const isFragment = loot.isFragment || type === 'fragment';
+
+    // Fallback for legacy items (potions)
+    const isPotion = loot.texture.key === 'item_health_potion';
 
     loot.destroy();
 
-    if (isFragment) {
-      // Add to Session Loot
+    if (type === 'bcoin') {
+        // BCOIN Pickup
+        if (!this.sessionLoot.coins) this.sessionLoot.coins = 0;
+        this.sessionLoot.coins += 1;
+
+        this.showFloatingText(player.x, player.y - 40, '+1 BCOIN', '#ffd700');
+        SoundManager.play(this, 'coin_collect');
+
+        // Update HUD Risk Zone
+        this.events.emit('update-bcoin', {
+            balance: this.sessionLoot.coins,
+        });
+
+    } else if (isFragment) {
+      // Fragment Pickup
+      const rarity = loot.rarity || 'Common';
+      const colorInt = loot.color || 0xcccccc;
+      const colorHex = '#' + colorInt.toString(16).padStart(6, '0');
+
       if (!this.sessionLoot.items) this.sessionLoot.items = [];
       this.sessionLoot.items.push({
         type: 'fragment',
@@ -1321,7 +1343,9 @@ export default class GameScene extends Phaser.Scene {
 
       this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
       SoundManager.play(this, 'coin_collect');
-    } else {
+
+    } else if (isPotion) {
+      // Potion Pickup
       const healAmount = Math.floor(this.playerStats.maxHp * 0.2);
       this.playerStats.hp = Math.min(
         this.playerStats.hp + healAmount,
