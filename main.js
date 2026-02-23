@@ -32,6 +32,7 @@ import AltarScene from './src/scenes/AltarScene.js';
 import PvpScene from './src/scenes/PvpScene.js';
 import TournamentLobbyScene from './src/scenes/TournamentLobbyScene.js';
 import TournamentBracketScene from './src/scenes/TournamentBracketScene.js';
+import BattleRoyaleScene from './src/scenes/BattleRoyaleScene.js';
 import OverlayManager from './src/ui/OverlayManager.js';
 
 // --- Hardcoded Debug Mode ---
@@ -75,6 +76,7 @@ const config = {
     PvpScene,
     TournamentLobbyScene,
     TournamentBracketScene,
+    BattleRoyaleScene,
   ],
   render: {
     antialias: false,
