@@ -1,4 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// Mock Phaser (even if not used directly, importing TextureGenerator loads it)
+vi.mock('phaser', () => {
+  return {
+    default: {
+      Display: {
+        Color: {
+          HSLToColor: vi.fn().mockReturnValue({ color: 0xffffff }),
+        },
+      },
+    },
+  };
+});
+
 import TextureGenerator from './TextureGenerator.js';
 
 describe('TextureGenerator Blocks', () => {

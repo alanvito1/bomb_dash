@@ -23,6 +23,7 @@ import BattleModal from '../ui/BattleModal.js';
 import playerStateService from '../services/PlayerStateService.js';
 import PostFXManager from '../modules/PostFXManager.js';
 import { getStageById } from '../config/Stages.js';
+import TextureGenerator from '../modules/TextureGenerator.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -287,6 +288,8 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   updateHeroSprite(key) {
+    TextureGenerator.ensureHero(this, key);
+
     if (this.heroSprite && this.textures.exists(key)) {
       this.heroSprite.setTexture(key);
       this.updateHeroScale();

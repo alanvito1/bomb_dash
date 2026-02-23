@@ -35,7 +35,7 @@ import TournamentBracketScene from './src/scenes/TournamentBracketScene.js';
 import OverlayManager from './src/ui/OverlayManager.js';
 
 // --- Hardcoded Debug Mode ---
-window.DEBUG_MODE = true;
+window.DEBUG_MODE = false;
 // --------------------------
 
 // ⚙️ Configurações gerais do Phaser

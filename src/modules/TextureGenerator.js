@@ -1,6 +1,20 @@
+import Phaser from 'phaser';
+
 export default class TextureGenerator {
   /**
-   * Generates a neon/minimalist hero texture.
+   * Ensures a hero texture exists. If not, generates a procedural one.
+   * @param {Phaser.Scene} scene
+   * @param {string} key
+   */
+  static ensureHero(scene, key) {
+    if (!scene.textures.exists(key)) {
+      console.log(`⚠️ Hero texture '${key}' missing. Generating procedural fallback.`);
+      this.createHero(scene, key);
+    }
+  }
+
+  /**
+   * Generates a "Chibi Bomber" style hero texture.
    * @param {Phaser.Scene} scene
    * @param {string} key
    */
@@ -9,13 +23,72 @@ export default class TextureGenerator {
 
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Body: Cyan Rectangle (Neon Style)
-    graphics.fillStyle(0x00ffff);
-    graphics.fillRect(4, 4, 24, 24);
+    // Color generation
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash % 360);
+    const baseColor = Phaser.Display.Color.HSLToColor(hue / 360, 1, 0.5).color;
+    const darkColor = Phaser.Display.Color.HSLToColor(hue / 360, 1, 0.3).color;
 
-    // Headband/Eyes: Black Strip
+    // --- HEAD (Chibi Proportions: Big Head) ---
+    // Face Skin
+    graphics.fillStyle(0xffccaa); // Peach Skin
+    graphics.fillRect(6, 6, 20, 14);
+
+    // Helmet (Top and Sides)
+    graphics.fillStyle(baseColor);
+    graphics.fillRect(4, 2, 24, 8);  // Top Forehead
+    graphics.fillRect(6, 0, 20, 2);  // Top Dome
+    graphics.fillRect(4, 2, 4, 18);  // Left Ear/Side
+    graphics.fillRect(24, 2, 4, 18); // Right Ear/Side
+
+    // Helmet Shading
+    graphics.fillStyle(darkColor);
+    graphics.fillRect(26, 4, 2, 16); // Right Edge Shadow
+
+    // Eyes (Cute Chibi Style - Vertical Ovals)
     graphics.fillStyle(0x000000);
-    graphics.fillRect(4, 10, 24, 6);
+    graphics.fillRect(10, 10, 4, 6); // Left Eye
+    graphics.fillRect(18, 10, 4, 6); // Right Eye
+
+    // Eye Sparkle (White Dot)
+    graphics.fillStyle(0xffffff);
+    graphics.fillRect(10, 10, 2, 2);
+    graphics.fillRect(18, 10, 2, 2);
+
+    // Cheeks (Blush)
+    graphics.fillStyle(0xffaaaa);
+    graphics.fillRect(8, 16, 4, 2);
+    graphics.fillRect(20, 16, 4, 2);
+
+    // --- BODY (Small Body) ---
+    // Suit Body
+    graphics.fillStyle(baseColor);
+    graphics.fillRect(10, 20, 12, 10);
+
+    // Belt / Detail
+    graphics.fillStyle(darkColor);
+    graphics.fillRect(10, 24, 12, 2);
+
+    // --- LIMBS (Stubby) ---
+    // Hands
+    graphics.fillStyle(0xffccaa); // Skin Hands
+    graphics.fillRect(6, 22, 4, 4);  // Left Hand
+    graphics.fillRect(22, 22, 4, 4); // Right Hand
+
+    // Feet
+    graphics.fillStyle(darkColor);
+    graphics.fillRect(10, 30, 4, 2); // Left Foot
+    graphics.fillRect(18, 30, 4, 2); // Right Foot
+
+    // --- EXTRAS ---
+    // Antenna / Bobble on Helmet
+    graphics.fillStyle(0xffd700); // Gold
+    graphics.fillRect(14, -2, 4, 4);
+
+    // Outline (Cartoon Style)
+    graphics.lineStyle(1, 0x000000, 0.4);
+    graphics.strokeRect(4, 0, 24, 32);
 
     graphics.generateTexture(key, 32, 32);
     console.log(`✅ Generated procedural HERO: ${key}`);
@@ -50,6 +123,14 @@ export default class TextureGenerator {
     graphics.lineTo(20, 6);
     graphics.fill();
 
+    // Angry Mouth
+    graphics.lineStyle(2, 0xffffff);
+    graphics.beginPath();
+    graphics.moveTo(10, 20);
+    graphics.lineTo(16, 18);
+    graphics.lineTo(22, 20);
+    graphics.stroke();
+
     graphics.generateTexture(key, 32, 32);
     console.log(`✅ Generated procedural ENEMY: ${key}`);
   }
@@ -67,6 +148,10 @@ export default class TextureGenerator {
     // Body: Black Circle
     graphics.fillStyle(0x000000);
     graphics.fillCircle(16, 16, 12);
+
+    // Highlight (Shiny)
+    graphics.fillStyle(0x333333);
+    graphics.fillCircle(12, 12, 4);
 
     // Border: Pulsing Red (Static here, animated via tween in game)
     graphics.lineStyle(2, 0xff0000);

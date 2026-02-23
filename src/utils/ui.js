@@ -132,35 +132,35 @@ export function createRetroButton(
   // Colors
   let topColor, mainColor, bottomColor;
   switch (type) {
-    case 'primary': // Neon Orange
-      topColor = 0xffad85;
+    case 'primary': // Neon Orange (Warmer)
+      topColor = 0xffcfb6;
       mainColor = 0xff5f1f;
-      bottomColor = 0xcc4400;
+      bottomColor = 0xb33600;
       break;
-    case 'success': // Green
-      topColor = 0x90ee90;
-      mainColor = 0x32cd32;
-      bottomColor = 0x006400;
+    case 'success': // Green (Vibrant)
+      topColor = 0xb6ffb6;
+      mainColor = 0x00ff00;
+      bottomColor = 0x008000;
       break;
-    case 'danger': // Red
-      topColor = 0xffc1c1;
-      mainColor = 0xff4500;
-      bottomColor = 0x8b0000;
+    case 'danger': // Red (Intense)
+      topColor = 0xff9999;
+      mainColor = 0xff0000;
+      bottomColor = 0x990000;
       break;
-    case 'neutral': // Cyan
-      topColor = 0xe0ffff;
+    case 'neutral': // Cyan (Neon)
+      topColor = 0xd1ffff;
       mainColor = 0x00ffff;
       bottomColor = 0x008b8b;
       break;
     case 'metal': // Grey
-      topColor = 0xd3d3d3;
-      mainColor = 0xa9a9a9;
-      bottomColor = 0x696969;
+      topColor = 0xe0e0e0;
+      mainColor = 0x808080;
+      bottomColor = 0x404040;
       break;
     default:
-      topColor = 0xffad85;
+      topColor = 0xffcfb6;
       mainColor = 0xff5f1f;
-      bottomColor = 0xcc4400;
+      bottomColor = 0xb33600;
   }
 
   const bg = scene.add.graphics();
