@@ -515,11 +515,6 @@ class PlayerStateService {
     console.log('[Admin] God Mode:', this.godMode);
     return this.godMode;
   }
-
-  resetState() {
-    this.state = this.getDefaultState();
-    this.saveLocalState();
-  }
 }
 
 const playerStateService = new PlayerStateService();
