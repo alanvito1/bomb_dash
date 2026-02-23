@@ -2,7 +2,8 @@
 import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
-import ExplosionEffect from '../modules/ExplosionEffect.js';
+import Bomb from '../modules/Bomb.js';
+import ExplosionManager from '../modules/ExplosionManager.js';
 import DamageTextManager from '../modules/DamageTextManager.js';
 import NeonBurstManager from '../modules/NeonBurstManager.js';
 import { showNextStageDialog as StageDialog } from '../modules/NextStageDialog.js';
@@ -223,6 +224,7 @@ export default class GameScene extends Phaser.Scene {
 
     // --- TASK FORCE: THE HEART OF GAME JUICE ---
     this.damageTextManager = new DamageTextManager(this);
+    this.explosionManager = new ExplosionManager(this);
     this.neonBurst = new NeonBurstManager(this);
 
     this.playerController = new PlayerController(this);
@@ -308,7 +310,10 @@ export default class GameScene extends Phaser.Scene {
       onComplete: () => riskText.destroy(),
     });
 
-    this.bombs = this.physics.add.group();
+    this.bombs = this.physics.add.group({
+      classType: Bomb,
+      runChildUpdate: true,
+    });
     this.enemies = this.physics.add.group();
     this.powerups = this.physics.add.group();
     this.lootGroup = this.physics.add.group(); // Loot Drop System
@@ -543,8 +548,14 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
-    this.playerBombs = this.physics.add.group();
-    this.opponentBombs = this.physics.add.group();
+    this.playerBombs = this.physics.add.group({
+      classType: Bomb,
+      runChildUpdate: true,
+    });
+    this.opponentBombs = this.physics.add.group({
+      classType: Bomb,
+      runChildUpdate: true,
+    });
     this.bombTimer = this.time.addEvent({
       delay: this.playerStats.fireRate,
       loop: true,
@@ -559,16 +570,16 @@ export default class GameScene extends Phaser.Scene {
       this.playerBombs,
       this.opponentPlayer,
       (opponent, bomb) => {
-        bomb.destroy();
-        new ExplosionEffect(this, opponent.x, opponent.y);
+        bomb.deactivate();
+        this.explosionManager.spawn(opponent.x, opponent.y);
       }
     );
     this.physics.add.collider(
       this.opponentBombs,
       this.player,
       (player, bomb) => {
-        bomb.destroy();
-        new ExplosionEffect(this, player.x, player.y);
+        bomb.deactivate();
+        this.explosionManager.spawn(player.x, player.y);
         this.playerStats.hp -= 10;
         this.events.emit('update-health', {
           health: this.playerStats.hp,
@@ -612,41 +623,9 @@ export default class GameScene extends Phaser.Scene {
     const direction = velocityY > 0 ? 1 : -1;
 
     const createBomb = (x, y, vx, vy) => {
-      const bomb = bombGroup.create(x, y, 'bomb');
-      bomb.setDisplaySize(bombDisplaySize, bombDisplaySize).setVelocity(vx, vy);
-
-      // 1. O Efeito Bloom (Projectile) - Intense
-      // White Core (ffffff), Aura depends on state/tint
-      if (bomb.preFX) {
-        // Color for aura: Default Neon Orange (FF5F1F) or Cyan (00FFFF)
-        // Let's use Neon Orange for Player Bombs
-        const bloomColor = isOpponent ? 0xff0000 : 0xff5f1f;
-        bomb.preFX.addBloom(bloomColor, 1, 1, 2, 1.2);
-      }
-
-      this.tweens.add({
-        targets: bomb,
-        scaleX: bomb.scaleX * 1.2,
-        scaleY: bomb.scaleY * 1.2,
-        duration: 200,
-        yoyo: true,
-        repeat: -1,
-      });
-
-      if (isOpponent) {
-        bomb.setTint(0xff8080);
-      } else {
-        this.tweens.addCounter({
-          from: 0,
-          to: 100,
-          duration: 200,
-          yoyo: true,
-          repeat: -1,
-          onUpdate: (tween) => {
-            if (tween.getValue() > 50) bomb.setTint(0xff4444);
-            else bomb.clearTint();
-          },
-        });
+      const bomb = bombGroup.get(x, y);
+      if (bomb) {
+        bomb.fire(x, y, vx, vy, bombSize, isOpponent);
       }
     };
 
@@ -964,6 +943,13 @@ export default class GameScene extends Phaser.Scene {
       });
     } else {
       proceed();
+    }
+  }
+
+  shakeCamera(duration, intensity) {
+    // ⚡ Bolt Optimization: Throttle Shake
+    if (!this.cameras.main.shakeEffect.isRunning) {
+      this.cameras.main.shake(duration, intensity);
     }
   }
 

@@ -92,17 +92,8 @@ export default class PowerupLogic {
       '#00ffff'
     );
 
-    if (this.scene.textures.exists('particle_pixel')) {
-      const p = this.scene.add.particles(player.x, player.y, 'particle_pixel', {
-        speed: 100,
-        scale: { start: 1, end: 0 },
-        lifespan: 500,
-        blendMode: 'ADD',
-        emitting: false,
-      });
-      p.explode(10);
-
-      this.scene.time.delayedCall(600, () => p.destroy());
+    if (this.scene.neonBurst) {
+      this.scene.neonBurst.explode(player.x, player.y, 10);
     }
 
     powerup.destroy();
