@@ -45,13 +45,16 @@ describe('PlayerStateService', () => {
 
   it('should have correct initial user BCOIN', () => {
     const user = playerStateService.getUser();
-    expect(user.bcoin).toBe(1000);
+    expect(user.bcoin).toBe(0);
   });
 
   it('should upgrade a hero level and deduct BCOIN', async () => {
+    // Need BCOIN first
+    await playerStateService.claimDailyFaucet(); // +5 BCOIN
+
     const heroes = playerStateService.getHeroes();
     const heroId = heroes[0].id;
-    const initialBcoin = playerStateService.getUser().bcoin;
+    const initialBcoin = playerStateService.getUser().bcoin; // Should be 5
     const initialPower = heroes[0].stats.power;
 
     const result = await playerStateService.upgradeHeroLevel(heroId);
@@ -66,6 +69,7 @@ describe('PlayerStateService', () => {
   });
 
   it('should persist state to localStorage', async () => {
+    await playerStateService.claimDailyFaucet(); // +5 BCOIN
     const heroes = playerStateService.getHeroes();
     await playerStateService.upgradeHeroLevel(heroes[0].id);
 
@@ -73,7 +77,7 @@ describe('PlayerStateService', () => {
     expect(stored).not.toBeNull();
 
     const parsed = JSON.parse(stored);
-    expect(parsed.user.bcoin).toBeLessThan(1000);
+    expect(parsed.user.bcoin).toBe(4);
   });
 
   describe('Task Force Phase 4: Upgrade Forge', () => {

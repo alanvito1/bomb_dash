@@ -283,9 +283,21 @@ class ApiClient {
     return this._mockResponse({ status: 'idle' });
   }
 
-  async completeMatch(heroId, xp, coins, bestiary, proficiency, drops) {
-    console.log('[MockAPI] Match Complete', { heroId, xp, coins, drops });
-    return this._mockResponse({ success: true });
+  async completeMatch(heroId, xp, coins, bestiary, proficiency, drops, wave = 1) {
+    console.log('[MockAPI] Match Complete', { heroId, xp, coins, drops, wave });
+
+    try {
+        // Task Force: Persist Match History & Economy
+        const result = await playerStateService.recordMatch({
+            wave,
+            bcoin: coins,
+            xp
+        });
+        return this._mockResponse({ success: true, levelResult: result.levelResult });
+    } catch (e) {
+        console.error('[MockAPI] Failed to record match', e);
+        return this._mockResponse({ success: false });
+    }
   }
 
   async completeStage(heroId, stageId) {

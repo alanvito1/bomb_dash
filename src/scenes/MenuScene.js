@@ -20,6 +20,7 @@ import ForgeModal from '../ui/ForgeModal.js';
 import HousesModal from '../ui/HousesModal.js';
 import ChatWidget from '../ui/ChatWidget.js';
 import BattleModal from '../ui/BattleModal.js';
+import ProfileModal from '../ui/ProfileModal.js';
 import playerStateService from '../services/PlayerStateService.js';
 import PostFXManager from '../modules/PostFXManager.js';
 import { getStageById } from '../config/Stages.js';
@@ -38,7 +39,7 @@ export default class MenuScene extends Phaser.Scene {
     if (window.DEBUG_MODE) {
       console.log('[DEBUG] MenuScene: init() called.', data);
     }
-    this.userData = data.userData;
+    this.userData = data && data.userData ? data.userData : null;
   }
 
   create() {
@@ -95,6 +96,7 @@ export default class MenuScene extends Phaser.Scene {
     this.forgeModal = new ForgeModal(this);
     this.housesModal = new HousesModal(this);
     this.battleModal = new BattleModal(this);
+    this.profileModal = new ProfileModal(this);
 
     // --- AUDIO ---
     this.playMenuMusic();
@@ -250,6 +252,30 @@ export default class MenuScene extends Phaser.Scene {
 
     y += gap;
 
+    // 5. Analytics View
+    const btn5 = createRetroButton(
+        this,
+        0,
+        y,
+        250,
+        40,
+        'VIEW ANALYTICS',
+        'neutral',
+        () => {
+            const user = playerStateService.getUser();
+            const stats = `
+LVL: ${user.accountLevel} | XP: ${user.accountXp}
+EARNED: ${user.totalEarned || 0}
+SPENT: ${user.totalSpent || 0}
+DAYS: ${user.daysLogged || 1}
+            `;
+            alert(stats); // Simple Alert for Admin MVP
+        }
+    );
+    this.godPanel.add(btn5);
+
+    y += gap;
+
     // Close
     const close = createRetroButton(
       this,
@@ -402,7 +428,14 @@ export default class MenuScene extends Phaser.Scene {
     const avatarBg = this.add.circle(avatarX, avatarY, 22, 0x00ffff);
     const avatarImg = this.add
       .image(avatarX, avatarY, 'icon_summoner')
-      .setDisplaySize(40, 40);
+      .setDisplaySize(40, 40)
+      .setInteractive({ useHandCursor: true });
+
+    avatarImg.on('pointerup', () => {
+        SoundManager.playClick(this);
+        this.profileModal.open();
+    });
+
     const maskShape = this.make.graphics();
     maskShape.fillStyle(0xffffff);
     maskShape.fillCircle(avatarX, avatarY, 20);
@@ -675,6 +708,7 @@ export default class MenuScene extends Phaser.Scene {
     );
 
     // FORGE (Orange) - Icon + Text
+    const canAccessForge = playerStateService.isEndGame();
     const forgeBtn = createRetroButton(
       this,
       x4,
@@ -682,8 +716,14 @@ export default class MenuScene extends Phaser.Scene {
       sideBtnW,
       50,
       'FORGE',
-      'danger',
+      canAccessForge ? 'danger' : 'metal',
       () => {
+        if (!canAccessForge) {
+            SoundManager.play(this, 'error');
+            // Toast would be nice, but simple alert for MVP
+            console.log('Forge Locked: Requires Level 8');
+            return;
+        }
         SoundManager.playClick(this);
         this.forgeModal.open();
       },
@@ -691,6 +731,7 @@ export default class MenuScene extends Phaser.Scene {
     );
 
     // SHOP (Green) - Icon + Text
+    const canAccessShop = playerStateService.isEndGame();
     const shopBtn = createRetroButton(
       this,
       x5,
@@ -698,8 +739,13 @@ export default class MenuScene extends Phaser.Scene {
       sideBtnW,
       50,
       'SHOP',
-      'success',
+      canAccessShop ? 'success' : 'metal',
       () => {
+        if (!canAccessShop) {
+            SoundManager.play(this, 'error');
+            console.log('Shop Locked: Requires Level 8');
+            return;
+        }
         SoundManager.playClick(this);
         this.shopModal.open();
       },
