@@ -6,11 +6,11 @@
 ## 1. Vision & Overview
 **Neon Rogue** is a retro-style PvE survival game where players defend against waves of enemies, collect loot, and upgrade their heroes. The core loop involves a "Solo Run" where players test their build against escalating difficulty.
 
-## 2. Economy (Mock Tokenomics)
+## 2. Economy (Hardcore Model)
 The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments** (Crafting Material).
 
-### Earnings
-- **Solo Run Victory:** Awards **50 Account XP** + **Looted Coins** (Session Coins).
+### Earnings (Session Based)
+- **Solo Run Victory:** Awards **50 Account XP** + **Looted Coins** (Session Coins) + **Hero Skill XP** (Manual Training).
 - **Boss Defeat:** Bosses drop significant coins (5x normal mob) and XP (3x normal mob).
 - **Loot Drop Chance (Soft Blocks):**
   - **Nothing:** 70%
@@ -19,12 +19,16 @@ The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments
 - **Daily Faucet (MVP Feature):**
   - **Action:** Player can claim **5 BCOIN** once every 24 hours.
   - **Location:** Profile Modal / Main Menu.
-  - **Purpose:** Ensure players have resources to test Forge upgrades daily.
+  - **Purpose:** Ensure players have resources to test upgrades daily.
 
 ### Spending Costs
-- **Hero Level Up (Eternal Forge):**
-  - **Cost:** `1 BCOIN` + `50 Common Fragments` per level.
-  - *Note: Guest Mode currently mocks fragment costs but enforces BCOIN.*
+- **XP Boost (10 Minutes):**
+  - **Effect:** Doubles (2x) ALL XP gains (Summoner Account XP + Hero Skill XP) for 10 minutes.
+  - **Cost:** Progressive daily cost.
+    - 1st Use: `1.00 BCOIN`
+    - 2nd Use: `1.30 BCOIN` (+30%)
+    - 3rd Use: `1.69 BCOIN` (+30% compounded)
+  - **Reset:** Cost resets to `1.00` every 24 hours.
 
 - **Spell Reroll (Heroes Modal):**
   - **Cost:** **FREE** (Mock API returns success immediately for MVP).
@@ -40,6 +44,11 @@ Leveling up is designed to be exponential and punitive, inspired by classic MMOs
   - Level 1 -> 2: Fast.
   - Level 8 -> 9: Requires days of grind.
 
+### Global Summoner Buff
+- **Effect:** +1% to ALL stats per **Account Level**.
+- **Source:** `PlayerStateService.getAccountLevel()`.
+- **Scope:** Applies to Speed, HP, and Damage.
+
 ### Level Gating (Feature Unlocks)
 To prevent overwhelming new players, features are unlocked in stages:
 - **Level 1 - 7 (The Grind):**
@@ -49,9 +58,30 @@ To prevent overwhelming new players, features are unlocked in stages:
 - **Level 8+ (The End-Game):**
   - **Unlocked:** ALL Features (Forge, Shop, Trading).
   - **Status:** `isEndGame: true`.
-  - **Bonus:** Exclusive drop chance for "Rare Items" (e.g., Boss Fragments) in Solo Mode.
+  - **Bonus:** Exclusive drop chance for "Boss Cores" (Ascension Material) in Solo Mode.
 
-## 4. Solo Mode Mechanics (PvE)
+## 4. Hero Progression (Manual Training)
+The NFT only evolves if used manually. Botting is discouraged by design.
+
+### The 4 Skill Bars (Manual Training)
+Each Hero has 4 distinct "Skill XP" pools that fill during gameplay.
+- **Speed XP:** Increases with **distance walked**.
+- **Fire Rate XP:** Increases with **bombs planted / shots fired**.
+- **Range XP:** Increases based on **targets hit / blocks destroyed** per explosion.
+- **Power (Damage) XP:** Increases with **total damage dealt** to enemies.
+
+### The 0.01% Rule (Micro-Progress)
+Massive upgrades are gone. Every Level gained in a Skill Bar grants a tiny, permanent bonus.
+- **Bonus:** +0.01% effectiveness per Skill Level.
+- **Visuals:** UI displays decimals (e.g., "Speed Lvl: 10.42") to show granular progress.
+- **Formula:** `EffectiveStat = BaseStat * (1 + (SkillLevel * 0.0001))`.
+
+### Ascension (Future Mechanic)
+- **Concept:** Unlocking higher skill caps.
+- **Requirement:** Maximize Skill Bars + Collect "Boss Cores" (Level 8+ Drop).
+- **Action:** Pay BCOIN fee at the Eternal Forge to ascend (e.g., 1 Star -> 2 Stars).
+
+## 5. Solo Mode Mechanics (PvE)
 The core gameplay happens in `GameScene.js`.
 
 ### Match Rules
@@ -75,25 +105,16 @@ The difficulty multiplier scales exponentially:
   - At Wave 30 (Diff ~66x): `100 * 66 = 6600 HP` (Approx).
 - **Leak Penalty:** If an enemy passes the bottom screen edge, it deals damage equal to its remaining HP to the player.
 
-## 5. NFT Attributes (Hero Stats)
-Hero stats are derived from base NFT metadata and scaled by Level and Account Buffs.
+## 6. Combat Formulas (`GameScene.js`)
+Hero stats are derived from base NFT metadata, Skill Levels (Manual Training), and Account Buffs.
 
-### Combat Formulas (`GameScene.js`)
-- **Damage (POW):** `(10 * HeroPOW) + AccountLevel`
-  - *Base Bomb Damage:* 10
-  - *Hero POW:* From NFT Stats.
-  - *Account Level:* Flat bonus.
-- **Speed (SPD):** `(150 + BaseSpeed * 10) * (1 + (Level - 1) * 0.02) * GlobalBuff`
-- **Max HP:** `(BaseStamina * 100) * GlobalBuff`
-- **Bomb Range (RNG):** `HeroRNG` (Strict NFT Stat)
-  - *Logic:* Explosion covers Center + `RNG` tiles in each direction (Up, Down, Left, Right).
+- **Damage (POW):** `(10 * HeroPOW) + AccountLevel` * `(1 + PowerSkillLevel * 0.0001)`
+- **Speed (SPD):** `(150 + BaseSpeed * 10)` * `(1 + SpeedSkillLevel * 0.0001)` * `(1 + AccountLevel * 0.01)`
+- **Max HP:** `(BaseStamina * 100)` * `(1 + AccountLevel * 0.01)`
+- **Bomb Range (RNG):** `HeroRNG` * `(1 + RangeSkillLevel * 0.0001)`
+- **Fire Rate:** `BaseFireRate` * `(1 - FireRateSkillLevel * 0.0001)` (Lower is faster)
 
-### Global Summoner Buff
-- **Effect:** +1% to ALL stats per **Account Level**.
-- **Source:** `PlayerStateService.getAccountLevel()`.
-- *Note:* Currently applies to Speed and HP. Damage uses the specific formula above. Range is strict.
-
-## 6. Spells & Abilities
+## 7. Spells & Abilities
 Spells are special modifiers attached to heroes.
 
 - **Multishot (`multishot`):**
@@ -105,7 +126,7 @@ Spells are special modifiers attached to heroes.
   - **Damage:** 3 Ticks of `5% MaxHP` (or 1 dmg min) over 3 seconds.
   - **Logic:** `CollisionHandler.applyPoison`.
 
-## 7. Analytics & Admin Tools
+## 8. Analytics & Admin Tools
 To facilitate balancing, the Admin Panel tracks key metrics:
 - **Summoner Level:** Current account progression.
 - **Economy:** Total BCOIN Earned vs. Spent.
