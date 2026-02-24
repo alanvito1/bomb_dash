@@ -21,7 +21,6 @@ import StartScene from './src/scenes/StartScene.js';
 import MenuScene from './src/scenes/MenuScene.js';
 import WorldMapScene from './src/scenes/WorldMapScene.js';
 import GameScene from './src/scenes/GameScene.js';
-import GameOverScene from './src/scenes/GameOverScene.js';
 import ProfileScene from './src/scenes/ProfileScene.js';
 import CharacterSelectionScene from './src/scenes/CharacterSelectionScene.js';
 import AuthChoiceScene from './src/scenes/AuthChoiceScene.js';
@@ -67,7 +66,6 @@ const config = {
     MenuScene,
     WorldMapScene,
     GameScene,
-    GameOverScene,
     ProfileScene,
     CharacterSelectionScene,
     HUDScene,

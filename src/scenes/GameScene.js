@@ -20,6 +20,7 @@ import { MOBS } from '../config/MobConfig.js';
 import PostFXManager from '../modules/PostFXManager.js';
 import { createRetroButton, createRetroPanel } from '../utils/ui.js';
 import TextureGenerator from '../modules/TextureGenerator.js';
+import { CST } from '../CST.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -181,6 +182,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Explicitly set Bomb Num from NFT (not calculated in service yet?)
     this.playerStats.bombNum = selectedHero.stats.bomb_num || 1;
+
+    // Snapshot Initial State for Post-Match Report ("Dopamine Report")
+    this.initialState = {
+        accountLevel: userAccountData.account_level,
+        accountXp: userAccountData.account_xp,
+        heroStats: calculatedStats ? JSON.parse(JSON.stringify(calculatedStats)) : null
+    };
 
     // Task Force: Spell Interpreter
     this.playerStats.spells = selectedHero.spells || [];
@@ -936,13 +944,17 @@ export default class GameScene extends Phaser.Scene {
         });
 
         if (response.success) {
-          SoundManager.play(this, 'gameover');
+          SoundManager.play(this, 'level_up');
           this.scene.stop('HUDScene');
-          this.scene.start('GameOverScene', {
-            score: 1000,
-            coinsEarned: response.rewards ? response.rewards.bcoin || 0 : 0,
-            finalScore: 1000,
-            customMessage: response.message,
+          this.scene.start(CST.SCENES.POST_MATCH, {
+            isVictory: true,
+            heroId: this.playerStats.id,
+            initialState: this.initialState,
+            sessionTraining: this.sessionTraining, // Likely minimal in PvP
+            sessionLoot: { coins: response.rewards ? response.rewards.bcoin || 0 : 0, items: [] },
+            xpGained: 1000,
+            wave: 0, // PvP
+            timeSurvived: 270 - this.matchTime
           });
         } else {
           throw new Error(response.message || 'Failed to report match result.');
@@ -956,10 +968,15 @@ export default class GameScene extends Phaser.Scene {
       }
     } else {
       this.scene.stop('HUDScene');
-      this.scene.start('GameOverScene', {
-        score: 0,
-        coinsEarned: 0,
-        customMessage: 'Você foi derrotado!',
+      this.scene.start(CST.SCENES.POST_MATCH, {
+        isVictory: false,
+        heroId: this.playerStats.id,
+        initialState: this.initialState,
+        sessionTraining: this.sessionTraining,
+        sessionLoot: { coins: 0, items: [] },
+        xpGained: 0,
+        wave: 0,
+        timeSurvived: 270 - this.matchTime
       });
     }
   }
@@ -1039,129 +1056,58 @@ export default class GameScene extends Phaser.Scene {
     this.physics.pause();
     this.setPlayerState('CANNOT_SHOOT', 'Victory');
     SoundManager.stopAll(this);
-    SoundManager.play(this, 'level_up');
+    SoundManager.play(this, 'level_up'); // Initial cue, full music in PostMatch
 
-    const proceed = async () => {
-      const cx = this.cameras.main.centerX;
-      const cy = this.cameras.main.centerY;
+    const xpGain = 50;
 
-      const overlay = this.add.graphics();
-      overlay.fillStyle(0x000000, 0.8);
-      overlay.fillRect(0, 0, this.scale.width, this.scale.height);
-      overlay.setDepth(2000);
-
-      this.add
-        .text(cx, cy - 50, 'STAGE CLEAR!', {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '32px',
-          color: '#00ff00',
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 6,
-        })
-        .setOrigin(0.5)
-        .setDepth(2001);
-
-      this.add
-        .text(cx, cy + 20, `LOOT SECURED:\n${this.sessionLoot.coins} Coins`, {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '16px',
-          color: '#ffffff',
-          align: 'center',
-          lineSpacing: 10,
-        })
-        .setOrigin(0.5)
-        .setDepth(2001);
-
-      const xpGain = 50;
-      const xpResult = playerStateService.addAccountXp(xpGain);
-
-      // TASK FORCE: SAVE TRAINING DATA
-      await playerStateService.applySessionTraining(this.playerStats.id, this.sessionTraining);
-
-      this.add
-        .text(cx, cy + 60, `+${xpGain} SUMMONER XP`, {
-          fontFamily: '"Press Start 2P"',
-          fontSize: '12px',
-          color: '#00ffff',
-        })
-        .setOrigin(0.5)
-        .setDepth(2001);
-
-      // Show Skill Gains (Manual Training)
-      const spdGain = (this.sessionTraining.speed / 100).toFixed(2);
-      const powGain = (this.sessionTraining.power / 100).toFixed(2);
-      const rngGain = (this.sessionTraining.range / 100).toFixed(2);
-      const frGain = (this.sessionTraining.fireRate / 100).toFixed(2);
-
-      const trainingSummary = `MANUAL TRAINING:\nSPD: +${spdGain} | POW: +${powGain}\nRNG: +${rngGain} | FR: +${frGain}`;
-
-      this.add
-        .text(cx, cy + 130, trainingSummary, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#00ff00',
-            align: 'center',
-            lineSpacing: 4
-        })
-        .setOrigin(0.5)
-        .setDepth(2001);
-
-      if (xpResult.leveledUp) {
-        this.add
-          .text(cx, cy + 85, `LEVEL UP! (${xpResult.newLevel})`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '14px',
-            color: '#ffd700',
-          })
-          .setOrigin(0.5)
-          .setDepth(2001);
-        SoundManager.play(this, 'level_up');
-      }
-
-      // Persist Loot (Coins)
-      if (this.playerStats.id) {
-        try {
-          // Task Force: Pass Wave (30) for history
-          await api.completeMatch(
-            this.playerStats.id,
-            xpGain,
-            this.sessionLoot.coins,
-            this.sessionBestiary,
-            {},
-            [],
-            30
-          );
-        } catch (e) {
-          console.warn('[GameScene] Failed to sync victory stats:', e);
-        }
-      }
-
-      if (this.playerStats.id && this.stageConfig) {
-        playerStateService.completeStage(
-          this.playerStats.id,
-          this.stageConfig.id
-        );
-      }
-
-      // Save Session Loot Items (Fragments) to Inventory
-      if (this.sessionLoot.items && this.sessionLoot.items.length > 0) {
-        playerStateService.addSessionLoot(this.sessionLoot.items);
-      }
-
-      this.time.delayedCall(3000, () => {
-        this.scene.stop('HUDScene');
-        this.scene.start('WorldMapScene');
-      });
-    };
-
-    if (playerStateService.isGuest) {
-      this.showSaveProgressModal(() => {
-        proceed();
-      });
-    } else {
-      proceed();
+    // 1. Update Backend/Service
+    // Task Force: Save Training Data FIRST
+    if (this.playerStats.id) {
+        await playerStateService.applySessionTraining(this.playerStats.id, this.sessionTraining);
     }
+
+    // Add Account XP
+    const xpResult = playerStateService.addAccountXp(xpGain);
+
+    // Save Loot/Fragments
+    if (this.sessionLoot.items && this.sessionLoot.items.length > 0) {
+        playerStateService.addSessionLoot(this.sessionLoot.items);
+    }
+
+    // Unlock Stage
+    if (this.playerStats.id && this.stageConfig) {
+        playerStateService.completeStage(this.playerStats.id, this.stageConfig.id);
+    }
+
+    // Report to API
+    if (this.playerStats.id) {
+        try {
+            await api.completeMatch(
+                this.playerStats.id,
+                xpGain,
+                this.sessionLoot.coins,
+                this.sessionBestiary,
+                {},
+                [],
+                30
+            );
+        } catch (e) {
+            console.warn('[GameScene] Failed to sync victory stats:', e);
+        }
+    }
+
+    // 2. Transition to Dopamine Report
+    this.scene.stop('HUDScene');
+    this.scene.start(CST.SCENES.POST_MATCH, {
+        isVictory: true,
+        heroId: this.playerStats.id,
+        initialState: this.initialState,
+        sessionTraining: this.sessionTraining,
+        sessionLoot: this.sessionLoot,
+        xpGained: xpGain,
+        wave: 30, // Victory = Max Wave
+        timeSurvived: 270 - this.matchTime // Total time
+    });
   }
 
   async handleGameOver(isVictory = false) {
@@ -1171,55 +1117,57 @@ export default class GameScene extends Phaser.Scene {
     this.player?.setActive(false);
     this.setPlayerState('CANNOT_SHOOT', 'Game over');
     SoundManager.stopAll(this);
-
     SoundManager.play(this, 'gameover');
 
-    const proceed = async () => {
-      const finalCoins = 0;
-      const finalXp = this.score;
+    const xpGain = this.score;
 
-      // TASK FORCE: SAVE TRAINING DATA (Hardcore: Keep skills even on death? Prompt: "O grind é eterno e seguro")
-      if (this.playerStats.id) {
+    // 1. Update Backend/Service
+    // Save Training (Eternal Grind)
+    if (this.playerStats.id) {
          await playerStateService.applySessionTraining(this.playerStats.id, this.sessionTraining);
-      }
-
-      const heroId = this.playerStats.id;
-      if (heroId) {
-        try {
-          // Task Force: Pass Current Wave for history
-          await api.completeMatch(
-            heroId,
-            finalXp,
-            finalCoins,
-            this.sessionBestiary || {},
-            {},
-            [],
-            this.currentWave
-          );
-        } catch (e) {
-          console.warn('Failed to report defeat stats', e);
-        }
-      }
-
-      this.scene.stop('HUDScene');
-      this.scene.start('GameOverScene', {
-        score: this.score,
-        world: this.world,
-        phase: this.currentWave,
-        coins: 0,
-        xpGained: finalXp,
-        isVictory: false,
-        customMessage: 'MISSION FAILED\nLOOT LOST',
-      });
-    };
-
-    if (playerStateService.isGuest) {
-      this.showSaveProgressModal(() => {
-        proceed();
-      });
-    } else {
-      proceed();
     }
+
+    // Report Defeat
+    const heroId = this.playerStats.id;
+    if (heroId) {
+        try {
+            await api.completeMatch(
+                heroId,
+                xpGain,
+                0, // Coins lost on defeat usually? Or kept? Prompt said "Loot Recovered", implying kept on Victory only?
+                   // But "The Dopamine Report" step 4 says "Loot Recovered... showing quantity collected".
+                   // "Risk Zone" text said "Survive to Keep Loot".
+                   // So on Game Over, coins = 0.
+                this.sessionBestiary || {},
+                {},
+                [],
+                this.currentWave
+            );
+        } catch (e) {
+            console.warn('Failed to report defeat stats', e);
+        }
+    }
+
+    // Add XP (Even on defeat?) Yes, user gets score as XP usually.
+    // playerStateService.addAccountXp(xpGain); // Logic was missing in old handleGameOver, adding it for consistency?
+    // Old code: finalXp = this.score. api.completeMatch passes finalXp.
+    // But it didn't call playerStateService.addAccountXp().
+    // I should probably add it to sync local state?
+    // The prompt says "Summoner Gain... anime a barra enchendo com o XP ganho". So yes.
+    playerStateService.addAccountXp(xpGain);
+
+    // 2. Transition to Dopamine Report
+    this.scene.stop('HUDScene');
+    this.scene.start(CST.SCENES.POST_MATCH, {
+        isVictory: false,
+        heroId: this.playerStats.id,
+        initialState: this.initialState,
+        sessionTraining: this.sessionTraining,
+        sessionLoot: { coins: 0, items: [] }, // Loot lost on death
+        xpGained: xpGain,
+        wave: this.currentWave,
+        timeSurvived: 270 - this.matchTime
+    });
   }
 
   shakeCamera(duration, intensity) {
