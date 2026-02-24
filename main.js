@@ -49,7 +49,7 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      debug: window.DEBUG_MODE,
+      debug: false,
       gravity: { y: 0 },
     },
   },
