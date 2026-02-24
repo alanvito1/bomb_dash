@@ -105,6 +105,20 @@ The difficulty multiplier scales exponentially:
   - At Wave 30 (Diff ~66x): `100 * 66 = 6600 HP` (Approx).
 - **Leak Penalty:** If an enemy passes the bottom screen edge, it deals damage equal to its remaining HP to the player.
 
+### Boss Mechanics (Task Force: Threat Intelligence)
+Bosses appear at **Waves 10, 20, and 30**. They are "GIGANTE" (3x Scale) and possess unique AI.
+
+- **Scale:** 3x Normal Mob (96px Visual, 72px Hitbox).
+- **Skills:**
+  1.  **Shooting:** Fires a magma projectile at the player every 2 seconds.
+  2.  **Summoning:** Summons 2 common minions near itself every 8 seconds.
+- **Enrage Mode (Phase 2):**
+  - **Trigger:** HP drops below 50%.
+  - **Visual:** Boss turns Red-Orange (`0xff4500`) and roars.
+  - **Buffs:**
+    - Movement Speed: +50%.
+    - Shooting Speed: 2x (Every 1 second).
+
 ## 6. Combat Formulas (`GameScene.js`)
 Hero stats are derived from base NFT metadata, Skill Levels (Manual Training), and Account Buffs.
 

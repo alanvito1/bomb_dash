@@ -357,45 +357,56 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   createBossHealthBar() {
-    const w = 300;
-    const h = 24;
+    // TASK FORCE: GIANT HEALTH BAR
+    const w = this.scale.width * 0.9; // 90% Width
+    const h = 32; // Taller
     const x = this.scale.width / 2;
-    const y = 80; // Below HUD
+    const y = 80; // Below main HUD
 
     this.bossHealthContainer = this.add.container(x, y);
     this.bossHealthContainer.setVisible(false);
 
+    // Bg (Dark Souls style: Dark Red/Black bg)
+    const bg = this.add.nineslice(0, 0, 'ui_panel', 0, w, h, 8, 8, 8, 8);
+    bg.setOrigin(0.5); // Ensure center origin for correct alignment
+    bg.setTint(0x330000); // Dark Red background
+
+    // Fill
+    this.bossHealthFill = this.add.graphics();
+
+    // Border Frame (Overlay)
+    // We can use another nineslice or just graphics stroke
+    const border = this.add.graphics();
+    border.lineStyle(4, 0xff5f1f, 1); // Thick Orange Border
+    border.strokeRect(-w/2, -h/2, w, h);
+
     // Label
     const label = this.add
-      .text(0, -20, 'BOSS', {
+      .text(-w/2 + 10, -h/2 - 15, 'BOSS', {
         fontFamily: '"Press Start 2P"',
-        fontSize: '12px',
+        fontSize: '14px',
         fill: '#FF5F1F',
         stroke: '#000000',
         strokeThickness: 4,
       })
-      .setOrigin(0.5);
-
-    // Bg
-    const bg = this.add.nineslice(0, 0, 'ui_panel', 0, w, h, 8, 8, 8, 8);
-    bg.setTint(0xff5f1f); // Orange Border
-
-    // Fill
-    this.bossHealthFill = this.add.graphics();
+      .setOrigin(0, 0.5); // Left Aligned
 
     // Text
     this.bossHealthText = this.add
       .text(0, 0, '', {
         fontFamily: '"Press Start 2P"',
-        fontSize: '10px',
+        fontSize: '12px',
         fill: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3
       })
       .setOrigin(0.5);
 
     this.bossHealthContainer.add([
-      label,
       bg,
       this.bossHealthFill,
+      border,
+      label,
       this.bossHealthText,
     ]);
     this.bossHealthDims = { w, h };
