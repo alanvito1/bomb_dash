@@ -339,23 +339,24 @@ export default class GameScene extends Phaser.Scene {
                   continue;
               }
 
-              // 2. Pillars (Classic Bomberman Checkerboard)
+              // 2. Spawn Cross Protection (Task Force: Safety First)
+              // Clear 2 tiles in each cardinal direction from player
+              const dx = Math.abs(x - playerGridX);
+              const dy = Math.abs(y - playerGridY);
+              const isSpawnCross = (x === playerGridX && dy <= 2) || (y === playerGridY && dx <= 2);
+
+              if (isSpawnCross) continue; // Guaranteed Clear Path
+
+              // 3. Pillars (Classic Bomberman Checkerboard)
               // Every even X and even Y (e.g., 2,2; 4,2; 2,4...)
+              // Strict Grid: Pillars override Soft Blocks
               if (x % 2 === 0 && y % 2 === 0) {
                   this.placeBlock(x, y, true); // Hard Block
                   continue;
               }
 
-              // 3. Clear Zones (Safety)
-              // Player Spawn Area (Radius 1)
-              if (Math.abs(x - playerGridX) <= 1 && Math.abs(y - playerGridY) <= 1) continue;
-
-              // Map Center (Radius 1) - Prevent central clutter
-              if (Math.abs(x - centerGridX) <= 1 && Math.abs(y - centerGridY) <= 1) continue;
-
               // 4. Soft Blocks (Random Scatter)
               // Distribution: 40% chance in empty spaces
-              // Creates corridors naturally between pillars
               if (Math.random() < 0.4) {
                   this.placeBlock(x, y, false); // Soft Block
               }
@@ -940,7 +941,8 @@ export default class GameScene extends Phaser.Scene {
           if (existing) return; // Cannot stack
 
           const bomb = new ClassicBomb(this, x, y, this.playerStats.bombRange, this.playerStats);
-          this.bombs.add(bomb);
+          // Fixed: Do not add Static ClassicBomb to Dynamic Physics Group to prevent crash
+          // this.bombs.add(bomb);
           bomb.startTimer(3000);
 
           SoundManager.play(this, 'bomb_fire');
