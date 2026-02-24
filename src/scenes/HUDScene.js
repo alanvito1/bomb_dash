@@ -457,8 +457,9 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateWave({ world, phase, isBoss }) {
-    const waveCounter = isBoss ? 'BOSS' : `${phase}/7`;
-    this.waveText.setText(`World ${world} | Wave ${waveCounter}`);
+    const waveCounter = isBoss ? 'BOSS' : `${phase}`;
+    // TASK FORCE: STAGE UI UPDATE
+    this.waveText.setText(`STAGE ${waveCounter}`);
   }
 
   handleBalanceUpdate({ balance, error }) {

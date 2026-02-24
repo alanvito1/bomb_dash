@@ -102,7 +102,7 @@ export default class EnemySpawner {
     enemy.body.setOffset(4, 4);
 
     enemy.setCollideWorldBounds(true);
-    enemy.setBounce(1, 1);
+    enemy.setBounce(0, 0); // Slide, don't bounce
 
     // Initial Velocity (add slight horizontal drift for "AI" feel)
     enemy.setVelocityY(speed);
@@ -114,8 +114,87 @@ export default class EnemySpawner {
     enemy.isBoss = false;
     enemy.name = `${mob.id}_${this.enemyIdCounter++}`;
 
-    // Optional: Add simple zigzag or sine wave movement based on mob type?
-    // For now, straight down with drift.
+    // TASK FORCE: ENEMY AI (Defense Shooter)
+    // Attach update logic for per-frame AI
+    enemy.lastThinkTime = 0;
+
+    enemy.update = (time, delta) => {
+        if (!enemy.active || !enemy.body) return;
+
+        // AI Throttling (Think every 200ms)
+        if (time - enemy.lastThinkTime < 200) return;
+        enemy.lastThinkTime = time;
+
+        const isHardcore = this.scene.playerStats.account_level >= 8;
+        let target = this.scene.player; // Default Target: Player
+
+        // LEVEL 8+ THREAT: LOOT STEAL & BLOCK BREAKER
+        if (isHardcore) {
+            // Priority 1: Loot on Ground (Greed)
+            let nearestLoot = null;
+            let minLootDist = 150; // Vision Range
+
+            this.scene.lootGroup.getChildren().forEach(loot => {
+                if (!loot.active) return;
+                const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, loot.x, loot.y);
+                if (dist < minLootDist) {
+                    minLootDist = dist;
+                    nearestLoot = loot;
+                }
+            });
+
+            if (nearestLoot) {
+                target = nearestLoot;
+                // Steal Logic (Overlap handled by physics or check here)
+                if (minLootDist < 30) {
+                    // OM NOM NOM
+                    nearestLoot.destroy();
+                    // Visual feedback: "STOLEN!" text?
+                    if (this.scene.damageTextManager) {
+                        this.scene.damageTextManager.show(enemy.x, enemy.y - 20, 'STOLEN!', '#ff0000');
+                    }
+                    return; // Busy eating
+                }
+            } else {
+                // Priority 2: Soft Blocks (Destruction)
+                // If blocked or near one?
+                // Simple implementation: Find nearest Soft Block in front
+                let nearestBlock = null;
+                let minBlockDist = 60; // Melee Range
+
+                this.scene.softGroup.getChildren().forEach(block => {
+                    if (!block.active) return;
+                    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, block.x, block.y);
+                    // Check if block is BELOW enemy (since they want to go down)
+                    if (block.y > enemy.y && dist < minBlockDist) {
+                        minBlockDist = dist;
+                        nearestBlock = block;
+                    }
+                });
+
+                if (nearestBlock) {
+                    target = nearestBlock;
+                    if (minBlockDist < 40) {
+                        // SMASH!
+                        nearestBlock.destroy();
+                        if (this.scene.explosionManager) {
+                            this.scene.explosionManager.spawn(nearestBlock.x, nearestBlock.y, 0.5);
+                        }
+                        return; // Busy smashing
+                    }
+                }
+            }
+        }
+
+        // MOVEMENT LOGIC
+        if (target && target.active) {
+            this.scene.physics.moveToObject(enemy, target, speed);
+        } else {
+             // Default: Move Down
+             enemy.setVelocityY(speed);
+             enemy.setVelocityX(0);
+        }
+    };
   }
 
   stopSpawning() {
