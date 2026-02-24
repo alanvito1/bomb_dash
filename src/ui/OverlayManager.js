@@ -1,6 +1,7 @@
 import ToSManager from './ToSManager.js';
 import AuthManager from './AuthManager.js';
 import LanguageManager from '../utils/LanguageManager.js';
+import { supabase } from '../lib/supabaseClient.js';
 
 export default class OverlayManager {
   constructor() {
@@ -10,7 +11,7 @@ export default class OverlayManager {
     this.audio = null;
   }
 
-  init() {
+  async init() {
     console.log('🕹️ Arcade Overlay Initialized');
     this.container.style.display = 'flex';
 
@@ -22,43 +23,76 @@ export default class OverlayManager {
     // Check for previous acceptance
     const termsAccepted = localStorage.getItem('termsAccepted');
 
-    if (termsAccepted === 'true') {
-      console.log('[Overlay] Terms already accepted. Launching Game directly.');
-      this.startGameDirectly();
-      return;
+    // Ensure LanguageManager is ready before showing UI
+    const mockScene = { registry: { set: () => {} } };
+    try {
+      await LanguageManager.init(mockScene);
+    } catch (e) {
+      console.warn('Language Init Failed', e);
     }
 
-    // Ensure LanguageManager is ready before showing ToS
-    const mockScene = { registry: { set: () => {} } };
-
-    LanguageManager.init(mockScene)
-      .then(() => {
-        this.tosManager.init();
-      })
-      .catch((e) => {
-        console.warn('Language Init Failed', e);
-        this.tosManager.init(); // Proceed anyway
-      });
+    if (termsAccepted === 'true') {
+      console.log('[Overlay] Terms already accepted. Checking Session...');
+      this.checkSession();
+    } else {
+      this.tosManager.init();
+    }
   }
 
-  startGameDirectly() {
+  async checkSession() {
+    // Check Supabase Session
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session) {
+      console.log('[Overlay] Active Session Found:', session.user.email);
+      this.startGameWithUser(session.user);
+    } else {
+      console.log('[Overlay] No Active Session. Showing Auth Gate.');
+      this.showAuthMenu();
+    }
+  }
+
+  startGameWithUser(user) {
     // Hide Overlay
     this.container.style.display = 'none';
+    this.showGameContainer();
 
-    // Show Game Container
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer) {
-      gameContainer.style.display = 'block';
-    }
-
-    // Launch Game
+    // Launch Game with User
     if (window.launchGame) {
       requestAnimationFrame(() => {
-        window.launchGame();
+        window.launchGame(user);
       });
     } else {
       console.error('Game Launcher not found!');
     }
+  }
+
+  startGameAsGuest() {
+    console.log('[Overlay] Starting as Guest...');
+    // Hide Overlay
+    this.container.style.display = 'none';
+    this.showGameContainer();
+
+    // Launch Game (No User -> Guest Mode)
+    if (window.launchGame) {
+      requestAnimationFrame(() => {
+        window.launchGame(null);
+      });
+    } else {
+      console.error('Game Launcher not found!');
+    }
+  }
+
+  showGameContainer() {
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+      gameContainer.style.display = 'block';
+    }
+  }
+
+  // Deprecated Alias for compatibility
+  startGameDirectly() {
+    this.startGameAsGuest();
   }
 
   playSound(type) {

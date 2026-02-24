@@ -1,19 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient.js';
 import playerStateService from '../services/PlayerStateService.js';
-
-// Initialize Supabase Client (Ensure keys are present)
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
-const supabaseKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.REACT_APP_SUPABASE_ANON_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  console.warn('Supabase keys missing. Google Login will fail.');
-}
 
 export default class AuthManager {
   constructor(overlayManager) {
@@ -23,20 +9,15 @@ export default class AuthManager {
 
     this.btnWeb3 = document.getElementById('btn-login-web3');
     this.btnGoogle = document.getElementById('btn-login-google');
+    this.btnGuest = document.getElementById('btn-login-guest');
   }
 
   init() {
     this.menu.style.display = 'block'; // Ensure visibility
     this.attachListeners();
 
-    // Check for redirect return (handled by LoadingScene mostly, but UI can reflect it)
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          console.log('[AuthManager] Session active:', session.user.email);
-        }
-      });
-    }
+    // Session check is now handled by OverlayManager before this menu appears
+    // But we keep this for redundancy or direct access if needed
   }
 
   attachListeners() {
@@ -49,6 +30,13 @@ export default class AuthManager {
 
     if (this.btnGoogle) {
       this.btnGoogle.onclick = () => this.loginGoogle();
+    }
+
+    if (this.btnGuest) {
+      this.btnGuest.onclick = () => {
+        this.overlayManager.playSound('click');
+        this.overlayManager.startGameAsGuest();
+      };
     }
   }
 
