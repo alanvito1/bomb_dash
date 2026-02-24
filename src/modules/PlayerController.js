@@ -25,10 +25,9 @@ export default class PlayerController {
     this.player.setDisplaySize(40, 40).setCollideWorldBounds(true);
 
     // TASK FORCE: FLUID GRID PHYSICS & HITBOX TUNING
-    // 1. Reduced Hitbox Size (20px width for tolerance in 32/48px corridors)
-    // 2. Focused Hitbox on Feet (Offset Y) for depth perception
-    this.player.body.setSize(20, 20);
-    this.player.body.setOffset(10, 20); // Center X (10), Bottom Y (20) for 40x40 sprite
+    // 1. Circular Hitbox for smoother corner sliding
+    // 2. Reduced Radius (10px = 20px diameter) for easy passage in 48px corridors
+    this.player.body.setCircle(10, 10, 20);
 
     // 🌑 SHADOW
     if (this.scene.textures.exists('shadow')) {
