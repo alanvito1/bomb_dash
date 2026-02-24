@@ -20,6 +20,7 @@ import { MOBS } from '../config/MobConfig.js';
 import PostFXManager from '../modules/PostFXManager.js';
 import { createRetroButton, createRetroPanel } from '../utils/ui.js';
 import TextureGenerator from '../modules/TextureGenerator.js';
+import MobileControls from '../ui/MobileControls.js';
 import { CST } from '../CST.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -297,15 +298,37 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.playWorldMusic(this, 1);
     this.input.keyboard.on('keydown-ESC', this.togglePause, this);
 
-    // Auto-Fire Toggle State
-    this.autoFire = true;
-
-    // Manual Fire Listener
-    this.input.on('pointerdown', () => {
-        if (!this.autoFire && this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
+    // TASK FORCE: MANUAL FIRE (Spacebar)
+    this.input.keyboard.on('keydown-SPACE', () => {
+        if (this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
             this.firePlayerBomb(true);
         }
     });
+
+    // Auto-Fire Toggle State (Legacy/Mobile)
+    this.autoFire = false; // Disabled by default for Pivot
+
+    // Manual Fire Listener (Touch/Mouse)
+    this.input.on('pointerdown', (pointer) => {
+        // Ignore if touching Joystick area (Left Half) when Joystick is active
+        if (this.mobileControls && this.mobileControls.active && pointer.x < this.scale.width / 2) return;
+
+        if (this.player?.active && this.playerState === 'CAN_SHOOT' && this.canShoot) {
+            this.firePlayerBomb(true);
+        }
+    });
+
+    // TASK FORCE: MOBILE CONTROLS
+    this.mobileControls = new MobileControls(this);
+    this.mobileControls.create();
+    this.joystick = this.mobileControls; // Expose for PlayerController
+
+    // Toggle Button
+    const mobileBtn = createRetroButton(this, this.scale.width - 100, 50, 160, 40, 'MOBILE CONTROLS', 'neutral', () => {
+        const isActive = this.mobileControls.toggle();
+        mobileBtn.setText(isActive ? 'HIDE CONTROLS' : 'MOBILE CONTROLS');
+    });
+    mobileBtn.setScrollFactor(0).setDepth(2000);
 
     this.canShoot = false;
     this.time.delayedCall(500, () => {
@@ -327,45 +350,82 @@ export default class GameScene extends Phaser.Scene {
       if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
       if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
 
-      // TASK FORCE: BOMBERMAN MAP RESTORATION
+      // TASK FORCE: ZIGZAG CAVE GENERATION (Defense Shooter Pivot)
       // Grid dimensions: 10x16 (approx 480x800 with 48px tiles)
 
-      const playerGridX = Math.floor(this.player.x / this.TILE_SIZE);
-      const playerGridY = Math.floor(this.player.y / this.TILE_SIZE);
-      const centerGridX = Math.floor(this.GRID_W / 2);
-      const centerGridY = Math.floor(this.GRID_H / 2);
+      const grid = [];
+      for(let y=0; y<this.GRID_H; y++) {
+          grid[y] = [];
+          for(let x=0; x<this.GRID_W; x++) {
+              grid[y][x] = 'EMPTY';
+          }
+      }
 
-      for (let y = 0; y < this.GRID_H; y++) {
-          for (let x = 0; x < this.GRID_W; x++) {
-              // 1. Fixed Walls (Borders)
-              // Left, Right, Top. Bottom is OPEN for "Leak Penalty".
-              const isBorder = (x === 0 || x === this.GRID_W - 1 || y === 0);
-              if (isBorder) {
-                  this.placeBlock(x, y, true); // Hard Block
+      // 1. Initial Noise Fill
+      for(let y=0; y<this.GRID_H; y++) {
+          for(let x=0; x<this.GRID_W; x++) {
+              // Borders (Left, Right, Top) - Hard
+              // Bottom is open for Game Over Zone interaction visually, but we might want walls there too?
+              // Rule: "Rotas para inimigos descerem".
+              if (x === 0 || x === this.GRID_W - 1 || y === 0) {
+                  grid[y][x] = 'HARD';
                   continue;
               }
 
-              // 2. Spawn Cross Protection (Task Force: Safety First)
-              // Clear 2 tiles in each cardinal direction from player
-              const dx = Math.abs(x - playerGridX);
-              const dy = Math.abs(y - playerGridY);
-              const isSpawnCross = (x === playerGridX && dy <= 2) || (y === playerGridY && dx <= 2);
+              // Random Scatter
+              const roll = Math.random();
+              if (roll < 0.2) grid[y][x] = 'HARD';
+              else if (roll < 0.5) grid[y][x] = 'SOFT';
+          }
+      }
 
-              if (isSpawnCross) continue; // Guaranteed Clear Path
+      // 2. Carve The Path (The River)
+      // Start Top Center
+      let carverX = Math.floor(this.GRID_W / 2);
+      let carverY = 1;
 
-              // 3. Pillars (Classic Bomberman Checkerboard)
-              // Every even X and even Y (e.g., 2,2; 4,2; 2,4...)
-              // Strict Grid: Pillars override Soft Blocks
-              if (x % 2 === 0 && y % 2 === 0) {
-                  this.placeBlock(x, y, true); // Hard Block
-                  continue;
+      const pathWidth = 1; // Radius around center to clear
+
+      while(carverY < this.GRID_H) {
+          // Clear area around carver
+          for(let dy = -pathWidth; dy <= pathWidth; dy++) {
+              for(let dx = -pathWidth; dx <= pathWidth; dx++) {
+                  const cx = carverX + dx;
+                  const cy = carverY + dy;
+                  if (cx > 0 && cx < this.GRID_W - 1 && cy > 0 && cy < this.GRID_H) {
+                      grid[cy][cx] = 'EMPTY';
+                  }
               }
+          }
 
-              // 4. Soft Blocks (Random Scatter)
-              // Distribution: 40% chance in empty spaces
-              if (Math.random() < 0.4) {
-                  this.placeBlock(x, y, false); // Soft Block
+          // Move Down
+          carverY++;
+
+          // Meander Left/Right
+          if (Math.random() < 0.5) {
+              carverX += (Math.random() < 0.5 ? -1 : 1);
+          }
+
+          // Clamp Carver
+          carverX = Phaser.Math.Clamp(carverX, 2, this.GRID_W - 3);
+      }
+
+      // 3. Clear Player Spawn Zone (Bottom Center)
+      const spawnX = Math.floor(this.GRID_W / 2);
+      const spawnY = this.GRID_H - 2;
+      for(let y=spawnY-1; y<=spawnY+1; y++) {
+          for(let x=spawnX-1; x<=spawnX+1; x++) {
+              if (x > 0 && x < this.GRID_W - 1 && y > 0 && y < this.GRID_H) {
+                  grid[y][x] = 'EMPTY';
               }
+          }
+      }
+
+      // 4. Instantiate Blocks
+      for(let y=0; y<this.GRID_H; y++) {
+          for(let x=0; x<this.GRID_W; x++) {
+              if (grid[y][x] === 'HARD') this.placeBlock(x, y, true);
+              else if (grid[y][x] === 'SOFT') this.placeBlock(x, y, false);
           }
       }
   }
@@ -380,6 +440,9 @@ export default class GameScene extends Phaser.Scene {
       const block = group.create(x, y, texture);
       block.setDisplaySize(this.TILE_SIZE, this.TILE_SIZE);
       block.refreshBody(); // Update static body
+
+      // Defense Shooter Pivot: Hard Blocks are immovable, Soft are destructible
+      // No special logic needed here, handled by group physics.
 
       block.gridX = gridX;
       block.gridY = gridY;
@@ -407,6 +470,12 @@ export default class GameScene extends Phaser.Scene {
     // TASK FORCE: Generate Grid Map
     this.generateMap();
 
+    // TASK FORCE: DEFENSE LINE (GAME OVER ZONE)
+    // Invisible zone at the bottom (y = height - 10 approx, or fully below?)
+    // "Encostar na base inferior". Let's put it at y = Height - 5.
+    this.defenseZone = this.add.zone(this.scale.width / 2, this.scale.height - 10, this.scale.width, 20);
+    this.physics.add.existing(this.defenseZone, true); // Static body
+
     // TASK FORCE: Grid Collisions
     // Player vs Walls
     this.physics.add.collider(this.player, this.hardGroup);
@@ -415,6 +484,9 @@ export default class GameScene extends Phaser.Scene {
     // Enemies vs Walls
     this.physics.add.collider(this.enemies, this.hardGroup);
     this.physics.add.collider(this.enemies, this.softGroup);
+
+    // Enemies vs Defense Zone
+    this.physics.add.overlap(this.enemies, this.defenseZone, this.handleEnemyBreach, null, this);
 
     // Projectile Collisions (Enemy)
     this.physics.add.collider(this.player, this.enemyProjectiles, this.handlePlayerHitByProjectile, null, this);
@@ -617,8 +689,17 @@ export default class GameScene extends Phaser.Scene {
     if (this.bombTimer) this.bombTimer.paused = false;
     this.setPlayerState('CAN_SHOOT', 'Next Stage');
 
-    // Show "Wave Clear" text briefly?
-    const clearText = this.add.text(this.scale.width/2, this.scale.height/2, `WAVE ${this.currentWave-1} CLEARED`, {
+    // TASK FORCE: MAP REGENERATION (New Stage Layout)
+    this.generateMap();
+
+    // Reset Player to Spawn Position (Safety)
+    if (this.player && this.player.active) {
+        this.player.setPosition(this.scale.width / 2, this.scale.height * 0.85);
+        this.player.setVelocity(0, 0);
+    }
+
+    // Show "Stage Clear" text briefly
+    const clearText = this.add.text(this.scale.width/2, this.scale.height/2, `STAGE ${this.currentWave-1} CLEARED`, {
         fontFamily: '"Press Start 2P"',
         fontSize: '24px',
         color: '#00ff00',
@@ -637,6 +718,19 @@ export default class GameScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => {
         this.startWave(this.currentWave);
     });
+  }
+
+  handleEnemyBreach(enemy, zone) {
+      if (!enemy.active || this.godMode || this.transitioning) return;
+
+      console.log('[DEFENSE BREACH] Enemy reached the base!');
+
+      // Visual Feedback (Red Flash)
+      this.cameras.main.flash(500, 255, 0, 0);
+      SoundManager.play(this, 'player_hit'); // Or a loud alarm?
+
+      // Instant Game Over
+      this.handleGameOver(false);
   }
 
   handlePlayerHitByProjectile(player, bomb) {
@@ -748,46 +842,9 @@ export default class GameScene extends Phaser.Scene {
       }
 
       // LEAK PENALTY (Bottom Screen)
-      if (enemy?.active && enemy.y > this.scale.height + 20) {
-        // Punish player based on enemy remaining HP
-        const damageTaken = enemy.hp || 50;
-
-        // GOD MODE CHECK
-        if (this.godMode) {
-          console.log('[GodMode] Damage Prevented');
+      // Now handled by 'defenseZone' overlap, but keep safety cleanup if they teleport past it?
+      if (enemy?.active && enemy.y > this.scale.height + 100) {
           enemy.destroy();
-          return;
-        }
-
-        this.playerStats.hp -= damageTaken;
-        this.events.emit('update-health', {
-          health: this.playerStats.hp,
-          maxHealth: this.playerStats.maxHp,
-        });
-
-        if (this.playerStats.hp <= 0) {
-          this.playerStats.extraLives--;
-          if (this.playerStats.extraLives >= 0) {
-            this.playerStats.hp = this.playerStats.maxHp;
-            SoundManager.play(this, 'player_hit');
-            this.events.emit('update-health', {
-              health: this.playerStats.hp,
-              maxHealth: this.playerStats.maxHp,
-            });
-          } else {
-            this.playerStats.hp = 0;
-            this.playerStats.extraLives = 0;
-            this.events.emit('update-health', {
-              health: 0,
-              maxHealth: this.playerStats.maxHp,
-            });
-            this.handleGameOver();
-          }
-        } else {
-          SoundManager.play(this, 'player_hit');
-        }
-
-        enemy.destroy();
       }
     });
 
@@ -944,22 +1001,51 @@ export default class GameScene extends Phaser.Scene {
   }
 
   firePlayerBomb(isPve) {
-      // TASK FORCE: RUN & GUN (AUTO-SHOOT PIVOT)
       if (this.gamePaused || !this.player || !this.player.active) return;
 
-      // Safety: Prevent Fire Rate Crash (Min 100ms)
-      if (this.playerStats.fireRate < 100) this.playerStats.fireRate = 100;
+      // Cooldown Check (Using time)
+      const now = this.time.now;
+      if (this.lastFireTime && now - this.lastFireTime < this.playerStats.fireRate) return;
+      this.lastFireTime = now;
 
-      // BRANCH: PvE (Run & Gun) vs PvP (Shooter)
+      // BRANCH: PvE (Defense Shooter) vs PvP
       if (isPve) {
-          // 1. Find Nearest Target (Enemy or Crate)
-          const rangePixels = (this.playerStats.bombRange || 4) * this.TILE_SIZE;
-          const target = this.findNearestTarget(rangePixels);
+          // Direction: playerLastDirection (Vector2) or default UP
+          let dir = this.playerLastDirection || new Phaser.Math.Vector2(0, -1);
+          if (dir.lengthSq() === 0) dir.set(0, -1);
 
-          if (!target) return; // No target in range, save ammo/don't shoot
+          const speed = 500; // Fast projectile
 
-          // 2. Fire Projectile(s)
-          this.shootAtTarget(target);
+          // TASK FORCE: DYNAMIC SCALE (RNG + POW)
+          // Scale = Base 1 + (Range * 0.15) + (Damage * 0.002)
+          // e.g. R=4, D=50 => 1 + 0.6 + 0.1 = 1.7.
+          const rng = this.playerStats.bombRange || 1;
+          const pow = this.playerStats.damage || 10;
+          const scale = 1.0 + (rng * 0.15) + (pow * 0.002);
+
+          // Multishot Logic
+          let count = 1 + (this.playerStats.multiShot || 0);
+          if (this.playerStats.spells && this.playerStats.spells.includes('multishot')) {
+              count = 3;
+          }
+
+          const baseAngle = dir.angle();
+          const spread = Phaser.Math.DegToRad(10);
+          const startAngle = baseAngle - ((count - 1) * spread) / 2;
+
+          for (let i = 0; i < count; i++) {
+              const currentAngle = startAngle + i * spread;
+              const vx = Math.cos(currentAngle) * speed;
+              const vy = Math.sin(currentAngle) * speed;
+
+              const bomb = this.bombs.get(this.player.x, this.player.y);
+              if (bomb) {
+                  bomb.fire(this.player.x, this.player.y, vx, vy, scale, false);
+                  bomb.setTint(0xffa500); // Orange/Gold
+              }
+          }
+
+          SoundManager.play(this, 'bomb_fire');
 
           // TASK FORCE: FIRE RATE XP
           if (this.sessionTraining) {
@@ -967,76 +1053,10 @@ export default class GameScene extends Phaser.Scene {
           }
 
       } else {
-          // PvP Logic: Shoot Projectile (Keep existing logic or adapt?)
-          // Existing logic relied on `fireBomb` which shoots strictly vertical/horizontal based on key?
-          // For now, preserving PvP behavior to minimize regression in ranked.
+          // PvP Fallback
           const bombGroup = this.bombs;
           this.fireBomb(this.player, this.playerBombs || this.bombs, -300, false);
       }
-  }
-
-  findNearestTarget(maxDist) {
-      let nearest = null;
-      let minDist = maxDist;
-
-      // Priority 1: Enemies
-      this.enemies.getChildren().forEach(enemy => {
-          if (!enemy.active) return;
-          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-          if (dist < minDist) {
-              minDist = dist;
-              nearest = enemy;
-          }
-      });
-
-      if (nearest) return nearest;
-
-      // Priority 2: Soft Blocks (Crates)
-      this.softGroup.getChildren().forEach(crate => {
-          if (!crate.active) return;
-          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, crate.x, crate.y);
-          if (dist < minDist) {
-              minDist = dist;
-              nearest = crate;
-          }
-      });
-
-      return nearest;
-  }
-
-  shootAtTarget(target) {
-      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-      const speed = 400; // Faster projectiles for snappy feel
-
-      // Multishot Logic
-      let count = 1 + (this.playerStats.multiShot || 0);
-      if (this.playerStats.spells && this.playerStats.spells.includes('multishot')) {
-          count = 3;
-      }
-
-      const spread = Phaser.Math.DegToRad(15);
-      const startAngle = angle - ((count - 1) * spread) / 2;
-
-      for (let i = 0; i < count; i++) {
-          const currentAngle = startAngle + i * spread;
-          const vx = Math.cos(currentAngle) * speed;
-          const vy = Math.sin(currentAngle) * speed;
-
-          // Get from Pool
-          const bomb = this.bombs.get(this.player.x, this.player.y);
-          if (bomb) {
-              // FIRE!
-              // Scale: 2 (16px) or 3 (24px). Default was 1 (8px).
-              // Let's go with 2.5 (20px) for visibility without being giant.
-              bomb.fire(this.player.x, this.player.y, vx, vy, 2.5, false);
-
-              // Visuals
-              bomb.setTint(0xffa500); // Orange projectile
-              if (count > 1) bomb.setTint(0xffff00); // Yellow for spread
-          }
-      }
-
-      SoundManager.play(this, 'bomb_fire');
   }
 
   fireBomb(firer, bombGroup, velocityY, isOpponent = false) {
