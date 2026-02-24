@@ -6,6 +6,10 @@ import { MockHeroes, MockHouses } from '../config/MockNFTData.js';
 const STORAGE_KEY = 'sandbox_state';
 const GUEST_STATE_KEY = 'guest_state';
 
+const XP_PER_LEVEL = 100;
+const BASE_SKILL_CAP_LEVEL = 10;
+const ASCENSION_BONUS_LEVEL = 10;
+
 class PlayerStateService {
   constructor() {
     this.state = this.getDefaultState();
@@ -255,6 +259,8 @@ class PlayerStateService {
     const heroes = JSON.parse(JSON.stringify(MockHeroes)).map(h => {
         // Ensure default skills structure
         h.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
+        // Ensure default ascension
+        h.ascensionLevel = 0;
         return h;
     });
 
@@ -318,6 +324,7 @@ class PlayerStateService {
         hp: dbHero.hp,
       },
       skills: dbHero.skills || { speed: 0, fireRate: 0, range: 0, power: 0 },
+      ascensionLevel: dbHero.ascension_level || 0,
       spells: [],
       name: dbHero.sprite_name,
     };
@@ -491,6 +498,10 @@ class PlayerStateService {
               power: powerLvl,
               range: rangeLvl,
               fireRate: fireRateLvl
+          },
+          ascension: {
+              current: hero.ascensionLevel || 0,
+              maxSkillLevel: BASE_SKILL_CAP_LEVEL + ((hero.ascensionLevel || 0) * ASCENSION_BONUS_LEVEL)
           }
       };
   }
@@ -722,6 +733,17 @@ class PlayerStateService {
     const validSkills = ['power', 'speed', 'range', 'fireRate'];
     if (!validSkills.includes(skillType)) return { success: false, message: 'Invalid Skill' };
 
+    // Check Cap
+    const ascension = hero.ascensionLevel || 0;
+    const maxLevel = BASE_SKILL_CAP_LEVEL + (ascension * ASCENSION_BONUS_LEVEL);
+
+    const currentXp = (hero.skills && hero.skills[skillType]) || 0;
+    const currentLevel = Math.floor(currentXp / XP_PER_LEVEL);
+
+    if (currentLevel >= maxLevel) {
+        return { success: false, message: `Skill Capped (Lvl ${maxLevel}). Ascend to unlock.` };
+    }
+
     const bcoinCost = 1;
 
     if (this.state.user.bcoin < bcoinCost) {
@@ -750,6 +772,64 @@ class PlayerStateService {
       newSkillLevel: hero.skills[skillType] / 100,
       remainingBcoin: this.state.user.bcoin
     };
+  }
+
+  async ascendHero(heroId) {
+    const hero = this.state.heroes.find((h) => h.id === heroId);
+    if (!hero) return { success: false, message: 'Hero not found' };
+
+    const ascension = hero.ascensionLevel || 0;
+
+    // 1. Check Soft Cap (Sum of Skills)
+    const currentMaxPerSkill = BASE_SKILL_CAP_LEVEL + (ascension * ASCENSION_BONUS_LEVEL);
+    const totalCap = currentMaxPerSkill * 4; // 4 Skills
+
+    // Calculate Total Hero Skill Levels
+    const s = hero.skills || {};
+    const totalLevels = Math.floor((s.speed||0)/XP_PER_LEVEL) +
+                        Math.floor((s.power||0)/XP_PER_LEVEL) +
+                        Math.floor((s.range||0)/XP_PER_LEVEL) +
+                        Math.floor((s.fireRate||0)/XP_PER_LEVEL);
+
+    if (totalLevels < totalCap) {
+        return { success: false, message: `Maximize all skills to Ascend. (${totalLevels}/${totalCap})` };
+    }
+
+    // 2. Costs
+    // Boss Core
+    // Check inventory. Assume 'boss_core' is the type.
+    // NOTE: Inventory items structure: { type: 'boss_core', quantity: 1, ... } or { type: 'material', name: 'Boss Core' ... }
+    // Based on `_mapItemFromDB`, itemDef has type/name/rarity.
+    // In `addSessionLoot`, we use `item.type`.
+    // Let's assume consistent use of `boss_core` as type or specific logic.
+    const coreItem = this.state.inventory.find(i => i.type === 'boss_core' || (i.name === 'Boss Core'));
+    if (!coreItem || coreItem.quantity < 1) {
+        return { success: false, message: 'Missing Boss Core.' };
+    }
+
+    // BCOIN: 100 * (AscensionLevel + 1)
+    const bcoinCost = 100 * (ascension + 1);
+    if (this.state.user.bcoin < bcoinCost) {
+         return { success: false, message: `Need ${bcoinCost} BCOIN.` };
+    }
+
+    // 3. Apply
+    coreItem.quantity -= 1;
+    if (coreItem.quantity <= 0) {
+        // Remove item from inventory logic if needed, or keep 0.
+        this.state.inventory = this.state.inventory.filter(i => i !== coreItem);
+    }
+
+    this.state.user.bcoin -= bcoinCost;
+    this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
+
+    hero.ascensionLevel = ascension + 1;
+
+    this.saveLocalState();
+
+    // Sync Cloud if needed (Stub)
+
+    return { success: true, hero, newAscensionLevel: hero.ascensionLevel };
   }
 
   // Legacy Level Up (Deprecated for Stats, kept for compatibility if needed)

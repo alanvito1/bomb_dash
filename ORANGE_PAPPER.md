@@ -78,10 +78,16 @@ Massive upgrades are gone. Every Level gained in a Skill Bar grants a tiny, perm
 - **Visuals:** UI displays decimals (e.g., "Speed Lvl: 10.42") to show granular progress.
 - **Formula:** `EffectiveStat = BaseStat * (1 + (SkillLevel * 0.0001))`.
 
-### Ascension (Future Mechanic)
-- **Concept:** Unlocking higher skill caps.
-- **Requirement:** Maximize Skill Bars + Collect "Boss Cores" (Level 8+ Drop).
-- **Action:** Pay BCOIN fee at the Eternal Forge to ascend (e.g., 1 Star -> 2 Stars).
+### Ascension (System V1.0)
+- **Concept:** Unlocking higher skill caps by burning Boss Cores.
+- **Requirement:**
+  1.  **Soft Cap Reached:** The sum of all Skill Levels (Speed + Power + Range + FireRate) must meet the current Cap.
+  2.  **Material:** 1x **Boss Core** (Legendary Drop from Level 8+ Bosses).
+- **Cost:** `1 Boss Core` + `(100 * (AscensionLevel + 1))` BCOIN.
+- **Effect:**
+  - **Ascension Level:** Increases by +1.
+  - **Unlock:** Increases `MAX_SKILL_LEVEL`, allowing further training.
+  - **Visual:** Adds a Star to the Hero Card.
 
 ## 5. Solo Mode Mechanics (PvE)
 The core gameplay happens in `GameScene.js`.
@@ -96,6 +102,10 @@ The core gameplay happens in `GameScene.js`.
 - **Player Hitbox:** Reduced to **20x20px** (offset Y+20) to prevent corner snagging in corridors.
 - **Enemy Hitbox:** Reduced by ~25% (24x24px for Mobs, 48x48px for Bosses) for better AI navigation.
 - **Bomb Placement:** Bombs use **Grid Snapping** (Center of 48x48 Tile) to ensure consistent Cross Explosions.
+
+### Map Generation (Classic Maze)
+- **Hard Grid:** Indestructible Pillars are strictly placed on EVEN coordinates (Checkerboard Pattern) to create predictable corridors.
+- **Spawn Cross:** The Player Spawn Area is guaranteed to be clear of Soft Blocks (Crates) in a Cross Pattern (2 tiles in all cardinal directions), ensuring no "trap spawns".
 
 ### Difficulty Scaling
 The difficulty multiplier scales exponentially:
