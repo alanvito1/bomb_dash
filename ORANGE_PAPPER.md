@@ -18,6 +18,7 @@ The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments
   - **BCOIN:** 5% (Premium Currency)
 - **Daily Faucet (MVP Feature):**
   - **Action:** Player can claim **5 BCOIN** once every 24 hours.
+  - **Constraint:** Strict local timestamp check. UI displays precise countdown "WAIT Xh Ym".
   - **Location:** Profile Modal / Main Menu.
   - **Purpose:** Ensure players have resources to test upgrades daily.
 
@@ -73,6 +74,7 @@ Each Hero has 4 distinct "Skill XP" pools that fill during gameplay.
 ### The 0.01% Rule (Micro-Progress)
 Massive upgrades are gone. Every Level gained in a Skill Bar grants a tiny, permanent bonus.
 - **Bonus:** +0.01% effectiveness per Skill Level.
+- **Forge Training:** Spending **1 BCOIN** at the Eternal Forge grants **+100 Skill XP**, effectively adding **+0.01%** to the chosen stat (Power, Speed, Range, or Fire Rate).
 - **Visuals:** UI displays decimals (e.g., "Speed Lvl: 10.42") to show granular progress.
 - **Formula:** `EffectiveStat = BaseStat * (1 + (SkillLevel * 0.0001))`.
 
@@ -132,8 +134,14 @@ Hero stats are derived from base NFT metadata, Skill Levels (Manual Training), a
 Spells are special modifiers attached to heroes.
 
 - **Multishot (`multishot`):**
-  - **Effect:** Increases projectile count by 2 (Fires 3 bombs total in a spread).
-  - **Logic:** `Bomb.js` / `GameScene.fireBomb`.
+  - **Effect:** Fires **3 Parallel Projectiles** aligned to grid lanes (Center, Left, Right).
+  - **Constraint:** Projectiles travel in strict straight lines (0, 90, 180, 270 degrees). No diagonals.
+  - **Logic:** `GameScene.fireMultishot`.
+
+- **Freeze Bomb (`freeze_bomb`):**
+  - **Effect:** Freezes enemies within the explosion area for **2 seconds**.
+  - **Logic:** The freeze area strictly follows the **Cross Pattern** of the explosion rays.
+  - **Implementation:** `CollisionHandler.applyFreeze` / `GameScene.triggerExplosion`.
 
 - **Poison Bomb (`poison_bomb`):**
   - **Effect:** Applies a green tint and Damage-over-Time (DoT).

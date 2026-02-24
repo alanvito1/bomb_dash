@@ -48,16 +48,18 @@ describe('PlayerStateService', () => {
     expect(user.bcoin).toBe(0);
   });
 
-  it('should upgrade a hero level and deduct BCOIN', async () => {
+  it('should upgrade a hero skill and deduct BCOIN', async () => {
     // Need BCOIN first
     await playerStateService.claimDailyFaucet(); // +5 BCOIN
 
     const heroes = playerStateService.getHeroes();
     const heroId = heroes[0].id;
     const initialBcoin = playerStateService.getUser().bcoin; // Should be 5
-    const initialPower = heroes[0].stats.power;
+    // Ensure skills exist
+    if (!heroes[0].skills) heroes[0].skills = { power: 0 };
+    const initialSkill = heroes[0].skills.power || 0;
 
-    const result = await playerStateService.upgradeHeroLevel(heroId);
+    const result = await playerStateService.upgradeHeroSkill(heroId, 'power');
 
     expect(result.success).toBe(true);
     expect(playerStateService.getUser().bcoin).toBe(initialBcoin - 1);
@@ -65,13 +67,13 @@ describe('PlayerStateService', () => {
     const updatedHero = playerStateService
       .getHeroes()
       .find((h) => h.id === heroId);
-    expect(updatedHero.stats.power).toBeGreaterThan(initialPower);
+    expect(updatedHero.skills.power).toBe(initialSkill + 100);
   });
 
   it('should persist state to localStorage', async () => {
     await playerStateService.claimDailyFaucet(); // +5 BCOIN
     const heroes = playerStateService.getHeroes();
-    await playerStateService.upgradeHeroLevel(heroes[0].id);
+    await playerStateService.upgradeHeroSkill(heroes[0].id, 'speed');
 
     const stored = localStorage.getItem('guest_state');
     expect(stored).not.toBeNull();

@@ -886,6 +886,12 @@ export default class GameScene extends Phaser.Scene {
 
       // BRANCH: PvE (Classic) vs PvP (Shooter)
       if (isPve) {
+          // CHECK SPELLS
+          if (this.playerStats.spells && this.playerStats.spells.includes('multishot')) {
+              this.fireMultishot();
+              return;
+          }
+
           const count = 1 + (this.playerStats.multiShot || 0);
           const tile = this.TILE_SIZE;
           const gridX = Math.floor(this.player.x / tile);
@@ -916,6 +922,55 @@ export default class GameScene extends Phaser.Scene {
           // PvP Logic: Shoot Projectile
           const bombGroup = this.bombs; // Or playerBombs if distinct
           this.fireBomb(this.player, this.playerBombs || this.bombs, -300, false);
+      }
+  }
+
+  fireMultishot() {
+      // Determine Direction (Prioritize movement keys, then last known)
+      const dir = this.lastDirection || 'right';
+      let vx = 0, vy = 0;
+      let offsetX = 0, offsetY = 0; // For side projectiles
+      const speed = 300;
+      const spacing = 48; // 1 Tile
+
+      if (dir === 'left') { vx = -speed; offsetY = spacing; }
+      else if (dir === 'right') { vx = speed; offsetY = spacing; }
+      else if (dir === 'up') { vy = -speed; offsetX = spacing; }
+      else if (dir === 'down') { vy = speed; offsetX = spacing; }
+
+      // Center
+      this.spawnAlignedProjectile(0, 0, vx, vy);
+      // Side 1
+      this.spawnAlignedProjectile(offsetX, offsetY, vx, vy);
+      // Side 2
+      this.spawnAlignedProjectile(-offsetX, -offsetY, vx, vy);
+
+      // TASK FORCE: FIRE RATE XP (Multishot = 3x? Or 1x? Let's say 1x per volley)
+      if (this.sessionTraining) {
+          this.sessionTraining.fireRate += 1;
+      }
+
+      SoundManager.play(this, 'bomb_fire');
+  }
+
+  spawnAlignedProjectile(offX, offY, vx, vy) {
+      // Grid Snap Spawn
+      const tile = this.TILE_SIZE;
+      const centerX = Math.floor(this.player.x / tile) * tile + tile/2;
+      const centerY = Math.floor(this.player.y / tile) * tile + tile/2;
+
+      // Add Offset
+      const spawnX = centerX + offX;
+      const spawnY = centerY + offY;
+
+      // Spawn
+      // We use `this.bombs` which is a Group of `Bomb` (Projectile) class
+      // Note: `Bomb.js` extends Physics.Arcade.Sprite.
+      const bomb = this.bombs.get(spawnX, spawnY);
+      if (bomb) {
+          // 0.5 size for projectile
+          bomb.fire(spawnX, spawnY, vx, vy, 0.5, false);
+          bomb.setTint(0xffff00); // Yellow for Multishot
       }
   }
 
@@ -985,6 +1040,9 @@ export default class GameScene extends Phaser.Scene {
       // Center Explosion
       this.explosionManager.spawn(x, y, 1.5);
       this.damageAt(x, y, owner);
+      if (this.playerStats.spells && this.playerStats.spells.includes('freeze_bomb')) {
+          this.freezeAt(x, y);
+      }
 
       const directions = [
           {x: 0, y: -1}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 1, y: 0}
@@ -1017,6 +1075,11 @@ export default class GameScene extends Phaser.Scene {
               const hits = this.damageAt(px, py, owner);
               targetsHit += hits;
 
+              // SPELL: Freeze Bomb
+              if (this.playerStats.spells && this.playerStats.spells.includes('freeze_bomb')) {
+                  this.freezeAt(px, py);
+              }
+
               // Check Soft Block
               const softBlock = this.softGroup.getChildren().find(b =>
                   b.active && Math.abs(b.x - px) < 10 && Math.abs(b.y - py) < 10
@@ -1036,6 +1099,15 @@ export default class GameScene extends Phaser.Scene {
       if (this.sessionTraining && targetsHit > 0) {
           this.sessionTraining.range += targetsHit;
       }
+  }
+
+  freezeAt(x, y) {
+      const radius = 20;
+      this.enemies.getChildren().forEach(enemy => {
+         if (enemy.active && Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) < radius) {
+             this.collisionHandler.applyFreeze(enemy);
+         }
+      });
   }
 
   // New: Record Damage for XP
@@ -1345,6 +1417,12 @@ export default class GameScene extends Phaser.Scene {
         }
     }
     this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+
+    // Track Last Direction for Multishot
+    if (this.cursors.left.isDown) this.lastDirection = 'left';
+    else if (this.cursors.right.isDown) this.lastDirection = 'right';
+    else if (this.cursors.up.isDown) this.lastDirection = 'up';
+    else if (this.cursors.down.isDown) this.lastDirection = 'down';
 
     this.playerController.update(this.cursors, this.playerStats.speed, delta);
 
