@@ -276,6 +276,9 @@ export default class GameScene extends Phaser.Scene {
       const bloom = this.player.preFX.addBloom(0xffffff, 1, 1, 1.2, 1.2);
     }
 
+    // TASK FORCE: I-Frames
+    this.player.isInvulnerable = false;
+
     this.cursors = this.input.keyboard.createCursorKeys();
 
     if (this.gameMode === 'ranked') {
@@ -608,8 +611,11 @@ export default class GameScene extends Phaser.Scene {
   handlePlayerHitByProjectile(player, bomb) {
       if (!bomb.active || !player.active || this.godMode) return;
 
+      // TASK FORCE: I-Frame Check
+      if (player.isInvulnerable) return;
+
       bomb.deactivate();
-      this.explosionManager.spawn(player.x, player.y, 0.5); // Small hit explosion
+      this.explosionManager.spawn(player.x, player.y, 0.5, 2.0); // High Intensity Shake on Player Hit
 
       // Damage Calculation (e.g., 10% HP or 1 Heart)
       const damage = Math.max(100, this.playerStats.maxHp * 0.1);
@@ -627,22 +633,47 @@ export default class GameScene extends Phaser.Scene {
           this.playerStats.extraLives--;
           if (this.playerStats.extraLives >= 0) {
               this.playerStats.hp = this.playerStats.maxHp;
-              // Flash Player
-              this.tweens.add({
-                  targets: player,
-                  alpha: 0,
-                  duration: 100,
-                  yoyo: true,
-                  repeat: 5
-              });
+              // Flash Player & I-Frames
+              this.triggerInvulnerability(2000);
           } else {
               this.handleGameOver();
           }
       } else {
-           // Flash Red
-           player.setTint(0xff0000);
-           this.time.delayedCall(100, () => player.clearTint());
+           // Trigger I-Frames
+           this.triggerInvulnerability(1500);
       }
+  }
+
+  triggerInvulnerability(duration = 1500) {
+      if (!this.player || !this.player.active) return;
+
+      this.player.isInvulnerable = true;
+      this.player.setTint(0xff0000); // Red Tint for impact
+
+      // Strobe Effect
+      this.tweens.add({
+          targets: this.player,
+          alpha: 0.2,
+          duration: 100,
+          yoyo: true,
+          repeat: -1
+      });
+
+      // Clear Tint quickly
+      this.time.delayedCall(200, () => {
+          if (this.player && this.player.active) {
+              this.player.clearTint();
+          }
+      });
+
+      // End I-Frames
+      this.time.delayedCall(duration, () => {
+          if (this.player && this.player.active) {
+              this.player.isInvulnerable = false;
+              this.player.alpha = 1;
+              this.tweens.killTweensOf(this.player);
+          }
+      });
   }
 
   enemyShoot(enemy) {
@@ -656,6 +687,7 @@ export default class GameScene extends Phaser.Scene {
       if (bomb) {
           bomb.fire(enemy.x, enemy.y, Math.cos(angle) * speed, Math.sin(angle) * speed, 0.5, true);
           bomb.setTint(0xff00ff); // Purple Projectile
+          SoundManager.play(this, 'enemy_shoot');
       }
   }
 
@@ -1532,7 +1564,9 @@ export default class GameScene extends Phaser.Scene {
         if (!this.sessionLoot.coins) this.sessionLoot.coins = 0;
         this.sessionLoot.coins += 1;
 
-        this.showFloatingText(player.x, player.y - 40, '+1 BCOIN', '#ffd700');
+        if (this.damageTextManager) {
+            this.damageTextManager.show(player.x, player.y - 40, '+1 BCOIN', 'GOLD');
+        }
         SoundManager.play(this, 'coin_collect');
 
         // Update HUD Risk Zone
@@ -1553,7 +1587,9 @@ export default class GameScene extends Phaser.Scene {
         quantity: 1,
       });
 
-      this.showFloatingText(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
+      if (this.damageTextManager) {
+          this.damageTextManager.show(player.x, player.y - 40, `+1 ${rarity}`, colorHex);
+      }
       SoundManager.play(this, 'coin_collect');
 
     } else if (isPotion) {
@@ -1568,33 +1604,10 @@ export default class GameScene extends Phaser.Scene {
         maxHealth: this.playerStats.maxHp,
       });
 
-      this.showFloatingText(
-        player.x,
-        player.y - 40,
-        `+${healAmount} HP`,
-        '#00ff00'
-      );
+      if (this.damageTextManager) {
+          this.damageTextManager.show(player.x, player.y - 40, `+${healAmount} HP`, 'HEAL');
+      }
       SoundManager.play(this, 'powerup_collect');
     }
-  }
-
-  showFloatingText(x, y, message, color) {
-    const text = this.add
-      .text(x, y, message, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: '10px',
-        color: color,
-        stroke: '#000000',
-        strokeThickness: 2,
-      })
-      .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: text,
-      y: y - 30,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => text.destroy(),
-    });
   }
 }
