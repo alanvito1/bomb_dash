@@ -93,41 +93,6 @@ export default class PlayerController {
       this.player.setVelocityY(speed);
     }
 
-    // Proficiency: Agility
-    if (isMoving) {
-      // Normalize diagonal speed? Not strictly requested but good practice.
-      // Keeping it simple as requested for "Fluid Grid Physics" often prefers axial dominance or raw speed.
-      // Let's normalize to avoid faster diagonal movement if desired.
-      // Current implementation: No normalization (Standard arcade feel).
-
-      // Distance = speed (pixels/sec) * delta (ms) / 1000
-      const distance = speed * (delta / 1000);
-      this.scene.sessionDistance = (this.scene.sessionDistance || 0) + distance;
-
-      // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
-      const startXp = this.scene.playerStats.agility_xp || 0;
-      const currentDistance = this.scene.sessionDistance;
-      const currentXp = startXp + Math.floor(currentDistance / 100); // 100 distance = 1 XP
-
-      const prevDistance = currentDistance - distance;
-      const prevXp = startXp + Math.floor(prevDistance / 100);
-
-      // Calculate Levels
-      const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
-      const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
-
-      if (currentLevel > prevLevel) {
-        createFloatingText(
-          this.scene,
-          this.player.x,
-          this.player.y - 40,
-          'AGILITY UP!',
-          '#00ff00'
-        );
-        SoundManager.play(this.scene, 'powerup_collect');
-      }
-    }
-
     // Handle Effects
     if (isMoving) {
       if (this.walkTween && this.walkTween.isPaused()) this.walkTween.resume();

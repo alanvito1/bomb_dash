@@ -147,9 +147,30 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // --- TASK FORCE: TRACKING ENGINE INIT ---
+    this.sessionTraining = {
+        speed: 0,
+        fireRate: 0,
+        range: 0,
+        power: 0
+    };
+
+    // --- TASK FORCE: STAT CALCULATION ---
+    // Use the central service logic to ensure 0.01% rule is applied consistently
+    const calculatedStats = playerStateService.getHeroStats(selectedHero.id);
+
     this.playerStats = {
       ...this.DEFAULT_STATS,
       ...selectedHero,
+      // Overwrite with Calculated Effective Stats
+      damage: calculatedStats ? calculatedStats.damage : 10,
+      speed: calculatedStats ? calculatedStats.speed : 200,
+      maxHp: calculatedStats ? calculatedStats.hp : 1000,
+      hp: calculatedStats ? calculatedStats.hp : 1000,
+      bombRange: calculatedStats ? calculatedStats.range : 1,
+      fireRate: calculatedStats ? calculatedStats.fireRate : 600,
+
+      // Meta Data
       hero_xp: selectedHero.xp || 0,
       hero_xp_for_next_level: 100,
       address: userAccountData.address,
@@ -158,33 +179,8 @@ export default class GameScene extends Phaser.Scene {
       bcoin: userAccountData.coins,
     };
 
-    const heroStats = selectedHero.stats || selectedHero;
-    const heroSpeed = heroStats.speed || 1;
-    const heroPower = heroStats.power || 1;
-    const heroBombNum = heroStats.bomb_num || 1;
-    const heroRange = heroStats.range || heroStats.bomb_range || 1;
-
-    const heroLevel = selectedHero.level || 1;
-
-    // Task Force: Hero Genetics -> Combat Math
-    // Task Force Update: Strict Formula from ORANGE_PAPPER.md
-    // Damage = (BaseBombDamage * HeroPOW) + AccountLevel
-    const baseBombDamage = 10;
-    const accountLevel = playerStateService.getAccountLevel();
-
-    this.playerStats.damage = (baseBombDamage * heroPower) + accountLevel;
-
-    const baseSpeed = 150 + heroSpeed * 10;
-    this.playerStats.speed = baseSpeed * (1 + (heroLevel - 1) * 0.02);
-
-    // HP from Hero Stats (or Stamina fallback)
-    const baseHp = (heroStats.hp || (heroStats.stamina || 10) * 100);
-    this.playerStats.maxHp = baseHp;
-    this.playerStats.hp = baseHp;
-
-    this.playerStats.bombNum = heroBombNum;
-    // Task Force Update: Strict Range (No Multipliers)
-    this.playerStats.bombRange = heroRange;
+    // Explicitly set Bomb Num from NFT (not calculated in service yet?)
+    this.playerStats.bombNum = selectedHero.stats.bomb_num || 1;
 
     // Task Force: Spell Interpreter
     this.playerStats.spells = selectedHero.spells || [];
@@ -193,31 +189,8 @@ export default class GameScene extends Phaser.Scene {
         console.log('[Spell Interpreter] Multishot Activated');
     }
 
-    // Proficiency scaling
-    const bombXp = selectedHero.bomb_mastery_xp || 0;
-    const agilityXp = selectedHero.agility_xp || 0;
-
-    // NOTE: Bomb Range Proficiency disabled to enforce strict NFT stats as requested.
-    // const bombLevel = Math.floor(Math.sqrt(bombXp) / 2);
-    // this.playerStats.bombRange *= 1 + bombLevel * 0.01;
-
-    const agilityLevel = Math.floor(Math.sqrt(agilityXp) / 2);
-    this.playerStats.speed *= 1 + agilityLevel * 0.005;
-
-    // Task Force: Global Summoner Buff (+1% per Account Level)
-    const globalMultiplier = 1 + accountLevel * 0.01;
-
-    // Damage is now calculated via formula above, not multiplier.
-    // this.playerStats.damage *= globalMultiplier;
-
-    this.playerStats.speed *= globalMultiplier;
-    this.playerStats.maxHp = Math.floor(this.playerStats.maxHp * globalMultiplier);
-    this.playerStats.hp = this.playerStats.maxHp;
-
-    // Range is strict.
-    // this.playerStats.bombRange *= globalMultiplier;
-
-    // UI Feedback
+    // UI Feedback for Global Buff
+    const accountLevel = playerStateService.getAccountLevel();
     this.time.delayedCall(1000, () => {
         const buffText = this.add.text(this.scale.width / 2, 120, `Summoner Buff: +${accountLevel}%`, {
             fontFamily: '"Press Start 2P"',
@@ -237,12 +210,6 @@ export default class GameScene extends Phaser.Scene {
             onComplete: () => buffText.destroy()
         });
     });
-
-    console.log(
-      `[GameScene] Applied Global Buff: Level ${accountLevel} -> x${globalMultiplier.toFixed(
-        2
-      )}`
-    );
 
     try {
       const bestiaryRes = await api.getBestiary();
@@ -782,6 +749,12 @@ export default class GameScene extends Phaser.Scene {
           bomb.startTimer(3000);
 
           SoundManager.play(this, 'bomb_fire');
+
+          // TASK FORCE: FIRE RATE XP
+          if (this.sessionTraining) {
+              this.sessionTraining.fireRate += 1;
+          }
+
       } else {
           // PvP Logic: Shoot Projectile
           const bombGroup = this.bombs; // Or playerBombs if distinct
@@ -860,6 +833,9 @@ export default class GameScene extends Phaser.Scene {
           {x: 0, y: -1}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 1, y: 0}
       ];
 
+      // Track hit count for Range XP
+      let targetsHit = 0;
+
       directions.forEach(dir => {
           for (let i = 1; i <= range; i++) {
               const tx = gridX + dir.x * i;
@@ -881,7 +857,8 @@ export default class GameScene extends Phaser.Scene {
               this.explosionManager.spawn(px, py, 1.5);
 
               // Damage
-              this.damageAt(px, py, owner);
+              const hits = this.damageAt(px, py, owner);
+              targetsHit += hits;
 
               // Check Soft Block
               const softBlock = this.softGroup.getChildren().find(b =>
@@ -890,22 +867,37 @@ export default class GameScene extends Phaser.Scene {
 
               if (softBlock) {
                   softBlock.destroy();
+                  targetsHit++; // Soft Block destroyed counts as hit
                   // Drop Loot?
                   if (Math.random() < 0.3) this.trySpawnLoot(px, py);
                   break; // Stop Ray
               }
           }
       });
+
+      // TASK FORCE: RANGE XP
+      if (this.sessionTraining && targetsHit > 0) {
+          this.sessionTraining.range += targetsHit;
+      }
+  }
+
+  // New: Record Damage for XP
+  recordDamage(amount) {
+      if (this.sessionTraining && amount > 0) {
+          this.sessionTraining.power += amount;
+      }
   }
 
   damageAt(x, y, owner) {
       // Damage Enemies
       // Use overlap circle small
       const radius = 20;
+      let hits = 0;
       this.enemies.getChildren().forEach(enemy => {
          if (enemy.active && Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) < radius) {
              const damage = this.playerStats.damage;
              this.collisionHandler.applyDamage(enemy, damage);
+             hits++;
          }
       });
 
@@ -915,6 +907,7 @@ export default class GameScene extends Phaser.Scene {
               this.collisionHandler.onHit(this.player, null);
           }
       }
+      return hits;
   }
 
   resetWaveState() {
@@ -1083,11 +1076,33 @@ export default class GameScene extends Phaser.Scene {
       const xpGain = 50;
       const xpResult = playerStateService.addAccountXp(xpGain);
 
+      // TASK FORCE: SAVE TRAINING DATA
+      await playerStateService.applySessionTraining(this.playerStats.id, this.sessionTraining);
+
       this.add
         .text(cx, cy + 60, `+${xpGain} SUMMONER XP`, {
           fontFamily: '"Press Start 2P"',
           fontSize: '12px',
           color: '#00ffff',
+        })
+        .setOrigin(0.5)
+        .setDepth(2001);
+
+      // Show Skill Gains (Manual Training)
+      const spdGain = (this.sessionTraining.speed / 100).toFixed(2);
+      const powGain = (this.sessionTraining.power / 100).toFixed(2);
+      const rngGain = (this.sessionTraining.range / 100).toFixed(2);
+      const frGain = (this.sessionTraining.fireRate / 100).toFixed(2);
+
+      const trainingSummary = `MANUAL TRAINING:\nSPD: +${spdGain} | POW: +${powGain}\nRNG: +${rngGain} | FR: +${frGain}`;
+
+      this.add
+        .text(cx, cy + 130, trainingSummary, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#00ff00',
+            align: 'center',
+            lineSpacing: 4
         })
         .setOrigin(0.5)
         .setDepth(2001);
@@ -1163,6 +1178,11 @@ export default class GameScene extends Phaser.Scene {
       const finalCoins = 0;
       const finalXp = this.score;
 
+      // TASK FORCE: SAVE TRAINING DATA (Hardcore: Keep skills even on death? Prompt: "O grind é eterno e seguro")
+      if (this.playerStats.id) {
+         await playerStateService.applySessionTraining(this.playerStats.id, this.sessionTraining);
+      }
+
       const heroId = this.playerStats.id;
       if (heroId) {
         try {
@@ -1216,6 +1236,19 @@ export default class GameScene extends Phaser.Scene {
       !this.player?.active
     )
       return;
+
+    // TASK FORCE: SPEED XP (Manual Training)
+    // Calculate distance based on movement since LAST FRAME
+    if (this.lastPlayerPos) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.lastPlayerPos.x, this.lastPlayerPos.y);
+
+        // Filter tiny jitter (e.g. < 0.1px)
+        if (this.sessionTraining && dist > 0.1) {
+            this.sessionTraining.speed += dist;
+        }
+    }
+    this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+
     this.playerController.update(this.cursors, this.playerStats.speed, delta);
 
     if (this.gameMode !== 'ranked') {

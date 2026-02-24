@@ -67,33 +67,6 @@ export default class CollisionHandler {
     const impactY = bomb.y;
     bomb.deactivate();
 
-    // Proficiency: Bomb Mastery
-    this.scene.sessionBombHits = (this.scene.sessionBombHits || 0) + 1;
-
-    // Check for Level Up (Logarithmic: Level = sqrt(XP)/2)
-    const startXp = this.scene.playerStats.bomb_mastery_xp || 0;
-    const currentXp = startXp + this.scene.sessionBombHits;
-
-    // Check if level changed from previous hit
-    const prevXp = currentXp - 1;
-    const currentLevel = Math.floor(Math.sqrt(currentXp) / 2);
-    const prevLevel = Math.floor(Math.sqrt(prevXp) / 2);
-
-    if (currentLevel > prevLevel) {
-      // Use DamageTextManager for general notifications too if flexible, or keep createFloatingText?
-      // User asked for "Damage Text Manager". For system messages, maybe keep createFloatingText or adapt manager.
-      // Let's use the manager as it's cleaner.
-      if (this.scene.damageTextManager) {
-        this.scene.damageTextManager.show(
-          impactX,
-          impactY - 20,
-          'BOMB MASTERY UP!',
-          true
-        );
-      }
-      SoundManager.play(this.scene, 'powerup_collect'); // Reuse sound
-    }
-
     // --- SPLASH DAMAGE LOGIC ---
     const range = this.scene.playerStats.bombRange || 1;
     const explosionRadius = 20 + range * 12;
@@ -183,6 +156,11 @@ export default class CollisionHandler {
     let damage = baseDamage;
     if (bonus > 0) {
       damage = Math.ceil(damage * (1 + bonus));
+    }
+
+    // TASK FORCE: POWER XP (Record Damage Dealt)
+    if (this.scene.recordDamage) {
+        this.scene.recordDamage(damage);
     }
 
     enemy.hp -= damage;

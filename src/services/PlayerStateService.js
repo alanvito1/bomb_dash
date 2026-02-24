@@ -14,6 +14,9 @@ class PlayerStateService {
     this.isGuest = false;
     this.isAdmin = false;
     this.godMode = false; // Admin God Mode Flag
+
+    // XP Boost Logic
+    this.xpBoostActiveUntil = 0;
   }
 
   /**
@@ -67,6 +70,10 @@ class PlayerStateService {
     if (this.state.user.lastLoginDate !== today) {
         this.state.user.daysLogged = (this.state.user.daysLogged || 0) + 1;
         this.state.user.lastLoginDate = today;
+
+        // Reset Daily XP Boost Count
+        this.state.user.dailyBoostUsage = 0;
+
         this.saveLocalState();
         console.log(`[PlayerState] Daily Login Recorded. Days: ${this.state.user.daysLogged}`);
     }
@@ -84,6 +91,14 @@ class PlayerStateService {
         if (this.state.user.totalEarned === undefined) this.state.user.totalEarned = 0;
         if (this.state.user.totalSpent === undefined) this.state.user.totalSpent = 0;
         if (this.state.user.daysLogged === undefined) this.state.user.daysLogged = 1;
+        if (this.state.user.dailyBoostUsage === undefined) this.state.user.dailyBoostUsage = 0;
+
+        // Boost Timestamp from localStorage? For now, boosts are transient in session (MVP)
+        // or we could save xpBoostActiveUntil if we want persistence across reloads.
+        // Let's keep it simple: boosts are session/timestamp based.
+        if (savedState.xpBoostActiveUntil) {
+           this.xpBoostActiveUntil = savedState.xpBoostActiveUntil;
+        }
 
         console.log('[PlayerState] Loaded Local Guest State');
       } else {
@@ -98,11 +113,18 @@ class PlayerStateService {
   }
 
   saveLocalState() {
-    if (!this.isGuest) return; // Only save locally if guest
-    try {
-      localStorage.setItem(GUEST_STATE_KEY, JSON.stringify(this.state));
-    } catch (e) {
-      console.error('[PlayerState] Failed to save local state', e);
+    // Save locally for Guest OR to persist preferences/boost timers for Authenticated users too (if hybrid)
+    // But architecture says "Only save locally if guest" for core state.
+    // We might want to save Boost Timer locally for everyone so refresh doesn't kill it.
+
+    const exportState = { ...this.state, xpBoostActiveUntil: this.xpBoostActiveUntil };
+
+    if (this.isGuest) {
+        try {
+            localStorage.setItem(GUEST_STATE_KEY, JSON.stringify(exportState));
+        } catch (e) {
+            console.error('[PlayerState] Failed to save local state', e);
+        }
     }
   }
 
@@ -194,7 +216,12 @@ class PlayerStateService {
   }
 
   getDefaultState() {
-    const heroes = JSON.parse(JSON.stringify(MockHeroes));
+    const heroes = JSON.parse(JSON.stringify(MockHeroes)).map(h => {
+        // Ensure default skills structure
+        h.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
+        return h;
+    });
+
     return {
       user: {
         ...MOCK_USER,
@@ -207,6 +234,7 @@ class PlayerStateService {
         totalEarned: 0,
         totalSpent: 0,
         daysLogged: 1,
+        dailyBoostUsage: 0, // Track usage for progressive cost
         lastLoginDate: new Date().toDateString(),
         lastFaucetClaim: 0,
         matchHistory: [], // { wave: number, bcoin: number, timestamp: number }
@@ -234,6 +262,7 @@ class PlayerStateService {
       totalEarned: dbUser.total_earned || 0,
       totalSpent: dbUser.total_spent || 0,
       daysLogged: dbUser.days_logged || 1,
+      dailyBoostUsage: dbUser.daily_boost_usage || 0,
       lastLoginDate: new Date().toDateString(), // Refresh on load
       matchHistory: [], // TODO: Load from DB if needed
     };
@@ -252,6 +281,7 @@ class PlayerStateService {
         speed: dbHero.speed,
         hp: dbHero.hp,
       },
+      skills: dbHero.skills || { speed: 0, fireRate: 0, range: 0, power: 0 },
       spells: [],
       name: dbHero.sprite_name,
     };
@@ -340,7 +370,179 @@ class PlayerStateService {
     return { success: true, hero };
   }
 
+  /**
+   * Calculates the Effective Stats of a hero based on Base NFT + Account Buffs + Skill Levels.
+   * Micro-Progress Rule: Each Skill Level grants +0.01% (x 1.0001) or linear percentage?
+   * Prompt says: "+1 em qualquer atributo... concederá apenas um incremento de 0.01%".
+   * Interpreting as: Effective = Base * (1 + (SkillLevel * 0.0001)).
+   */
+  getHeroStats(heroId) {
+      const hero = this.state.heroes.find(h => h.id === heroId);
+      if (!hero) return null;
+
+      const accountLevel = this.getAccountLevel();
+      const skills = hero.skills || { speed: 0, fireRate: 0, range: 0, power: 0 };
+
+      // Skill Levels (Derived from Raw XP)
+      // Assumption: 1000 XP = 1 Level (Linear for MVP, or reuse "Hardcore" curve?)
+      // User asked for "Micro-Progress Eternal" -> "Escala de 0.01%".
+      // Let's use a flat divisor for now to make "Levels" meaningful.
+      const XP_PER_LEVEL = 100; // Every 100 distance/damage/shots = 1 Level
+
+      const speedLvl = (skills.speed || 0) / XP_PER_LEVEL;
+      const powerLvl = (skills.power || 0) / XP_PER_LEVEL;
+      const rangeLvl = (skills.range || 0) / XP_PER_LEVEL;
+      const fireRateLvl = (skills.fireRate || 0) / XP_PER_LEVEL;
+
+      // Base Stats from NFT
+      // Note: hero.stats.power is the "Gene" (1-10 scale usually).
+      const basePower = hero.stats.power || 1;
+      const baseSpeed = hero.stats.speed || 1;
+      const baseHp = hero.stats.hp || 100;
+      const baseRange = hero.stats.range || 1; // Sometimes undefined in mock
+
+      // Multipliers
+      // 1. Account Buff (+1% per Level)
+      const accountMult = 1 + (accountLevel * 0.01);
+
+      // 2. Skill Buffs (+0.01% per Level)
+      // 0.01% = 0.0001
+      const speedBuff = 1 + (speedLvl * 0.0001);
+      const powerBuff = 1 + (powerLvl * 0.0001);
+      const rangeBuff = 1 + (rangeLvl * 0.0001);
+      // Fire Rate: Lower is better.
+      const fireRateBuff = 1 - (fireRateLvl * 0.0001);
+
+      // Final Calculations
+      // Damage: (10 * Base) + AccountLevel... then applied Skill Buff?
+      // ORANGE_PAPPER: (10 * HeroPOW) + AccountLevel * (1 + PowerSkillLevel * 0.0001)
+      // Parenthesis ambiguous in GDD. Applying Skill Buff to the TOTAL base damage.
+      const rawDamage = (10 * basePower) + accountLevel;
+      const finalDamage = rawDamage * powerBuff;
+
+      // Speed: (150 + Base * 10) * AccountBuff * SkillBuff
+      const rawSpeed = (150 + baseSpeed * 10);
+      const finalSpeed = rawSpeed * accountMult * speedBuff;
+
+      // HP
+      const rawHp = (baseHp) * 100; // If baseHp is stamina (1-10). If it's 2100, careful.
+      // GameScene logic says: baseHp = heroStats.hp || (heroStats.stamina * 100).
+      // Mock data has 'hp: 100' or 'hp: 2100'? Let's trust the value in `hero.stats.hp`.
+      // If it's small (<100), treat as stamina.
+      let effectiveBaseHp = baseHp;
+      if (baseHp < 50) effectiveBaseHp = baseHp * 100;
+      const finalHp = effectiveBaseHp * accountMult; // HP doesn't have a Skill Bar in the 4 listed (Speed, FR, Range, Power)
+
+      // Range
+      // Strict NFT Stat * Skill Buff
+      const finalRange = (baseRange || 1) * rangeBuff;
+
+      // Fire Rate
+      // Base is usually 600ms.
+      const baseFireRate = 600;
+      const finalFireRate = Math.max(100, baseFireRate * fireRateBuff); // Cap at 100ms
+
+      return {
+          damage: finalDamage,
+          speed: finalSpeed,
+          hp: finalHp,
+          range: finalRange,
+          fireRate: finalFireRate,
+
+          // Return levels for UI
+          levels: {
+              speed: speedLvl,
+              power: powerLvl,
+              range: rangeLvl,
+              fireRate: fireRateLvl
+          }
+      };
+  }
+
   // --- ACTIONS ---
+
+  // New: Economic Boost
+  getBoostCost() {
+      const usage = this.state.user.dailyBoostUsage || 0;
+      // Formula: 1.00 * (1.30 ^ usage)
+      const cost = 1.00 * Math.pow(1.30, usage);
+      return parseFloat(cost.toFixed(2));
+  }
+
+  isBoostActive() {
+      return Date.now() < this.xpBoostActiveUntil;
+  }
+
+  getXpBoostMultiplier() {
+      return this.isBoostActive() ? 2.0 : 1.0;
+  }
+
+  async buyXpBoost() {
+      const cost = this.getBoostCost();
+      if (this.state.user.bcoin < cost) {
+          return { success: false, message: `Need ${cost} BCOIN` };
+      }
+
+      // Deduct
+      this.state.user.bcoin -= cost;
+      this.state.user.totalSpent = (this.state.user.totalSpent || 0) + cost;
+
+      // Increment Usage
+      this.state.user.dailyBoostUsage = (this.state.user.dailyBoostUsage || 0) + 1;
+
+      // Set Timer (10 Minutes)
+      // If already active, extend? Or just reset to 10m from now?
+      // User said "10 Minutes". Let's stack if active? Usually "refresh" is safer.
+      const duration = 10 * 60 * 1000;
+      const now = Date.now();
+      if (this.xpBoostActiveUntil > now) {
+          this.xpBoostActiveUntil += duration;
+      } else {
+          this.xpBoostActiveUntil = now + duration;
+      }
+
+      this.saveLocalState();
+
+      return {
+          success: true,
+          message: 'XP Boost Activated!',
+          newBalance: this.state.user.bcoin,
+          cost: cost,
+          activeUntil: this.xpBoostActiveUntil
+      };
+  }
+
+  // New: Manual Training Persistence
+  async applySessionTraining(heroId, sessionData) {
+      // sessionData: { speed: float, power: float, range: float, fireRate: float }
+      const hero = this.state.heroes.find(h => h.id === heroId);
+      if (!hero) return { success: false };
+
+      if (!hero.skills) hero.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
+
+      // Apply Global Boost Multiplier
+      const mult = this.getXpBoostMultiplier();
+
+      // Accumulate
+      // Note: These inputs are "Raw Actions" (distance, damage).
+      // We add them directly to the XP pool.
+      if (sessionData.speed) hero.skills.speed += sessionData.speed * mult;
+      if (sessionData.power) hero.skills.power += sessionData.power * mult;
+      if (sessionData.range) hero.skills.range += sessionData.range * mult;
+      if (sessionData.fireRate) hero.skills.fireRate += sessionData.fireRate * mult;
+
+      this.saveLocalState();
+
+      // Sync to Cloud if not guest
+      if (!this.isGuest) {
+          try {
+              // TODO: Create endpoint for batch skill update
+              // axios.post('/api/heroes/skills/update', { heroId, skills: hero.skills });
+          } catch (e) { console.error(e); }
+      }
+
+      return { success: true, hero };
+  }
 
   async claimDailyFaucet() {
       const now = Date.now();
@@ -366,6 +568,9 @@ class PlayerStateService {
       // result: { wave, bcoin, xp }
       const { wave, bcoin, xp } = result;
 
+      const mult = this.getXpBoostMultiplier();
+      const finalXp = Math.floor(xp * mult);
+
       // 1. Add History (Keep last 5)
       if (!this.state.user.matchHistory) this.state.user.matchHistory = [];
       this.state.user.matchHistory.unshift({
@@ -382,10 +587,10 @@ class PlayerStateService {
       this.state.user.bcoin += bcoin;
 
       // 3. Add XP (Use internal method to handle leveling)
-      const levelResult = this.addAccountXp(xp);
+      const levelResult = this.addAccountXp(finalXp);
 
       this.saveLocalState();
-      console.log('[PlayerState] Match Recorded:', result);
+      console.log('[PlayerState] Match Recorded:', { ...result, xp: finalXp });
 
       return { success: true, levelResult };
   }
