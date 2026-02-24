@@ -74,7 +74,9 @@ export default class CollisionHandler {
 
     // Visual Explosion
     if (this.scene.explosionManager) {
-      this.scene.explosionManager.spawn(impactX, impactY, scale);
+      // TASK FORCE: Juice Factor
+      const intensity = enemy.isBoss ? 2.5 : 1.0;
+      this.scene.explosionManager.spawn(impactX, impactY, scale, intensity);
     }
 
     const baseDamage = this.scene.playerStats.damage || 1;
@@ -272,7 +274,7 @@ export default class CollisionHandler {
           enemy.x,
           enemy.y - 20,
           `+${coinsGained} G`,
-          true
+          'GOLD'
         );
       }
 
@@ -298,7 +300,7 @@ export default class CollisionHandler {
           enemy.x,
           enemy.y - 40,
           'Bestiary +1',
-          false
+          'XP'
         );
       }
 
@@ -330,13 +332,11 @@ export default class CollisionHandler {
   onHit(player, enemy) {
     if (this.scene.gamePaused || this.scene.transitioning) return;
 
+    // TASK FORCE: I-Frame Check
+    if (player.isInvulnerable) return;
+
     // 🔴 PLAYER HIT FX
     // 3. Screen Shake & Hit Pause (Hero Damage)
-    player.setTint(0xff0000); // Red Flash
-    this.scene.time.delayedCall(200, () => {
-      if (player.active) player.clearTint();
-    });
-
     // User requested: shake(100, 0.01)
     this.scene.shakeCamera(100, 0.01);
 
@@ -357,6 +357,10 @@ export default class CollisionHandler {
           health: stats.hp,
           maxHealth: stats.maxHp,
         });
+        // Trigger I-Frames (Longer for Respawn)
+        if (this.scene.triggerInvulnerability) {
+            this.scene.triggerInvulnerability(2000);
+        }
       } else {
         stats.hp = 0;
         this.events.emit('update-health', {
@@ -365,6 +369,11 @@ export default class CollisionHandler {
         });
         this.scene.handleGameOver();
       }
+    } else {
+        // Trigger I-Frames (Normal Hit)
+        if (this.scene.triggerInvulnerability) {
+            this.scene.triggerInvulnerability(1500);
+        }
     }
   }
 }

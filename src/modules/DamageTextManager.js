@@ -28,14 +28,14 @@ export default class DamageTextManager {
   }
 
   /**
-   * Shows a floating damage number.
+   * Shows a floating damage number or status text.
    * @param {number} x - World X position.
    * @param {number} y - World Y position.
    * @param {string|number} value - The text to display.
-   * @param {boolean} isCritical - Whether it's a critical hit (larger, different color).
-   * @param {boolean} isBoss - Whether it's a boss hit (even larger).
+   * @param {string|boolean} styleOrCrit - Style name ('DAMAGE', 'HEAL', 'GOLD', 'CRIT') OR isCritical boolean.
+   * @param {boolean} isBoss - Whether it's a boss hit (legacy override).
    */
-  show(x, y, value, isCritical = false, isBoss = false) {
+  show(x, y, value, styleOrCrit = 'DAMAGE', isBoss = false) {
     // Get text from pool
     const text = this.pool.get(x, y);
 
@@ -47,16 +47,55 @@ export default class DamageTextManager {
     let duration = 600;
     let yOffset = 50;
 
-    if (isBoss) {
-      fontSize = '24px';
-      color = '#ff00ff'; // Magenta
-      strokeThickness = 4;
-      duration = 800;
-      yOffset = 80;
-    } else if (isCritical) {
-      fontSize = '20px';
-      color = '#ff5f1f'; // Neon Orange
-      strokeThickness = 4;
+    // Resolve Style
+    let style = 'DAMAGE';
+    if (typeof styleOrCrit === 'boolean') {
+        if (styleOrCrit) style = 'CRIT';
+        if (isBoss) style = 'BOSS';
+    } else {
+        style = styleOrCrit;
+    }
+
+    // Apply Style Config
+    switch (style) {
+        case 'BOSS':
+            fontSize = '24px';
+            color = '#ff00ff'; // Magenta
+            strokeThickness = 4;
+            duration = 1000;
+            yOffset = 80;
+            break;
+        case 'CRIT':
+            fontSize = '20px';
+            color = '#ff5f1f'; // Neon Orange
+            strokeThickness = 4;
+            break;
+        case 'HEAL':
+            fontSize = '16px';
+            color = '#00ff00'; // Green
+            strokeThickness = 3;
+            duration = 800;
+            yOffset = 60;
+            break;
+        case 'GOLD':
+            fontSize = '14px';
+            color = '#ffd700'; // Gold
+            strokeThickness = 3;
+            duration = 1000;
+            yOffset = 60;
+            break;
+        case 'XP':
+            fontSize = '14px';
+            color = '#00ffff'; // Cyan
+            strokeThickness = 2;
+            break;
+        // Fragment Rarities (Use explicit colors if passed, or default to style logic)
+        // Here we can map passed style strings directly if needed, but for now specific cases:
+        default:
+            // Check for hex color string in style? Or just default.
+            if (style.startsWith('#')) color = style;
+            else if (style === 'DAMAGE') color = '#ffffff';
+            break;
     }
 
     // Configure the reused text object
@@ -79,7 +118,8 @@ export default class DamageTextManager {
     // Stop any existing tween on this object
     this.scene.tweens.killTweensOf(text);
 
-    this.scene.tweens.add({
+    // Dynamic Tween based on style
+    let tweenConfig = {
       targets: text,
       y: y - yOffset,
       alpha: 0,
@@ -89,6 +129,13 @@ export default class DamageTextManager {
         text.setActive(false);
         text.setVisible(false);
       },
-    });
+    };
+
+    if (style === 'GOLD' || style === 'HEAL') {
+         // Bounce effect for loot
+         tweenConfig.ease = 'Back.easeOut';
+    }
+
+    this.scene.tweens.add(tweenConfig);
   }
 }

@@ -94,7 +94,7 @@ export default class ExplosionManager {
     }
   }
 
-  spawn(x, y, scale = 2) {
+  spawn(x, y, scale = 2, intensityMultiplier = 1.0) {
     // Get from pool
     const explosion = this.pool.get(x, y);
 
@@ -103,19 +103,29 @@ export default class ExplosionManager {
     explosion.fire(x, y, scale);
 
     // Throttled Shake
-    this.shakeCamera(scale);
+    this.shakeCamera(scale, intensityMultiplier);
 
     SoundManager.play(this.scene, 'explosion');
   }
 
-  shakeCamera(scale) {
+  shakeCamera(scale, intensityMultiplier) {
     if (!this.scene.cameras || !this.scene.cameras.main) return;
 
     // ⚡ Bolt Optimization: Throttle Shake
     // Only shake if camera is stable to prevent "stuttering" overlap
     if (!this.scene.cameras.main.shakeEffect.isRunning) {
-         const shakeIntensity = 0.01 * (scale / 2);
-         this.scene.cameras.main.shake(200, Math.min(shakeIntensity, 0.05));
+         // Base Shake: 0.005 for scale 1
+         // With Scale 2 -> 0.01
+         // With Multiplier: Modulate up
+         let shakeIntensity = 0.005 * scale * intensityMultiplier;
+
+         // Cap max shake to avoid nausea
+         shakeIntensity = Math.min(shakeIntensity, 0.05);
+
+         // Duration: 200ms default, boost if high intensity
+         const duration = intensityMultiplier > 1 ? 300 : 200;
+
+         this.scene.cameras.main.shake(duration, shakeIntensity);
     }
   }
 }
