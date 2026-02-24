@@ -550,8 +550,10 @@ class PlayerStateService {
       const cooldown = 24 * 60 * 60 * 1000; // 24 Hours
 
       if (now - lastClaim < cooldown) {
-          const remaining = Math.ceil((cooldown - (now - lastClaim)) / (60 * 60 * 1000));
-          return { success: false, message: `Wait ${remaining}h` };
+          const diff = cooldown - (now - lastClaim);
+          const hours = Math.floor(diff / (60 * 60 * 1000));
+          const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+          return { success: false, message: `Wait ${hours}h ${minutes}m` };
       }
 
       const amount = 5;
@@ -672,9 +674,17 @@ class PlayerStateService {
     return { success: true, newMaxStage: hero.max_stage, unlocked };
   }
 
-  async upgradeHeroLevel(heroId) {
+  /**
+   * Upgrades a specific skill by adding XP equivalent to 1 Level (0.01% stat boost).
+   * @param {string} heroId
+   * @param {string} skillType - 'power', 'speed', 'range', 'fireRate'
+   */
+  async upgradeHeroSkill(heroId, skillType) {
     const hero = this.state.heroes.find((h) => h.id === heroId);
-    if (!hero) throw new Error('Hero not found');
+    if (!hero) return { success: false, message: 'Hero not found' };
+
+    const validSkills = ['power', 'speed', 'range', 'fireRate'];
+    if (!validSkills.includes(skillType)) return { success: false, message: 'Invalid Skill' };
 
     const bcoinCost = 1;
 
@@ -682,50 +692,33 @@ class PlayerStateService {
       return { success: false, message: 'Insufficient BCOIN' };
     }
 
-    // Logic split: Guest vs Cloud
-    if (this.isGuest) {
-      this.state.user.bcoin -= bcoinCost;
-      this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
+    // Deduct Cost
+    this.state.user.bcoin -= bcoinCost;
+    this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
 
-      hero.level++;
-      hero.stats.power += 1;
-      hero.stats.speed += 1;
+    // Add Skill XP
+    // Rule: 1 BCOIN = +1 Level = +100 XP (which equals 0.01% via getHeroStats divisor)
+    if (!hero.skills) hero.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
+    hero.skills[skillType] = (hero.skills[skillType] || 0) + 100;
 
-      this.saveLocalState();
-      return {
-        success: true,
-        hero,
-        newLevel: hero.level,
-        remainingBcoin: this.state.user.bcoin,
-        remainingFragments: 0,
-      };
-    } else {
-      try {
-        const response = await axios.post('/api/heroes/levelup', {
-          walletAddress: this.walletAddress,
-          heroId,
-        });
+    this.saveLocalState();
 
-        if (response.data.success) {
-          const { hero: updatedHero, newBalance } = response.data;
-          Object.assign(hero, this._mapHeroFromDB(updatedHero));
-          this.state.user.bcoin = newBalance;
-          // Optimistic spent tracking for analytics (approx)
-          this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
-
-          return {
-            success: true,
-            hero,
-            newLevel: hero.level,
-            remainingBcoin: newBalance,
-          };
-        } else {
-          return { success: false, message: response.data.message || 'Failed' };
-        }
-      } catch (e) {
-        return { success: false, message: 'Network Error' };
-      }
+    // Sync Cloud (Stub for MVP)
+    if (!this.isGuest) {
+      // axios.post('/api/heroes/skillup', ...)
     }
+
+    return {
+      success: true,
+      hero,
+      newSkillLevel: hero.skills[skillType] / 100,
+      remainingBcoin: this.state.user.bcoin
+    };
+  }
+
+  // Legacy Level Up (Deprecated for Stats, kept for compatibility if needed)
+  async upgradeHeroLevel(heroId) {
+     return { success: false, message: 'Use Skill Training instead.' };
   }
 
   async addSessionLoot(sessionLoot) {

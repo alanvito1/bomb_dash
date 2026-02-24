@@ -118,8 +118,10 @@ export default class ProfileModal extends UIModal {
         let style = "success"; // Green
 
         if (!canClaim) {
-             const remaining = Math.ceil((cooldown - (now - lastClaim)) / (60 * 60 * 1000));
-             label = `WAIT ${remaining}H`;
+             const diff = cooldown - (now - lastClaim);
+             const hours = Math.floor(diff / (60 * 60 * 1000));
+             const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+             label = `WAIT ${hours}h ${minutes}m`;
              style = "disabled"; // Grey, usually handled by createRetroButton logic or custom tint
         }
 

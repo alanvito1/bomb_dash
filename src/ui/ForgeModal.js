@@ -125,70 +125,71 @@ export default class ForgeModal extends UIModal {
   }
 
   createLevelUpSection() {
-    const y = 100;
+    const y = 80;
 
-    // Panel (9-Slice)
-    const panel = UIHelper.createPanel(this.scene, 500, 200, 0x444444);
-    panel.y = y + 50; // Adjust for center offset?
-    // Original was y-50 for top left? No, fillRoundedRect with negative offsets implies center is 0,y.
-    // y is 100. Height 200. Top is 0, Bottom 200.
-    // If center is 0,100. Then rect -250, 50, 500, 200 draws from 50 to 250?
-    // Wait, original: `fillRoundedRect(-250, y - 50, ...)` where y=100. -> y starts at 50.
-    // Height 200. Ends at 250.
-    // Center of that rect is 150.
-    // UIHelper.createPanel creates a nineslice. Origin 0.5.
-    // So we want panel.y = 150.
-    panel.y = 150;
+    // Panel (9-Slice) - Larger for grid
+    const panel = UIHelper.createPanel(this.scene, 520, 240, 0x444444);
+    panel.y = y + 100;
     this.windowContainer.add(panel);
 
-    // Next Level Preview
-    const nextLevel = (this.selectedHero.level || 1) + 1;
-    this.addText(0, y - 20, `NEXT LEVEL: ${nextLevel}`, '#AAAAAA', '12px');
+    const stats = playerStateService.getHeroStats(this.selectedHero.id);
+    const levels = stats ? stats.levels : { speed: 0, power: 0, range: 0, fireRate: 0 };
 
-    // Bonus Preview
-    const bonusText = `BONUS: Power +1, Speed +2%`;
-    this.addText(0, y + 10, bonusText, '#00FF00', '12px');
+    this.addText(0, y + 5, 'TRAINING GROUND (0.01% BONUS)', '#00FFFF', '12px');
 
-    // Upgrade Button
-    const costBcoin = 1;
-    const costFrags = 50;
+    const btnW = 200;
+    const btnH = 50;
+    const gapX = 220;
+    const gapY = 70;
+    const startX = -110;
+    const startY = y + 50;
 
-    const btnY = y + 80;
+    // Skill Config
+    const skills = [
+        { key: 'power', label: 'POWER', val: levels.power },
+        { key: 'speed', label: 'SPEED', val: levels.speed },
+        { key: 'range', label: 'RANGE', val: levels.range },
+        { key: 'fireRate', label: 'FIRE RT', val: levels.fireRate }
+    ];
 
-    const btn = UIHelper.createNeonButton(
-      this.scene,
-      0,
-      btnY,
-      `LEVEL UP\n${costBcoin} BC + ${costFrags} FG`,
-      300,
-      60,
-      () => this.handleLevelUp(),
-      0x00ff00 // Green for Upgrade
-    );
+    skills.forEach((s, idx) => {
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
 
-    this.windowContainer.add(btn);
+        const bx = startX + (col * gapX);
+        const by = startY + (row * gapY);
+
+        const btn = UIHelper.createNeonButton(
+            this.scene,
+            bx,
+            by,
+            `${s.label} L${s.val.toFixed(0)}\n1 BC (+0.01%)`,
+            btnW,
+            btnH,
+            () => this.handleSkillUp(s.key),
+            0x00ff00
+        );
+        this.windowContainer.add(btn);
+    });
   }
 
-  handleLevelUp() {
-    const res = playerStateService.upgradeHeroLevel(this.selectedHero.id);
+  async handleSkillUp(skillType) {
+    const res = await playerStateService.upgradeHeroSkill(this.selectedHero.id, skillType);
 
     if (res.success) {
-      SoundManager.play(this.scene, 'level_up'); // Victory sound as placeholder for awesome upgrade
-
-      // Visual feedback
-      this.showFloatingText(0, 0, 'LEVEL UP!', '#00FF00');
+      SoundManager.play(this.scene, 'level_up');
+      this.showFloatingText(0, 0, `${skillType.toUpperCase()} UP!`, '#00FF00');
 
       // Update local hero reference
       this.selectedHero = res.hero;
-
-      // Update Registry to sync with Menu
+      // Sync registry
       this.scene.registry.set('selectedHero', this.selectedHero);
 
-      // Refresh UI
       this.refreshUI();
     } else {
       SoundManager.play(this.scene, 'error');
-      alert(res.message);
+      // Show error text instead of alert for better UX?
+      this.showFloatingText(0, 0, res.message || 'FAILED', '#FF0000');
     }
   }
 

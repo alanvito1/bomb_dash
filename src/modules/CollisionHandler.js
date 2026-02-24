@@ -118,12 +118,6 @@ export default class CollisionHandler {
                   // Poison Damage (Flat or Scaled? Let's use 10% of MaxHP or flat 5)
                   const dmg = Math.max(1, Math.floor(enemy.maxHp * 0.05));
                   this.applyDamage(enemy, dmg, true); // true = isDoT
-
-                  // Visual
-                  if (this.scene.damageTextManager) {
-                      // Custom color for poison? Default is white/crit red.
-                      // We can assume standard usage for now.
-                  }
               }
           }
       });
@@ -132,6 +126,32 @@ export default class CollisionHandler {
       this.scene.time.delayedCall(3500, () => {
           if (enemy.active) {
               enemy.poisoned = false;
+              enemy.clearTint();
+          }
+      });
+  }
+
+  applyFreeze(enemy) {
+      if (enemy.frozen || !enemy.active) return;
+
+      enemy.frozen = true;
+      enemy.setTint(0x00ffff); // Cyan Tint
+
+      // Freeze Movement
+      // Store original speed if available, or just assume handled by update logic
+      // Most movement logic multiplies speed. We can inject a "speedMultiplier" or modify speed directly.
+      if (enemy.body) enemy.body.setVelocity(0, 0);
+
+      // We rely on enemy.update checking `enemy.frozen` or we can hack `enemy.speed`
+      // Let's assume we modify speed and restore it.
+      const originalSpeed = enemy.speed || 50;
+      enemy.speed = 0;
+
+      // Restore after 2 seconds
+      this.scene.time.delayedCall(2000, () => {
+          if (enemy.active) {
+              enemy.frozen = false;
+              enemy.speed = originalSpeed;
               enemy.clearTint();
           }
       });

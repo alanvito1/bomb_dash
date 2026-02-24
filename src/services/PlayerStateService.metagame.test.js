@@ -124,7 +124,7 @@ describe('PlayerStateService Metagame', () => {
       it('should track spending', async () => {
           await playerStateService.claimDailyFaucet(); // +5
           const heroes = playerStateService.getHeroes();
-          await playerStateService.upgradeHeroLevel(heroes[0].id); // -1
+          await playerStateService.upgradeHeroSkill(heroes[0].id, 'power'); // -1
 
           const user = playerStateService.getUser();
           expect(user.totalSpent).toBe(1);
