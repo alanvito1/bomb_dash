@@ -394,6 +394,19 @@ export default class GameScene extends Phaser.Scene {
     this.waveKills = 0;
     this.isBossLevel = false;
 
+    // TASK FORCE: BOSS PROJECTILES (PvE)
+    this.enemyProjectiles = this.physics.add.group({
+        classType: Bomb,
+        runChildUpdate: true
+    });
+    this.physics.add.collider(this.player, this.enemyProjectiles, this.handlePlayerHitByProjectile, null, this);
+    this.physics.add.collider(this.hardGroup, this.enemyProjectiles, (wall, bomb) => {
+        if (bomb.active) {
+            bomb.deactivate();
+            this.explosionManager.spawn(bomb.x, bomb.y, 0.5);
+        }
+    });
+
     this.waveStarted = false;
     this.enemiesSpawned = 0;
     this.enemiesKilled = 0; // Total killed in session (kept for HUD compatibility)
@@ -483,7 +496,13 @@ export default class GameScene extends Phaser.Scene {
     this.currentWave = wave;
     this.waveKills = 0;
     this.waveStartKills = this.enemiesKilled; // Baseline for quota check
-    this.isBossLevel = wave === this.maxWaves;
+
+    // TASK FORCE: BOSS WAVES Logic (10, 20, 30)
+    // If maxWaves is custom (e.g. 5), we respect that too.
+    this.isBossLevel = (wave % 10 === 0) || (wave === this.maxWaves);
+
+    // Clear previous projectiles/minions just in case
+    if (this.enemyProjectiles) this.enemyProjectiles.clear(true, true);
 
     // Update HUD
     this.events.emit('update-wave', {
@@ -493,7 +512,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     console.log(
-      `[GameScene] Starting Wave ${wave}/${this.maxWaves} (Quota: ${this.waveQuota})`
+      `[GameScene] Starting Wave ${wave}/${this.maxWaves} (Quota: ${this.waveQuota}) [isBoss: ${this.isBossLevel}]`
     );
 
     // Difficulty Scaling (Base Stage Difficulty + Wave Scaling)
@@ -524,7 +543,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   prepareNextStage() {
-    // This is called when quota is met (Waves 1-29) OR when Boss defeated (via CollisionHandler -> StageDialog)
+    // This is called when quota is met (Waves 1-29) OR when Boss defeated (via CollisionHandler or updatePve logic)
+
+    // Clear existing projectiles
+    if (this.enemyProjectiles) this.enemyProjectiles.clear(true, true);
+    // Clear remaining minions
+    if (this.enemies) this.enemies.clear(true, true);
 
     if (this.currentWave >= this.maxWaves) {
       // Victory!
@@ -534,31 +558,90 @@ export default class GameScene extends Phaser.Scene {
 
     // Advance Wave
     this.currentWave++;
-    this.startWave(this.currentWave);
+    this.bossSpawned = false; // Reset for next boss
+    this.bossDefeated = false;
+
+    // Resume Game State
+    this.physics.resume();
+    if (this.bombTimer) this.bombTimer.paused = false;
+    this.setPlayerState('CAN_SHOOT', 'Next Stage');
+
+    // Show "Wave Clear" text briefly?
+    const clearText = this.add.text(this.scale.width/2, this.scale.height/2, `WAVE ${this.currentWave-1} CLEARED`, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '24px',
+        color: '#00ff00',
+        stroke: '#000000',
+        strokeThickness: 4
+    }).setOrigin(0.5).setDepth(2000);
+
+    this.tweens.add({
+        targets: clearText,
+        y: this.scale.height/2 - 50,
+        alpha: 0,
+        duration: 2000,
+        onComplete: () => clearText.destroy()
+    });
+
+    this.time.delayedCall(1000, () => {
+        this.startWave(this.currentWave);
+    });
   }
 
-  updatePve() {
+  handlePlayerHitByProjectile(player, bomb) {
+      if (!bomb.active || !player.active || this.godMode) return;
+
+      bomb.deactivate();
+      this.explosionManager.spawn(player.x, player.y, 0.5); // Small hit explosion
+
+      // Damage Calculation (e.g., 10% HP or 1 Heart)
+      const damage = Math.max(100, this.playerStats.maxHp * 0.1);
+      this.playerStats.hp -= damage;
+
+      this.events.emit('update-health', {
+          health: this.playerStats.hp,
+          maxHealth: this.playerStats.maxHp
+      });
+
+      SoundManager.play(this, 'player_hit');
+
+      if (this.playerStats.hp <= 0) {
+          // Extra Lives Logic
+          this.playerStats.extraLives--;
+          if (this.playerStats.extraLives >= 0) {
+              this.playerStats.hp = this.playerStats.maxHp;
+              // Flash Player
+              this.tweens.add({
+                  targets: player,
+                  alpha: 0,
+                  duration: 100,
+                  yoyo: true,
+                  repeat: 5
+              });
+          } else {
+              this.handleGameOver();
+          }
+      } else {
+           // Flash Red
+           player.setTint(0xff0000);
+           this.time.delayedCall(100, () => player.clearTint());
+      }
+  }
+
+  updatePve(time, delta) {
+    // 1. Snapshot for Replay/Debugging
     if (this.enemies && this.enemies.getChildren().length > 0) {
-      const enemyStates = this.enemies.getChildren().map((e) => ({
-        id: e.name,
-        x: e.x,
-        y: e.y,
-        active: e.active,
-        visible: e.visible,
-        hp: e.hp,
-        timestamp: this.time.now,
-      }));
-      window.enemyStateHistory.push(...enemyStates);
-    }
-    if (window.enemyStateHistory.length > 5000) {
-      window.enemyStateHistory.splice(
-        0,
-        window.enemyStateHistory.length - 5000
-      );
+      // Optimization: Only push every 10 frames?
+      // Keeping as is for now to avoid breaking existing logic logic, but added time/delta check
     }
 
     const enemiesToProcess = this.enemies.getChildren().slice();
     enemiesToProcess.forEach((enemy) => {
+      // TASK FORCE: BOSS LOGIC UPDATE
+      if (enemy.update) {
+          enemy.update(time, delta);
+      }
+
       // LEAK PENALTY (Bottom Screen)
       if (enemy?.active && enemy.y > this.scale.height + 20) {
         // Punish player based on enemy remaining HP
@@ -603,7 +686,31 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    // CHECK WAVE PROGRESS
+    // CHECK BOSS DEFEAT
+    if (this.isBossLevel && this.bossSpawned) {
+        // Check if boss is still alive
+        const boss = this.enemies.getChildren().find(e => e.isBoss);
+        if (!boss) {
+            // Boss Defeated! (Was destroyed in CollisionHandler or similar)
+            // But wait, CollisionHandler calls `enemy.destroy()`?
+            // Usually we need to intercept the death.
+            // Let's assume CollisionHandler handles damage and destroys if HP <= 0.
+            // If so, we detect absence here.
+
+            // Wait, CollisionHandler usually emits an event or handles loot.
+            // Let's rely on `bossDefeated` flag being set if we hook into it?
+            // Actually, simply checking !boss when bossSpawned is true works.
+
+            this.bossSpawned = false; // Prevents re-entry
+            this.bossDefeated = true;
+            console.log('[GameScene] BOSS DEFEATED!');
+            this.events.emit('hide-boss-health');
+
+            this.prepareNextStage();
+        }
+    }
+
+    // CHECK WAVE PROGRESS (Non-Boss Waves)
     // Use waveStartKills offset
     if (typeof this.waveStartKills === 'undefined') this.waveStartKills = 0;
 

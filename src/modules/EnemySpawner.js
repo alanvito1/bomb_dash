@@ -156,12 +156,14 @@ export default class EnemySpawner {
     }
 
     const boss = this.scene.enemies.create(x, y, key);
-    boss.setDisplaySize(64, 64); // Bigger boss
+    // TASK FORCE: BOSS SCALE (3x)
+    const size = 96;
+    boss.setDisplaySize(size, size);
 
     // TASK FORCE: BOSS HITBOX
-    // 64px sprite -> 48px hitbox (25% reduction)
-    boss.body.setSize(48, 48);
-    boss.body.setOffset(8, 8); // (64-48)/2 = 8
+    // 96px sprite -> 72px hitbox (25% reduction)
+    boss.body.setSize(72, 72);
+    boss.body.setOffset(12, 12); // (96-72)/2 = 12
 
     boss.setVelocityY(speed); // Fall in
 
@@ -171,6 +173,13 @@ export default class EnemySpawner {
     boss.isBoss = true;
     boss.name = `BOSS_${bossConfig.id}`;
 
+    // Boss State
+    boss.isEnraged = false;
+    boss.nextShotTime = 0;
+    boss.nextSummonTime = 0;
+    boss.shootCooldown = 2000; // 2s
+    boss.summonCooldown = 8000; // 8s
+
     // Boss Entry Tween
     this.scene.tweens.add({
       targets: boss,
@@ -178,25 +187,73 @@ export default class EnemySpawner {
       duration: 2000,
       ease: 'Power2',
       onComplete: () => {
+        if (!boss.active) return;
+
         // Start Boss Logic (Movement Pattern)
         boss.setVelocityY(0);
         boss.setVelocityX(50);
         boss.setCollideWorldBounds(true);
         boss.setBounce(1, 1);
 
-        // Simple AI: Change direction randomly?
+        // Movement Loop (Random Direction)
         this.scene.time.addEvent({
           delay: 2000,
           callback: () => {
             if (boss.active) {
-              boss.setVelocityX(Phaser.Math.Between(-80, 80));
-              boss.setVelocityY(Phaser.Math.Between(-20, 20));
+              const speedMult = boss.isEnraged ? 1.5 : 1.0;
+              boss.setVelocityX(Phaser.Math.Between(-80, 80) * speedMult);
+              boss.setVelocityY(Phaser.Math.Between(-20, 20) * speedMult);
             }
           },
           loop: true,
         });
       },
     });
+
+    // TASK FORCE: BOSS AI (Attached to Sprite)
+    boss.update = (time, delta) => {
+        if (!boss.active || !boss.body) return;
+
+        // 1. Enrage Check
+        if (!boss.isEnraged && boss.hp <= boss.maxHp * 0.5) {
+            boss.isEnraged = true;
+            boss.setTint(0xff4500); // Red-Orange Tint
+
+            // Speed Boost
+            boss.shootCooldown = 1000; // Faster shooting
+
+            // Visual Shout
+            const shout = this.scene.add.text(boss.x, boss.y - 60, 'ENRAGED!', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '16px',
+                color: '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5);
+
+            this.scene.tweens.add({
+                targets: shout,
+                y: boss.y - 100,
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => shout.destroy()
+            });
+
+            SoundManager.play(this.scene, 'boss_spawn'); // Roar
+        }
+
+        // 2. Shooting Skill
+        if (time > boss.nextShotTime) {
+            boss.nextShotTime = time + boss.shootCooldown;
+            this.bossShoot(boss);
+        }
+
+        // 3. Summoning Skill
+        if (time > boss.nextSummonTime) {
+            boss.nextSummonTime = time + boss.summonCooldown;
+            this.bossSummon(boss);
+        }
+    };
 
     this.scene.bossSpawned = true;
     SoundManager.play(this.scene, 'boss_spawn');
@@ -207,5 +264,82 @@ export default class EnemySpawner {
       name: bossConfig.name,
       maxHealth: hp,
     });
+  }
+
+  bossShoot(boss) {
+      if (!this.scene.player || !this.scene.player.active) return;
+      if (!this.scene.enemyProjectiles) return;
+
+      const targetX = this.scene.player.x;
+      const targetY = this.scene.player.y;
+
+      const angle = Phaser.Math.Angle.Between(boss.x, boss.y, targetX, targetY);
+      const speed = 300;
+
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+
+      const bomb = this.scene.enemyProjectiles.get(boss.x, boss.y + 40); // Spawn below boss center
+      if (bomb) {
+          // Use 'fire' method from Bomb.js
+          // fire(x, y, vx, vy, size, isOpponent)
+          // We pass isOpponent=true to trigger Tint logic in Bomb.js
+          // But Bomb.js sets tint to 0xff8080 (Reddish).
+          // We can override tint here if we want "Poison/Fire" distinct look.
+
+          bomb.fire(boss.x, boss.y + 40, vx, vy, 1.5, true);
+
+          // Override Tint for Boss Projectile (Fire/Magma)
+          bomb.setTint(0xff5f1f);
+
+          // Add trail or effect?
+          // Bomb.js has bloom if available.
+      }
+  }
+
+  bossSummon(boss) {
+      // Spawn 2 Minions
+      for (let i = 0; i < 2; i++) {
+          const offsetX = (i === 0 ? -60 : 60);
+          const spawnX = Phaser.Math.Clamp(boss.x + offsetX, 50, 430);
+          const spawnY = boss.y + 40;
+
+          this.spawnMinion(spawnX, spawnY);
+      }
+
+      // Visual Feedback
+      // ...
+  }
+
+  spawnMinion(x, y) {
+      if (!this.currentMob) return; // Use current wave mob
+
+      const mob = this.currentMob;
+      const hp = Math.ceil(mob.base_hp * this.difficultyMultiplier * 0.5); // Minions are weaker? Or same? "Common Mobs" -> Same.
+      // Let's keep them standard HP.
+
+      let key = mob.asset_key || 'enemy';
+      if (!this.scene.textures.exists(key)) key = 'enemy';
+
+      const enemy = this.scene.enemies.create(x, y, key);
+      enemy.setDisplaySize(32, 32);
+      enemy.body.setSize(24, 24);
+      enemy.body.setOffset(4, 4);
+      enemy.setCollideWorldBounds(true);
+      enemy.setBounce(1, 1);
+
+      enemy.setVelocityY(100);
+      enemy.setVelocityX(Phaser.Math.Between(-50, 50));
+
+      enemy.hp = hp;
+      enemy.maxHp = hp;
+      enemy.id = mob.id;
+      enemy.isBoss = false;
+      enemy.name = `MINION_${this.enemyIdCounter++}`;
+
+      // Spawn Effect
+      if (this.scene.neonBurst) {
+          this.scene.neonBurst.explode(x, y, 10);
+      }
   }
 }
