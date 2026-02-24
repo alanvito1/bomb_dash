@@ -86,7 +86,7 @@ export default class GameScene extends Phaser.Scene {
 
   create() {
     this.events.on('shutdown', this.shutdown, this);
-    this.chatWidget = new ChatWidget(this);
+    // this.chatWidget = new ChatWidget(this); // Task Force: Disabled Chat
     // PostFXManager.init(this); // Clean UI: Removed CRT filter
     this.initializeScene();
   }
@@ -104,7 +104,14 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.stop(this, 'menu_music');
     this.score = 0;
 
-    let userAccountData = {};
+    // Task Force: Offline Mock Mode
+    let userAccountData = {
+        address: '0x0000000000000000000000000000000000000000',
+        account_level: 1,
+        account_xp: 0,
+        coins: 0
+    };
+    /*
     try {
       const response = await api.fetch('/auth/me', {}, true);
       if (response.success && response.user) {
@@ -120,6 +127,7 @@ export default class GameScene extends Phaser.Scene {
       this.scene.start('MenuScene', { error: 'Could not load player data.' });
       return;
     }
+    */
 
     const selectedHero = this.registry.get('selectedHero');
 
@@ -299,53 +307,54 @@ export default class GameScene extends Phaser.Scene {
   }
 
   generateMap() {
-      // Create Groups
-      this.hardGroup = this.physics.add.staticGroup();
-      this.softGroup = this.physics.add.staticGroup();
+      // Create Groups (or Clear if re-generating)
+      if (!this.hardGroup) this.hardGroup = this.physics.add.staticGroup();
+      else this.hardGroup.clear(true, true);
+
+      if (!this.softGroup) this.softGroup = this.physics.add.staticGroup();
+      else this.softGroup.clear(true, true);
 
       // Ensure Textures exist (using Generators if needed)
       if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
       if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
 
-      // 1. Hard Blocks (Outer Border + Grid Pattern)
+      // TASK FORCE: BOMBERMAN MAP RESTORATION
       // Grid dimensions: 10x16 (approx 480x800 with 48px tiles)
 
-      // BORDER: Left, Right, Top. Bottom is OPEN for "Leak Penalty".
-      for (let y = 0; y < this.GRID_H; y++) {
-          // Left Wall
-          this.placeBlock(0, y, true);
-          // Right Wall
-          this.placeBlock(this.GRID_W - 1, y, true);
-      }
-      for (let x = 1; x < this.GRID_W - 1; x++) {
-          // Top Wall
-          this.placeBlock(x, 0, true);
-      }
-
-      // 2. Inner Hard Blocks (Grid Pattern)
-      // Every even X and even Y
-      for (let y = 2; y < this.GRID_H - 1; y += 2) {
-          for (let x = 2; x < this.GRID_W - 2; x += 2) {
-              this.placeBlock(x, y, true);
-          }
-      }
-
-      // 3. Soft Blocks (Random Scatter)
-      // Avoid Player Start (Bottom Center)
       const playerGridX = Math.floor(this.player.x / this.TILE_SIZE);
       const playerGridY = Math.floor(this.player.y / this.TILE_SIZE);
+      const centerGridX = Math.floor(this.GRID_W / 2);
+      const centerGridY = Math.floor(this.GRID_H / 2);
 
-      for (let y = 1; y < this.GRID_H - 1; y++) {
-          for (let x = 1; x < this.GRID_W - 1; x++) {
-              // Skip if Hard Block exists (simplistic check: even/even logic matches above)
-              if (x % 2 === 0 && y % 2 === 0) continue;
+      for (let y = 0; y < this.GRID_H; y++) {
+          for (let x = 0; x < this.GRID_W; x++) {
+              // 1. Fixed Walls (Borders)
+              // Left, Right, Top. Bottom is OPEN for "Leak Penalty".
+              const isBorder = (x === 0 || x === this.GRID_W - 1 || y === 0);
+              if (isBorder) {
+                  this.placeBlock(x, y, true); // Hard Block
+                  continue;
+              }
 
-              // Safe Zone around Player
-              if (Math.abs(x - playerGridX) < 2 && Math.abs(y - playerGridY) < 2) continue;
+              // 2. Pillars (Classic Bomberman Checkerboard)
+              // Every even X and even Y (e.g., 2,2; 4,2; 2,4...)
+              if (x % 2 === 0 && y % 2 === 0) {
+                  this.placeBlock(x, y, true); // Hard Block
+                  continue;
+              }
 
-              // Chance to spawn Soft Block
-              if (Math.random() < 0.3) {
-                  this.placeBlock(x, y, false);
+              // 3. Clear Zones (Safety)
+              // Player Spawn Area (Radius 1)
+              if (Math.abs(x - playerGridX) <= 1 && Math.abs(y - playerGridY) <= 1) continue;
+
+              // Map Center (Radius 1) - Prevent central clutter
+              if (Math.abs(x - centerGridX) <= 1 && Math.abs(y - centerGridY) <= 1) continue;
+
+              // 4. Soft Blocks (Random Scatter)
+              // Distribution: 40% chance in empty spaces
+              // Creates corridors naturally between pillars
+              if (Math.random() < 0.4) {
+                  this.placeBlock(x, y, false); // Soft Block
               }
           }
       }
@@ -369,6 +378,22 @@ export default class GameScene extends Phaser.Scene {
   initializePveMatch() {
     this.world = this.stageConfig ? this.stageConfig.id : 1;
 
+    // --- TASK FORCE: PHYSICS INIT (CRITICAL FIX) ---
+    // Initialize Physics Groups FIRST to prevent "undefined" crashes
+    this.bombs = this.physics.add.group({
+      classType: Bomb,
+      runChildUpdate: true,
+    });
+    this.enemies = this.physics.add.group();
+    this.powerups = this.physics.add.group();
+    this.lootGroup = this.physics.add.group(); // Loot Drop System
+
+    // Enemy Projectiles Group
+    this.enemyProjectiles = this.physics.add.group({
+        classType: Bomb,
+        runChildUpdate: true
+    });
+
     // TASK FORCE: Generate Grid Map
     this.generateMap();
 
@@ -380,6 +405,18 @@ export default class GameScene extends Phaser.Scene {
     // Enemies vs Walls
     this.physics.add.collider(this.enemies, this.hardGroup);
     this.physics.add.collider(this.enemies, this.softGroup);
+
+    // Projectile Collisions
+    this.physics.add.collider(this.player, this.enemyProjectiles, this.handlePlayerHitByProjectile, null, this);
+    this.physics.add.collider(this.hardGroup, this.enemyProjectiles, (wall, bomb) => {
+        if (bomb.active) {
+            bomb.deactivate();
+            this.explosionManager.spawn(bomb.x, bomb.y, 0.5);
+        }
+    });
+
+    // Loot Collection (Physical Overlap)
+    this.physics.add.overlap(this.player, this.lootGroup, this.handleLootPickup, null, this);
 
     // TASK FORCE STEP 2: 30-Wave Engine
     this.currentWave = 1;
@@ -393,19 +430,6 @@ export default class GameScene extends Phaser.Scene {
         : 6; // Task Force: Adjusted for 9s Wave Pacing
     this.waveKills = 0;
     this.isBossLevel = false;
-
-    // TASK FORCE: BOSS PROJECTILES (PvE)
-    this.enemyProjectiles = this.physics.add.group({
-        classType: Bomb,
-        runChildUpdate: true
-    });
-    this.physics.add.collider(this.player, this.enemyProjectiles, this.handlePlayerHitByProjectile, null, this);
-    this.physics.add.collider(this.hardGroup, this.enemyProjectiles, (wall, bomb) => {
-        if (bomb.active) {
-            bomb.deactivate();
-            this.explosionManager.spawn(bomb.x, bomb.y, 0.5);
-        }
-    });
 
     this.waveStarted = false;
     this.enemiesSpawned = 0;
@@ -446,13 +470,6 @@ export default class GameScene extends Phaser.Scene {
       onComplete: () => riskText.destroy(),
     });
 
-    this.bombs = this.physics.add.group({
-      classType: Bomb, // Keeping generic for now, but will use ClassicBomb mostly
-      runChildUpdate: true,
-    });
-    this.enemies = this.physics.add.group();
-    this.powerups = this.physics.add.group();
-    this.lootGroup = this.physics.add.group(); // Loot Drop System
     this.powerupLogic = new PowerupLogic(this);
     this.collisionHandler = new CollisionHandler(
       this,
@@ -628,6 +645,20 @@ export default class GameScene extends Phaser.Scene {
       }
   }
 
+  enemyShoot(enemy) {
+      if (!this.player || !this.player.active || !this.enemyProjectiles) return;
+      if (this.gamePaused) return;
+
+      const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      const speed = 200;
+
+      const bomb = this.enemyProjectiles.get(enemy.x, enemy.y);
+      if (bomb) {
+          bomb.fire(enemy.x, enemy.y, Math.cos(angle) * speed, Math.sin(angle) * speed, 0.5, true);
+          bomb.setTint(0xff00ff); // Purple Projectile
+      }
+  }
+
   updatePve(time, delta) {
     // 1. Snapshot for Replay/Debugging
     if (this.enemies && this.enemies.getChildren().length > 0) {
@@ -640,6 +671,17 @@ export default class GameScene extends Phaser.Scene {
       // TASK FORCE: BOSS LOGIC UPDATE
       if (enemy.update) {
           enemy.update(time, delta);
+      }
+
+      // TASK FORCE: ENEMY SHOOTING (Wave 8+)
+      // Standard mobs gain ranged attack to force player to use cover
+      if (this.currentWave >= 8 && !enemy.isBoss && enemy.active) {
+          // Chance: 0.1% per frame (~1 shot every 16s per enemy on avg)
+          // Adjust probability based on difficulty/wave?
+          // Let's keep it simple: 0.001
+          if (Math.random() < 0.001) {
+              this.enemyShoot(enemy);
+          }
       }
 
       // LEAK PENALTY (Bottom Screen)
