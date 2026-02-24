@@ -99,9 +99,14 @@ export default class ToSManager {
 
     // SAVE ACCEPTANCE
     localStorage.setItem('termsAccepted', 'true');
-    console.log('[ToS] Terms Accepted. Starting Game Loop.');
+    console.log('[ToS] Terms Accepted. Proceeding to Auth Check.');
 
-    // SKIP AUTH -> GO DIRECTLY TO GAME
-    this.overlayManager.startGameDirectly();
+    // Check Session (Gate)
+    if (this.overlayManager.checkSession) {
+      this.overlayManager.checkSession();
+    } else {
+      // Fallback
+      this.overlayManager.showAuthMenu();
+    }
   }
 }

@@ -90,15 +90,15 @@ const config = {
 };
 
 // 🎬 Start Game Logic
-window.launchGame = async function () {
+window.launchGame = async function (user = null) {
   console.log(
     '%cCreated with passion by AVRE 🌹',
     'color: #FF5F1F; font-weight: bold; font-size: 16px;'
   );
   console.log('🚀 Launching Phaser...');
 
-  // Initialize Player State (Guest Mode by default if no auth)
-  await playerStateService.init();
+  // Initialize Player State (Guest Mode by default if no user passed)
+  await playerStateService.init(user);
 
   // 🚀 Criação da instância do jogo
   const game = new Phaser.Game(config);

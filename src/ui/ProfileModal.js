@@ -30,13 +30,67 @@ export default class ProfileModal extends UIModal {
 
         let y = -this.modalHeight / 2 + 100;
 
+        // --- IDENTITY ---
+        const avatarSize = 64;
+        const avatarKey = user.avatarUrl ? `avatar_${user.id}` : 'icon_summoner';
+
+        // Container for Avatar
+        const avatarContainer = this.scene.add.container(0, y);
+
+        // Background Circle
+        const avatarBg = this.scene.add.circle(0, 0, avatarSize / 2 + 4, 0x00ffff);
+
+        // Avatar Image
+        let avatarImg = this.scene.add.image(0, 0, 'icon_summoner').setDisplaySize(avatarSize, avatarSize);
+
+        // Try to load external avatar if available and not loaded
+        if (user.avatarUrl && !this.scene.textures.exists(avatarKey)) {
+             this.scene.load.image(avatarKey, user.avatarUrl);
+             this.scene.load.once('complete', () => {
+                 if (this.scene.textures.exists(avatarKey) && avatarImg.active) {
+                     avatarImg.setTexture(avatarKey);
+                     avatarImg.setDisplaySize(avatarSize, avatarSize);
+                 }
+             });
+             this.scene.load.start();
+        } else if (this.scene.textures.exists(avatarKey)) {
+             avatarImg.setTexture(avatarKey);
+             avatarImg.setDisplaySize(avatarSize, avatarSize);
+        }
+
+        // Mask
+        const maskShape = this.scene.make.graphics();
+        maskShape.fillStyle(0xffffff);
+        maskShape.fillCircle(0, 0, avatarSize / 2);
+        const mask = maskShape.createGeometryMask();
+        // Since mask needs absolute coordinates and we are in a container, it's tricky.
+        // Simplified: Just use a circle overlay or rely on the image being square/fitted.
+        // For MVP, skip mask complexity inside container or use a simple frame.
+        // We'll just put a ring on top.
+        const ring = this.scene.add.graphics();
+        ring.lineStyle(4, 0x00ffff);
+        ring.strokeCircle(0, 0, avatarSize / 2);
+
+        avatarContainer.add([avatarBg, avatarImg, ring]);
+        this.contentContainer.add(avatarContainer);
+
+        y += 50;
+
+        // Name
+        const nameText = this.scene.add.text(0, y, user.fullName || 'Summoner', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ffffff'
+        }).setOrigin(0.5);
+        this.contentContainer.add(nameText);
+
+        y += 40;
+
         // --- LEVEL HEADER ---
         const lvlText = this.scene.add.text(0, y, `LEVEL ${level}`, {
-             fontFamily: '"Press Start 2P"', fontSize: '24px', color: '#ffd700'
+             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ffd700'
         }).setOrigin(0.5);
         this.contentContainer.add(lvlText);
 
-        y += 40;
+        y += 30;
 
         // XP Bar
         const barW = 280;

@@ -21,12 +21,32 @@ class PlayerStateService {
 
   /**
    * Initializes the player state.
-   * @param {string|null} walletAddress - User wallet/id. If null, loads Guest Mode.
-   * @param {string|null} email - User email for Admin check.
+   * @param {object|null} user - Supabase User Object or null (Guest).
    */
-  async init(walletAddress = null, email = null) {
+  async init(user = null) {
+    let walletAddress = null;
+    let email = null;
+    let fullName = null;
+    let avatarUrl = null;
+
+    if (user) {
+        if (typeof user === 'string') {
+             // Legacy Support for tests/mock calls passing walletAddress string directly
+             walletAddress = user;
+        } else {
+             // Standard Supabase User Object
+             walletAddress = user.id; // Use UUID as walletAddress for Web2 Auth
+             email = user.email;
+             // Extract Metadata
+             if (user.user_metadata) {
+                 fullName = user.user_metadata.full_name || user.user_metadata.name;
+                 avatarUrl = user.user_metadata.avatar_url || user.user_metadata.picture;
+             }
+        }
+    }
+
     console.log(
-      `[PlayerState] Initializing. Wallet: ${
+      `[PlayerState] Initializing. Wallet/ID: ${
         walletAddress || 'Guest'
       }, Email: ${email || 'N/A'}`
     );
@@ -41,7 +61,19 @@ class PlayerStateService {
       console.log('[PlayerState] Guest Mode Active');
     } else {
       this.isGuest = false;
+
+      // Check for Guest Data Merge
+      if (localStorage.getItem(GUEST_STATE_KEY)) {
+          console.log('[PlayerState] Found existing guest data. Attempting merge...');
+          // Pass the full user object to preserve metadata during re-init
+          await this.mergeGuestData(user);
+      }
+
       await this.loadCloudState(walletAddress);
+
+      // Inject Identity Metadata (since DB might not have it yet)
+      if (fullName) this.state.user.fullName = fullName;
+      if (avatarUrl) this.state.user.avatarUrl = avatarUrl;
     }
 
     // --- Analytics: Days Logged In ---
@@ -193,12 +225,15 @@ class PlayerStateService {
     const guestState = JSON.parse(localStorage.getItem(GUEST_STATE_KEY));
     if (!guestState) return;
 
+    // Resolve Wallet Address from User Object (Supabase or Legacy)
+    const walletAddress = user.id || user.walletAddress || (typeof user === 'string' ? user : null);
+
     const gainedXp = guestState.user.accountXp || 0;
     const gainedCoins = guestState.user.bcoin - 0; // Guest starts with 0 now
 
     try {
       await axios.post('/api/game/sync-offline', {
-        walletAddress: user.walletAddress,
+        walletAddress: walletAddress,
         xp: gainedXp,
         coins: Math.max(0, gainedCoins),
         items: guestState.inventory || [],
@@ -209,7 +244,8 @@ class PlayerStateService {
       localStorage.removeItem('termsAccepted');
       console.log('[PlayerState] Merge Complete. Guest State Cleared.');
 
-      await this.init(user.walletAddress, user.email);
+      // Re-init with full user object to restore metadata
+      await this.init(user);
     } catch (e) {
       console.error('[PlayerState] Failed to merge guest data', e);
     }
