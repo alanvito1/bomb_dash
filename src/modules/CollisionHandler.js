@@ -102,6 +102,11 @@ export default class CollisionHandler {
       if (this.scene.playerStats.spells && this.scene.playerStats.spells.includes('poison_bomb')) {
           this.applyPoison(target);
       }
+
+      // Task Force: Freeze Spell (Restored)
+      if (this.scene.playerStats.spells && this.scene.playerStats.spells.includes('freeze_bomb')) {
+          this.applyFreeze(target);
+      }
     });
   }
 

@@ -3,7 +3,7 @@ import api from '../api.js';
 import CollisionHandler from '../modules/CollisionHandler.js';
 import EnemySpawner from '../modules/EnemySpawner.js';
 import Bomb from '../modules/Bomb.js';
-import ClassicBomb from '../modules/BattleRoyale/ClassicBomb.js'; // Task Force: Grid Bomb
+// ClassicBomb removed for Run & Gun Pivot
 import ExplosionManager from '../modules/ExplosionManager.js';
 import DamageTextManager from '../modules/DamageTextManager.js';
 import NeonBurstManager from '../modules/NeonBurstManager.js';
@@ -276,6 +276,12 @@ export default class GameScene extends Phaser.Scene {
       const bloom = this.player.preFX.addBloom(0xffffff, 1, 1, 1.2, 1.2);
     }
 
+    // TASK FORCE: FORCE DEBUG OFF
+    if (this.physics.world.debugGraphic) {
+        this.physics.world.debugGraphic.setVisible(false);
+    }
+    this.physics.world.drawDebug = false;
+
     // TASK FORCE: I-Frames
     this.player.isInvulnerable = false;
 
@@ -410,12 +416,36 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.hardGroup);
     this.physics.add.collider(this.enemies, this.softGroup);
 
-    // Projectile Collisions
+    // Projectile Collisions (Enemy)
     this.physics.add.collider(this.player, this.enemyProjectiles, this.handlePlayerHitByProjectile, null, this);
     this.physics.add.collider(this.hardGroup, this.enemyProjectiles, (wall, bomb) => {
         if (bomb.active) {
             bomb.deactivate();
             this.explosionManager.spawn(bomb.x, bomb.y, 0.5);
+        }
+    });
+
+    // TASK FORCE: PLAYER PROJECTILE COLLISIONS (Run & Gun)
+    // 1. Vs Walls (Explode)
+    this.physics.add.collider(this.bombs, this.hardGroup, (bomb, wall) => {
+        if (bomb.active) {
+            bomb.deactivate();
+            this.explosionManager.spawn(bomb.x, bomb.y, 1.0);
+            SoundManager.play(this, 'explosion');
+        }
+    });
+
+    // 2. Vs Soft Blocks (Destroy + Loot)
+    this.physics.add.collider(this.bombs, this.softGroup, (bomb, crate) => {
+        if (bomb.active) {
+            bomb.deactivate();
+            this.explosionManager.spawn(crate.x, crate.y, 1.0);
+            crate.destroy();
+
+            // Loot Chance (30%)
+            if (Math.random() < 0.3) this.trySpawnLoot(crate.x, crate.y);
+
+            SoundManager.play(this, 'explosion');
         }
     });
 
@@ -914,38 +944,22 @@ export default class GameScene extends Phaser.Scene {
   }
 
   firePlayerBomb(isPve) {
-      // TASK FORCE: GRID SNAPPING & STATIC PLACEMENT (PvE)
+      // TASK FORCE: RUN & GUN (AUTO-SHOOT PIVOT)
       if (this.gamePaused || !this.player || !this.player.active) return;
 
-      // BRANCH: PvE (Classic) vs PvP (Shooter)
+      // Safety: Prevent Fire Rate Crash (Min 100ms)
+      if (this.playerStats.fireRate < 100) this.playerStats.fireRate = 100;
+
+      // BRANCH: PvE (Run & Gun) vs PvP (Shooter)
       if (isPve) {
-          // CHECK SPELLS
-          if (this.playerStats.spells && this.playerStats.spells.includes('multishot')) {
-              this.fireMultishot();
-              return;
-          }
+          // 1. Find Nearest Target (Enemy or Crate)
+          const rangePixels = (this.playerStats.bombRange || 4) * this.TILE_SIZE;
+          const target = this.findNearestTarget(rangePixels);
 
-          const count = 1 + (this.playerStats.multiShot || 0);
-          const tile = this.TILE_SIZE;
-          const gridX = Math.floor(this.player.x / tile);
-          const gridY = Math.floor(this.player.y / tile);
+          if (!target) return; // No target in range, save ammo/don't shoot
 
-          const x = gridX * tile + tile / 2;
-          const y = gridY * tile + tile / 2;
-
-          // Check if bomb already exists there
-          const existing = this.bombs.getChildren().find(b =>
-              Math.abs(b.x - x) < 10 && Math.abs(b.y - y) < 10 && b.active
-          );
-
-          if (existing) return; // Cannot stack
-
-          const bomb = new ClassicBomb(this, x, y, this.playerStats.bombRange, this.playerStats);
-          // Fixed: Do not add Static ClassicBomb to Dynamic Physics Group to prevent crash
-          // this.bombs.add(bomb);
-          bomb.startTimer(3000);
-
-          SoundManager.play(this, 'bomb_fire');
+          // 2. Fire Projectile(s)
+          this.shootAtTarget(target);
 
           // TASK FORCE: FIRE RATE XP
           if (this.sessionTraining) {
@@ -953,59 +967,76 @@ export default class GameScene extends Phaser.Scene {
           }
 
       } else {
-          // PvP Logic: Shoot Projectile
-          const bombGroup = this.bombs; // Or playerBombs if distinct
+          // PvP Logic: Shoot Projectile (Keep existing logic or adapt?)
+          // Existing logic relied on `fireBomb` which shoots strictly vertical/horizontal based on key?
+          // For now, preserving PvP behavior to minimize regression in ranked.
+          const bombGroup = this.bombs;
           this.fireBomb(this.player, this.playerBombs || this.bombs, -300, false);
       }
   }
 
-  fireMultishot() {
-      // Determine Direction (Prioritize movement keys, then last known)
-      const dir = this.lastDirection || 'right';
-      let vx = 0, vy = 0;
-      let offsetX = 0, offsetY = 0; // For side projectiles
-      const speed = 300;
-      const spacing = 48; // 1 Tile
+  findNearestTarget(maxDist) {
+      let nearest = null;
+      let minDist = maxDist;
 
-      if (dir === 'left') { vx = -speed; offsetY = spacing; }
-      else if (dir === 'right') { vx = speed; offsetY = spacing; }
-      else if (dir === 'up') { vy = -speed; offsetX = spacing; }
-      else if (dir === 'down') { vy = speed; offsetX = spacing; }
+      // Priority 1: Enemies
+      this.enemies.getChildren().forEach(enemy => {
+          if (!enemy.active) return;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+          if (dist < minDist) {
+              minDist = dist;
+              nearest = enemy;
+          }
+      });
 
-      // Center
-      this.spawnAlignedProjectile(0, 0, vx, vy);
-      // Side 1
-      this.spawnAlignedProjectile(offsetX, offsetY, vx, vy);
-      // Side 2
-      this.spawnAlignedProjectile(-offsetX, -offsetY, vx, vy);
+      if (nearest) return nearest;
 
-      // TASK FORCE: FIRE RATE XP (Multishot = 3x? Or 1x? Let's say 1x per volley)
-      if (this.sessionTraining) {
-          this.sessionTraining.fireRate += 1;
+      // Priority 2: Soft Blocks (Crates)
+      this.softGroup.getChildren().forEach(crate => {
+          if (!crate.active) return;
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, crate.x, crate.y);
+          if (dist < minDist) {
+              minDist = dist;
+              nearest = crate;
+          }
+      });
+
+      return nearest;
+  }
+
+  shootAtTarget(target) {
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+      const speed = 400; // Faster projectiles for snappy feel
+
+      // Multishot Logic
+      let count = 1 + (this.playerStats.multiShot || 0);
+      if (this.playerStats.spells && this.playerStats.spells.includes('multishot')) {
+          count = 3;
+      }
+
+      const spread = Phaser.Math.DegToRad(15);
+      const startAngle = angle - ((count - 1) * spread) / 2;
+
+      for (let i = 0; i < count; i++) {
+          const currentAngle = startAngle + i * spread;
+          const vx = Math.cos(currentAngle) * speed;
+          const vy = Math.sin(currentAngle) * speed;
+
+          // Get from Pool
+          const bomb = this.bombs.get(this.player.x, this.player.y);
+          if (bomb) {
+              // FIRE!
+              // Scale: 2 (16px) or 3 (24px). Default was 1 (8px).
+              // Let's go with 2.5 (20px) for visibility without being giant.
+              bomb.fire(this.player.x, this.player.y, vx, vy, 2.5, false);
+
+              // Visuals
+              bomb.setTint(0xffa500); // Orange projectile
+              if (count > 1) bomb.setTint(0xffff00); // Yellow for spread
+          }
       }
 
       SoundManager.play(this, 'bomb_fire');
-  }
-
-  spawnAlignedProjectile(offX, offY, vx, vy) {
-      // Grid Snap Spawn
-      const tile = this.TILE_SIZE;
-      const centerX = Math.floor(this.player.x / tile) * tile + tile/2;
-      const centerY = Math.floor(this.player.y / tile) * tile + tile/2;
-
-      // Add Offset
-      const spawnX = centerX + offX;
-      const spawnY = centerY + offY;
-
-      // Spawn
-      // We use `this.bombs` which is a Group of `Bomb` (Projectile) class
-      // Note: `Bomb.js` extends Physics.Arcade.Sprite.
-      const bomb = this.bombs.get(spawnX, spawnY);
-      if (bomb) {
-          // 0.5 size for projectile
-          bomb.fire(spawnX, spawnY, vx, vy, 0.5, false);
-          bomb.setTint(0xffff00); // Yellow for Multishot
-      }
   }
 
   fireBomb(firer, bombGroup, velocityY, isOpponent = false) {
@@ -1065,112 +1096,11 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  triggerExplosion(x, y, range, owner) {
-      // TASK FORCE: CROSS EXPLOSION LOGIC
-      const tile = this.TILE_SIZE;
-      const gridX = Math.floor(x / tile);
-      const gridY = Math.floor(y / tile);
-
-      // Center Explosion
-      this.explosionManager.spawn(x, y, 1.5);
-      this.damageAt(x, y, owner);
-      if (this.playerStats.spells && this.playerStats.spells.includes('freeze_bomb')) {
-          this.freezeAt(x, y);
-      }
-
-      const directions = [
-          {x: 0, y: -1}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 1, y: 0}
-      ];
-
-      // Track hit count for Range XP
-      let targetsHit = 0;
-
-      directions.forEach(dir => {
-          for (let i = 1; i <= range; i++) {
-              const tx = gridX + dir.x * i;
-              const ty = gridY + dir.y * i;
-
-              const px = tx * tile + tile / 2;
-              const py = ty * tile + tile / 2;
-
-              // Bounds Check
-              if (tx < 0 || tx >= this.GRID_W || ty < 0 || ty >= this.GRID_H) break;
-
-              // Check Hard Block
-              const hardBlock = this.hardGroup.getChildren().find(b =>
-                  b.active && Math.abs(b.x - px) < 10 && Math.abs(b.y - py) < 10
-              );
-              if (hardBlock) break; // Stop Ray
-
-              // Visual
-              this.explosionManager.spawn(px, py, 1.5);
-
-              // Damage
-              const hits = this.damageAt(px, py, owner);
-              targetsHit += hits;
-
-              // SPELL: Freeze Bomb
-              if (this.playerStats.spells && this.playerStats.spells.includes('freeze_bomb')) {
-                  this.freezeAt(px, py);
-              }
-
-              // Check Soft Block
-              const softBlock = this.softGroup.getChildren().find(b =>
-                  b.active && Math.abs(b.x - px) < 10 && Math.abs(b.y - py) < 10
-              );
-
-              if (softBlock) {
-                  softBlock.destroy();
-                  targetsHit++; // Soft Block destroyed counts as hit
-                  // Drop Loot?
-                  if (Math.random() < 0.3) this.trySpawnLoot(px, py);
-                  break; // Stop Ray
-              }
-          }
-      });
-
-      // TASK FORCE: RANGE XP
-      if (this.sessionTraining && targetsHit > 0) {
-          this.sessionTraining.range += targetsHit;
-      }
-  }
-
-  freezeAt(x, y) {
-      const radius = 20;
-      this.enemies.getChildren().forEach(enemy => {
-         if (enemy.active && Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) < radius) {
-             this.collisionHandler.applyFreeze(enemy);
-         }
-      });
-  }
-
   // New: Record Damage for XP
   recordDamage(amount) {
       if (this.sessionTraining && amount > 0) {
           this.sessionTraining.power += amount;
       }
-  }
-
-  damageAt(x, y, owner) {
-      // Damage Enemies
-      // Use overlap circle small
-      const radius = 20;
-      let hits = 0;
-      this.enemies.getChildren().forEach(enemy => {
-         if (enemy.active && Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) < radius) {
-             const damage = this.playerStats.damage;
-             this.collisionHandler.applyDamage(enemy, damage);
-             hits++;
-         }
-      });
-
-      // Damage Player?
-      if (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < radius) {
-          if (!this.godMode) {
-              this.collisionHandler.onHit(this.player, null);
-          }
-      }
-      return hits;
   }
 
   resetWaveState() {

@@ -49,7 +49,7 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,
+      debug: false, // TASK FORCE: DEBUG DISABLED
       gravity: { y: 0 },
     },
   },
