@@ -146,7 +146,7 @@ Bosses appear at **Waves 10, 20, and 30**. They are "GIGANTE" (3x Scale) and pos
 Hero stats are derived from base NFT metadata, Skill Levels (Manual Training), and Account Buffs.
 
 - **Damage (POW):** `(10 * HeroPOW) + AccountLevel` * `(1 + PowerSkillLevel * 0.0001)`
-- **Speed (SPD):** `(150 + BaseSpeed * 10)` * `(1 + SpeedSkillLevel * 0.0001)` * `(1 + AccountLevel * 0.01)`
+- **Speed (SPD):** `160 + (AccountLevel * 5)` (Capped at 300). **Note:** Speed is strictly tied to Account Level and cannot be trained manually.
 - **Max HP:** `(BaseStamina * 100)` * `(1 + AccountLevel * 0.01)`
 - **Bomb Range (RNG):** `HeroRNG` * `(1 + RangeSkillLevel * 0.0001)`
 - **Fire Rate:** `BaseFireRate` * `(1 - FireRateSkillLevel * 0.0001)` (Lower is faster)
