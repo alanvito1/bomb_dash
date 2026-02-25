@@ -67,10 +67,6 @@ export default class EnemySpawner {
 
     // Check Quota (Don't spawn more than needed for the wave)
     const quota = this.scene.waveQuota || 100;
-    // We already spawned 'totalSpawnedInWave'.
-    // If we have killed X, we need to spawn until X + active = quota?
-    // No, simple logic: Total Spawned <= Quota.
-    // If quota is 30 kills, we spawn 30 enemies total.
 
     if (this.totalSpawnedInWave >= quota) {
         this.spawnQueue = 0; // Clear queue, we are done
@@ -126,14 +122,9 @@ export default class EnemySpawner {
     const enemy = this.scene.enemies.create(x, y, key);
     enemy.setDisplaySize(32, 32);
 
-    // TASK FORCE: FLUID ENEMY PHYSICS
-    // 1. Reduced Hitbox (24px for 32px sprite -> ~25% reduction)
-    // 2. Enable World Bounds & Bounce
-    enemy.body.setSize(24, 24);
-    // Center the hitbox? Default offset is 0,0.
-    // If sprite is 32x32 (Display), body is 24x24.
-    // Center offset = (32-24)/2 = 4.
-    enemy.body.setOffset(4, 4);
+    // TASK FORCE: FLUID ENEMY PHYSICS (Sliding Circles)
+    enemy.body.setCircle(11); // Radius 11 -> Diameter 22px
+    enemy.body.setOffset(5, 5); // Center on 32x32 sprite ((32-22)/2 = 5)
 
     enemy.setCollideWorldBounds(true);
     enemy.setBounce(0, 0); // Slide, don't bounce
@@ -148,156 +139,8 @@ export default class EnemySpawner {
     enemy.isBoss = false;
     enemy.name = `${mob.id}_${this.enemyIdCounter++}`;
 
-    // TASK FORCE: ENEMY AI (Defense Shooter)
-    // Attach update logic for per-frame AI
-    enemy.lastThinkTime = 0;
-    enemy.aiState = 'SEEK'; // SEEK, UNSTUCK, WANDER
-    enemy.lastPos = { x: x, y: y };
-    enemy.stuckCounter = 0;
-    enemy.unstuckEndTime = 0;
-
-    // Initialize cached target
-    enemy.cachedTarget = null;
-
-    enemy.update = (time, delta) => {
-        if (!enemy.active || !enemy.body) return;
-
-        // --- 1. HIGH-LEVEL AI (Throttled: 200ms) ---
-        // Target selection and State Switching
-        if (time - enemy.lastThinkTime > 200) {
-            enemy.lastThinkTime = time;
-
-            // A. Stuck Detection
-            if (enemy.aiState === 'SEEK') {
-                const currentSpeed = enemy.body.velocity.length();
-                let isStuck = false;
-
-                // Check 1: Velocity Drop
-                if (currentSpeed < speed * 0.1) isStuck = true;
-
-                // Check 2: Positional Lock
-                const distMoved = Phaser.Math.Distance.Between(enemy.x, enemy.y, enemy.lastPos.x, enemy.lastPos.y);
-                if (distMoved < 5) isStuck = true;
-
-                if (isStuck) {
-                    enemy.stuckCounter++;
-                } else {
-                    enemy.stuckCounter = 0;
-                }
-
-                if (enemy.stuckCounter > 4) { // ~800ms stuck
-                    enemy.aiState = 'UNSTUCK';
-                    enemy.unstuckEndTime = time + 1500; // 1.5s Unstuck
-                    enemy.stuckCounter = 0;
-
-                    // Pick random direction for Unstuck
-                    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                    enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-                }
-                enemy.lastPos = { x: enemy.x, y: enemy.y };
-            }
-
-            // B. Target Selection
-            const isHardcore = this.scene.playerStats.account_level >= 8;
-            let target = this.scene.player; // Default
-
-            if (isHardcore) {
-                // Priority 1: Loot
-                let nearestLoot = null;
-                let minLootDist = 150;
-                this.scene.lootGroup.getChildren().forEach(loot => {
-                    if (!loot.active) return;
-                    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, loot.x, loot.y);
-                    if (dist < minLootDist) {
-                        minLootDist = dist;
-                        nearestLoot = loot;
-                    }
-                });
-
-                if (nearestLoot) {
-                    target = nearestLoot;
-                    if (minLootDist < 30) {
-                        nearestLoot.destroy();
-                        if (this.scene.damageTextManager) {
-                            this.scene.damageTextManager.show(enemy.x, enemy.y - 20, 'STOLEN!', '#ff0000');
-                        }
-                    }
-                } else {
-                    // Priority 2: Soft Blocks
-                    let nearestBlock = null;
-                    let minBlockDist = 60;
-                    this.scene.softGroup.getChildren().forEach(block => {
-                        if (!block.active) return;
-                        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, block.x, block.y);
-                        if (block.y > enemy.y && dist < minBlockDist) {
-                            minBlockDist = dist;
-                            nearestBlock = block;
-                        }
-                    });
-
-                    if (nearestBlock) {
-                        target = nearestBlock;
-                        if (minBlockDist < 40) {
-                            nearestBlock.destroy();
-                            if (this.scene.explosionManager) {
-                                this.scene.explosionManager.spawn(nearestBlock.x, nearestBlock.y, 0.5);
-                            }
-                        }
-                    }
-                }
-            }
-            enemy.cachedTarget = target;
-        }
-
-        // --- 2. LOW-LEVEL MOVEMENT (Per Frame) ---
-        // Reacts instantly to collisions for smooth sliding
-
-        // Unstuck State
-        if (enemy.aiState === 'UNSTUCK') {
-             if (time > enemy.unstuckEndTime) {
-                 enemy.aiState = 'SEEK';
-             } else {
-                 // Bounce if blocked while unstucking
-                 if (enemy.body.blocked.down || enemy.body.blocked.up || enemy.body.blocked.left || enemy.body.blocked.right) {
-                     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                     enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-                 }
-                 return;
-             }
-        }
-
-        // Seek State
-        const target = enemy.cachedTarget || this.scene.player;
-        if (target && target.active) {
-            // Calculate base desired velocity
-            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, target.x, target.y);
-            let vx = Math.cos(angle) * speed;
-            let vy = Math.sin(angle) * speed;
-
-            // SLIDING LOGIC: Redirect force if blocked
-            // This ensures they slide along walls instead of stopping
-            if (enemy.body.blocked.right && vx > 0) {
-                vx = 0;
-                vy = (target.y > enemy.y) ? speed : -speed;
-            } else if (enemy.body.blocked.left && vx < 0) {
-                vx = 0;
-                vy = (target.y > enemy.y) ? speed : -speed;
-            }
-
-            if (enemy.body.blocked.down && vy > 0) {
-                vy = 0;
-                vx = (target.x > enemy.x) ? speed : -speed;
-            } else if (enemy.body.blocked.up && vy < 0) {
-                vy = 0;
-                vx = (target.x > enemy.x) ? speed : -speed;
-            }
-
-            enemy.setVelocity(vx, vy);
-        } else {
-            // No target? Drift.
-            enemy.setVelocityY(speed * 0.5);
-        }
-    };
+    // TASK FORCE: HYBRID AI
+    this.attachAI(enemy, speed);
   }
 
   stopSpawning() {
@@ -319,8 +162,6 @@ export default class EnemySpawner {
     if (!bossConfig) return;
 
     // Task Force: Boss HP Rule -> 5x Common Mob HP (Base 20)
-    // Formula: 5 * (20 * 1.15^Wave)
-    // Since difficultyMultiplier passed is already (1.15^Wave), we use:
     const COMMON_BASE_HP = 20;
     const hp = Math.ceil(5 * COMMON_BASE_HP * difficultyMultiplier);
 
@@ -342,10 +183,11 @@ export default class EnemySpawner {
     const size = 96;
     boss.setDisplaySize(size, size);
 
-    // TASK FORCE: BOSS HITBOX
-    // 96px sprite -> 72px hitbox (25% reduction)
-    boss.body.setSize(72, 72);
-    boss.body.setOffset(12, 12); // (96-72)/2 = 12
+    // TASK FORCE: BOSS HITBOX (Sliding Circle)
+    // 96px sprite. 72px diameter circle?
+    // Radius 36. Offset: (96-72)/2 = 12.
+    boss.body.setCircle(36);
+    boss.body.setOffset(12, 12);
 
     boss.setVelocityY(speed); // Fall in
 
@@ -463,19 +305,8 @@ export default class EnemySpawner {
 
       const bomb = this.scene.enemyProjectiles.get(boss.x, boss.y + 40); // Spawn below boss center
       if (bomb) {
-          // Use 'fire' method from Bomb.js
-          // fire(x, y, vx, vy, size, isOpponent)
-          // We pass isOpponent=true to trigger Tint logic in Bomb.js
-          // But Bomb.js sets tint to 0xff8080 (Reddish).
-          // We can override tint here if we want "Poison/Fire" distinct look.
-
           bomb.fire(boss.x, boss.y + 40, vx, vy, 1.5, true);
-
-          // Override Tint for Boss Projectile (Fire/Magma)
           bomb.setTint(0xff5f1f);
-
-          // Add trail or effect?
-          // Bomb.js has bloom if available.
       }
   }
 
@@ -488,27 +319,26 @@ export default class EnemySpawner {
 
           this.spawnMinion(spawnX, spawnY);
       }
-
-      // Visual Feedback
-      // ...
   }
 
   spawnMinion(x, y) {
       if (!this.currentMob) return; // Use current wave mob
 
       const mob = this.currentMob;
-      const hp = Math.ceil(mob.base_hp * this.difficultyMultiplier * 0.5); // Minions are weaker? Or same? "Common Mobs" -> Same.
-      // Let's keep them standard HP.
+      const hp = Math.ceil(mob.base_hp * this.difficultyMultiplier * 0.5);
 
       let key = mob.asset_key || 'enemy';
       if (!this.scene.textures.exists(key)) key = 'enemy';
 
       const enemy = this.scene.enemies.create(x, y, key);
       enemy.setDisplaySize(32, 32);
-      enemy.body.setSize(24, 24);
-      enemy.body.setOffset(4, 4);
+
+      // TASK FORCE: MINION HITBOX (Sliding Circle)
+      enemy.body.setCircle(11);
+      enemy.body.setOffset(5, 5);
+
       enemy.setCollideWorldBounds(true);
-      enemy.setBounce(1, 1);
+      enemy.setBounce(0, 0); // Slide, don't bounce (Minions are smart now)
 
       enemy.setVelocityY(100);
       enemy.setVelocityX(Phaser.Math.Between(-50, 50));
@@ -523,5 +353,82 @@ export default class EnemySpawner {
       if (this.scene.neonBurst) {
           this.scene.neonBurst.explode(x, y, 10);
       }
+
+      // Hybrid AI
+      this.attachAI(enemy, 80); // Minion Speed 80
+  }
+
+  /**
+   * Attaches Hybrid AI (Seek/Wander) to an enemy sprite.
+   */
+  attachAI(enemy, speed) {
+      enemy.lastThinkTime = 0;
+      enemy.aiState = 'SEEK';
+      enemy.wanderTarget = null;
+      enemy.wanderEndTime = 0;
+      enemy.lastPos = { x: enemy.x, y: enemy.y };
+
+      enemy.update = (time, delta) => {
+          if (!enemy.active || !enemy.body) return;
+
+          // --- 1. HIGH-LEVEL AI (Throttled: 250ms) ---
+          if (time - enemy.lastThinkTime > 250) {
+              enemy.lastThinkTime = time;
+
+              const player = this.scene.player;
+              if (!player || !player.active) {
+                  enemy.aiState = 'WANDER';
+                  return;
+              }
+
+              // A. Line of Sight Check (Raycast)
+              const line = new Phaser.Geom.Line(enemy.x, enemy.y, player.x, player.y);
+              let hasLineOfSight = true;
+
+              if (this.scene.hardGroup) {
+                  const blocks = this.scene.hardGroup.getChildren();
+                  for (const block of blocks) {
+                      if (block.active && Phaser.Geom.Intersects.LineToRectangle(line, block.body)) {
+                          hasLineOfSight = false;
+                          break;
+                      }
+                  }
+              }
+
+              // B. State Decision
+              if (hasLineOfSight) {
+                  enemy.aiState = 'SEEK';
+              } else {
+                  if (enemy.aiState !== 'WANDER' || time > enemy.wanderEndTime) {
+                      enemy.aiState = 'WANDER';
+                      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                      const dist = Phaser.Math.FloatBetween(50, 150);
+                      enemy.wanderTarget = {
+                          x: Phaser.Math.Clamp(enemy.x + Math.cos(angle) * dist, 50, 430),
+                          y: Phaser.Math.Clamp(enemy.y + Math.sin(angle) * dist, 50, 750)
+                      };
+                      enemy.wanderEndTime = time + 2000;
+                  }
+              }
+          }
+
+          // --- 2. LOW-LEVEL MOVEMENT ---
+          let targetX = enemy.x;
+          let targetY = enemy.y;
+
+          if (enemy.aiState === 'SEEK' && this.scene.player) {
+              targetX = this.scene.player.x;
+              targetY = this.scene.player.y;
+          } else if (enemy.aiState === 'WANDER' && enemy.wanderTarget) {
+              targetX = enemy.wanderTarget.x;
+              targetY = enemy.wanderTarget.y;
+          }
+
+          const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, targetX, targetY);
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+
+          enemy.setVelocity(vx, vy);
+      };
   }
 }

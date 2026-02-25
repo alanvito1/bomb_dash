@@ -102,8 +102,14 @@ The core gameplay happens in `GameScene.js`.
 
 ### Physics & Controls (Fluid Grid System)
 - **Player Hitbox:** Reduced to **20x20px** (offset Y+20) to prevent corner snagging in corridors.
-- **Enemy Hitbox:** Reduced by ~25% (24x24px for Mobs, 48x48px for Bosses) for better AI navigation.
+- **Enemy Hitbox:** **Circular Physics** (Radius 11px for Mobs, Radius 36px for Bosses) to enable "Sliding" around corners.
 - **Bomb Placement:** Bombs use **Grid Snapping** (Center of 48x48 Tile) to ensure consistent Cross Explosions.
+
+### AI Behavior (Hybrid System)
+- **Seek vs Wander:** Enemies use Raycasting to detect Line of Sight (LoS).
+  - **Clear LoS:** State = `SEEK` (Move directly to Player).
+  - **Blocked LoS:** State = `WANDER` (Move randomly to find a path).
+- **Throttling:** AI decision making is throttled to **250ms** for performance.
 
 ### Map Generation (Bomberman Survival)
 - **Randomized Layout:** The map is procedurally generated every stage.
