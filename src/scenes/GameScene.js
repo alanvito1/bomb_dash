@@ -69,6 +69,7 @@ export default class GameScene extends Phaser.Scene {
     this.opponent = data.opponent || null;
     this.matchId = data.matchId || null;
     this.stageConfig = data.stageConfig || null; // Stage Routing
+    this.initialHeroData = data.hero || null; // Task Force: Store passed hero data
     this.lastBombSoundTime = 0;
 
     // Check for God Mode from Service (if set by Admin)
@@ -130,7 +131,8 @@ export default class GameScene extends Phaser.Scene {
     }
     */
 
-    const selectedHero = this.registry.get('selectedHero');
+    // Task Force: Priority to data passed via init (Routing fix), then Registry
+    const selectedHero = this.initialHeroData || this.registry.get('selectedHero');
 
     if (!selectedHero || !selectedHero.id) {
       console.error(
@@ -238,7 +240,8 @@ export default class GameScene extends Phaser.Scene {
       this.bestiaryData = {};
     }
 
-    this.registry.remove('selectedHero');
+    // Task Force: Do not remove selectedHero from registry to allow re-entry
+    // this.registry.remove('selectedHero');
 
     const bgAsset = this.stageConfig
       ? this.stageConfig.background_asset
@@ -329,6 +332,29 @@ export default class GameScene extends Phaser.Scene {
         mobileBtn.setText(isActive ? 'HIDE CONTROLS' : 'MOBILE CONTROLS');
     });
     mobileBtn.setScrollFactor(0).setDepth(2000);
+
+    // TASK FORCE: AUTO-ATTACK MONETIZATION
+    this.autoFirePurchased = false;
+    this.autoFire = false;
+
+    const autoBtn = createRetroButton(this, this.scale.width - 100, 100, 160, 40, 'AUTO: OFF', 'neutral', async () => {
+        if (!this.autoFirePurchased) {
+            const result = await playerStateService.purchaseAutoFire();
+            if (result.success) {
+                this.autoFirePurchased = true;
+                this.autoFire = true;
+                autoBtn.setText('AUTO: ON');
+                // Visual feedback
+                if (this.damageTextManager) this.damageTextManager.show(autoBtn.x, autoBtn.y + 40, '-1 BCOIN', 'GOLD');
+            } else {
+                if (this.damageTextManager) this.damageTextManager.show(autoBtn.x, autoBtn.y + 40, 'NEED 1 BCOIN', 'CRIT');
+            }
+        } else {
+            this.autoFire = !this.autoFire;
+            autoBtn.setText(this.autoFire ? 'AUTO: ON' : 'AUTO: PAUSED');
+        }
+    });
+    autoBtn.setScrollFactor(0).setDepth(2000);
 
     this.canShoot = false;
     this.time.delayedCall(500, () => {
@@ -595,6 +621,27 @@ export default class GameScene extends Phaser.Scene {
           this.playerState === 'CAN_SHOOT' &&
           this.canShoot
         ) {
+          // Task Force: Auto-Aim Logic
+          // Find nearest enemy
+          let nearest = null;
+          let minDist = Infinity;
+          this.enemies.getChildren().forEach(enemy => {
+              if (enemy.active) {
+                  const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+                  if (d < minDist) {
+                      minDist = d;
+                      nearest = enemy;
+                  }
+              }
+          });
+
+          if (nearest) {
+              const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, nearest.x, nearest.y);
+              // Update direction vector
+              if (!this.playerLastDirection) this.playerLastDirection = new Phaser.Math.Vector2();
+              this.playerLastDirection.set(Math.cos(angle), Math.sin(angle));
+          }
+
           this.firePlayerBomb(true);
         }
       },
@@ -1353,13 +1400,13 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    // Add XP (Even on defeat?) Yes, user gets score as XP usually.
-    // playerStateService.addAccountXp(xpGain); // Logic was missing in old handleGameOver, adding it for consistency?
-    // Old code: finalXp = this.score. api.completeMatch passes finalXp.
-    // But it didn't call playerStateService.addAccountXp().
-    // I should probably add it to sync local state?
-    // The prompt says "Summoner Gain... anime a barra enchendo com o XP ganho". So yes.
+    // Task Force: Apply Match XP first, THEN Penalty
     playerStateService.addAccountXp(xpGain);
+
+    // Task Force: Death Penalty (Point 4 Hookup)
+    if (!isVictory) {
+        playerStateService.applyDeathPenalty(this.playerStats.id);
+    }
 
     // 2. Transition to Dopamine Report
     this.scene.stop('HUDScene');

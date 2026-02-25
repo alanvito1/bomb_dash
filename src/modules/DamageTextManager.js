@@ -41,6 +41,13 @@ export default class DamageTextManager {
 
     if (!text) return; // Pool full or error
 
+    // Task Force: Ensure text is on display list and high depth
+    // Note: PooledText constructor sets 'scene', but not displayList.
+    if (!text.displayList) {
+        this.scene.add.existing(text);
+    }
+    text.setDepth(2000); // Higher than map (100) and player
+
     let fontSize = '16px';
     let color = '#ffffff';
     let strokeThickness = 3;

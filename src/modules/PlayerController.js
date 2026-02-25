@@ -68,6 +68,9 @@ export default class PlayerController {
       paused: true,
     });
 
+    // TASK FORCE: WASD Support
+    this.wasd = this.scene.input.keyboard.addKeys('W,A,S,D');
+
     return this.player;
   }
 
@@ -96,11 +99,16 @@ export default class PlayerController {
        this.lastDirection.set(Math.cos(joystick.angle), Math.sin(joystick.angle)).normalize();
 
     } else {
-        // Keyboard Input
-        if (cursors.left.isDown) velocity.x -= 1;
-        if (cursors.right.isDown) velocity.x += 1;
-        if (cursors.up.isDown) velocity.y -= 1;
-        if (cursors.down.isDown) velocity.y += 1;
+        // Keyboard Input (Arrows + WASD)
+        const left = cursors.left.isDown || (this.wasd && this.wasd.A.isDown);
+        const right = cursors.right.isDown || (this.wasd && this.wasd.D.isDown);
+        const up = cursors.up.isDown || (this.wasd && this.wasd.W.isDown);
+        const down = cursors.down.isDown || (this.wasd && this.wasd.S.isDown);
+
+        if (left) velocity.x -= 1;
+        if (right) velocity.x += 1;
+        if (up) velocity.y -= 1;
+        if (down) velocity.y += 1;
 
         if (velocity.lengthSq() > 0) {
             velocity.normalize().scale(speed);
