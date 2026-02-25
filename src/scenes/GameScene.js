@@ -68,17 +68,42 @@ export default class GameScene extends Phaser.Scene {
     this.gameMode = data.gameMode || 'solo';
     this.opponent = data.opponent || null;
     this.matchId = data.matchId || null;
-    this.stageConfig = data.stageConfig || null; // Stage Routing
-    this.initialHeroData = data.hero || null; // Task Force: Store passed hero data
+
+    // TASK FORCE: ROUTING FIX (Stage Config)
+    // If no stageConfig passed, fallback to Stage 1 (Default)
+    this.stageConfig = data.stageConfig || {
+      id: 1,
+      name: 'The Cave Entrance',
+      difficulty_multiplier: 1.0,
+      background_asset: 'bg1',
+      enemy_config: {
+        wave_count: 30,
+        wave_quota: 6,
+        mob_a: { id: 'slime_green', asset_key: 'enemy1', base_hp: 10, base_speed: 50 },
+        mob_b: { id: 'bat_black', asset_key: 'enemy1', base_hp: 25, base_speed: 70 },
+        boss: { id: 'king_slime', asset_key: 'enemy1', base_hp: 1000, base_speed: 40 },
+      },
+    };
+
+    // TASK FORCE: ROUTING FIX (Hero Data)
+    // Priority: 1. Passed in init(data) 2. Registry 3. Fail
+    this.initialHeroData = data.hero || this.registry.get('selectedHero');
+
     this.lastBombSoundTime = 0;
 
     // Check for God Mode from Service (if set by Admin)
     this.godMode = playerStateService.godMode || false;
 
+    // TASK FORCE: MEMORY LEAK HOTFIX (Play Again Crash)
+    // Explicitly nullify physics groups to force recreation in generateMap()
+    // This prevents accessing destroyed World references.
+    this.hardGroup = null;
+    this.softGroup = null;
+
     console.log(
       `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${
         this.matchId
-      }, Stage: ${this.stageConfig ? this.stageConfig.name : 'Default'}`
+      }, Stage: ${this.stageConfig.name}`
     );
   }
 
@@ -132,30 +157,13 @@ export default class GameScene extends Phaser.Scene {
     */
 
     // Task Force: Priority to data passed via init (Routing fix), then Registry
-    const selectedHero = this.initialHeroData || this.registry.get('selectedHero');
+    const selectedHero = this.initialHeroData;
 
     if (!selectedHero || !selectedHero.id) {
       console.error(
         '[GameScene] CRITICAL: Scene started without a valid selected hero. Aborting.'
       );
-      this.add
-        .text(
-          this.scale.width / 2,
-          this.scale.height / 2,
-          'ERROR: No hero data found.\nReturning to menu.',
-          {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '18px',
-            color: '#ff0000',
-            align: 'center',
-            wordWrap: { width: this.scale.width - 40 },
-          }
-        )
-        .setOrigin(0.5);
-
-      this.time.delayedCall(3000, () => {
-        this.scene.start('MenuScene');
-      });
+      this.scene.start('MenuScene');
       return;
     }
 
