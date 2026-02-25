@@ -151,120 +151,151 @@ export default class EnemySpawner {
     // TASK FORCE: ENEMY AI (Defense Shooter)
     // Attach update logic for per-frame AI
     enemy.lastThinkTime = 0;
-    enemy.aiState = 'SEEK'; // SEEK, UNSTUCK
+    enemy.aiState = 'SEEK'; // SEEK, UNSTUCK, WANDER
     enemy.lastPos = { x: x, y: y };
     enemy.stuckCounter = 0;
     enemy.unstuckEndTime = 0;
 
+    // Initialize cached target
+    enemy.cachedTarget = null;
+
     enemy.update = (time, delta) => {
         if (!enemy.active || !enemy.body) return;
 
-        // AI Throttling (Think every 200ms)
-        if (time - enemy.lastThinkTime < 200) return;
-        enemy.lastThinkTime = time;
+        // --- 1. HIGH-LEVEL AI (Throttled: 200ms) ---
+        // Target selection and State Switching
+        if (time - enemy.lastThinkTime > 200) {
+            enemy.lastThinkTime = time;
 
-        // --- STUCK DETECTION ---
-        // Check if we are "moving" (speed > 10) but not changing position
-        const currentSpeed = enemy.body.velocity.length();
-        if (enemy.aiState === 'SEEK' && currentSpeed > 10) {
-            const distMoved = Phaser.Math.Distance.Between(enemy.x, enemy.y, enemy.lastPos.x, enemy.lastPos.y);
-            if (distMoved < 5) { // Moved less than 5px in 200ms despite velocity
-                enemy.stuckCounter++;
-            } else {
-                enemy.stuckCounter = 0;
-            }
+            // A. Stuck Detection
+            if (enemy.aiState === 'SEEK') {
+                const currentSpeed = enemy.body.velocity.length();
+                let isStuck = false;
 
-            if (enemy.stuckCounter > 3) { // Stuck for ~600ms
-                enemy.aiState = 'UNSTUCK';
-                enemy.unstuckEndTime = time + 1500; // 1.5s Unstuck
-                enemy.stuckCounter = 0;
+                // Check 1: Velocity Drop
+                if (currentSpeed < speed * 0.1) isStuck = true;
 
-                // Pick random direction
-                const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-                // console.log(`[AI] ${enemy.name} is STUCK. Switching to UNSTUCK.`);
-            }
-        }
-        enemy.lastPos = { x: enemy.x, y: enemy.y };
+                // Check 2: Positional Lock
+                const distMoved = Phaser.Math.Distance.Between(enemy.x, enemy.y, enemy.lastPos.x, enemy.lastPos.y);
+                if (distMoved < 5) isStuck = true;
 
-        // --- UNSTUCK BEHAVIOR ---
-        if (enemy.aiState === 'UNSTUCK') {
-            if (time > enemy.unstuckEndTime) {
-                enemy.aiState = 'SEEK';
-                enemy.setVelocity(0, 0); // Reset momentum
-            } else {
-                return; // Keep moving in random direction, ignore seeking
-            }
-        }
-
-        const isHardcore = this.scene.playerStats.account_level >= 8;
-        let target = this.scene.player; // Default Target: Player
-
-        // LEVEL 8+ THREAT: LOOT STEAL & BLOCK BREAKER
-        if (isHardcore) {
-            // Priority 1: Loot on Ground (Greed)
-            let nearestLoot = null;
-            let minLootDist = 150; // Vision Range
-
-            this.scene.lootGroup.getChildren().forEach(loot => {
-                if (!loot.active) return;
-                const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, loot.x, loot.y);
-                if (dist < minLootDist) {
-                    minLootDist = dist;
-                    nearestLoot = loot;
+                if (isStuck) {
+                    enemy.stuckCounter++;
+                } else {
+                    enemy.stuckCounter = 0;
                 }
-            });
 
-            if (nearestLoot) {
-                target = nearestLoot;
-                // Steal Logic (Overlap handled by physics or check here)
-                if (minLootDist < 30) {
-                    // OM NOM NOM
-                    nearestLoot.destroy();
-                    // Visual feedback: "STOLEN!" text?
-                    if (this.scene.damageTextManager) {
-                        this.scene.damageTextManager.show(enemy.x, enemy.y - 20, 'STOLEN!', '#ff0000');
-                    }
-                    return; // Busy eating
+                if (enemy.stuckCounter > 4) { // ~800ms stuck
+                    enemy.aiState = 'UNSTUCK';
+                    enemy.unstuckEndTime = time + 1500; // 1.5s Unstuck
+                    enemy.stuckCounter = 0;
+
+                    // Pick random direction for Unstuck
+                    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                    enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
                 }
-            } else {
-                // Priority 2: Soft Blocks (Destruction)
-                // If blocked or near one?
-                // Simple implementation: Find nearest Soft Block in front
-                let nearestBlock = null;
-                let minBlockDist = 60; // Melee Range
+                enemy.lastPos = { x: enemy.x, y: enemy.y };
+            }
 
-                this.scene.softGroup.getChildren().forEach(block => {
-                    if (!block.active) return;
-                    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, block.x, block.y);
-                    // Check if block is BELOW enemy (since they want to go down)
-                    if (block.y > enemy.y && dist < minBlockDist) {
-                        minBlockDist = dist;
-                        nearestBlock = block;
+            // B. Target Selection
+            const isHardcore = this.scene.playerStats.account_level >= 8;
+            let target = this.scene.player; // Default
+
+            if (isHardcore) {
+                // Priority 1: Loot
+                let nearestLoot = null;
+                let minLootDist = 150;
+                this.scene.lootGroup.getChildren().forEach(loot => {
+                    if (!loot.active) return;
+                    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, loot.x, loot.y);
+                    if (dist < minLootDist) {
+                        minLootDist = dist;
+                        nearestLoot = loot;
                     }
                 });
 
-                if (nearestBlock) {
-                    target = nearestBlock;
-                    if (minBlockDist < 40) {
-                        // SMASH!
-                        nearestBlock.destroy();
-                        if (this.scene.explosionManager) {
-                            this.scene.explosionManager.spawn(nearestBlock.x, nearestBlock.y, 0.5);
+                if (nearestLoot) {
+                    target = nearestLoot;
+                    if (minLootDist < 30) {
+                        nearestLoot.destroy();
+                        if (this.scene.damageTextManager) {
+                            this.scene.damageTextManager.show(enemy.x, enemy.y - 20, 'STOLEN!', '#ff0000');
                         }
-                        return; // Busy smashing
+                    }
+                } else {
+                    // Priority 2: Soft Blocks
+                    let nearestBlock = null;
+                    let minBlockDist = 60;
+                    this.scene.softGroup.getChildren().forEach(block => {
+                        if (!block.active) return;
+                        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, block.x, block.y);
+                        if (block.y > enemy.y && dist < minBlockDist) {
+                            minBlockDist = dist;
+                            nearestBlock = block;
+                        }
+                    });
+
+                    if (nearestBlock) {
+                        target = nearestBlock;
+                        if (minBlockDist < 40) {
+                            nearestBlock.destroy();
+                            if (this.scene.explosionManager) {
+                                this.scene.explosionManager.spawn(nearestBlock.x, nearestBlock.y, 0.5);
+                            }
+                        }
                     }
                 }
             }
+            enemy.cachedTarget = target;
         }
 
-        // MOVEMENT LOGIC
+        // --- 2. LOW-LEVEL MOVEMENT (Per Frame) ---
+        // Reacts instantly to collisions for smooth sliding
+
+        // Unstuck State
+        if (enemy.aiState === 'UNSTUCK') {
+             if (time > enemy.unstuckEndTime) {
+                 enemy.aiState = 'SEEK';
+             } else {
+                 // Bounce if blocked while unstucking
+                 if (enemy.body.blocked.down || enemy.body.blocked.up || enemy.body.blocked.left || enemy.body.blocked.right) {
+                     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                     enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                 }
+                 return;
+             }
+        }
+
+        // Seek State
+        const target = enemy.cachedTarget || this.scene.player;
         if (target && target.active) {
-            this.scene.physics.moveToObject(enemy, target, speed);
+            // Calculate base desired velocity
+            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, target.x, target.y);
+            let vx = Math.cos(angle) * speed;
+            let vy = Math.sin(angle) * speed;
+
+            // SLIDING LOGIC: Redirect force if blocked
+            // This ensures they slide along walls instead of stopping
+            if (enemy.body.blocked.right && vx > 0) {
+                vx = 0;
+                vy = (target.y > enemy.y) ? speed : -speed;
+            } else if (enemy.body.blocked.left && vx < 0) {
+                vx = 0;
+                vy = (target.y > enemy.y) ? speed : -speed;
+            }
+
+            if (enemy.body.blocked.down && vy > 0) {
+                vy = 0;
+                vx = (target.x > enemy.x) ? speed : -speed;
+            } else if (enemy.body.blocked.up && vy < 0) {
+                vy = 0;
+                vx = (target.x > enemy.x) ? speed : -speed;
+            }
+
+            enemy.setVelocity(vx, vy);
         } else {
-             // Default: Move Down
-             enemy.setVelocityY(speed);
-             enemy.setVelocityX(0);
+            // No target? Drift.
+            enemy.setVelocityY(speed * 0.5);
         }
     };
   }
