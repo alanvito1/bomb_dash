@@ -142,6 +142,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateTimer({ time }) {
+    if (!this.scene.isActive()) return;
     if (!this.timerText) return;
 
     const minutes = Math.floor(time / 60);
@@ -253,6 +254,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateHealth({ health, maxHealth }) {
+    if (!this.scene.isActive()) return;
     if (!this.healthBarFill || !this.healthValueText) return;
 
     const pct = maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
@@ -326,6 +328,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateXP({ accountLevel, accountXP }) {
+    if (!this.scene.isActive()) return;
     if (!this.xpBarFill || !this.levelText || !this.xpText) return;
 
     // Update Label
@@ -418,6 +421,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   showBossHealth({ name, maxHealth }) {
+    if (!this.scene.isActive()) return;
     if (this.bossHealthContainer) {
       this.bossHealthContainer.setVisible(true);
       this.bossHealthText.setText(`${maxHealth}/${maxHealth}`);
@@ -434,6 +438,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateBossHealth({ health, maxHealth }) {
+    if (!this.scene.isActive()) return;
     if (!this.bossHealthContainer || !this.bossHealthContainer.visible || !this.bossHealthFill || !this.bossHealthText) return;
 
     const pct = Phaser.Math.Clamp(health / maxHealth, 0, 1);
@@ -451,6 +456,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   hideBossHealth() {
+    if (!this.scene.isActive()) return;
     if (this.bossHealthContainer) {
       this.tweens.add({
         targets: this.bossHealthContainer,
@@ -462,6 +468,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateWave({ world, phase, isBoss }) {
+    if (!this.scene.isActive()) return;
     if (!this.waveText) return;
 
     const waveCounter = isBoss ? 'BOSS' : `${phase}`;
@@ -470,6 +477,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   handleBalanceUpdate({ balance, error }) {
+    if (!this.scene.isActive()) return;
     if (!this.scene || !this.sys || !this.active) return;
     if (!this.bcoinText || !this.bcoinText.active) return;
 

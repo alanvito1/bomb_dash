@@ -248,6 +248,7 @@ export default class LoadingScene extends Phaser.Scene {
       this.scene.start('GameScene', {
         stageConfig: stage1,
         gameMode: 'solo',
+        hero: heroes[0] // Task Force: Unify Payload
       });
       return;
     }
