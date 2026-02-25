@@ -119,6 +119,9 @@ export default class HUDScene extends Phaser.Scene {
     // Initial population
     this.updateHealth({ health: 0, maxHealth: 0 });
     this.updateXP({ accountLevel: 1, accountXP: 0 });
+
+    // Handshake: Notify GameScene that HUD is ready
+    GameEventEmitter.emit('HUD_READY');
   }
 
   setupEventListeners() {
