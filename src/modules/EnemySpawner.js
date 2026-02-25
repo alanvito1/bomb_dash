@@ -151,6 +151,10 @@ export default class EnemySpawner {
     // TASK FORCE: ENEMY AI (Defense Shooter)
     // Attach update logic for per-frame AI
     enemy.lastThinkTime = 0;
+    enemy.aiState = 'SEEK'; // SEEK, UNSTUCK
+    enemy.lastPos = { x: x, y: y };
+    enemy.stuckCounter = 0;
+    enemy.unstuckEndTime = 0;
 
     enemy.update = (time, delta) => {
         if (!enemy.active || !enemy.body) return;
@@ -158,6 +162,40 @@ export default class EnemySpawner {
         // AI Throttling (Think every 200ms)
         if (time - enemy.lastThinkTime < 200) return;
         enemy.lastThinkTime = time;
+
+        // --- STUCK DETECTION ---
+        // Check if we are "moving" (speed > 10) but not changing position
+        const currentSpeed = enemy.body.velocity.length();
+        if (enemy.aiState === 'SEEK' && currentSpeed > 10) {
+            const distMoved = Phaser.Math.Distance.Between(enemy.x, enemy.y, enemy.lastPos.x, enemy.lastPos.y);
+            if (distMoved < 5) { // Moved less than 5px in 200ms despite velocity
+                enemy.stuckCounter++;
+            } else {
+                enemy.stuckCounter = 0;
+            }
+
+            if (enemy.stuckCounter > 3) { // Stuck for ~600ms
+                enemy.aiState = 'UNSTUCK';
+                enemy.unstuckEndTime = time + 1500; // 1.5s Unstuck
+                enemy.stuckCounter = 0;
+
+                // Pick random direction
+                const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                // console.log(`[AI] ${enemy.name} is STUCK. Switching to UNSTUCK.`);
+            }
+        }
+        enemy.lastPos = { x: enemy.x, y: enemy.y };
+
+        // --- UNSTUCK BEHAVIOR ---
+        if (enemy.aiState === 'UNSTUCK') {
+            if (time > enemy.unstuckEndTime) {
+                enemy.aiState = 'SEEK';
+                enemy.setVelocity(0, 0); // Reset momentum
+            } else {
+                return; // Keep moving in random direction, ignore seeking
+            }
+        }
 
         const isHardcore = this.scene.playerStats.account_level >= 8;
         let target = this.scene.player; // Default Target: Player

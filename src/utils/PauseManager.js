@@ -28,8 +28,9 @@ export default class PauseManager {
    * - Setting a player state to prevent actions.
    * - Launching a dedicated pause UI scene.
    * - Correctly pausing the main game scene, which stops the update loop, physics, and all timers.
+   * @param {string} source - The source of the pause request (e.g., 'User', 'Blur', 'System').
    */
-  pause() {
+  pause(source = 'Unknown') {
     if (
       this.isPaused ||
       this.scene.transitioning ||
@@ -38,10 +39,10 @@ export default class PauseManager {
       return;
     }
 
-    console.log('[PauseManager] Pausing game...');
+    console.log(`[PauseManager] Pausing game... (Source: ${source})`);
     this.isPaused = true;
 
-    this.scene.setPlayerState('CANNOT_SHOOT', 'Game paused');
+    this.scene.setPlayerState('CANNOT_SHOOT', `Game paused by ${source}`);
 
     this.scene.scene.launch('PauseScene');
     this.scene.scene.pause();

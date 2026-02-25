@@ -100,6 +100,12 @@ export default class GameScene extends Phaser.Scene {
     this.hardGroup = null;
     this.softGroup = null;
 
+    // TASK FORCE: ZERO STATE RULE (Cleanup)
+    this.scene.stop('PauseScene');
+    this.scene.stop('HUDScene');
+    if (this.input && this.input.keyboard) this.input.keyboard.resetKeys();
+    if (this.physics) this.physics.resume();
+
     console.log(
       `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${
         this.matchId
@@ -248,22 +254,34 @@ export default class GameScene extends Phaser.Scene {
       .image(this.scale.width / 2, this.scale.height / 2, bgAsset)
       .setOrigin(0.5)
       .setDisplaySize(480, 800);
+
+    // TASK FORCE: HUD SYNCHRONIZATION (Handshake)
     this.scene.launch('HUDScene');
-    this.time.delayedCall(100, () => {
-      this.events.emit('update-health', {
-        health: this.playerStats.hp,
-        maxHealth: this.playerStats.maxHp,
-      });
-      this.events.emit('update-xp', {
-        accountLevel: this.playerStats.account_level,
-        accountXP: this.playerStats.account_xp,
-        heroXP: this.playerStats.hero_xp,
-        heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
-      });
-      GameEventEmitter.emit('bcoin-balance-update', {
-        balance: this.playerStats.bcoin,
-      });
-    });
+
+    const sendInitialData = () => {
+        this.events.emit('update-health', {
+            health: this.playerStats.hp,
+            maxHealth: this.playerStats.maxHp,
+        });
+        this.events.emit('update-xp', {
+            accountLevel: this.playerStats.account_level,
+            accountXP: this.playerStats.account_xp,
+            heroXP: this.playerStats.hero_xp,
+            heroXPForNextLevel: this.playerStats.hero_xp_for_next_level,
+        });
+        GameEventEmitter.emit('bcoin-balance-update', {
+            balance: this.playerStats.bcoin,
+        });
+    };
+
+    // Listen for HUD Ready signal
+    GameEventEmitter.once('HUD_READY', sendInitialData);
+
+    // Fallback: If HUD is already running (hot restart), send immediately
+    if (this.scene.isActive('HUDScene')) {
+        GameEventEmitter.off('HUD_READY', sendInitialData); // Prevent double send
+        sendInitialData();
+    }
 
     // --- TASK FORCE: THE HEART OF GAME JUICE ---
     this.damageTextManager = new DamageTextManager(this);
@@ -1551,7 +1569,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   togglePause() {
-    this.pauseManager.pause();
+    this.pauseManager.pause('UserKey');
   }
 
   toggleAutoFire() {
