@@ -294,7 +294,6 @@ export default class GameScene extends Phaser.Scene {
         this.physics.world.debugGraphic.clear(); // Clear any existing lines
     }
     this.physics.world.drawDebug = false;
-    this.physics.world.forceX = true; // ??? No, this is for body.
 
     // Force check in a few frames to ensure it stays off
     this.time.delayedCall(500, () => {
@@ -394,7 +393,7 @@ export default class GameScene extends Phaser.Scene {
       if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
       if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
 
-      // TASK FORCE: BOMBERMAN SURVIVAL MAP (Randomized)
+      // TASK FORCE: CONNECTABLE MAZE (Guaranteed Explorability)
       const width = this.GRID_W;
       const height = this.GRID_H;
       const px = 1;
@@ -402,23 +401,52 @@ export default class GameScene extends Phaser.Scene {
       const ex = Math.floor(width / 2);
       const ey = 1; // Top-Center Enemy Spawn
 
-      // Helper: Path Checker (BFS)
-      const checkPath = (start, end, hardBlocks) => {
-          const queue = [start];
+      // 1. Initial Hard Block Placement (Random + Borders)
+      const hardBlocks = new Set();
+
+      for(let y=0; y<height; y++) {
+          for(let x=0; x<width; x++) {
+              const key = `${x},${y}`;
+
+              // Borders
+              if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+                  hardBlocks.add(key);
+                  continue;
+              }
+
+              // Safe Zones (Player & Enemy)
+              const isPlayerZone = (Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1);
+              const isEnemyZone = (Math.abs(x - ex) <= 1 && Math.abs(y - ey) <= 1);
+
+              if (isPlayerZone || isEnemyZone) continue;
+
+              // Random Hard Blocks (25% for structure)
+              if (Math.random() < 0.25) {
+                  hardBlocks.add(key);
+              }
+          }
+      }
+
+      // 2. Connectivity Check (Flood Fill)
+      // Goal: Ensure ALL non-hard blocks are reachable from Player Spawn.
+      // If not, remove blocking Hard Blocks until they are.
+
+      const getReachable = () => {
           const visited = new Set();
-          visited.add(`${start.x},${start.y}`);
+          const queue = [{x: px, y: py}];
+          visited.add(`${px},${py}`);
 
           while(queue.length > 0) {
-              const curr = queue.shift();
-              if (curr.x === end.x && curr.y === end.y) return true;
-
+              const {x, y} = queue.shift();
               const dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
-              for(let d of dirs) {
-                  const nx = curr.x + d.x;
-                  const ny = curr.y + d.y;
 
+              for(const d of dirs) {
+                  const nx = x + d.x;
+                  const ny = y + d.y;
+                  const key = `${nx},${ny}`;
+
+                  // Check bounds
                   if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                      const key = `${nx},${ny}`;
                       if (!visited.has(key) && !hardBlocks.has(key)) {
                           visited.add(key);
                           queue.push({x: nx, y: ny});
@@ -426,57 +454,67 @@ export default class GameScene extends Phaser.Scene {
                   }
               }
           }
-          return false;
+          return visited;
       };
 
-      let isValid = false;
+      let reachable = getReachable();
+      // Calculate total expected reachable cells (Total Grid - Hard Blocks)
       let attempts = 0;
-      const hardBlocks = new Set();
 
-      while(!isValid && attempts < 100) {
-          hardBlocks.clear();
+      // While we haven't reached all non-hard blocks...
+      while (reachable.size < (width * height - hardBlocks.size) && attempts < 1000) {
           attempts++;
 
-          for(let y=0; y<height; y++) {
-              for(let x=0; x<width; x++) {
-                  // Strict Borders
-                  if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-                      hardBlocks.add(`${x},${y}`);
-                      continue;
-                  }
-                  // Random Hard Blocks (20%)
-                  if (Math.random() < 0.2) {
-                      hardBlocks.add(`${x},${y}`);
+          // Find Hard Blocks that separate Visited from Unvisited
+          const candidates = [];
+
+          // Iterate all Hard Blocks (skipping borders)
+          for(let y=1; y<height-1; y++) {
+              for(let x=1; x<width-1; x++) {
+                  const key = `${x},${y}`;
+                  if (hardBlocks.has(key)) {
+                      const dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+                      let isAdjacentToVisited = false;
+                      let isAdjacentToUnvisited = false;
+
+                      for(const d of dirs) {
+                          const nx = x + d.x;
+                          const ny = y + d.y;
+                          const nKey = `${nx},${ny}`;
+
+                          if (reachable.has(nKey)) isAdjacentToVisited = true;
+                          else if (!hardBlocks.has(nKey)) isAdjacentToUnvisited = true; // Not Hard = Soft/Empty = Unvisited (since not in reachable)
+                      }
+
+                      if (isAdjacentToVisited && isAdjacentToUnvisited) {
+                          candidates.push(key);
+                      }
                   }
               }
           }
 
-          // Clear Spawns
-          // Player Zone (Bottom-Left)
-          hardBlocks.delete(`${px},${py}`);
-          hardBlocks.delete(`${px+1},${py}`);
-          hardBlocks.delete(`${px},${py-1}`);
+          if (candidates.length > 0) {
+              // Remove a random candidate to open a path
+              const toRemove = candidates[Math.floor(Math.random() * candidates.length)];
+              hardBlocks.delete(toRemove);
 
-          // Enemy Zone (Top-Center)
-          hardBlocks.delete(`${ex},${ey}`);
-          hardBlocks.delete(`${ex-1},${ey}`);
-          hardBlocks.delete(`${ex+1},${ey}`);
-          hardBlocks.delete(`${ex},${ey+1}`);
-
-          // Verify Path
-          if (checkPath({x: px, y: py}, {x: ex, y: ey}, hardBlocks)) {
-              isValid = true;
+              // Re-evaluate reachability
+              reachable = getReachable();
+          } else {
+              // No candidates? Should be impossible if unvisited nodes exist.
+              // Break to prevent infinite loop.
+              break;
           }
       }
 
-      // Instantiate
+      // 3. Instantiate
       for(let y=0; y<height; y++) {
           for(let x=0; x<width; x++) {
               const key = `${x},${y}`;
               if (hardBlocks.has(key)) {
                   this.placeBlock(x, y, true);
               } else {
-                  // Spawn Zone Checks
+                  // Spawn Zone Checks (Prevent Soft Blocks on top of player/enemy)
                   const isPlayerZone = (Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1);
                   const isEnemyZone = (Math.abs(x - ex) <= 1 && Math.abs(y - ey) <= 1);
 
@@ -498,11 +536,6 @@ export default class GameScene extends Phaser.Scene {
       const block = group.create(x, y, texture);
       block.setDisplaySize(this.TILE_SIZE, this.TILE_SIZE);
       block.refreshBody(); // Update static body
-
-      // Visual Hint for "Starter Blocks" (Weak, No Drops)
-      if (!isHard && this.playerStats.account_level < 8) {
-           block.setTint(0xaaaaaa); // Dull/Greyish to indicate no value
-      }
 
       block.gridX = gridX;
       block.gridY = gridY;
