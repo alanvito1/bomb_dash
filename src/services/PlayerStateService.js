@@ -426,46 +426,44 @@ class PlayerStateService {
       const accountLevel = this.getAccountLevel();
       const skills = hero.skills || { speed: 0, fireRate: 0, range: 0, power: 0 };
 
-      // Skill Levels (Derived from Raw XP)
-      // Assumption: 1000 XP = 1 Level (Linear for MVP, or reuse "Hardcore" curve?)
-      // User asked for "Micro-Progress Eternal" -> "Escala de 0.01%".
-      // Let's use a flat divisor for now to make "Levels" meaningful.
-      const XP_PER_LEVEL = 100; // Every 100 distance/damage/shots = 1 Level
+      // Skill Levels (Handbrake Logic: Use explicit levels, default to floor if missing)
+      const XP_PER_LEVEL = 100;
 
-      const speedLvl = (skills.speed || 0) / XP_PER_LEVEL;
-      const powerLvl = (skills.power || 0) / XP_PER_LEVEL;
-      const rangeLvl = (skills.range || 0) / XP_PER_LEVEL;
-      const fireRateLvl = (skills.fireRate || 0) / XP_PER_LEVEL;
+      // Task Force: Speed is NOT manual anymore. It's Account Level only.
+      const speedLvl = 0;
+
+      // Task Force: Manual Skills use explicit level (unlocked via Forge)
+      const powerLvl = skills.power_level !== undefined ? skills.power_level : Math.floor((skills.power || 0) / XP_PER_LEVEL);
+      const rangeLvl = skills.range_level !== undefined ? skills.range_level : Math.floor((skills.range || 0) / XP_PER_LEVEL);
+      const fireRateLvl = skills.fireRate_level !== undefined ? skills.fireRate_level : Math.floor((skills.fireRate || 0) / XP_PER_LEVEL);
 
       // Base Stats from NFT
-      // Note: hero.stats.power is the "Gene" (1-10 scale usually).
       const basePower = hero.stats.power || 1;
       const baseSpeed = hero.stats.speed || 1;
       const baseHp = hero.stats.hp || 100;
-      const baseRange = hero.stats.range || 1; // Sometimes undefined in mock
+      const baseRange = hero.stats.range || 1;
 
       // Multipliers
       // 1. Account Buff (+1% per Level)
       const accountMult = 1 + (accountLevel * 0.01);
 
       // 2. Skill Buffs (+0.01% per Level)
-      // 0.01% = 0.0001
-      const speedBuff = 1 + (speedLvl * 0.0001);
+      // Speed Buff: Removed manual component. Only Account Buff affects speed now?
+      // User said: "Speed EXCLUSIVELY to Account Level".
+      // So no speedLvl buff.
+      const speedBuff = 1;
+
       const powerBuff = 1 + (powerLvl * 0.0001);
       const rangeBuff = 1 + (rangeLvl * 0.0001);
-      // Fire Rate: Lower is better.
       const fireRateBuff = 1 - (fireRateLvl * 0.0001);
 
       // Final Calculations
-      // Damage: (10 * Base) + AccountLevel... then applied Skill Buff?
-      // ORANGE_PAPPER: (10 * HeroPOW) + AccountLevel * (1 + PowerSkillLevel * 0.0001)
-      // Parenthesis ambiguous in GDD. Applying Skill Buff to the TOTAL base damage.
       const rawDamage = (10 * basePower) + accountLevel;
       const finalDamage = rawDamage * powerBuff;
 
-      // Speed: (150 + Base * 10) * AccountBuff * SkillBuff
+      // Speed: (150 + Base * 10) * AccountBuff (No SkillBuff)
       const rawSpeed = (150 + baseSpeed * 10);
-      const finalSpeed = rawSpeed * accountMult * speedBuff;
+      const finalSpeed = rawSpeed * accountMult;
 
       // HP
       const rawHp = (baseHp) * 100; // If baseHp is stamina (1-10). If it's 2100, careful.
@@ -524,6 +522,20 @@ class PlayerStateService {
       return this.isBoostActive() ? 2.0 : 1.0;
   }
 
+  // Task Force: Auto-Attack Monetization
+  async purchaseAutoFire() {
+      const cost = 1;
+      if (this.state.user.bcoin < cost) {
+          return { success: false, message: 'Need 1 BCOIN for Auto-Fire.' };
+      }
+
+      this.state.user.bcoin -= cost;
+      this.state.user.totalSpent = (this.state.user.totalSpent || 0) + cost;
+      this.saveLocalState();
+
+      return { success: true, remaining: this.state.user.bcoin };
+  }
+
   async buyXpBoost() {
       const cost = this.getBoostCost();
       if (this.state.user.bcoin < cost) {
@@ -559,24 +571,35 @@ class PlayerStateService {
       };
   }
 
-  // New: Manual Training Persistence
+  // New: Manual Training Persistence (Handbrake Edition)
   async applySessionTraining(heroId, sessionData) {
-      // sessionData: { speed: float, power: float, range: float, fireRate: float }
       const hero = this.state.heroes.find(h => h.id === heroId);
       if (!hero) return { success: false };
 
       if (!hero.skills) hero.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
 
-      // Apply Global Boost Multiplier
       const mult = this.getXpBoostMultiplier();
+      const XP_PER_LEVEL = 100;
 
-      // Accumulate
-      // Note: These inputs are "Raw Actions" (distance, damage).
-      // We add them directly to the XP pool.
-      if (sessionData.speed) hero.skills.speed += sessionData.speed * mult;
-      if (sessionData.power) hero.skills.power += sessionData.power * mult;
-      if (sessionData.range) hero.skills.range += sessionData.range * mult;
-      if (sessionData.fireRate) hero.skills.fireRate += sessionData.fireRate * mult;
+      // Helper to cap XP
+      const cappedAdd = (stat, amount) => {
+          const xp = hero.skills[stat] || 0;
+          const lvl = hero.skills[`${stat}_level`] !== undefined ? hero.skills[`${stat}_level`] : Math.floor(xp / XP_PER_LEVEL);
+          const cap = (lvl + 1) * XP_PER_LEVEL;
+
+          // Add XP but clamp to next level cap
+          hero.skills[stat] = Math.min(xp + (amount * mult), cap);
+
+          // Ensure level property exists for consistency
+          if (hero.skills[`${stat}_level`] === undefined) hero.skills[`${stat}_level`] = lvl;
+      };
+
+      // Task Force: Ignore Speed (Handbrake)
+      // if (sessionData.speed) ...
+
+      if (sessionData.power) cappedAdd('power', sessionData.power);
+      if (sessionData.range) cappedAdd('range', sessionData.range);
+      if (sessionData.fireRate) cappedAdd('fireRate', sessionData.fireRate);
 
       this.saveLocalState();
 
@@ -670,6 +693,38 @@ class PlayerStateService {
     };
   }
 
+  // Task Force: Tibia-style Death Penalty
+  applyDeathPenalty(heroId) {
+      const PENALTY_PCT = 0.05; // 5% Loss
+
+      // 1. Account XP Loss
+      const currentXp = this.state.user.accountXp || 0;
+      const xpLoss = Math.floor(currentXp * PENALTY_PCT);
+      this.state.user.accountXp = Math.max(0, currentXp - xpLoss);
+
+      // 2. Hero Skill XP Loss
+      const hero = this.state.heroes.find(h => h.id === heroId);
+      let skillsLost = {};
+
+      if (hero && hero.skills) {
+          ['speed', 'power', 'range', 'fireRate'].forEach(stat => {
+              const val = hero.skills[stat] || 0;
+              const loss = Math.floor(val * PENALTY_PCT);
+              hero.skills[stat] = Math.max(0, val - loss);
+              skillsLost[stat] = loss;
+          });
+      }
+
+      console.log(`[PlayerState] Death Penalty Applied: -${xpLoss} Account XP`, skillsLost);
+      this.saveLocalState();
+
+      return {
+          success: true,
+          xpLost: xpLoss,
+          skillsLost
+      };
+  }
+
   addAccountXp(amount) {
     this.state.user.accountXp = (this.state.user.accountXp || 0) + amount;
 
@@ -733,43 +788,52 @@ class PlayerStateService {
     const validSkills = ['power', 'speed', 'range', 'fireRate'];
     if (!validSkills.includes(skillType)) return { success: false, message: 'Invalid Skill' };
 
-    // Check Cap
+    // Task Force: Speed is Auto (Account Level)
+    if (skillType === 'speed') return { success: false, message: 'Speed scales with Summoner Level.' };
+
+    const XP_PER_LEVEL = 100;
+    const skills = hero.skills || {};
+
+    // Get Current Level State
+    const currentLvl = skills[`${skillType}_level`] !== undefined ? skills[`${skillType}_level`] : Math.floor((skills[skillType] || 0) / XP_PER_LEVEL);
+    const currentXp = skills[skillType] || 0;
+
+    // Check Cap (Ascension)
     const ascension = hero.ascensionLevel || 0;
     const maxLevel = BASE_SKILL_CAP_LEVEL + (ascension * ASCENSION_BONUS_LEVEL);
 
-    const currentXp = (hero.skills && hero.skills[skillType]) || 0;
-    const currentLevel = Math.floor(currentXp / XP_PER_LEVEL);
-
-    if (currentLevel >= maxLevel) {
-        return { success: false, message: `Skill Capped (Lvl ${maxLevel}). Ascend to unlock.` };
+    if (currentLvl >= maxLevel) {
+        return { success: false, message: `Max Level ${maxLevel} Reached. Ascend!` };
     }
 
+    // Check Handbrake: XP must be full (next level cap)
+    const reqXp = (currentLvl + 1) * XP_PER_LEVEL;
+    if (currentXp < reqXp) {
+        return { success: false, message: `Train more! ${Math.floor((currentXp/reqXp)*100)}% Complete.` };
+    }
+
+    // Cost
     const bcoinCost = 1;
-
     if (this.state.user.bcoin < bcoinCost) {
-      return { success: false, message: 'Insufficient BCOIN' };
+      return { success: false, message: 'Need 1 BCOIN to Unlock Level.' };
     }
 
-    // Deduct Cost
+    // Execute Unlock
     this.state.user.bcoin -= bcoinCost;
     this.state.user.totalSpent = (this.state.user.totalSpent || 0) + bcoinCost;
 
-    // Add Skill XP
-    // Rule: 1 BCOIN = +1 Level = +100 XP (which equals 0.01% via getHeroStats divisor)
-    if (!hero.skills) hero.skills = { speed: 0, fireRate: 0, range: 0, power: 0 };
-    hero.skills[skillType] = (hero.skills[skillType] || 0) + 100;
+    // Increment Level
+    hero.skills[`${skillType}_level`] = currentLvl + 1;
+
+    // Ensure XP matches (optional, but clean)
+    // hero.skills[skillType] = reqXp;
 
     this.saveLocalState();
-
-    // Sync Cloud (Stub for MVP)
-    if (!this.isGuest) {
-      // axios.post('/api/heroes/skillup', ...)
-    }
 
     return {
       success: true,
       hero,
-      newSkillLevel: hero.skills[skillType] / 100,
+      newSkillLevel: hero.skills[`${skillType}_level`],
       remainingBcoin: this.state.user.bcoin
     };
   }
