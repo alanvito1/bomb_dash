@@ -204,6 +204,7 @@ export default class WorldMapScene extends Phaser.Scene {
     // Transition to GameScene with the config
     this.scene.start('GameScene', {
       stageConfig: stageData,
+      gameMode: 'solo', // Task Force: Unify Payload
       hero: this.currentHero, // Pass fresh hero data
     });
   }
