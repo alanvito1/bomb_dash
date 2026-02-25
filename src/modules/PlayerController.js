@@ -58,16 +58,6 @@ export default class PlayerController {
       });
     }
 
-    // 🏃 WALK ANIMATION (Bobbing)
-    this.walkTween = this.scene.tweens.add({
-      targets: this.player,
-      y: '+=2',
-      duration: 150,
-      yoyo: true,
-      repeat: -1,
-      paused: true,
-    });
-
     // TASK FORCE: WASD Support
     this.wasd = this.scene.input.keyboard.addKeys('W,A,S,D');
 
@@ -125,19 +115,12 @@ export default class PlayerController {
     const isMoving = velocity.lengthSq() > 0;
 
     if (isMoving) {
-      if (this.walkTween && this.walkTween.isPaused()) this.walkTween.resume();
-
       // Emit smoke
       if (this.trailEmitter) {
         this.trailEmitter.setPosition(this.player.x, this.player.y + 18);
         if (this.scene.time.now % 100 < 20) {
           this.trailEmitter.emitParticle(1);
         }
-      }
-    } else {
-      if (this.walkTween && this.walkTween.isPlaying()) {
-        this.walkTween.pause();
-        this.player.y = Math.round(this.player.y); // Snap to pixel when stopping
       }
     }
   }
