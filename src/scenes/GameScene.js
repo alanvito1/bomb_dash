@@ -106,6 +106,11 @@ export default class GameScene extends Phaser.Scene {
     if (this.input && this.input.keyboard) this.input.keyboard.resetKeys();
     if (this.physics) this.physics.resume();
 
+    // TASK FORCE: RESET FLAGS (Play Again Fix)
+    this.gamePaused = false;
+    this.transitioning = false;
+    this.playerState = 'CAN_SHOOT';
+
     console.log(
       `[GameScene] Initialized with mode: ${this.gameMode}, Match ID: ${
         this.matchId
