@@ -13,9 +13,11 @@ The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments
 - **Solo Run Victory:** Awards **50 Account XP** + **Looted Coins** (Session Coins) + **Hero Skill XP** (Manual Training).
 - **Boss Defeat:** Bosses drop significant coins (5x normal mob) and XP (3x normal mob).
 - **Loot Drop Chance (Soft Blocks):**
-  - **Nothing:** 70%
-  - **Common Fragment:** 25% (Crafting Material)
-  - **BCOIN:** 5% (Premium Currency)
+  - **Account Level 1-7 (Starter Blocks):** 1 HP, **0% Drop Rate** (Training Wheels).
+  - **Account Level 8+ (Standard Soft Blocks):**
+    - **Nothing:** 70%
+    - **Common Fragment:** 25% (Crafting Material)
+    - **BCOIN:** 5% (Premium Currency)
 - **Daily Faucet (MVP Feature):**
   - **Action:** Player can claim **5 BCOIN** once every 24 hours.
   - **Constraint:** Strict local timestamp check. UI displays precise countdown "WAIT Xh Ym".
@@ -103,9 +105,18 @@ The core gameplay happens in `GameScene.js`.
 - **Enemy Hitbox:** Reduced by ~25% (24x24px for Mobs, 48x48px for Bosses) for better AI navigation.
 - **Bomb Placement:** Bombs use **Grid Snapping** (Center of 48x48 Tile) to ensure consistent Cross Explosions.
 
-### Map Generation (Classic Maze)
-- **Hard Grid:** Indestructible Pillars are strictly placed on EVEN coordinates (Checkerboard Pattern) to create predictable corridors.
-- **Spawn Cross:** The Player Spawn Area is guaranteed to be clear of Soft Blocks (Crates) in a Cross Pattern (2 tiles in all cardinal directions), ensuring no "trap spawns".
+### Map Generation (Bomberman Survival)
+- **Randomized Layout:** The map is procedurally generated every stage.
+- **Logic:**
+  - The map is filled with Soft Blocks (destructible).
+  - Hard Blocks (indestructible) are scattered randomly but **NEVER** block the path completely (Guaranteed Connectivity).
+  - A path always exists from Player Spawn to Enemy Spawn, though it may be blocked by Soft Blocks initially.
+- **Spawns:**
+  - **Player:** Bottom-Left Corner (Safe Zone).
+  - **Enemies:** Top-Center (Base/Portal).
+- **Block Types:**
+  - **Starter Blocks (Level 1-7):** 1 HP, No Loot. Purely for cover/obstacle mechanics.
+  - **Standard Blocks (Level 8+):** HP scales, Drops Loot (BCOIN/Fragments).
 
 ### Difficulty Scaling
 The difficulty multiplier scales exponentially:
@@ -115,7 +126,7 @@ The difficulty multiplier scales exponentially:
 ### Enemy Stats
 - **Boss HP:** `5 * (20 * DifficultyMultiplier)`.
   - At Wave 30 (Diff ~66x): `100 * 66 = 6600 HP` (Approx).
-- **Leak Penalty:** If an enemy passes the bottom screen edge, it deals damage equal to its remaining HP to the player.
+- **Leak Penalty:** Enemies reaching the bottom of the screen do NOT cause instant Game Over (Visual Zone only for now). Game Over is triggered only by Player Death or Time Out.
 
 ### Boss Mechanics (Task Force: Threat Intelligence)
 Bosses appear at **Waves 10, 20, and 30**. They are "GIGANTE" (3x Scale) and possess unique AI.

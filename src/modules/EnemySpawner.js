@@ -75,8 +75,9 @@ export default class EnemySpawner {
     const hp = Math.ceil(mob.base_hp * this.difficultyMultiplier);
     const speed = mob.base_speed * (1 + (this.difficultyMultiplier - 1) * 0.1);
 
-    const x = Phaser.Math.Between(50, this.scene.scale.width - 50);
-    const y = -50; // Top of screen
+    // Task Force: Enemies enter from Top-Center "Portal" (Gap in Hard Blocks)
+    const x = this.scene.scale.width / 2;
+    const y = -50; // Fly in from top
 
     // Use asset_key from MobConfig
     let key = mob.asset_key || 'enemy';
