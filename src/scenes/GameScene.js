@@ -131,30 +131,14 @@ export default class GameScene extends Phaser.Scene {
     SoundManager.stop(this, 'menu_music');
     this.score = 0;
 
-    // Task Force: Offline Mock Mode
-    let userAccountData = {
-        address: '0x0000000000000000000000000000000000000000',
-        account_level: 1,
-        account_xp: 0,
-        coins: 0
+    // Task Force: Load User Data from Service
+    const user = playerStateService.getUser();
+    const userAccountData = {
+        address: user.walletAddress || 'Guest',
+        account_level: user.accountLevel || 1,
+        account_xp: user.accountXp || 0,
+        coins: user.bcoin || 0
     };
-    /*
-    try {
-      const response = await api.fetch('/auth/me', {}, true);
-      if (response.success && response.user) {
-        userAccountData = response.user;
-      } else {
-        throw new Error(response.message || 'Failed to fetch user data.');
-      }
-    } catch (error) {
-      console.error(
-        '[GameScene] Could not load player data, returning to menu.',
-        error
-      );
-      this.scene.start('MenuScene', { error: 'Could not load player data.' });
-      return;
-    }
-    */
 
     // Task Force: Priority to data passed via init (Routing fix), then Registry
     const selectedHero = this.initialHeroData;
