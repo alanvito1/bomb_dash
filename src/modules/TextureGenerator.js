@@ -181,33 +181,27 @@ export default class TextureGenerator {
 
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Base: Lighter Wood (Distinct from dark background)
-    graphics.fillStyle(0xcd853f); // Peru
+    // Base: Bright Wood (Distinct from Hard Block)
+    graphics.fillStyle(0xDEB887); // BurlyWood
     graphics.fillRect(0, 0, 32, 32);
 
-    // Wood Grain Pattern
-    graphics.lineStyle(2, 0x8b4513); // SaddleBrown
-    // Planks
-    graphics.moveTo(0, 10);
-    graphics.lineTo(32, 10);
-    graphics.moveTo(0, 22);
-    graphics.lineTo(32, 22);
-    graphics.strokePath();
+    // Frame/Border
+    graphics.lineStyle(4, 0x8B4513); // SaddleBrown
+    graphics.strokeRect(0, 0, 32, 32);
 
-    // Diagonals for "Crate" look
-    graphics.lineStyle(2, 0x8b4513);
+    // Cross Pattern (CRATE)
+    graphics.lineStyle(2, 0x8B4513);
     graphics.moveTo(0, 0);
     graphics.lineTo(32, 32);
     graphics.moveTo(32, 0);
     graphics.lineTo(0, 32);
     graphics.strokePath();
 
-    // Border
-    graphics.lineStyle(4, 0x8b4513);
-    graphics.strokeRect(0, 0, 32, 32);
+    // Inner Square
+    graphics.strokeRect(8, 8, 16, 16);
 
     graphics.generateTexture('soft_block', 32, 32);
-    console.log('✅ Generated procedural SOFT BLOCK (Distinct Wood)');
+    console.log('✅ Generated procedural SOFT BLOCK (CRATE STYLE)');
   }
 
   /**
@@ -219,41 +213,41 @@ export default class TextureGenerator {
 
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Base: Light Grey Stone (Distinct from black background)
-    graphics.fillStyle(0x808080); // Grey
+    // Base: Dark Metal/Stone
+    graphics.fillStyle(0x444444); // Dark Grey
     graphics.fillRect(0, 0, 32, 32);
 
-    // Stone Brick Pattern
-    graphics.lineStyle(2, 0x404040); // Dark Grey Mortar
+    // Rivets/Bolts (Industrial Look)
+    graphics.fillStyle(0xaaaaaa);
+    graphics.fillCircle(4, 4, 2);
+    graphics.fillCircle(28, 4, 2);
+    graphics.fillCircle(4, 28, 2);
+    graphics.fillCircle(28, 28, 2);
 
-    // Horizontal Lines
+    // Cross Bracing (Metal)
+    graphics.lineStyle(2, 0x222222);
+    graphics.moveTo(16, 0);
+    graphics.lineTo(16, 32);
     graphics.moveTo(0, 16);
     graphics.lineTo(32, 16);
-
-    // Vertical Staggered
-    graphics.moveTo(16, 0);
-    graphics.lineTo(16, 16);
-    graphics.moveTo(8, 16);
-    graphics.lineTo(8, 32);
-    graphics.moveTo(24, 16);
-    graphics.lineTo(24, 32);
-
     graphics.strokePath();
 
-    // Highlighting (3D effect)
-    graphics.fillStyle(0xaaaaaa, 0.5);
-    graphics.fillRect(2, 2, 12, 12);
-    graphics.fillRect(18, 2, 12, 12);
-    graphics.fillRect(2, 18, 4, 12);
-    graphics.fillRect(10, 18, 12, 12);
-    graphics.fillRect(26, 18, 4, 12);
+    // Highlight (Top-Left)
+    graphics.lineStyle(2, 0x666666);
+    graphics.moveTo(2, 30);
+    graphics.lineTo(2, 2);
+    graphics.lineTo(30, 2);
+    graphics.strokePath();
 
-    // Border
-    graphics.lineStyle(4, 0x2f4f4f); // Dark Slate Grey
-    graphics.strokeRect(0, 0, 32, 32);
+    // Shadow (Bottom-Right)
+    graphics.lineStyle(2, 0x000000);
+    graphics.moveTo(30, 2);
+    graphics.lineTo(30, 30);
+    graphics.lineTo(2, 30);
+    graphics.strokePath();
 
     graphics.generateTexture('hard_block', 32, 32);
-    console.log('✅ Generated procedural HARD BLOCK (Distinct Stone)');
+    console.log('✅ Generated procedural HARD BLOCK (INDUSTRIAL STONE)');
   }
 
   /**
