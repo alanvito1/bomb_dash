@@ -173,7 +173,7 @@ export default class TextureGenerator {
   }
 
   /**
-   * Generates a procedural Soft Block (Destructible - Brick).
+   * Generates a procedural Soft Block (Destructible - Wood).
    * @param {Phaser.Scene} scene
    */
   static createSoftBlock(scene) {
@@ -181,32 +181,38 @@ export default class TextureGenerator {
 
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Base Brown
-    graphics.fillStyle(0x8b4513);
+    // Base: Warm Light Brown (Wood)
+    graphics.fillStyle(0xa0522d);
     graphics.fillRect(0, 0, 32, 32);
 
-    // Inner Lighter Brown (Bevel)
-    graphics.fillStyle(0xa0522d);
-    graphics.fillRect(2, 2, 28, 28);
-
-    // Brick Pattern Lines
-    graphics.lineStyle(2, 0x654321);
+    // Horizontal Planks Pattern
+    graphics.lineStyle(2, 0x654321); // Dark Brown Divider
+    graphics.moveTo(0, 8);
+    graphics.lineTo(32, 8);
     graphics.moveTo(0, 16);
     graphics.lineTo(32, 16);
-    graphics.moveTo(16, 0);
-    graphics.lineTo(16, 16);
-    graphics.moveTo(8, 16);
-    graphics.lineTo(8, 32);
-    graphics.moveTo(24, 16);
-    graphics.lineTo(24, 32);
+    graphics.moveTo(0, 24);
+    graphics.lineTo(32, 24);
     graphics.strokePath();
 
+    // Vertical Nails/Grain details (Randomized look)
+    graphics.lineStyle(1, 0x8b4513);
+    graphics.moveTo(10, 8);
+    graphics.lineTo(10, 16);
+    graphics.moveTo(22, 16);
+    graphics.lineTo(22, 24);
+    graphics.strokePath();
+
+    // Border: Dark Wood
+    graphics.lineStyle(2, 0x654321);
+    graphics.strokeRect(0, 0, 32, 32);
+
     graphics.generateTexture('soft_block', 32, 32);
-    console.log('✅ Generated procedural SOFT BLOCK');
+    console.log('✅ Generated procedural SOFT BLOCK (Warm/Organic)');
   }
 
   /**
-   * Generates a procedural Hard Block (Indestructible - Metal).
+   * Generates a procedural Hard Block (Indestructible - Metal/Stone).
    * @param {Phaser.Scene} scene
    */
   static createHardBlock(scene) {
@@ -214,31 +220,35 @@ export default class TextureGenerator {
 
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // Base Dark Grey
-    graphics.fillStyle(0x444444);
+    // Base: Cold Dark Grey (Heavy Stone/Metal)
+    graphics.fillStyle(0x222222);
     graphics.fillRect(0, 0, 32, 32);
 
-    // Rivets (Corners)
-    graphics.fillStyle(0x888888);
-    graphics.fillCircle(4, 4, 2);
-    graphics.fillCircle(28, 4, 2);
-    graphics.fillCircle(4, 28, 2);
-    graphics.fillCircle(28, 28, 2);
+    // Border: Lighter Steel Grey
+    graphics.lineStyle(2, 0x666666);
+    graphics.strokeRect(0, 0, 32, 32);
 
-    // Cross Brace
-    graphics.lineStyle(2, 0x222222);
+    // Metallic Cross (Reinforced)
+    graphics.lineStyle(2, 0x444444);
     graphics.moveTo(0, 0);
     graphics.lineTo(32, 32);
     graphics.moveTo(32, 0);
     graphics.lineTo(0, 32);
     graphics.strokePath();
 
-    // Border
-    graphics.lineStyle(2, 0x888888);
-    graphics.strokeRect(0, 0, 32, 32);
+    // Rivets (Highlights)
+    graphics.fillStyle(0x888888);
+    graphics.fillCircle(4, 4, 2);
+    graphics.fillCircle(28, 4, 2);
+    graphics.fillCircle(4, 28, 2);
+    graphics.fillCircle(28, 28, 2);
+
+    // Center Bolt
+    graphics.fillStyle(0x555555);
+    graphics.fillCircle(16, 16, 4);
 
     graphics.generateTexture('hard_block', 32, 32);
-    console.log('✅ Generated procedural HARD BLOCK');
+    console.log('✅ Generated procedural HARD BLOCK (Cold/Heavy)');
   }
 
   /**

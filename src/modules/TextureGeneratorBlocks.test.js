@@ -45,7 +45,7 @@ describe('TextureGenerator Blocks', () => {
 
     TextureGenerator.createSoftBlock(mockScene);
 
-    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x8b4513); // Base Brown
+    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0xa0522d); // Warm Light Brown
     expect(mockGraphics.generateTexture).toHaveBeenCalledWith(
       'soft_block',
       32,
@@ -82,7 +82,7 @@ describe('TextureGenerator Blocks', () => {
 
     TextureGenerator.createHardBlock(mockScene);
 
-    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x444444); // Base Grey
+    expect(mockGraphics.fillStyle).toHaveBeenCalledWith(0x222222); // Cold Dark Grey
     expect(mockGraphics.generateTexture).toHaveBeenCalledWith(
       'hard_block',
       32,
