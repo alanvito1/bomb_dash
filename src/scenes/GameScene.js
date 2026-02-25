@@ -179,16 +179,22 @@ export default class GameScene extends Phaser.Scene {
     // Use the central service logic to ensure 0.01% rule is applied consistently
     const calculatedStats = playerStateService.getHeroStats(selectedHero.id);
 
+    // TASK FORCE: SPEED CAP (Level Dependent)
+    // Speed = Base 160 + (AccountLevel * 5). Cap at 300.
+    // This prevents "Speed 11" runaway.
+    const acctLvl = userAccountData.account_level || 1;
+    const lockedSpeed = Math.min(300, 160 + (acctLvl * 5));
+
     this.playerStats = {
       ...this.DEFAULT_STATS,
       ...selectedHero,
-      // Overwrite with Calculated Effective Stats
-      damage: calculatedStats ? calculatedStats.damage : 10,
-      speed: calculatedStats ? calculatedStats.speed : 200,
-      maxHp: calculatedStats ? calculatedStats.hp : 1000,
-      hp: calculatedStats ? calculatedStats.hp : 1000,
-      bombRange: calculatedStats ? calculatedStats.range : 1,
-      fireRate: calculatedStats ? calculatedStats.fireRate : 600,
+      // Overwrite with Calculated Effective Stats (or Fallback to NFT Base)
+      damage: calculatedStats ? calculatedStats.damage : (selectedHero.damage || 10),
+      speed: lockedSpeed, // Locked Speed
+      maxHp: calculatedStats ? calculatedStats.hp : (selectedHero.maxHp || 1000),
+      hp: calculatedStats ? calculatedStats.hp : (selectedHero.hp || 1000),
+      bombRange: calculatedStats ? calculatedStats.range : (selectedHero.range || 1),
+      fireRate: calculatedStats ? calculatedStats.fireRate : (selectedHero.fireRate || 600),
 
       // Meta Data
       hero_xp: selectedHero.xp || 0,
@@ -282,6 +288,12 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerController = new PlayerController(this);
     this.player = this.playerController.create();
+
+    // TASK FORCE: FORCE SPAWN POSITION (Safe Zone)
+    // Overwrite PlayerController's default
+    const px = 2;
+    const py = this.GRID_H - 3;
+    this.player.setPosition((px + 0.5) * this.TILE_SIZE, (py + 0.5) * this.TILE_SIZE);
 
     // 1. O Efeito Bloom (Hero) - Subtle
     if (this.player.preFX) {
@@ -390,14 +402,15 @@ export default class GameScene extends Phaser.Scene {
       else this.softGroup.clear(true, true);
 
       // Ensure Textures exist (using Generators if needed)
-      if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
-      if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
+      if (!this.textures.exists('hard_block')) TextureGenerator.createHardBlock(this);
+      if (!this.textures.exists('soft_block')) TextureGenerator.createSoftBlock(this);
 
       // TASK FORCE: CONNECTABLE MAZE (Guaranteed Explorability)
       const width = this.GRID_W;
       const height = this.GRID_H;
-      const px = 1;
-      const py = height - 2; // Bottom-Left Player Spawn
+      // TASK FORCE: SPAWN LOGIC FIX (Move to safe inner zone)
+      const px = 2;
+      const py = height - 3; // (2, 13) - Safe from borders
       const ex = Math.floor(width / 2);
       const ey = 1; // Top-Center Enemy Spawn
 
@@ -415,6 +428,7 @@ export default class GameScene extends Phaser.Scene {
               }
 
               // Safe Zones (Player & Enemy)
+              // TASK FORCE: SPAWN CROSS (3x3 Exclusion)
               const isPlayerZone = (Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1);
               const isEnemyZone = (Math.abs(x - ex) <= 1 && Math.abs(y - ey) <= 1);
 
@@ -424,6 +438,14 @@ export default class GameScene extends Phaser.Scene {
               if (Math.random() < 0.25) {
                   hardBlocks.add(key);
               }
+          }
+      }
+
+      // TASK FORCE: FORCE CLEAR SPAWN AREA (Zero Tolerance)
+      // Remove any accidental hard blocks in 3x3 radius
+      for(let y=py-1; y<=py+1; y++) {
+          for(let x=px-1; x<=px+1; x++) {
+              hardBlocks.delete(`${x},${y}`);
           }
       }
 
@@ -530,7 +552,7 @@ export default class GameScene extends Phaser.Scene {
       const x = gridX * this.TILE_SIZE + this.TILE_SIZE / 2;
       const y = gridY * this.TILE_SIZE + this.TILE_SIZE / 2;
 
-      const texture = isHard ? 'block_hard' : 'block_soft';
+      const texture = isHard ? 'hard_block' : 'soft_block';
       const group = isHard ? this.hardGroup : this.softGroup;
 
       const block = group.create(x, y, texture);
@@ -820,9 +842,12 @@ export default class GameScene extends Phaser.Scene {
     // TASK FORCE: MAP REGENERATION (New Stage Layout)
     this.generateMap();
 
-    // Reset Player to Spawn Position (Bottom Left - Safety)
+    // Reset Player to Spawn Position (Safe Zone)
     if (this.player && this.player.active) {
-        this.player.setPosition(1.5 * this.TILE_SIZE, (this.GRID_H - 1.5) * this.TILE_SIZE);
+        // (2, 13) => Grid coords. World coords = (2+0.5)*TILE, (13+0.5)*TILE
+        const px = 2;
+        const py = this.GRID_H - 3;
+        this.player.setPosition((px + 0.5) * this.TILE_SIZE, (py + 0.5) * this.TILE_SIZE);
         this.player.setVelocity(0, 0);
     }
 
@@ -1515,17 +1540,18 @@ export default class GameScene extends Phaser.Scene {
     )
       return;
 
-    // TASK FORCE: SPEED XP (Manual Training)
-    // Calculate distance based on movement since LAST FRAME
+    // TASK FORCE: SPEED XP (Manual Training) - DISABLED
+    // Speed is now locked to Account Level.
+    /*
     if (this.lastPlayerPos) {
         const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.lastPlayerPos.x, this.lastPlayerPos.y);
 
-        // Filter tiny jitter (e.g. < 0.1px)
         if (this.sessionTraining && dist > 0.1) {
             this.sessionTraining.speed += dist;
         }
     }
     this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+    */
 
     // Track Last Direction for Multishot
     if (this.cursors.left.isDown) this.lastDirection = 'left';

@@ -133,6 +133,10 @@ export default class LoadingScene extends Phaser.Scene {
       'assets/backgrounds/menu_bg_vertical.png'
     );
 
+    // TASK FORCE: STABLE EXTERNAL ASSETS (Zero Tolerance for Debug Visuals)
+    this.load.image('hard_block', 'https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/block.png');
+    this.load.image('soft_block', 'https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/crate.png');
+
     const uiIcons = [
       'btn_menu',
       'btn_pause',
