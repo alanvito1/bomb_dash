@@ -384,82 +384,96 @@ export default class GameScene extends Phaser.Scene {
       if (!this.textures.exists('block_hard')) TextureGenerator.createHardBlock(this);
       if (!this.textures.exists('block_soft')) TextureGenerator.createSoftBlock(this);
 
-      // TASK FORCE: ZIGZAG CAVE GENERATION (Defense Shooter Pivot)
-      // Grid dimensions: 10x16 (approx 480x800 with 48px tiles)
+      // TASK FORCE: BOMBERMAN SURVIVAL MAP (Randomized)
+      const width = this.GRID_W;
+      const height = this.GRID_H;
+      const px = 1;
+      const py = height - 2; // Bottom-Left Player Spawn
+      const ex = Math.floor(width / 2);
+      const ey = 1; // Top-Center Enemy Spawn
 
-      const grid = [];
-      for(let y=0; y<this.GRID_H; y++) {
-          grid[y] = [];
-          for(let x=0; x<this.GRID_W; x++) {
-              grid[y][x] = 'EMPTY';
-          }
-      }
+      // Helper: Path Checker (BFS)
+      const checkPath = (start, end, hardBlocks) => {
+          const queue = [start];
+          const visited = new Set();
+          visited.add(`${start.x},${start.y}`);
 
-      // 1. Initial Noise Fill
-      for(let y=0; y<this.GRID_H; y++) {
-          for(let x=0; x<this.GRID_W; x++) {
-              // Borders (Left, Right, Top) - Hard
-              // Bottom is open for Game Over Zone interaction visually, but we might want walls there too?
-              // Rule: "Rotas para inimigos descerem".
-              if (x === 0 || x === this.GRID_W - 1 || y === 0) {
-                  grid[y][x] = 'HARD';
-                  continue;
+          while(queue.length > 0) {
+              const curr = queue.shift();
+              if (curr.x === end.x && curr.y === end.y) return true;
+
+              const dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+              for(let d of dirs) {
+                  const nx = curr.x + d.x;
+                  const ny = curr.y + d.y;
+
+                  if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                      const key = `${nx},${ny}`;
+                      if (!visited.has(key) && !hardBlocks.has(key)) {
+                          visited.add(key);
+                          queue.push({x: nx, y: ny});
+                      }
+                  }
               }
-
-              // Random Scatter
-              const roll = Math.random();
-              if (roll < 0.2) grid[y][x] = 'HARD';
-              else if (roll < 0.5) grid[y][x] = 'SOFT';
           }
-      }
+          return false;
+      };
 
-      // 2. Carve The Path (The River)
-      // Start Top Center
-      let carverX = Math.floor(this.GRID_W / 2);
-      let carverY = 1;
+      let isValid = false;
+      let attempts = 0;
+      const hardBlocks = new Set();
 
-      const pathWidth = 1; // Radius around center to clear
+      while(!isValid && attempts < 100) {
+          hardBlocks.clear();
+          attempts++;
 
-      while(carverY < this.GRID_H) {
-          // Clear area around carver
-          for(let dy = -pathWidth; dy <= pathWidth; dy++) {
-              for(let dx = -pathWidth; dx <= pathWidth; dx++) {
-                  const cx = carverX + dx;
-                  const cy = carverY + dy;
-                  if (cx > 0 && cx < this.GRID_W - 1 && cy > 0 && cy < this.GRID_H) {
-                      grid[cy][cx] = 'EMPTY';
+          for(let y=0; y<height; y++) {
+              for(let x=0; x<width; x++) {
+                  // Strict Borders
+                  if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+                      hardBlocks.add(`${x},${y}`);
+                      continue;
+                  }
+                  // Random Hard Blocks (20%)
+                  if (Math.random() < 0.2) {
+                      hardBlocks.add(`${x},${y}`);
                   }
               }
           }
 
-          // Move Down
-          carverY++;
+          // Clear Spawns
+          // Player Zone (Bottom-Left)
+          hardBlocks.delete(`${px},${py}`);
+          hardBlocks.delete(`${px+1},${py}`);
+          hardBlocks.delete(`${px},${py-1}`);
 
-          // Meander Left/Right
-          if (Math.random() < 0.5) {
-              carverX += (Math.random() < 0.5 ? -1 : 1);
+          // Enemy Zone (Top-Center)
+          hardBlocks.delete(`${ex},${ey}`);
+          hardBlocks.delete(`${ex-1},${ey}`);
+          hardBlocks.delete(`${ex+1},${ey}`);
+          hardBlocks.delete(`${ex},${ey+1}`);
+
+          // Verify Path
+          if (checkPath({x: px, y: py}, {x: ex, y: ey}, hardBlocks)) {
+              isValid = true;
           }
-
-          // Clamp Carver
-          carverX = Phaser.Math.Clamp(carverX, 2, this.GRID_W - 3);
       }
 
-      // 3. Clear Player Spawn Zone (Bottom Center)
-      const spawnX = Math.floor(this.GRID_W / 2);
-      const spawnY = this.GRID_H - 2;
-      for(let y=spawnY-1; y<=spawnY+1; y++) {
-          for(let x=spawnX-1; x<=spawnX+1; x++) {
-              if (x > 0 && x < this.GRID_W - 1 && y > 0 && y < this.GRID_H) {
-                  grid[y][x] = 'EMPTY';
+      // Instantiate
+      for(let y=0; y<height; y++) {
+          for(let x=0; x<width; x++) {
+              const key = `${x},${y}`;
+              if (hardBlocks.has(key)) {
+                  this.placeBlock(x, y, true);
+              } else {
+                  // Spawn Zone Checks
+                  const isPlayerZone = (Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1);
+                  const isEnemyZone = (Math.abs(x - ex) <= 1 && Math.abs(y - ey) <= 1);
+
+                  if (!isPlayerZone && !isEnemyZone) {
+                      this.placeBlock(x, y, false);
+                  }
               }
-          }
-      }
-
-      // 4. Instantiate Blocks
-      for(let y=0; y<this.GRID_H; y++) {
-          for(let x=0; x<this.GRID_W; x++) {
-              if (grid[y][x] === 'HARD') this.placeBlock(x, y, true);
-              else if (grid[y][x] === 'SOFT') this.placeBlock(x, y, false);
           }
       }
   }
@@ -475,8 +489,10 @@ export default class GameScene extends Phaser.Scene {
       block.setDisplaySize(this.TILE_SIZE, this.TILE_SIZE);
       block.refreshBody(); // Update static body
 
-      // Defense Shooter Pivot: Hard Blocks are immovable, Soft are destructible
-      // No special logic needed here, handled by group physics.
+      // Visual Hint for "Starter Blocks" (Weak, No Drops)
+      if (!isHard && this.playerStats.account_level < 8) {
+           block.setTint(0xaaaaaa); // Dull/Greyish to indicate no value
+      }
 
       block.gridX = gridX;
       block.gridY = gridY;
@@ -546,10 +562,22 @@ export default class GameScene extends Phaser.Scene {
         if (bomb.active) {
             bomb.deactivate();
             this.explosionManager.spawn(crate.x, crate.y, 1.0);
-            crate.destroy();
 
-            // Loot Chance (30%)
-            if (Math.random() < 0.3) this.trySpawnLoot(crate.x, crate.y);
+            // Task Force: Block HP Logic
+            if (crate.hp === undefined) crate.hp = 1;
+            crate.hp--;
+
+            if (crate.hp <= 0) {
+                crate.destroy();
+                // Loot Chance (30%)
+                if (Math.random() < 0.3) this.trySpawnLoot(crate.x, crate.y);
+            } else {
+                // Flash on hit
+                crate.setTint(0xffffff);
+                this.time.delayedCall(100, () => {
+                    if (crate.active) crate.clearTint();
+                });
+            }
 
             SoundManager.play(this, 'explosion');
         }
@@ -747,9 +775,9 @@ export default class GameScene extends Phaser.Scene {
     // TASK FORCE: MAP REGENERATION (New Stage Layout)
     this.generateMap();
 
-    // Reset Player to Spawn Position (Safety)
+    // Reset Player to Spawn Position (Bottom Left - Safety)
     if (this.player && this.player.active) {
-        this.player.setPosition(this.scale.width / 2, this.scale.height * 0.85);
+        this.player.setPosition(1.5 * this.TILE_SIZE, (this.GRID_H - 1.5) * this.TILE_SIZE);
         this.player.setVelocity(0, 0);
     }
 
@@ -778,14 +806,11 @@ export default class GameScene extends Phaser.Scene {
   handleEnemyBreach(enemy, zone) {
       if (!enemy.active || this.godMode || this.transitioning) return;
 
-      console.log('[DEFENSE BREACH] Enemy reached the base!');
-
-      // Visual Feedback (Red Flash)
-      this.cameras.main.flash(500, 255, 0, 0);
-      SoundManager.play(this, 'player_hit'); // Or a loud alarm?
-
-      // Instant Game Over
-      this.handleGameOver(false);
+      // No Game Over anymore. Just logging or visual warning?
+      // Maybe enemies disappear if they enter the zone?
+      // Or just ignore.
+      // Let's just log it for now to confirm behavior.
+      // console.log('[DEFENSE BREACH] Enemy reached the base! (No Penalty)');
   }
 
   handlePlayerHitByProjectile(player, bomb) {
@@ -1480,6 +1505,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   trySpawnLoot(x, y) {
+    // Task Force: Level 1-7 Starter Blocks drop NOTHING.
+    if (this.playerStats.account_level < 8) {
+        return;
+    }
+
     // 1. Health Potion (5% Chance - Independent Roll)
     if (Math.random() < 0.05) {
       this.spawnLootItem(
