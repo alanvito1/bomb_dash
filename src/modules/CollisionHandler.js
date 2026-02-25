@@ -324,6 +324,11 @@ export default class CollisionHandler {
         this.scene.trySpawnLoot(enemy.x, enemy.y);
       }
 
+      // TASK FORCE: Trigger Exponential Spawn
+      if (this.scene.enemySpawner && this.scene.enemySpawner.onEnemyKilled) {
+          this.scene.enemySpawner.onEnemyKilled();
+      }
+
       enemy.destroy();
       this.powerupLogic.spawn(enemy.x, enemy.y);
     }
