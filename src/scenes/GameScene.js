@@ -291,8 +291,18 @@ export default class GameScene extends Phaser.Scene {
     // TASK FORCE: FORCE DEBUG OFF
     if (this.physics.world.debugGraphic) {
         this.physics.world.debugGraphic.setVisible(false);
+        this.physics.world.debugGraphic.clear(); // Clear any existing lines
     }
     this.physics.world.drawDebug = false;
+    this.physics.world.forceX = true; // ??? No, this is for body.
+
+    // Force check in a few frames to ensure it stays off
+    this.time.delayedCall(500, () => {
+        if (this.physics.world.debugGraphic) {
+            this.physics.world.debugGraphic.setVisible(false);
+            this.physics.world.drawDebug = false;
+        }
+    });
 
     // TASK FORCE: I-Frames
     this.player.isInvulnerable = false;
@@ -568,6 +578,8 @@ export default class GameScene extends Phaser.Scene {
             crate.hp--;
 
             if (crate.hp <= 0) {
+                // TASK FORCE: Fix Movement - Disable body before destroying to ensure space is cleared
+                if (crate.body) crate.disableBody(true, true);
                 crate.destroy();
                 // Loot Chance (30%)
                 if (Math.random() < 0.3) this.trySpawnLoot(crate.x, crate.y);

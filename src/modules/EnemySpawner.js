@@ -32,36 +32,69 @@ export default class EnemySpawner {
     this.difficultyMultiplier = difficultyMultiplier;
     this.isSpawning = true;
 
-    // Initial Spawn
-    this.spawnEnemy();
+    // TASK FORCE: Exponential Spawn Logic (Kill 1 -> Spawn 2)
+    // No more time-based loop. Reactive to kills.
+    // Initial Seed: 2 Enemies
+    this.spawnQueue = 2;
+    this.totalSpawnedInWave = 0; // Track total spawned to respect Quota
 
-    // Loop
-    // Spawn rate: Base 1.5s, decreases with difficulty?
-    // Let's use a fixed rate for now, e.g. 1000ms.
-    const spawnRate = Math.max(500, 1500 - difficultyMultiplier * 100);
-
+    // Queue Processor (Fast Check)
     this.spawnTimer = this.scene.time.addEvent({
-      delay: spawnRate,
-      callback: this.spawnCheck,
+      delay: 100, // Check queue frequently
+      callback: this.processQueue,
       callbackScope: this,
       loop: true,
     });
 
     console.log(
-      `[EnemySpawner] Started spawning ${mobConfig.name} (x${difficultyMultiplier})`
+      `[EnemySpawner] Started spawning ${mobConfig.name} (x${difficultyMultiplier}) [Reactive Mode]`
     );
   }
 
-  spawnCheck() {
+  /**
+   * Called when an enemy is killed. Triggers exponential respawn.
+   */
+  onEnemyKilled() {
+      if (!this.isSpawning) return;
+
+      // Exponential Rule: Kill 1 -> Spawn 2
+      this.spawnQueue += 2;
+  }
+
+  processQueue() {
     if (!this.isSpawning) return;
     if (this.scene.gamePaused) return;
 
-    // Concurrency Limit (Don't flood the screen)
-    const maxEnemies = 8;
+    // Check Quota (Don't spawn more than needed for the wave)
+    const quota = this.scene.waveQuota || 100;
+    // We already spawned 'totalSpawnedInWave'.
+    // If we have killed X, we need to spawn until X + active = quota?
+    // No, simple logic: Total Spawned <= Quota.
+    // If quota is 30 kills, we spawn 30 enemies total.
+
+    if (this.totalSpawnedInWave >= quota) {
+        this.spawnQueue = 0; // Clear queue, we are done
+        return;
+    }
+
+    // Concurrency Limit (Safety Cap)
+    const maxEnemies = 20; // Increased from 8 for "Horde" feel
     const currentCount = this.scene.enemies.countActive();
 
-    if (currentCount < maxEnemies) {
-      this.spawnEnemy();
+    // FAILSAFE: If no enemies active, queue empty, and quota not met -> Spawn 1 to keep game going (avoid softlock)
+    if (currentCount === 0 && this.spawnQueue === 0 && this.totalSpawnedInWave < quota) {
+        this.spawnQueue = 1;
+    }
+
+    if (currentCount < maxEnemies && this.spawnQueue > 0) {
+        let activeCount = currentCount;
+        // Loop to fill up to max
+        while (activeCount < maxEnemies && this.spawnQueue > 0 && this.totalSpawnedInWave < quota) {
+            this.spawnEnemy();
+            this.spawnQueue--;
+            this.totalSpawnedInWave++;
+            activeCount++;
+        }
     }
   }
 
