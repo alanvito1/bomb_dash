@@ -139,6 +139,8 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateTimer({ time }) {
+    if (!this.timerText) return;
+
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
     this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
@@ -248,7 +250,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateHealth({ health, maxHealth }) {
-    if (!this.healthBarFill) return;
+    if (!this.healthBarFill || !this.healthValueText) return;
 
     const pct = maxHealth > 0 ? Phaser.Math.Clamp(health / maxHealth, 0, 1) : 0;
     const { x, y, w, h } = this.healthBarDims;
@@ -321,7 +323,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateXP({ accountLevel, accountXP }) {
-    if (!this.xpBarFill) return;
+    if (!this.xpBarFill || !this.levelText || !this.xpText) return;
 
     // Update Label
     this.levelText.setText(`Lv.${accountLevel}`);
@@ -429,7 +431,7 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateBossHealth({ health, maxHealth }) {
-    if (!this.bossHealthContainer || !this.bossHealthContainer.visible) return;
+    if (!this.bossHealthContainer || !this.bossHealthContainer.visible || !this.bossHealthFill || !this.bossHealthText) return;
 
     const pct = Phaser.Math.Clamp(health / maxHealth, 0, 1);
     const { w, h } = this.bossHealthDims;
@@ -457,6 +459,8 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   updateWave({ world, phase, isBoss }) {
+    if (!this.waveText) return;
+
     const waveCounter = isBoss ? 'BOSS' : `${phase}`;
     // TASK FORCE: STAGE UI UPDATE
     this.waveText.setText(`STAGE ${waveCounter}`);
