@@ -21,7 +21,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const isOfflineMode = !supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder');
+
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
+  supabaseAnonKey || 'placeholder',
+  {
+    auth: {
+      autoRefreshToken: !isOfflineMode,
+      persistSession: !isOfflineMode,
+      detectSessionInUrl: !isOfflineMode
+    }
+  }
 );

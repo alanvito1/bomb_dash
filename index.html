@@ -494,18 +494,21 @@
         try {
           const response = await fetch('/api/news');
           if (!response.ok) throw new Error('Network response was not ok');
-          const data = await response.json();
-          if (data.success && data.news) {
-            renderNews(data.news);
+
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.indexOf('application/json') !== -1) {
+            const data = await response.json();
+            if (data.success && data.news) {
+              renderNews(data.news);
+            } else {
+              renderNews(staticNews);
+            }
           } else {
-            console.warn('API returned success: false, using static news.');
+            // Silently fallback if the API returns HTML or something unexpected
             renderNews(staticNews);
           }
         } catch (e) {
-          console.warn(
-            'Failed to load news (API likely offline), using static fallback.',
-            e
-          );
+          // Silently fallback on network error/timeout
           renderNews(staticNews);
         }
       }

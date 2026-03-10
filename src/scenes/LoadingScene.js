@@ -116,10 +116,9 @@ export default class LoadingScene extends Phaser.Scene {
 
     // VFX & Items
     this.load.image('bomb', 'assets/vfx/bomb.png');
-    this.load.spritesheet('explosion_sheet', 'assets/vfx/explosion_sheet.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
+
+    // We intentionally skip loading 'explosion_sheet' to avoid 404s and let AssetLoader generate it procedurally
+
     this.load.spritesheet('explosion', 'assets/vfx/explosion.png', {
       frameWidth: 32,
       frameHeight: 32,
@@ -140,27 +139,20 @@ export default class LoadingScene extends Phaser.Scene {
     const uiIcons = [
       'btn_menu',
       'btn_pause',
-      'icon_heroes',
-      'icon_play',
-      'icon_shop',
-      'icon_forge',
-      'icon_summoner',
-      'icon_gold',
-      'icon_bcoin',
-      'icon_avatar',
+      // The following are missing, removing them to skip the 404 errors
+      // 'icon_heroes',
+      // 'icon_play',
+      // 'icon_shop',
+      // 'icon_forge',
+      // 'icon_summoner',
+      // 'icon_gold',
+      // 'icon_bcoin',
+      // 'icon_avatar',
     ];
     uiIcons.forEach((icon) => {
       if (!icon.startsWith('assets'))
         this.load.image(icon, `assets/ui/${icon}.png`);
     });
-    // Fix paths for new icons
-    this.load.image('icon_heroes', 'assets/icons/HeroSIcon.png');
-    this.load.image('icon_play', 'assets/icons/shield_lightning.png');
-    this.load.image('icon_shop', 'assets/icons/token.png');
-    this.load.image('icon_forge', 'assets/icons/bhouse.webp');
-    this.load.image('icon_summoner', 'assets/icons/Icon_L.png');
-    this.load.image('icon_gold', 'assets/icons/token.png');
-    this.load.image('icon_bcoin', 'assets/icons/sen_token.png');
 
     const powerups = [
       'rapid_fire',
