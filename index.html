@@ -422,16 +422,10 @@
         const loginContainer = document.getElementById('login-form-container');
         if (loginContainer) {
           loginContainer.style.display = 'flex';
-          // Ensure close button works to hide it if needed manually
-          const backBtn = document.getElementById('login-back-button');
-          if (backBtn) {
-            // The main.js might override this, but let's add a safe fallback listener just for UI toggle
-            // Note: main.js handles hiding on 'RETURN' usually.
-          }
         }
       };
 
-      // Fetch News
+      // Fetch News (Mocked for Offline Mode)
       async function loadNews() {
         const renderNews = (newsItems) => {
           const container = document.getElementById('news-grid');
@@ -469,48 +463,30 @@
 
         const staticNews = [
           {
+            title: 'Offline Mode Active',
+            content:
+              'Bomb Dash is now running in 100% Offline Mode. No backend required! Your progress is saved locally in your browser.',
+            created_at: new Date().toISOString(),
+            image_url: 'assets/img/bg/update.png',
+          },
+          {
             title: 'Season 1: Genesis Launch',
             content:
-              'The first official season of Bomb Dash is here! Compete for the top spot in the leaderboard and earn exclusive NFT rewards.',
-            created_at: new Date().toISOString(),
+              'The first official season of Bomb Dash is here! Compete for the top spot in the leaderboard and earn exclusive rewards.',
+            created_at: new Date(Date.now() - 86400000).toISOString(),
             image_url: 'assets/img/bg/season1.png',
           },
           {
             title: 'New Hero: Bomber King',
             content:
-              "The legendary Bomber King has arrived. Mint now to access his devastating 'Mega Bomb' ability.",
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            image_url: 'assets/img/bg/hero-king.png',
-          },
-          {
-            title: 'Community Update v1.2',
-            content:
-              "We've listened to your feedback! Patch v1.2 brings improved matchmaking and bug fixes for the collision system.",
+              "The legendary Bomber King has arrived. Unlock him now to access his devastating 'Mega Bomb' ability.",
             created_at: new Date(Date.now() - 172800000).toISOString(),
-            image_url: 'assets/img/bg/update.png',
+            image_url: 'assets/img/bg/hero-king.png',
           },
         ];
 
-        try {
-          const response = await fetch('/api/news');
-          if (!response.ok) throw new Error('Network response was not ok');
-
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.indexOf('application/json') !== -1) {
-            const data = await response.json();
-            if (data.success && data.news) {
-              renderNews(data.news);
-            } else {
-              renderNews(staticNews);
-            }
-          } else {
-            // Silently fallback if the API returns HTML or something unexpected
-            renderNews(staticNews);
-          }
-        } catch (e) {
-          // Silently fallback on network error/timeout
-          renderNews(staticNews);
-        }
+        console.log('[Offline] News loaded from static source.');
+        renderNews(staticNews);
       }
 
       // Load news on start

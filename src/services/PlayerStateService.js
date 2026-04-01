@@ -1,5 +1,3 @@
-import axios from 'axios';
-import { supabase } from '../lib/supabaseClient.js';
 import { MOCK_USER } from '../config/MockData.js';
 import { MockHeroes, MockHouses } from '../config/MockNFTData.js';
 
@@ -23,62 +21,11 @@ class PlayerStateService {
     this.xpBoostActiveUntil = 0;
   }
 
-  /**
-   * Initializes the player state.
-   * @param {object|null} user - Supabase User Object or null (Guest).
-   */
   async init(user = null) {
-    let walletAddress = null;
-    let email = null;
-    let fullName = null;
-    let avatarUrl = null;
-
-    if (user) {
-        if (typeof user === 'string') {
-             // Legacy Support for tests/mock calls passing walletAddress string directly
-             walletAddress = user;
-        } else {
-             // Standard Supabase User Object
-             walletAddress = user.id; // Use UUID as walletAddress for Web2 Auth
-             email = user.email;
-             // Extract Metadata
-             if (user.user_metadata) {
-                 fullName = user.user_metadata.full_name || user.user_metadata.name;
-                 avatarUrl = user.user_metadata.avatar_url || user.user_metadata.picture;
-             }
-        }
-    }
-
-    console.log(
-      `[PlayerState] Initializing. Wallet/ID: ${
-        walletAddress || 'Guest'
-      }, Email: ${email || 'N/A'}`
-    );
-
-    this.walletAddress = walletAddress;
-    this.checkAdmin(email);
-
-    if (!walletAddress) {
-      this.loadLocalState();
-      this.isGuest = true;
-      this.isInitialized = true;
-      console.log('[PlayerState] Guest Mode Active');
-    } else {
-      this.isGuest = false;
-
-      // Check for Guest Data Merge
-      if (localStorage.getItem(GUEST_STATE_KEY)) {
-          console.log('[PlayerState] Found existing guest data. Attempting merge...');
-          // Pass the full user object to preserve metadata during re-init
-          await this.mergeGuestData(user);
-      }
-
-      await this.loadCloudState(walletAddress);
-
-      // Inject Identity Metadata (since DB might not have it yet)
-      if (fullName) this.state.user.fullName = fullName;
-      if (avatarUrl) this.state.user.avatarUrl = avatarUrl;
-    }
+    this.loadLocalState();
+    this.isGuest = true;
+    this.isInitialized = true;
+    console.log('[PlayerState] Offline Mode Active (Local Storage Only)');
 
     // --- Analytics: Days Logged In ---
     this.checkDailyLogin();
@@ -165,94 +112,11 @@ class PlayerStateService {
   }
 
   async loadCloudState(walletAddress) {
-    try {
-      // 1. Fetch User
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('wallet_address', walletAddress)
-        .single();
-
-      if (userError || !userData) {
-        console.warn(
-          '[PlayerState] Cloud User not found. This should be handled by Auth.',
-          userError
-        );
-        // Fallback to Mock if DB fails, but keep isGuest=false to prevent overwriting local
-        this.state.user = { ...MOCK_USER, walletAddress };
-      } else {
-        this.state.user = this._mapUserFromDB(userData);
-      }
-
-      // 2. Fetch Heroes
-      const { data: heroesData } = await supabase
-        .from('heroes')
-        .select('*')
-        .eq('user_id', this.state.user.id || 0);
-
-      if (heroesData) {
-        this.state.heroes = heroesData.map((h) => this._mapHeroFromDB(h));
-      }
-
-      // 3. Fetch Inventory
-      const { data: inventoryData } = await supabase
-        .from('user_items')
-        .select('quantity, item:items(name, type, rarity)')
-        .eq('user_id', this.state.user.id || 0);
-
-      if (inventoryData) {
-        this.state.inventory = inventoryData.map((i) => this._mapItemFromDB(i));
-      }
-
-      // 4. Fetch Bestiary
-      const { data: bestiaryData } = await supabase
-        .from('user_bestiary')
-        .select('enemy_type, kill_count')
-        .eq('user_id', this.state.user.id || 0);
-
-      if (bestiaryData) {
-        this.state.bestiary = {};
-        bestiaryData.forEach((b) => {
-          this.state.bestiary[b.enemy_type] = b.kill_count;
-        });
-      }
-
-      this.isInitialized = true;
-      console.log('[PlayerState] Cloud State Loaded', this.state);
-    } catch (e) {
-      console.error('[PlayerState] Cloud Load Error:', e);
-    }
+    console.warn('[PlayerState] Cloud State disabled in Offline Mode.');
   }
 
   async mergeGuestData(user) {
-    console.log('[PlayerState] Merging Guest Data to Cloud...');
-    const guestState = JSON.parse(localStorage.getItem(GUEST_STATE_KEY));
-    if (!guestState) return;
-
-    // Resolve Wallet Address from User Object (Supabase or Legacy)
-    const walletAddress = user.id || user.walletAddress || (typeof user === 'string' ? user : null);
-
-    const gainedXp = guestState.user.accountXp || 0;
-    const gainedCoins = guestState.user.bcoin - 0; // Guest starts with 0 now
-
-    try {
-      await axios.post('/api/game/sync-offline', {
-        walletAddress: walletAddress,
-        xp: gainedXp,
-        coins: Math.max(0, gainedCoins),
-        items: guestState.inventory || [],
-        bestiary: guestState.bestiary || {},
-      });
-
-      localStorage.removeItem(GUEST_STATE_KEY);
-      localStorage.removeItem('termsAccepted');
-      console.log('[PlayerState] Merge Complete. Guest State Cleared.');
-
-      // Re-init with full user object to restore metadata
-      await this.init(user);
-    } catch (e) {
-      console.error('[PlayerState] Failed to merge guest data', e);
-    }
+    console.warn('[PlayerState] Cloud Sync disabled in Offline Mode.');
   }
 
   getDefaultState() {
@@ -674,16 +538,7 @@ class PlayerStateService {
 
     this.saveLocalState();
 
-    if (!this.isGuest) {
-      try {
-        await axios.post('/api/game/bestiary/update', {
-          walletAddress: this.walletAddress,
-          updates: { [mobId]: amount },
-        });
-      } catch (e) {
-        console.error('Failed to sync Bestiary', e);
-      }
-    }
+    // Sync Cloud disabled (Offline Mode)
 
     return {
       success: true,
@@ -761,17 +616,7 @@ class PlayerStateService {
 
     this.saveLocalState();
 
-    if (!this.isGuest) {
-      try {
-        await axios.post('/api/game/stage/complete', {
-          walletAddress: this.walletAddress,
-          heroId,
-          stageId,
-        });
-      } catch (e) {
-        console.error('Failed to save Stage Progress', e);
-      }
-    }
+    // Sync Cloud disabled (Offline Mode)
 
     return { success: true, newMaxStage: hero.max_stage, unlocked };
   }
@@ -915,16 +760,7 @@ class PlayerStateService {
 
     this.saveLocalState();
 
-    if (!this.isGuest) {
-      try {
-        await axios.post('/api/game/loot/sync', {
-          walletAddress: this.walletAddress,
-          loot: sessionLoot,
-        });
-      } catch (e) {
-        console.error('Failed to sync loot', e);
-      }
-    }
+    // Sync Cloud disabled (Offline Mode)
 
     return { success: true, inventory: this.state.inventory };
   }
@@ -938,15 +774,7 @@ class PlayerStateService {
     this.addAccountXp(xp);
     this.saveLocalState();
 
-    if (!this.isGuest) {
-      axios
-        .post('/api/admin/grant-resources', {
-          walletAddress: this.walletAddress,
-          xp,
-          coins,
-        })
-        .catch((e) => console.warn('Admin Sync Failed', e));
-    }
+    // Admin Sync disabled (Offline Mode)
     return {
       success: true,
       newBalance: this.state.user.bcoin,

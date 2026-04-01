@@ -183,39 +183,14 @@ export default class LoadingScene extends Phaser.Scene {
   async checkSessionAndProceed(loadingText) {
     loadingText.setText('INITIALIZING SYSTEM...');
 
-    // Ensure PlayerStateService is initialized
-    // NOTE: This now handles Supabase Session check internally if we implemented it right
-    // or we check supabase session here and pass it.
-
-    // Check for Supabase Session (Google Login Return)
-    let sessionUser = null;
+    // In Offline Mode, we skip supabase session checks.
+    // We always initialize as Guest.
     try {
-      const { supabase } = await import('../lib/supabaseClient.js');
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        console.log(
-          '[LoadingScene] Supabase Session Detected:',
-          session.user.email
-        );
-        // Re-init PlayerState with this user
-        await playerStateService.init(session.user.id, session.user.email);
-
-        // TASK FORCE: MERGE GUEST DATA
-        if (localStorage.getItem('guest_state')) {
-          loadingText.setText('SYNCING OFFLINE DATA...');
-          await playerStateService.mergeGuestData({
-            walletAddress: session.user.id,
-            email: session.user.email,
-          });
-        }
-      } else {
-        await playerStateService.init(); // Guest
-      }
+      console.log('[LoadingScene] Offline Mode: Initializing Local State...');
+      await playerStateService.init();
     } catch (e) {
-      console.warn('[LoadingScene] Session Check Error', e);
-      await playerStateService.init(); // Fallback to Guest
+      console.warn('[LoadingScene] Initialization Error', e);
+      await playerStateService.init(); // Fallback
     }
 
     const user = playerStateService.getUser();
@@ -240,7 +215,7 @@ export default class LoadingScene extends Phaser.Scene {
       this.scene.start('GameScene', {
         stageConfig: stage1,
         gameMode: 'solo',
-        hero: heroes[0] // Task Force: Unify Payload
+        hero: heroes[0] 
       });
       return;
     }

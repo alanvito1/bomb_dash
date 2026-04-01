@@ -135,23 +135,8 @@ export default class ChatWidget {
   }
 
   async subscribeToChannel() {
-    if (!supabase) return;
-
-    this.channel = supabase.channel('global-chat');
-
-    this.channel
-      .on('broadcast', { event: 'chat-message' }, (payload) => {
-        this.addMessage(payload.payload);
-      })
-      .on('broadcast', { event: 'system-message' }, (payload) => {
-        this.addSystemMessage(payload.payload);
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Chat Connected');
-          this.addSystemMessage({ message: 'Connected to Global Chat.' });
-        }
-      });
+    console.log('[Chat] Offline Mode: Subscriptions disabled.');
+    this.addSystemMessage({ message: 'Global Chat is in Local/Offline Mode.' });
   }
 
   addMessage(data) {
@@ -187,40 +172,31 @@ export default class ChatWidget {
 
   async sendMessage() {
     const text = this.inputElement.value.trim();
-    if (!text || !supabase) return;
+    if (!text) return;
 
-    // Get User Info
+    // In Offline Mode, we just show the message locally for "vibe"
+    // and maybe add a mock system response.
     const user = await api.getCurrentUser();
-    // Assuming API returns user data, or we use local storage/registry
-    // API `getCurrentUser` returns the auth/me response.
-    // If fail, user is Guest.
-
     let username = 'Guest';
-    let tag = '';
 
     if (user && user.success) {
-      username = user.user.walletAddress.substring(0, 6);
-      // Fetch Guild Tag if not present in user object (might need to fetch 'my-guild' or store in session)
-      // Ideally we store this. For now, let's try to get it.
-      // Optimization: Fetch guild tag on init and store in class.
+      username = user.user.name || 'Survivor';
     }
 
-    // Send via Channel
-    // Note: Supabase Broadcast from client is allowed if RLS policies permit.
-    // If not, we might need to send via backend endpoint.
-    // Assuming RLS allows broadcast for authenticated users on this channel.
-
-    await this.channel.send({
-      type: 'broadcast',
-      event: 'chat-message',
-      payload: {
-        user: username,
-        tag: this.guildTag || '', // To do: fetch guild tag
-        text: text,
-      },
+    this.addMessage({
+      user: username,
+      text: text,
+      tag: 'LOCAL'
     });
 
     this.inputElement.value = '';
+
+    // Occasional mock response
+    if (text.toLowerCase().includes('hello')) {
+        setTimeout(() => {
+            this.addSystemMessage({ message: 'Hello, Bomber! Connection is local-only today.' });
+        }, 1000);
+    }
   }
 
   scrollToBottom() {
@@ -239,8 +215,6 @@ export default class ChatWidget {
     if (this.container) {
       this.container.remove();
     }
-    if (this.channel) {
-      supabase.removeChannel(this.channel);
-    }
+    // No channel to remove in offline mode
   }
 }

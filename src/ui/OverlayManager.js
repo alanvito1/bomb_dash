@@ -1,7 +1,6 @@
 import ToSManager from './ToSManager.js';
 import AuthManager from './AuthManager.js';
 import LanguageManager from '../utils/LanguageManager.js';
-import { supabase } from '../lib/supabaseClient.js';
 
 export default class OverlayManager {
   constructor() {
@@ -18,7 +17,6 @@ export default class OverlayManager {
     // Initialize Audio
     this.audio = new Audio('/assets/audio/menu.mp3');
     this.audio.volume = 0.2;
-    // this.audio.loop = true; // Optional: Loop background ambient?
 
     // Check for previous acceptance
     const termsAccepted = localStorage.getItem('termsAccepted');
@@ -32,7 +30,7 @@ export default class OverlayManager {
     }
 
     if (termsAccepted === 'true') {
-      console.log('[Overlay] Terms already accepted. Checking Session...');
+      console.log('[Overlay] Terms already accepted. Proceeding to Auth Gate.');
       this.checkSession();
     } else {
       this.tosManager.init();
@@ -40,16 +38,12 @@ export default class OverlayManager {
   }
 
   async checkSession() {
-    // Check Supabase Session
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (session) {
-      console.log('[Overlay] Active Session Found:', session.user.email);
-      this.startGameWithUser(session.user);
-    } else {
-      console.log('[Overlay] No Active Session. Showing Auth Gate.');
-      this.showAuthMenu();
-    }
+    // In Offline Mode, we skip supabase session check.
+    // We show the auth menu (Identification) where only Guest is active,
+    // or skip directly to guest if we want absolute friction-less.
+    // Let's show the auth menu as the Identifty/Identification gate.
+    console.log('[Overlay] Offline Mode: Showing Auth Gate.');
+    this.showAuthMenu();
   }
 
   startGameWithUser(user) {

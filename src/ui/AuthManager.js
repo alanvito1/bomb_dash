@@ -16,22 +16,22 @@ export default class AuthManager {
     this.menu.style.display = 'block'; // Ensure visibility
     this.attachListeners();
 
-    // Session check is now handled by OverlayManager before this menu appears
-    // But we keep this for redundancy or direct access if needed
+    // Disable non-guest buttons visually
+    if (this.btnWeb3) {
+      this.btnWeb3.classList.add('disabled');
+      this.btnWeb3.style.opacity = '0.5';
+      this.btnWeb3.style.pointerEvents = 'none';
+      this.btnWeb3.innerText = 'WEB3 (OFFLINE)';
+    }
+    if (this.btnGoogle) {
+      this.btnGoogle.classList.add('disabled');
+      this.btnGoogle.style.opacity = '0.5';
+      this.btnGoogle.style.pointerEvents = 'none';
+      this.btnGoogle.innerText = 'GOOGLE (OFFLINE)';
+    }
   }
 
   attachListeners() {
-    if (this.btnWeb3) {
-      this.btnWeb3.onclick = () => {
-        this.overlayManager.playSound('click');
-        // Web3 Logic (Coming Soon)
-      };
-    }
-
-    if (this.btnGoogle) {
-      this.btnGoogle.onclick = () => this.loginGoogle();
-    }
-
     if (this.btnGuest) {
       this.btnGuest.onclick = () => {
         this.overlayManager.playSound('click');
@@ -45,11 +45,8 @@ export default class AuthManager {
       this.status.innerHTML = `<div class="pixel-spinner"></div><br>${msg}`;
       this.status.style.display = 'block';
       this.status.style.color = '#00ffff';
-
-      if (this.btnGoogle) this.btnGoogle.classList.add('disabled');
     } else {
       this.status.innerHTML = '';
-      if (this.btnGoogle) this.btnGoogle.classList.remove('disabled');
     }
   }
 
@@ -64,25 +61,7 @@ export default class AuthManager {
   }
 
   async loginGoogle() {
-    this.overlayManager.playSound('click');
-
-    if (!supabase) {
-      this.setError('Configuration Error');
-      return;
-    }
-
-    this.setLoading(true, 'REDIRECTING...');
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin, // Redirect back to game
-      },
-    });
-
-    if (error) {
-      this.setError(error.message);
-    }
-    // Browser will redirect now.
+      // Disabled in Offline Mode
+      this.setError('Cloud Auth is disabled in Offline Mode.');
   }
 }

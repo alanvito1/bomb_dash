@@ -53,68 +53,26 @@ class ContractProvider {
   }
 
   /**
-   * Initializes the provider by fetching contract addresses from the backend API.
-   * This method must be called successfully at application startup.
-   * @returns {Promise<void>} A promise that resolves on successful initialization.
-   * @throws {Error} Throws an error if the API call fails.
+   * Initializes the provider by hardcoding contract addresses for offline mode.
+   * @returns {Promise<void>}
    */
   async initialize() {
     if (this.initialized) {
-      console.log('ContractProvider already initialized.');
       return;
     }
 
-    try {
-      console.log(
-        'Initializing ContractProvider: fetching contract addresses...'
-      );
+    console.log('Initializing ContractProvider in OFFLINE MODE: using hardcoded addresses.');
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/contracts`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch contract addresses: ${response.statusText}`
-          );
-        }
-        const data = await response.json();
-
-        if (data.success) {
-          this.addresses = {
-            wagerArena: data.wagerArenaAddress,
-            heroStaking: data.heroStakingAddress,
-            mockHeroNFT: data.mockHeroNFTAddress,
-            bcoin: data.bcoinTokenAddress,
-            tournamentController: data.tournamentControllerAddress,
-            perpetualRewardPool: data.perpetualRewardPoolAddress,
-          };
-          this.initialized = true;
-          console.log(
-            '✅ ContractProvider initialized successfully:',
-            this.addresses
-          );
-        } else {
-          throw new Error(
-            data.message || 'Failed to fetch contract addresses.'
-          );
-        }
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          throw new Error('ContractProvider initialization timed out (5s).');
-        }
-        throw err;
-      }
-    } catch (error) {
-      console.error('CRITICAL: Failed to initialize ContractProvider.', error);
-      this.initialized = false;
-      throw error;
-    }
+    this.addresses = {
+      wagerArena: '0x0000000000000000000000000000000000000001',
+      heroStaking: '0x0000000000000000000000000000000000000002',
+      mockHeroNFT: '0x0000000000000000000000000000000000000003',
+      bcoin: '0x0000000000000000000000000000000000000004',
+      tournamentController: '0x0000000000000000000000000000000000000005',
+      perpetualRewardPool: '0x0000000000000000000000000000000000000006',
+    };
+    this.initialized = true;
+    console.log('✅ ContractProvider initialized in OFFLINE MODE:', this.addresses);
   }
 
   /**

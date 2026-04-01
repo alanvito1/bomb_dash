@@ -1,13 +1,18 @@
 # ORANGE PAPER: The Living GDD
 
+> [!IMPORTANT]
+> **OFFLINE-STRICT ARCHITECTURE:** Ported for 100% Client-Side operation (Vercel Ready). 
+> **ALL** Backend (Supabase/Node) and Blockchain (Web3) dependencies have been removed or mocked. 
+> Game State is persisted **strictly** via Browser LocalStorage.
+
 > **WARNING:** This document is the SINGLE SOURCE OF TRUTH for game mechanics.
 > If the code changes, this document MUST be updated in the same Pull Request.
 
 ## 1. Vision & Overview
-**Neon Rogue** is a retro-style PvE survival game where players defend against waves of enemies, collect loot, and upgrade their heroes. The core loop involves a "Solo Run" where players test their build against escalating difficulty.
+**Neon Rogue (Legacy Edition)** is a retro-style PvE survival game designed to run entirely in the browser without any server-side infrastructure. Players defend against waves of enemies, collect loot, and upgrade their heroes. The core loop involves a "Solo Run" where players test their build against escalating difficulty.
 
-## 2. Economy (Hardcore Model)
-The game uses a dual-currency system: **BCOIN** (Premium/Earned) and **Fragments** (Crafting Material).
+## 2. Economy (Offline Model)
+The game uses a locally-managed dual-currency system: **BCOIN** (Premium/Earned) and **Fragments** (Crafting Material).
 
 ### Earnings (Session Based)
 - **Solo Run Victory:** Awards **50 Account XP** + **Looted Coins** (Session Coins) + **Hero Skill XP** (Manual Training).
